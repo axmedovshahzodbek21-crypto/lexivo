@@ -28,6 +28,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   bool _autoPlay = true;
   final List<bool> _history = []; // true = knew, false = forgot, one entry per graded card
   bool _gradesApplied = false;
+  double _cardDx = 0;
 
   int get _knew => _history.where((s) => s).length;
   int get _forgot => _history.where((s) => !s).length;
@@ -97,7 +98,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     _history.add(true);
     _flipCtrl.reset();
     final next = _currentIndex + 1;
-    setState(() { _currentIndex = next; _revealed = false; });
+    setState(() { _currentIndex = next; _revealed = false; _cardDx = 0; });
     if (next >= _queue.length) {
       _applyGrades();
     } else if (_autoPlay) {
@@ -109,7 +110,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     _history.add(false);
     _flipCtrl.reset();
     final next = _currentIndex + 1;
-    setState(() { _currentIndex = next; _revealed = false; });
+    setState(() { _currentIndex = next; _revealed = false; _cardDx = 0; });
     if (next >= _queue.length) {
       _applyGrades();
     } else if (_autoPlay) {
@@ -121,7 +122,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     if (_history.isEmpty) return;
     _history.removeLast();
     _flipCtrl.reset();
-    setState(() { _currentIndex--; _revealed = false; });
+    setState(() { _currentIndex--; _revealed = false; _cardDx = 0; });
     if (_autoPlay) _speak(_queue[_currentIndex].word);
   }
 
@@ -248,86 +249,122 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
                   ),
                   const SizedBox(height: 12),
 
-                  // Word card — tap to reveal
+                  // Word card — tap to reveal, swipe to grade (after reveal)
                   GestureDetector(
                     onTap: _reveal,
-                    child: Container(
-                      width: double.infinity,
-                      height: 200,
-                      decoration: BoxDecoration(
-                        color: context.primary,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: context.primary.withValues(alpha: 0.3),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                    onHorizontalDragUpdate: _revealed
+                        ? (d) => setState(() => _cardDx += d.delta.dx)
+                        : null,
+                    onHorizontalDragEnd: _revealed
+                        ? (d) {
+                            if (_cardDx > 80) {
+                              _markKnew();
+                            } else if (_cardDx < -80) {
+                              _markForgot();
+                            } else {
+                              setState(() => _cardDx = 0);
+                            }
+                          }
+                        : null,
+                    child: Transform.translate(
+                      offset: Offset(_cardDx, 0),
+                      child: Stack(
                         children: [
-                          Text(
-                            _current.word,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                          Container(
+                            width: double.infinity,
+                            height: 200,
+                            decoration: BoxDecoration(
+                              color: context.primary,
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: context.primary.withValues(alpha: 0.3),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            _current.partOfSpeech,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.white60,
-                            ),
-                          ),
-                          if (_current.pronunciation.isNotEmpty) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              _current.pronunciation,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Colors.white54,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 8),
-                          GestureDetector(
-                            onTap: () => _speak(_current.word),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.volume_up,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  _current.word,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
                                     color: Colors.white,
-                                    size: 14,
                                   ),
-                                  const SizedBox(width: 4),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  _current.partOfSpeech,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.white60,
+                                  ),
+                                ),
+                                if (_current.pronunciation.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
                                   Text(
-                                    tr('listen'),
+                                    _current.pronunciation,
                                     style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
+                                      fontSize: 13,
+                                      color: Colors.white54,
+                                      fontStyle: FontStyle.italic,
                                     ),
                                   ),
                                 ],
-                              ),
+                                const SizedBox(height: 8),
+                                GestureDetector(
+                                  onTap: () => _speak(_current.word),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.volume_up, color: Colors.white, size: 14),
+                                        const SizedBox(width: 4),
+                                        Text(tr('listen'), style: const TextStyle(color: Colors.white, fontSize: 12)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+                          // Swipe overlay
+                          if (_revealed && _cardDx > 20)
+                            Positioned.fill(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withValues(alpha: (_cardDx / 200).clamp(0.0, 0.75)),
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                                child: const Center(
+                                  child: Text('✓  KNEW', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
+                                ),
+                              ),
+                            ),
+                          if (_revealed && _cardDx < -20)
+                            Positioned.fill(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withValues(alpha: (-_cardDx / 200).clamp(0.0, 0.75)),
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                                child: const Center(
+                                  child: Text('✗  FORGOT', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),

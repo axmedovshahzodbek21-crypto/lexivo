@@ -132,6 +132,13 @@ class SRSWord {
         : _copyWith(reviewStage: newStage, nextReviewDate: _nextDateFromNow(_intervals[newStage]));
   }
 
+  SRSWord hardStage() {
+    final newStage = reviewStage + 1;
+    if (newStage >= 4) return _copyWith(reviewStage: 4, nextReviewDate: '9999-12-31');
+    final days = (_intervals[newStage] / 2).ceil();
+    return _copyWith(reviewStage: newStage, nextReviewDate: _nextDateFromNow(days));
+  }
+
   Map<String, dynamic> toJson() => {
     'word': word,
     'id': '$collectionName::$word',
@@ -791,6 +798,11 @@ class StorageService {
 
   static Future<void> failSRSWord(SRSWord word) async {
     final updated = word.dropStage();
+    await updateSRSWord(updated);
+  }
+
+  static Future<void> hardSRSWord(SRSWord word) async {
+    final updated = word.hardStage();
     await updateSRSWord(updated);
   }
 

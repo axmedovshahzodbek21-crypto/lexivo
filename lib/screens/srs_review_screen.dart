@@ -5,6 +5,8 @@ import '../data/storage_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 
+enum _Grade { knew, hard, forgot }
+
 class SRSReviewScreen extends StatefulWidget {
   final List<SRSWord> words;
   final String userProfile;
@@ -26,12 +28,13 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   int _currentIndex = 0;
   bool _revealed = false;
   bool _autoPlay = true;
-  final List<bool> _history = []; // true = knew, false = forgot, one entry per graded card
+  final List<_Grade> _history = [];
   bool _gradesApplied = false;
   double _cardDx = 0;
 
-  int get _knew => _history.where((s) => s).length;
-  int get _forgot => _history.where((s) => !s).length;
+  int get _knew => _history.where((g) => g == _Grade.knew).length;
+  int get _hard => _history.where((g) => g == _Grade.hard).length;
+  int get _forgot => _history.where((g) => g == _Grade.forgot).length;
 
   late AnimationController _flipCtrl;
   late Animation<double> _flipAnim;
@@ -72,6 +75,8 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
       case LogicalKeyboardKey.arrowRight:
       case LogicalKeyboardKey.keyK:
         if (_revealed) { _markKnew(); return true; }
+      case LogicalKeyboardKey.keyH:
+        if (_revealed) { _markHard(); return true; }
       case LogicalKeyboardKey.arrowLeft:
       case LogicalKeyboardKey.keyJ:
         if (_revealed) { _markForgot(); return true; }
@@ -95,7 +100,19 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   }
 
   void _markKnew() {
-    _history.add(true);
+    _history.add(_Grade.knew);
+    _flipCtrl.reset();
+    final next = _currentIndex + 1;
+    setState(() { _currentIndex = next; _revealed = false; _cardDx = 0; });
+    if (next >= _queue.length) {
+      _applyGrades();
+    } else if (_autoPlay) {
+      _speak(_queue[next].word);
+    }
+  }
+
+  void _markHard() {
+    _history.add(_Grade.hard);
     _flipCtrl.reset();
     final next = _currentIndex + 1;
     setState(() { _currentIndex = next; _revealed = false; _cardDx = 0; });
@@ -107,7 +124,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   }
 
   void _markForgot() {
-    _history.add(false);
+    _history.add(_Grade.forgot);
     _flipCtrl.reset();
     final next = _currentIndex + 1;
     setState(() { _currentIndex = next; _revealed = false; _cardDx = 0; });
@@ -130,11 +147,15 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     if (_gradesApplied) return;
     _gradesApplied = true;
     for (int i = 0; i < _history.length; i++) {
-      if (_history[i]) {
-        await StorageService.reviewSRSWord(_queue[i]);
-        await StorageService.addXP(5, reason: 'SRS Review');
-      } else {
-        await StorageService.failSRSWord(_queue[i]);
+      switch (_history[i]) {
+        case _Grade.knew:
+          await StorageService.reviewSRSWord(_queue[i]);
+          await StorageService.addXP(5, reason: 'SRS Review');
+        case _Grade.hard:
+          await StorageService.hardSRSWord(_queue[i]);
+          await StorageService.addXP(3, reason: 'SRS Review Hard');
+        case _Grade.forgot:
+          await StorageService.failSRSWord(_queue[i]);
       }
     }
     if (_history.isNotEmpty) {
@@ -203,7 +224,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
             padding: const EdgeInsets.only(right: 16),
             child: Center(
               child: Text(
-                '✓ $_knew  ✗ $_forgot',
+                '✓$_knew  ~$_hard  ✗$_forgot',
                 style: const TextStyle(
                   color: Colors.green,
                   fontWeight: FontWeight.bold,
@@ -449,10 +470,23 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
                               padding: const EdgeInsets.symmetric(vertical: 18),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                             ),
-                            child: Text(tr('didnt_know'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            child: Text(tr('didnt_know'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _markHard,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.amber.shade700,
+                              side: BorderSide(color: Colors.amber.shade700),
+                              padding: const EdgeInsets.symmetric(vertical: 18),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                            child: const Text('Hard', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: ElevatedButton(
                             onPressed: _markKnew,
@@ -462,7 +496,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
                               padding: const EdgeInsets.symmetric(vertical: 18),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                             ),
-                            child: Text(tr('know_it'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            child: Text(tr('know_it'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                           ),
                         ),
                       ],
@@ -479,7 +513,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   }
 
   Widget _buildFinish(BuildContext context) {
-    final total = _knew + _forgot;
+    final total = _knew + _hard + _forgot;
 
     return Scaffold(
       backgroundColor: context.bg,
@@ -515,6 +549,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
                   children: [
                     _buildStat(context, '$total', tr('reviewed'), context.primary),
                     _buildStat(context, '$_knew', tr('know_it'), Colors.green),
+                    _buildStat(context, '$_hard', 'Hard', Colors.amber),
                     _buildStat(context, '$_forgot', tr('didnt_know'), Colors.red),
                   ],
                 ),

@@ -51,6 +51,7 @@ class _LearningScreenState extends State<LearningScreen> {
   final Set<int> _learnedIndices = {};
   final Set<int> _skippedIndices = {};
   final Set<int> _hardIndices = {};
+  final Set<int> _starredIndices = {};
 
   bool _showEx1Translation = false;
   bool _showEx2Translation = false;
@@ -58,6 +59,7 @@ class _LearningScreenState extends State<LearningScreen> {
   bool _showUzDefinition = false;
 
   double _cardDragDx = 0;
+  double _cardDragDy = 0;
 
   List<WordItem> get _allWords => widget.wordDay.words;
   WordItem get _currentWord => _allWords[_currentIndex];
@@ -187,6 +189,19 @@ class _LearningScreenState extends State<LearningScreen> {
         _showUzDefinition = false;
       });
     }
+  }
+
+  void _toggleStar() {
+    final word = _currentWord;
+    setState(() {
+      if (_starredIndices.contains(_currentIndex)) {
+        _starredIndices.remove(_currentIndex);
+        StorageService.removeStarredWord(word.word, widget.collectionName);
+      } else {
+        _starredIndices.add(_currentIndex);
+        StorageService.saveStarredWord(word, widget.collectionName);
+      }
+    });
   }
 
   void _skipWord() {
@@ -347,6 +362,8 @@ class _LearningScreenState extends State<LearningScreen> {
     final isHard    = _hardIndices.contains(_currentIndex);
     final swipeRight = _cardDragDx > 30;
     final swipeLeft  = _cardDragDx < -30;
+    final swipeUp    = _cardDragDy < -30;
+    final isStarred  = _starredIndices.contains(_currentIndex);
 
     return PopScope(
       canPop: true,
@@ -403,7 +420,17 @@ class _LearningScreenState extends State<LearningScreen> {
             ],
           ),
           centerTitle: true,
-          actions: const [PomodoroTimerPill(), SizedBox(width: 8)],
+          actions: [
+            IconButton(
+              icon: Icon(
+                isStarred ? Icons.star_rounded : Icons.star_border_rounded,
+                color: isStarred ? Colors.amber : context.textMuted,
+              ),
+              onPressed: _toggleStar,
+            ),
+            const PomodoroTimerPill(),
+            const SizedBox(width: 8),
+          ],
         ),
         body: Column(
           children: [
@@ -449,11 +476,17 @@ class _LearningScreenState extends State<LearningScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Word card — tilt + swipe-down-to-skip
+                        // Word card — tilt + swipe-down-to-skip + swipe-up-to-star
                         GestureDetector(
+                          onVerticalDragUpdate: (d) => setState(() => _cardDragDy += d.delta.dy),
                           onVerticalDragEnd: (d) {
-                            if (d.velocity.pixelsPerSecond.dy > 600) _skipWord();
+                            final vel = d.velocity.pixelsPerSecond.dy;
+                            final dy = _cardDragDy;
+                            setState(() => _cardDragDy = 0);
+                            if (vel > 600 || dy > 80) { _skipWord(); }
+                            else if (vel < -600 || dy < -80) { _toggleStar(); }
                           },
+                          onVerticalDragCancel: () => setState(() => _cardDragDy = 0),
                           child: Transform.translate(
                             offset: Offset(_cardDragDx * 0.35, 0),
                             child: Transform.rotate(
@@ -552,18 +585,20 @@ class _LearningScreenState extends State<LearningScreen> {
                                     ),
                                   ),
                                   // Swipe overlay hint
-                                  if (swipeRight || swipeLeft)
+                                  if (swipeRight || swipeLeft || swipeUp)
                                     Positioned.fill(
                                       child: Container(
                                         decoration: BoxDecoration(
                                           borderRadius: BorderRadius.circular(20),
-                                          color: swipeRight
+                                          color: swipeUp
+                                              ? Colors.amber.withValues(alpha: 0.35)
+                                              : swipeRight
                                               ? const Color(0xFF2ECC71).withValues(alpha: 0.35)
                                               : const Color(0xFFE74C3C).withValues(alpha: 0.35),
                                         ),
                                         child: Center(
                                           child: Text(
-                                            swipeRight ? '✓' : '😤',
+                                            swipeUp ? '⭐' : swipeRight ? '✓' : '😤',
                                             style: const TextStyle(fontSize: 48),
                                           ),
                                         ),

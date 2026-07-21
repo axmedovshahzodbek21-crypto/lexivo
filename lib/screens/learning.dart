@@ -550,9 +550,9 @@ class _LearningScreenState extends State<LearningScreen> {
                                           ],
                                         ),
                                         const SizedBox(height: 12),
-                                        Text(_currentWord.translation, style: const TextStyle(fontSize: 18, color: Colors.white70)),
+                                        Text(_currentWord.definition, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: Colors.white, height: 1.5)),
                                         const SizedBox(height: 8),
-                                        Text(_currentWord.definition, style: const TextStyle(fontSize: 15, color: Colors.white, height: 1.5)),
+                                        Text(_currentWord.translation, style: const TextStyle(fontSize: 14, color: Colors.white70)),
                                         if (_currentWord.definitionUz.isNotEmpty) ...[
                                           const SizedBox(height: 10),
                                           GestureDetector(

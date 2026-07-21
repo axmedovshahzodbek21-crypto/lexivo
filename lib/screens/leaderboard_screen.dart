@@ -59,6 +59,7 @@ class LeaderboardScreen extends StatefulWidget {
 
 class _LeaderboardScreenState extends State<LeaderboardScreen> {
   List<LeaderboardEntry> _entries = [];
+  List<LeaderboardEntry> _trackedOffBoard = [];
   bool _loading = true;
   String? _error;
   Set<String> _savedIds = {};
@@ -66,12 +67,16 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   @override
   void initState() {
     super.initState();
-    _load();
-    _loadSaved();
+    _loadAll();
+  }
+
+  Future<void> _loadAll() async {
+    setState(() { _loading = true; _error = null; });
+    await Future.wait([_load(), _loadSaved()]);
+    await _loadTrackedOffBoard();
   }
 
   Future<void> _load() async {
-    setState(() { _loading = true; _error = null; });
     try {
       final res = await supabase.rpc('get_leaderboard');
       final list = (res as List).map((e) => LeaderboardEntry.fromMap(Map<String, dynamic>.from(e as Map))).toList();
@@ -90,6 +95,52 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     } catch (_) {}
   }
 
+  Future<void> _loadTrackedOffBoard() async {
+    if (_savedIds.isEmpty) {
+      if (mounted) setState(() => _trackedOffBoard = []);
+      return;
+    }
+    final boardIds = _entries.map((e) => e.userId).toSet();
+    final missing = _savedIds.where((id) => !boardIds.contains(id)).toList();
+    if (missing.isEmpty) {
+      if (mounted) setState(() => _trackedOffBoard = []);
+      return;
+    }
+    try {
+      final statsRes = await supabase
+          .from('user_stats')
+          .select('id, xp, streak, last_study_date, today_count, total_learned')
+          .inFilter('id', missing);
+      final statsMap = {for (final r in (statsRes as List)) (r as Map)['id'] as String: r};
+
+      final profileRes = await supabase
+          .from('profiles')
+          .select('id, name, avatar_url')
+          .inFilter('id', missing);
+
+      final entries = <LeaderboardEntry>[];
+      for (final p in (profileRes as List)) {
+        final pm = Map<String, dynamic>.from(p as Map);
+        final uid = pm['id'] as String;
+        final s = statsMap[uid] ?? {};
+        entries.add(LeaderboardEntry(
+          userId: uid,
+          name: (pm['name'] as String?) ?? 'Learner',
+          avatarUrl: pm['avatar_url'] as String?,
+          xp: (s['xp'] as num?)?.toInt() ?? 0,
+          streak: (s['streak'] as num?)?.toInt() ?? 0,
+          lastStudyDate: s['last_study_date'] as String?,
+          todayCount: (s['today_count'] as num?)?.toInt() ?? 0,
+          totalLearned: (s['total_learned'] as num?)?.toInt() ?? 0,
+        ));
+      }
+      entries.sort((a, b) => b.xp.compareTo(a.xp));
+      if (mounted) setState(() => _trackedOffBoard = entries);
+    } catch (_) {
+      if (mounted) setState(() => _trackedOffBoard = []);
+    }
+  }
+
   Future<void> _toggleSave(String targetId) async {
     final user = currentUser;
     if (user == null) return;
@@ -101,6 +152,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       } else {
         await supabase.from('saved_users').insert({'user_id': user.id, 'saved_user_id': targetId});
       }
+      await _loadTrackedOffBoard();
     } catch (_) {
       if (mounted) setState(() { isSaved ? _savedIds.add(targetId) : _savedIds.remove(targetId); });
     }
@@ -124,7 +176,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         actions: [
           IconButton(
             icon: Icon(Icons.refresh_rounded, color: context.primary),
-            onPressed: _load,
+            onPressed: _loadAll,
           ),
         ],
       ),
@@ -146,7 +198,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             const SizedBox(height: 12),
             Text(_error!, style: TextStyle(color: context.textMuted)),
             const SizedBox(height: 16),
-            ElevatedButton(onPressed: _load, child: const Text('Try again')),
+            ElevatedButton(onPressed: _loadAll, child: const Text('Try again')),
           ],
         ),
       );
@@ -167,21 +219,119 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   Widget _buildList() {
     final today = _todayStr;
     final myId = _myId;
-    return RefreshIndicator(
-      onRefresh: _load,
-      color: context.primary,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: _entries.length + 1,
-        itemBuilder: (context, i) {
-          if (i == 0) return _buildPodium(today);
+    final tracked = _trackedOffBoard;
+
+    // Build the flat item list so index math is simple
+    final items = <Widget>[
+      _buildPodium(today),
+      // Tracked-off-board section
+      if (tracked.isNotEmpty) ...[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 12, 4, 6),
+          child: Row(
+            children: [
+              const Text('⭐', style: TextStyle(fontSize: 14)),
+              const SizedBox(width: 6),
+              Text(
+                'Tracking',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.5),
+              ),
+            ],
+          ),
+        ),
+        ...tracked.map((e) {
+          final isMe = myId != null && e.userId == myId;
+          final studiedToday = e.lastStudyDate == today;
+          return _buildTrackedRow(e, isMe, studiedToday);
+        }),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
+          child: Row(
+            children: [
+              Expanded(child: Divider(color: context.border)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text('Leaderboard', style: TextStyle(fontSize: 12, color: context.textMuted)),
+              ),
+              Expanded(child: Divider(color: context.border)),
+            ],
+          ),
+        ),
+      ],
+      // Main leaderboard rows (skip podium positions)
+      for (int i = 1; i <= _entries.length; i++) ...[
+        if (!(_entries.length >= 3 && i <= 3)) () {
           final entry = _entries[i - 1];
-          if (_entries.length >= 3 && i <= 3) return const SizedBox.shrink();
-          final rank = i;
           final isMe = myId != null && entry.userId == myId;
           final studiedToday = entry.lastStudyDate == today;
-          return _buildRow(entry, rank, isMe, studiedToday);
-        },
+          return _buildRow(entry, i, isMe, studiedToday);
+        }(),
+      ],
+    ];
+
+    return RefreshIndicator(
+      onRefresh: _loadAll,
+      color: context.primary,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: items,
+      ),
+    );
+  }
+
+  Widget _buildTrackedRow(LeaderboardEntry entry, bool isMe, bool studiedToday) {
+    return GestureDetector(
+      onTap: () => _showStreakSheet(entry),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: context.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.amber.withValues(alpha: 0.5), width: 1.5),
+        ),
+        child: Row(
+          children: [
+            const SizedBox(width: 4),
+            const Text('⭐', style: TextStyle(fontSize: 14)),
+            const SizedBox(width: 8),
+            _Avatar(name: entry.name, size: 36, avatarUrl: entry.avatarUrl),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(child: Text(entry.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: context.appText), overflow: TextOverflow.ellipsis)),
+                      if (isMe) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(color: context.primary, borderRadius: BorderRadius.circular(20)),
+                          child: const Text('YOU', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                      if (studiedToday) ...[
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
+                          child: const Text('TODAY', style: TextStyle(color: Colors.green, fontSize: 9, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${entry.xp.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')} XP${entry.streak > 0 ? ' · 🔥 ${entry.streak}' : ''}',
+                    style: TextStyle(fontSize: 11, color: context.textMuted),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

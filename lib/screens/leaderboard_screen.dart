@@ -63,6 +63,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   bool _loading = true;
   String? _error;
   Set<String> _savedIds = {};
+  bool _trackingExpanded = false;
 
   @override
   void initState() {
@@ -225,48 +226,63 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     // Build the flat item list so index math is simple
     final items = <Widget>[
       _buildPodium(today),
-      // Tracking section — always visible
-      Padding(
-        padding: const EdgeInsets.fromLTRB(4, 12, 4, 6),
-        child: Row(
-          children: [
-            const Text('⭐', style: TextStyle(fontSize: 14)),
-            const SizedBox(width: 6),
-            Text(
-              'Tracking',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.5),
-            ),
-          ],
-        ),
-      ),
-      if (tracked.isEmpty)
-        Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: context.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: context.border),
-          ),
+      // Tracking section — always visible, tap ⭐ to expand/collapse
+      GestureDetector(
+        onTap: () => setState(() => _trackingExpanded = !_trackingExpanded),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(4, 12, 4, 6),
           child: Row(
             children: [
-              Text('☆', style: TextStyle(fontSize: 18, color: context.textMuted)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Tap ⭐ on any user to track them here',
-                  style: TextStyle(fontSize: 13, color: context.textMuted),
-                ),
+              Text('⭐', style: TextStyle(fontSize: 14, color: tracked.isNotEmpty ? Colors.amber : context.textMuted)),
+              const SizedBox(width: 6),
+              Text(
+                'Tracking',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.5),
               ),
+              if (tracked.isNotEmpty) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  decoration: BoxDecoration(color: Colors.amber.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
+                  child: Text('${tracked.length}', style: const TextStyle(fontSize: 11, color: Colors.amber, fontWeight: FontWeight.bold)),
+                ),
+              ],
+              const Spacer(),
+              Icon(_trackingExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, size: 18, color: context.textMuted),
             ],
           ),
-        )
-      else
-        ...tracked.map((e) {
-          final isMe = myId != null && e.userId == myId;
-          final studiedToday = e.lastStudyDate == today;
-          return _buildTrackedRow(e, isMe, studiedToday);
-        }),
+        ),
+      ),
+      if (_trackingExpanded) ...[
+        if (tracked.isEmpty)
+          Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: context.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: context.border),
+            ),
+            child: Row(
+              children: [
+                Text('☆', style: TextStyle(fontSize: 18, color: context.textMuted)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Tap ⭐ on any user to track them here',
+                    style: TextStyle(fontSize: 13, color: context.textMuted),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          ...tracked.map((e) {
+            final isMe = myId != null && e.userId == myId;
+            final studiedToday = e.lastStudyDate == today;
+            return _buildTrackedRow(e, isMe, studiedToday);
+          }),
+      ],
       Padding(
         padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
         child: Row(

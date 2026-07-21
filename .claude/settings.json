@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(ls C:\\\\Users\\\\User\\\\lexivo-web\\\\ | Where-Object {-not $_.PSIsContainer} | Select-Object Name)",
+      "Bash(npx tsc *)",
+      "Bash(flutter build *)",
+      "Bash(git remote *)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\User\\lexivo-web\\public",
+      "C:\\Users\\User\\lexivo-web\\lib",
+      "C:\\Users\\User\\lexivo-web\\app",
+      "C:\\Users\\User\\lexivo-web"
+    ]
+  }
+}

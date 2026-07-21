@@ -1,0 +1,11 @@
+fix: sync achievements between Flutter and web (#7)
+
+Push: compute all currently-unlocked achievement IDs from local prefs
+(word count, streak, XP, SRS mastered, boolean flags, level-test flags)
+and upsert to achievements table with ignoreDuplicates=true so the table
+is append-only — a reset streak never removes an earned badge.
+
+Pull: read cloud achievement IDs and set the local boolean/level flags
+for activity-based achievements (quiz_first, quiz_perfect, flashcard_first,
+srs_first, a1/a2/b1_complete). Derived achievements are recomputed from
+already-synced underlying data on every screen load, so no extra flag needed.

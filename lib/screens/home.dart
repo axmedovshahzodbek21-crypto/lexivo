@@ -1,0 +1,2192 @@
+import 'dart:async';
+import 'dart:io';
+import 'leveled_words_screen.dart';
+import 'stats_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:ui';
+import 'dart:math';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'collections.dart';
+import 'learning.dart';
+import 'flashcard.dart';
+import 'progress_screens.dart';
+import 'search_screen.dart';
+import 'settings_screen.dart';
+import 'free_time_screen.dart';
+import 'pomodoro_setup_screen.dart';
+import '../data/word_data.dart';
+import '../data/storage_service.dart';
+import '../services/sync_service.dart';
+import 'xp_level_sheet.dart';
+import '../app_theme.dart';
+import '../l10n.dart';
+
+class HomeScreen extends StatefulWidget {
+  final String wordSource;
+  final String exampleStyle;
+  final String userProfile;
+  final String languageLevel;
+  final int dailyWordGoal;
+
+  const HomeScreen({
+    super.key,
+    required this.wordSource,
+    required this.exampleStyle,
+    required this.userProfile,
+    required this.languageLevel,
+    required this.dailyWordGoal,
+  });
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  int _wordsLearned = 0;
+  int _streak = 0;
+  int _reviewsDue = 0;
+  int _xp = 0;
+  int _freezes = 0;
+  int _dailyGoal = 0;
+  int _todayLearned = 0;
+  bool _bannerDismissed = false;
+  WordItem? _wordOfDay;
+  String _userName = '';
+  String? _profileImagePath;
+  StreamSubscription<void>? _syncSub;
+
+  bool get _isDesktop =>
+      defaultTargetPlatform == TargetPlatform.windows ||
+      defaultTargetPlatform == TargetPlatform.macOS ||
+      defaultTargetPlatform == TargetPlatform.linux;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _dailyGoal = widget.dailyWordGoal;
+    _pickWordOfDay();
+    _loadStats();
+    _syncSub = SyncService.onPull.listen((_) => _loadStats());
+    appLangNotifier.addListener(_onLangChange);
+  }
+
+  @override
+  void dispose() {
+    appLangNotifier.removeListener(_onLangChange);
+    _syncSub?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onLangChange() { if (mounted) setState(() {}); }
+
+  void _pickWordOfDay() {
+    final allWords = <WordItem>[];
+    for (final day in thirtyDaysCollection.days) {
+      allWords.addAll(day.words);
+    }
+    final today = DateTime.now();
+    final seed = today.year * 10000 + today.month * 100 + today.day;
+    setState(
+      () => _wordOfDay = allWords[Random(seed).nextInt(allWords.length)],
+    );
+  }
+
+  Future<void> _loadStats() async {
+    final learned = await StorageService.getLearnedWords();
+    final streak = await StorageService.getStreak();
+    final dueWords = await StorageService.getDueWords();
+    final xp = await StorageService.getXP();
+    final freezes = await StorageService.getFreezesAvailable();
+    final prefs = await SharedPreferences.getInstance();
+    final goal = prefs.getInt('daily_word_goal') ?? widget.dailyWordGoal;
+    final todayCount = await StorageService.getTodayLearnedCount();
+    final skippedCount = await StorageService.getTotalSkippedWordsCount();
+    final userName = prefs.getString('user_name') ?? '';
+    final profileImagePath = prefs.getString('profile_image_path');
+    setState(() {
+      _wordsLearned = learned.length + skippedCount;
+      _streak = streak;
+      _reviewsDue = dueWords.length;
+      _xp = xp;
+      _freezes = freezes;
+      _dailyGoal = goal;
+      _todayLearned = todayCount;
+      _userName = userName;
+      _profileImagePath = profileImagePath;
+    });
+  }
+
+  bool get _limitReached => _todayLearned >= _dailyGoal;
+
+  void _showPomodoroThenPicker() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => PomodoroSetupScreen(
+        onSkip: () {
+          Navigator.pop(context);
+          _showCollectionPicker();
+        },
+        onStart: () {
+          Navigator.pop(context);
+          _showCollectionPicker();
+        },
+      ),
+    );
+  }
+
+  void _showCollectionPicker() {
+    _controller.forward(from: 0);
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Dismiss',
+      barrierColor: Colors.transparent,
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (context, animation, secondaryAnimation) =>
+          const SizedBox.shrink(),
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return _CollectionPickerOverlay(
+          userProfile: widget.userProfile,
+          animation: animation,
+        );
+      },
+    ).then((_) => _loadStats());
+  }
+
+  void _showLimitReachedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          tr('limit_reached_title'),
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          tr('limit_reached_body').replaceFirst('{n}', '$_todayLearned'),
+          style: const TextStyle(color: Colors.grey),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(tr('ok'), style: const TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _showCollectionPicker();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6C63FF),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(tr('learn_anyway')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _greeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return tr('greeting_morning');
+    if (hour < 17) return tr('greeting_afternoon');
+    return tr('greeting_evening');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isDesktop) return _buildDesktopLayout(context);
+    return _buildMobileLayout(context);
+  }
+
+  // ─── DESKTOP LAYOUT ──────────────────────────────────────────────────────────
+
+  Widget _buildDesktopLayout(BuildContext context) {
+    final levelName = StorageService.getLevelName(_xp);
+    final nextLevelXP = StorageService.getNextLevelXP(_xp);
+    final currentLevelMinXP = StorageService.getCurrentLevelMinXP(_xp);
+    final levelProgress = nextLevelXP == currentLevelMinXP
+        ? 1.0
+        : (_xp - currentLevelMinXP) / (nextLevelXP - currentLevelMinXP);
+
+    return Scaffold(
+      backgroundColor: context.bg,
+      body: Row(
+        children: [
+          // Persistent Sidebar
+          Container(
+            width: 240,
+            color: const Color(0xFF6C63FF),
+            child: SafeArea(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 24),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: const Text(
+                      'Lexivo',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Profile
+                  GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => SettingsScreen()),
+                    ).then((_) => _loadStats()),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(22),
+                              border: Border.all(
+                                color: Colors.white30,
+                                width: 2,
+                              ),
+                            ),
+                            child: _profileImagePath != null
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(22),
+                                    child: Image.file(
+                                      File(_profileImagePath!),
+                                      fit: BoxFit.cover,
+                                    ),
+                                  )
+                                : const Center(
+                                    child: Text(
+                                      '👤',
+                                      style: TextStyle(fontSize: 20),
+                                    ),
+                                  ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _userName.isNotEmpty
+                                      ? _userName
+                                      : widget.userProfile.isNotEmpty
+                                      ? widget.userProfile
+                                      : 'Learner',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  '$levelName · $_xp XP',
+                                  style: const TextStyle(
+                                    color: Colors.white60,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  const Divider(
+                    color: Colors.white24,
+                    indent: 20,
+                    endIndent: 20,
+                  ),
+                  const SizedBox(height: 8),
+                  _buildSidebarTile(
+                    '⭐',
+                    tr('starred_words'),
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const StarredWordsScreen(),
+                      ),
+                    ),
+                  ),
+                  _buildSidebarTile(
+                    '📖',
+                    tr('word_library'),
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const WordsLibraryScreen(),
+                      ),
+                    ),
+                  ),
+                  _buildSidebarTile(
+                    '📊',
+                    tr('stats'),
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => StatsScreen()),
+                    ).then((_) => _loadStats()),
+                  ),
+                  _buildSidebarTile(
+                    '🔍',
+                    tr('nav_search'),
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            SearchScreen(userProfile: widget.userProfile),
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  const Divider(
+                    color: Colors.white24,
+                    indent: 20,
+                    endIndent: 20,
+                  ),
+                  _buildSidebarTile(
+                    '⚙️',
+                    tr('settings'),
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => SettingsScreen()),
+                    ).then((_) => _loadStats()),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          ),
+
+          // Main Content
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(40),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 900),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header
+                      Text(
+                        _greeting(),
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: context.appText,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _limitReached
+                            ? '${tr('daily_goal_done')} $_todayLearned / $_dailyGoal ${tr('words')} ✓'
+                            : '$_todayLearned / $_dailyGoal ${tr('today_learned')}',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: _limitReached ? Colors.green : context.textMuted,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+
+                      // Review banner
+                      if (_reviewsDue > 0 && !_bannerDismissed)
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: 24),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF3E0),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFFFFB74D)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Text('🔔', style: TextStyle(fontSize: 24)),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '$_reviewsDue ${tr('review_banner_title')}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                        color: Color(0xFF1A1A2E),
+                                      ),
+                                    ),
+                                    Text(
+                                      tr('review_banner_sub'),
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.brown,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              ElevatedButton(
+                                onPressed: () =>
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => ReviewsDueScreen(
+                                          userProfile: widget.userProfile,
+                                        ),
+                                      ),
+                                    ).then((_) {
+                                      setState(() => _bannerDismissed = true);
+                                      _loadStats();
+                                    }),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFFF9800),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Text(tr('start_reviews')),
+                              ),
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: () =>
+                                    setState(() => _bannerDismissed = true),
+                                child: Icon(
+                                  Icons.close,
+                                  color: context.textMuted,
+                                  size: 18,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      // Two column row
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Left column
+                          Expanded(
+                            flex: 3,
+                            child: Column(
+                              children: [
+                                // XP card
+                                GestureDetector(
+                                  onTap: () => showXpLevelSheet(context, _xp),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(20),
+                                    decoration: BoxDecoration(
+                                      color: context.surface,
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: context.cardShadow,
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.center,
+                                          children: [
+                                            Flexible(
+                                              child: Text(
+                                                levelName,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                  color: context.appText,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  '$_xp XP',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    color: context.primary,
+                                                    fontSize: 15,
+                                                  ),
+                                                ),
+                                                if (_freezes > 0) ...[
+                                                  const SizedBox(width: 8),
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 8,
+                                                          vertical: 3,
+                                                        ),
+                                                    decoration: BoxDecoration(
+                                                      color:
+                                                          Colors.blue.shade50,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            8,
+                                                          ),
+                                                    ),
+                                                    child: Text(
+                                                      '🧊 $_freezes',
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        color: Colors
+                                                            .blue
+                                                            .shade700,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 12),
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                          child: LinearProgressIndicator(
+                                            value: levelProgress.clamp(
+                                              0.0,
+                                              1.0,
+                                            ),
+                                            backgroundColor:
+                                                context.border,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                  context.primary,
+                                                ),
+                                            minHeight: 10,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              '$currentLevelMinXP XP',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: context.textMuted,
+                                              ),
+                                            ),
+                                            Text(
+                                              '$nextLevelXP XP',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: context.textMuted,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                _buildSessionCard(context),
+                                const SizedBox(height: 20),
+                                // Stats row
+                                Row(
+                                  children: [
+                                    _buildStatCard(
+                                      context,
+                                      '$_wordsLearned',
+                                      'Words\nLearned',
+                                      () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              WordsLearnedScreen(),
+                                        ),
+                                      ).then((_) => _loadStats()),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    _buildStatCard(
+                                      context,
+                                      '$_streak',
+                                      'Day\nStreak',
+                                      () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              StreakCalendarScreen(),
+                                        ),
+                                      ).then((_) => _loadStats()),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    _buildStatCard(
+                                      context,
+                                      '$_reviewsDue',
+                                      'Reviews\nDue',
+                                      () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              ReviewsDueScreen(
+                                                userProfile: widget.userProfile,
+                                              ),
+                                        ),
+                                      ).then((_) => _loadStats()),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    _buildStatCard(
+                                      context,
+                                      '$_todayLearned/$_dailyGoal',
+                                      'Today\'s\nWords',
+                                      () {},
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 24),
+                          // Right column — Word of the Day
+                          Expanded(
+                            flex: 2,
+                            child: Column(
+                              children: [
+                                if (_wordOfDay != null)
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(24),
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [
+                                          Color(0xFF1A1A2E),
+                                          Color(0xFF16213E),
+                                        ],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 3,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(
+                                              0xFF6C63FF,
+                                            ).withValues(alpha: 0.4),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '✨ ${tr('word_of_day')}',
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.white70,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          _wordOfDay!.word,
+                                          style: const TextStyle(
+                                            fontSize: 26,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          _wordOfDay!.pronunciation,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.white54,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          _wordOfDay!.translation,
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            color: Color(0xFF8B83FF),
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          _wordOfDay!.definition,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.white60,
+                                            height: 1.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSidebarTile(String icon, String label, VoidCallback onTap) {
+    return Material(
+      color: Colors.transparent,
+      child: ListTile(
+        leading: Text(icon, style: const TextStyle(fontSize: 18)),
+        title: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        onTap: onTap,
+        horizontalTitleGap: 4,
+        dense: true,
+      ),
+    );
+  }
+
+  // ─── MOBILE LAYOUT ────────────────────────────────────────────────────────────
+
+  Widget _buildMobileLayout(BuildContext context) {
+    final levelName = StorageService.getLevelName(_xp);
+    final nextLevelXP = StorageService.getNextLevelXP(_xp);
+    final currentLevelMinXP = StorageService.getCurrentLevelMinXP(_xp);
+    final levelProgress = nextLevelXP == currentLevelMinXP
+        ? 1.0
+        : (_xp - currentLevelMinXP) / (nextLevelXP - currentLevelMinXP);
+
+    return Scaffold(
+      backgroundColor: context.bg,
+      drawer: _buildDrawer(context),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: Icon(Icons.menu, color: context.primary),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
+        title: Text(
+          'Lexivo',
+          style: TextStyle(
+            color: context.primary,
+            fontWeight: FontWeight.bold,
+            fontSize: 24,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.search, color: context.primary),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    SearchScreen(userProfile: widget.userProfile),
+              ),
+            ),
+          ),
+          IconButton(
+            icon: Icon(Icons.settings, color: context.primary),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => SettingsScreen()),
+            ).then((_) => _loadStats()),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_reviewsDue > 0 && !_bannerDismissed)
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF3E0),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFFFB74D)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Flexible(
+                            child: Row(
+                              children: [
+                                const Text('🔔', style: TextStyle(fontSize: 20)),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    '$_reviewsDue words due for review!',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                      color: Color(0xFF1A1A2E),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () =>
+                                setState(() => _bannerDismissed = true),
+                            child: const Text(
+                              'Skip →',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Complete your reviews before learning new words for best results.',
+                        style: TextStyle(fontSize: 12, color: Colors.brown),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () =>
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ReviewsDueScreen(
+                                    userProfile: widget.userProfile,
+                                  ),
+                                ),
+                              ).then((_) {
+                                setState(() => _bannerDismissed = true);
+                                _loadStats();
+                              }),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFF9800),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'Start Reviews 🧠',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              Text(
+                _greeting(),
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: context.appText,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _limitReached
+                    ? 'Daily goal complete! $_todayLearned / $_dailyGoal words ✓'
+                    : '$_todayLearned / $_dailyGoal words learned today',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: _limitReached ? Colors.green : context.textMuted,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              GestureDetector(
+                onTap: () => showXpLevelSheet(context, _xp),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: context.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: context.cardShadow,
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              levelName,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                                color: context.appText,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '$_xp XP',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: context.primary,
+                                ),
+                              ),
+                              if (_freezes > 0) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    '🧊 $_freezes',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.blue.shade700,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: levelProgress.clamp(0.0, 1.0),
+                          backgroundColor: context.border,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            context.primary,
+                          ),
+                          minHeight: 8,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '$currentLevelMinXP XP',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: context.textMuted,
+                            ),
+                          ),
+                          Text(
+                            '$nextLevelXP XP',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: context.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              if (_wordOfDay != null)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6C63FF).withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '✨ ${tr('word_of_day')}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.white70,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        _wordOfDay!.word,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _wordOfDay!.pronunciation,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.white54,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _wordOfDay!.translation,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: Color(0xFF8B83FF),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _wordOfDay!.definition,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.white60,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 16),
+
+              _buildSessionCard(context),
+
+              const SizedBox(height: 24),
+              Text(
+                'Your Progress',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: context.appText,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  _buildStatCard(
+                    context,
+                    '$_wordsLearned',
+                    'Words\nLearned',
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => WordsLearnedScreen(),
+                      ),
+                    ).then((_) => _loadStats()),
+                  ),
+                  const SizedBox(width: 12),
+                  _buildStatCard(
+                    context,
+                    '$_streak',
+                    'Day\nStreak',
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => StreakCalendarScreen(),
+                      ),
+                    ).then((_) => _loadStats()),
+                  ),
+                  const SizedBox(width: 12),
+                  _buildStatCard(
+                    context,
+                    '$_reviewsDue',
+                    'Reviews\nDue',
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            ReviewsDueScreen(userProfile: widget.userProfile),
+                      ),
+                    ).then((_) => _loadStats()),
+                  ),
+                  const SizedBox(width: 12),
+                  _buildStatCard(
+                    context,
+                    '$_todayLearned/$_dailyGoal',
+                    'Today\'s\nWords',
+                    () {},
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── SHARED WIDGETS ───────────────────────────────────────────────────────────
+
+  Widget _buildDrawer(BuildContext context) {
+    final levelName = StorageService.getLevelName(_xp);
+
+    return Drawer(
+      backgroundColor: context.surface,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
+                      decoration: const BoxDecoration(color: Color(0xFF6C63FF)),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.pop(context);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => SettingsScreen(),
+                                ),
+                              ).then((_) => _loadStats());
+                            },
+                            child: Stack(
+                              children: [
+                                Container(
+                                  width: 64,
+                                  height: 64,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(32),
+                                    border: Border.all(color: Colors.white30, width: 2),
+                                  ),
+                                  child: _profileImagePath != null
+                                      ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(32),
+                                          child: Image.file(
+                                            File(_profileImagePath!),
+                                            fit: BoxFit.cover,
+                                          ),
+                                        )
+                                      : const Center(
+                                          child: Text(
+                                            '👤',
+                                            style: TextStyle(fontSize: 30),
+                                          ),
+                                        ),
+                                ),
+                                Positioned(
+                                  bottom: 0,
+                                  right: 0,
+                                  child: Container(
+                                    width: 22,
+                                    height: 22,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(11),
+                                    ),
+                                    child: const Icon(
+                                      Icons.edit,
+                                      color: Color(0xFF6C63FF),
+                                      size: 13,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _userName.isNotEmpty
+                                ? _userName
+                                : widget.userProfile.isNotEmpty
+                                ? widget.userProfile
+                                : 'Learner',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Text(
+                                levelName,
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '$_xp XP',
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildDrawerTile(
+                      context,
+                      icon: '⭐',
+                      label: 'Starred Words',
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const StarredWordsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildDrawerTile(
+                      context,
+                      icon: '📖',
+                      label: 'Word Library',
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const WordsLibraryScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildDrawerTile(
+                      context,
+                      icon: '📊',
+                      label: 'Stats',
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => StatsScreen()),
+                        ).then((_) => _loadStats());
+                      },
+                    ),
+                    Divider(indent: 20, endIndent: 20, color: context.border),
+                    _buildDrawerTile(
+                      context,
+                      icon: '⚙️',
+                      label: 'Settings',
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => SettingsScreen()),
+                        ).then((_) => _loadStats());
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text(
+                'Lexivo',
+                style: TextStyle(
+                  color: context.textMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerTile(
+    BuildContext context, {
+    required String icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Text(icon, style: const TextStyle(fontSize: 22)),
+      title: Text(
+        label,
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: context.appText,
+        ),
+      ),
+      onTap: onTap,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      horizontalTitleGap: 8,
+    );
+  }
+
+  Widget _buildSessionCard(BuildContext context) {
+    if (!_limitReached) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: const Color(0xFF6C63FF),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Today's Session",
+              style: TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${_dailyGoal - _todayLearned} Words Remaining',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '$_todayLearned of $_dailyGoal learned',
+              style: const TextStyle(color: Colors.white60, fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _showPomodoroThenPicker,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF6C63FF),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                'Start Learning',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_reviewsDue > 0) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: context.surface2,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: context.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Today's Session",
+              style: TextStyle(color: context.textMuted, fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Daily Limit Reached 🎯',
+              style: TextStyle(
+                color: context.appText,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'You\'ve learned $_todayLearned words today. Come back tomorrow!',
+              style: TextStyle(color: context.textMuted, fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _showLimitReachedDialog,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: context.border,
+                foregroundColor: context.textMuted,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                'Learn anyway',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0F3460), Color(0xFF16213E)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '🎉 All caught up!',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'No reviews due. You\'ve done everything for today!',
+            style: TextStyle(color: Colors.white60, fontSize: 13),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => FreeTimeScreen(
+                  wordOfDay: _wordOfDay,
+                  userProfile: widget.userProfile,
+                ),
+              ),
+            ).then((_) => _loadStats()),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6C63FF),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text(
+              'Free Time Activities ✨',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: _showLimitReachedDialog,
+            child: const Text(
+              'Learn anyway',
+              style: TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard(BuildContext context, String number, String label, VoidCallback onTap) {
+    final isZero = number == '0';
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+          decoration: BoxDecoration(
+            color: context.surface,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: context.cardShadow,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: isZero
+                    ? Text(
+                        '—',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: context.textMuted,
+                        ),
+                      )
+                    : Text(
+                        number,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: context.primary,
+                        ),
+                      ),
+              ),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 10, color: context.textMuted),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+// ─── Starred Words Screen ─────────────────────────────────────────────────────
+
+class StarredWordsScreen extends StatefulWidget {
+  const StarredWordsScreen({super.key});
+
+  @override
+  State<StarredWordsScreen> createState() => _StarredWordsScreenState();
+}
+
+class _StarredWordsScreenState extends State<StarredWordsScreen> {
+  List<Map<String, dynamic>> _starredWords = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStarredWords();
+  }
+
+  Future<void> _loadStarredWords() async {
+    final words = await StorageService.getStarredWords();
+    setState(() {
+      _starredWords = words;
+      _loading = false;
+    });
+  }
+
+  List<List<Map<String, dynamic>>> get _units {
+    final result = <List<Map<String, dynamic>>>[];
+    for (int i = 0; i < _starredWords.length; i += 30) {
+      result.add(_starredWords.sublist(i, (i + 30).clamp(0, _starredWords.length)));
+    }
+    return result;
+  }
+
+  WordItem _toWordItem(Map<String, dynamic> m) => WordItem(
+    word: m['word'] ?? '',
+    partOfSpeech: m['partOfSpeech'] ?? '',
+    pronunciation: m['pronunciation'] ?? '',
+    translation: m['translation'] ?? '',
+    definition: m['definition'] ?? '',
+    example1: m['example1'] ?? '',
+    example2: '',
+    example3: '',
+  );
+
+  void _startLearn(int unitIndex, List<Map<String, dynamic>> unitWords) {
+    final wordDay = WordDay(
+      dayNumber: unitIndex + 1,
+      topic: 'Unit ${unitIndex + 1}',
+      words: unitWords.map(_toWordItem).toList(),
+    );
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => LearningScreen(
+        wordDay: wordDay,
+        userProfile: 'default',
+        collectionName: 'starred_words',
+        noXP: true,
+      ),
+    ));
+  }
+
+  void _startFlashcard(int unitIndex, List<Map<String, dynamic>> unitWords) {
+    final wordDay = WordDay(
+      dayNumber: unitIndex + 1,
+      topic: 'Unit ${unitIndex + 1}',
+      words: unitWords.map(_toWordItem).toList(),
+    );
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => FlashcardSettingsScreen(
+        wordDay: wordDay,
+        userProfile: 'default',
+        collectionName: 'starred_words',
+        noXP: true,
+      ),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final units = _units;
+    return Scaffold(
+      backgroundColor: context.bg,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: context.primary),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Starred Words',
+          style: TextStyle(color: context.appText, fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          if (_starredWords.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Center(
+                child: Text(
+                  '${_starredWords.length} words',
+                  style: TextStyle(fontSize: 13, color: context.textMuted),
+                ),
+              ),
+            ),
+        ],
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _starredWords.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('⭐', style: TextStyle(fontSize: 48)),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No starred words yet',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Star words during flashcard sessions\nto save them here.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: context.textMuted, height: 1.5),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: units.length,
+              itemBuilder: (context, unitIndex) {
+                final unit = units[unitIndex];
+                final isLast = unitIndex == units.length - 1;
+                final isFull = unit.length == 30;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: context.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: context.cardShadow,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Text('⭐', style: TextStyle(fontSize: 20)),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Unit ${unitIndex + 1}',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: context.primaryBg,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              '${unit.length} / 30',
+                              style: TextStyle(fontSize: 12, color: context.primary, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (isLast && !isFull) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          '${30 - unit.length} more to complete this unit',
+                          style: TextStyle(fontSize: 11, color: context.textMuted),
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => _startLearn(unitIndex, unit),
+                              icon: const Icon(Icons.school, size: 16),
+                              label: const Text('Learn'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: context.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                elevation: 0,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _startFlashcard(unitIndex, unit),
+                              icon: const Icon(Icons.style, size: 16),
+                              label: const Text('Flashcard'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: context.primary,
+                                side: BorderSide(color: context.primary),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}
+
+// ─── Collection Picker Overlay ────────────────────────────────────────────────
+
+class _CollectionPickerOverlay extends StatefulWidget {
+  final String userProfile;
+  final Animation<double> animation;
+  const _CollectionPickerOverlay({
+    required this.userProfile,
+    required this.animation,
+  });
+  @override
+  State<_CollectionPickerOverlay> createState() =>
+      _CollectionPickerOverlayState();
+}
+
+class _CollectionPickerOverlayState extends State<_CollectionPickerOverlay>
+    with TickerProviderStateMixin {
+  late List<AnimationController> _cardControllers;
+  late List<Animation<double>> _cardScales;
+  late List<Animation<double>> _cardSlides;
+  String _englishLevel = 'B1';
+
+  final List<Map<String, dynamic>> _collections = [
+    {
+      'icon': '🏆',
+      'name': '30 Days of Powerful Words',
+      'description': 'Essential IELTS vocabulary by topic',
+      'color': const Color(0xFF6C63FF),
+      'collection': thirtyDaysCollection,
+    },
+    {
+      'icon': '💡',
+      'name': '24 Vocabulary Challenge',
+      'description': 'Idioms and phrases for fluent speakers',
+      'color': const Color(0xFFFF6584),
+      'collection': vocabularyChallengeCollection,
+    },
+    {
+      'icon': '🎯',
+      'name': 'Word Mastery',
+      'description': 'High-level C1 & B2 collocations',
+      'color': const Color(0xFF2ECC71),
+      'collection': wordMasteryCollection,
+    },
+  ];
+
+  bool get _isBeginnerLevel => ['A1', 'A2', 'B1'].contains(_englishLevel);
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLevel();
+    _cardControllers = List.generate(
+      _collections.length,
+      (i) => AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 350),
+      ),
+    );
+    _cardScales = _cardControllers
+        .map(
+          (c) => Tween<double>(
+            begin: 0.8,
+            end: 1.0,
+          ).animate(CurvedAnimation(parent: c, curve: Curves.easeOutBack)),
+        )
+        .toList();
+    _cardSlides = _cardControllers
+        .map(
+          (c) => Tween<double>(
+            begin: 60,
+            end: 0,
+          ).animate(CurvedAnimation(parent: c, curve: Curves.easeOut)),
+        )
+        .toList();
+    for (int i = 0; i < _cardControllers.length; i++) {
+      Future.delayed(Duration(milliseconds: 100 + i * 80), () {
+        if (mounted) _cardControllers[i].forward();
+      });
+    }
+  }
+
+  Future<void> _loadLevel() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() => _englishLevel = prefs.getString('english_level') ?? 'B1');
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final c in _cardControllers) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: widget.animation,
+      builder: (context, child) {
+        return Stack(
+          children: [
+            GestureDetector(
+              onTap: () => Navigator.of(context).pop(),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(
+                  sigmaX: 12 * widget.animation.value,
+                  sigmaY: 12 * widget.animation.value,
+                ),
+                child: Container(
+                  color: Colors.black.withValues(
+                    alpha: 0.4 * widget.animation.value,
+                  ),
+                ),
+              ),
+            ),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Transform.translate(
+                offset: Offset(0, 100 * (1 - widget.animation.value)),
+                child: Opacity(
+                  opacity: widget.animation.value,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.85,
+                    ),
+                    child: Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: context.bg,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(28),
+                          topRight: Radius.circular(28),
+                        ),
+                      ),
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 4,
+                              margin: const EdgeInsets.only(bottom: 20),
+                              decoration: BoxDecoration(
+                                color: context.border,
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            Text(
+                              'Choose a Collection',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: context.appText,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+
+                            if (_isBeginnerLevel) ...[
+                              _buildLeveledWordsTile(context),
+                              const SizedBox(height: 8),
+                            ],
+
+                            if (!_isBeginnerLevel)
+                              ...List.generate(_collections.length, (i) {
+                                final item = _collections[i];
+                                return AnimatedBuilder(
+                                  animation: _cardControllers[i],
+                                  builder: (context, child) => Transform.translate(
+                                    offset: Offset(0, _cardSlides[i].value),
+                                    child: Transform.scale(
+                                      scale: _cardScales[i].value,
+                                      child: child,
+                                    ),
+                                  ),
+                                  child: _buildCollectionTile(
+                                    context,
+                                    icon: item['icon'],
+                                    name: item['name'],
+                                    description: item['description'],
+                                    color: item['color'],
+                                    collection: item['collection'],
+                                  ),
+                                );
+                              }),
+
+                            const SizedBox(height: 4),
+                            if (!_isBeginnerLevel) _buildLeveledWordsTile(context),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildLeveledWordsTile(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const LeveledWordsScreen()),
+      ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: _isBeginnerLevel
+              ? const Color(0xFF2ECC71).withValues(alpha: 0.06)
+              : context.surface2,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: _isBeginnerLevel
+                ? const Color(0xFF2ECC71).withValues(alpha: 0.4)
+                : context.border,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: _isBeginnerLevel
+                    ? const Color(0xFF2ECC71).withValues(alpha: 0.1)
+                    : context.surface2,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Center(
+                child: Text('📚', style: TextStyle(fontSize: 26)),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Leveled Words',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: _isBeginnerLevel
+                          ? const Color(0xFF27AE60)
+                          : context.appText,
+                    ),
+                  ),
+                  Text(
+                    'A1 → C2 vocabulary by CEFR level',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _isBeginnerLevel
+                          ? Colors.green.shade400
+                          : context.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 14,
+              color: _isBeginnerLevel
+                  ? const Color(0xFF2ECC71)
+                  : context.textMuted,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCollectionTile(
+    BuildContext context, {
+    required String icon,
+    required String name,
+    required String description,
+    required Color color,
+    required WordCollection collection,
+  }) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => CollectionsScreen(
+            userProfile: widget.userProfile,
+            collection: collection,
+          ),
+        ),
+      ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: context.surface,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.15),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Center(
+                child: Text(icon, style: const TextStyle(fontSize: 26)),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: context.appText,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    description,
+                    style: TextStyle(fontSize: 12, color: context.textMuted),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, size: 14, color: color),
+          ],
+        ),
+      ),
+    );
+  }
+}

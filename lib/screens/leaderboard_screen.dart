@@ -59,7 +59,7 @@ class LeaderboardScreen extends StatefulWidget {
 
 class _LeaderboardScreenState extends State<LeaderboardScreen> {
   List<LeaderboardEntry> _entries = [];
-  List<LeaderboardEntry> _trackedOffBoard = [];
+  List<LeaderboardEntry> _trackedEntries = [];
   bool _loading = true;
   String? _error;
   Set<String> _savedIds = {};
@@ -73,7 +73,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   Future<void> _loadAll() async {
     setState(() { _loading = true; _error = null; });
     await Future.wait([_load(), _loadSaved()]);
-    await _loadTrackedOffBoard();
+    await _loadTrackedUsers();
   }
 
   Future<void> _load() async {
@@ -95,50 +95,51 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     } catch (_) {}
   }
 
-  Future<void> _loadTrackedOffBoard() async {
+  Future<void> _loadTrackedUsers() async {
     if (_savedIds.isEmpty) {
-      if (mounted) setState(() => _trackedOffBoard = []);
+      if (mounted) setState(() => _trackedEntries = []);
       return;
     }
+    // Users already in the leaderboard results
+    final onBoard = _entries.where((e) => _savedIds.contains(e.userId)).toList();
+
+    // Users NOT in the leaderboard — need to fetch separately
     final boardIds = _entries.map((e) => e.userId).toSet();
     final missing = _savedIds.where((id) => !boardIds.contains(id)).toList();
-    if (missing.isEmpty) {
-      if (mounted) setState(() => _trackedOffBoard = []);
-      return;
-    }
-    try {
-      final statsRes = await supabase
-          .from('user_stats')
-          .select('id, xp, streak, last_study_date, today_count, total_learned')
-          .inFilter('id', missing);
-      final statsMap = {for (final r in (statsRes as List)) (r as Map)['id'] as String: r};
+    final offBoard = <LeaderboardEntry>[];
+    if (missing.isNotEmpty) {
+      try {
+        final statsRes = await supabase
+            .from('user_stats')
+            .select('id, xp, streak, last_study_date, today_count, total_learned')
+            .inFilter('id', missing);
+        final statsMap = {for (final r in (statsRes as List)) (r as Map)['id'] as String: r};
 
-      final profileRes = await supabase
-          .from('profiles')
-          .select('id, name, avatar_url')
-          .inFilter('id', missing);
+        final profileRes = await supabase
+            .from('profiles')
+            .select('id, name, avatar_url')
+            .inFilter('id', missing);
 
-      final entries = <LeaderboardEntry>[];
-      for (final p in (profileRes as List)) {
-        final pm = Map<String, dynamic>.from(p as Map);
-        final uid = pm['id'] as String;
-        final s = statsMap[uid] ?? {};
-        entries.add(LeaderboardEntry(
-          userId: uid,
-          name: (pm['name'] as String?) ?? 'Learner',
-          avatarUrl: pm['avatar_url'] as String?,
-          xp: (s['xp'] as num?)?.toInt() ?? 0,
-          streak: (s['streak'] as num?)?.toInt() ?? 0,
-          lastStudyDate: s['last_study_date'] as String?,
-          todayCount: (s['today_count'] as num?)?.toInt() ?? 0,
-          totalLearned: (s['total_learned'] as num?)?.toInt() ?? 0,
-        ));
-      }
-      entries.sort((a, b) => b.xp.compareTo(a.xp));
-      if (mounted) setState(() => _trackedOffBoard = entries);
-    } catch (_) {
-      if (mounted) setState(() => _trackedOffBoard = []);
+        for (final p in (profileRes as List)) {
+          final pm = Map<String, dynamic>.from(p as Map);
+          final uid = pm['id'] as String;
+          final s = statsMap[uid] ?? {};
+          offBoard.add(LeaderboardEntry(
+            userId: uid,
+            name: (pm['name'] as String?) ?? 'Learner',
+            avatarUrl: pm['avatar_url'] as String?,
+            xp: (s['xp'] as num?)?.toInt() ?? 0,
+            streak: (s['streak'] as num?)?.toInt() ?? 0,
+            lastStudyDate: s['last_study_date'] as String?,
+            todayCount: (s['today_count'] as num?)?.toInt() ?? 0,
+            totalLearned: (s['total_learned'] as num?)?.toInt() ?? 0,
+          ));
+        }
+      } catch (_) {}
     }
+
+    final all = [...onBoard, ...offBoard]..sort((a, b) => b.xp.compareTo(a.xp));
+    if (mounted) setState(() => _trackedEntries = all);
   }
 
   Future<void> _toggleSave(String targetId) async {
@@ -152,7 +153,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       } else {
         await supabase.from('saved_users').insert({'user_id': user.id, 'saved_user_id': targetId});
       }
-      await _loadTrackedOffBoard();
+      await _loadTrackedUsers();
     } catch (_) {
       if (mounted) setState(() { isSaved ? _savedIds.add(targetId) : _savedIds.remove(targetId); });
     }
@@ -219,7 +220,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   Widget _buildList() {
     final today = _todayStr;
     final myId = _myId;
-    final tracked = _trackedOffBoard;
+    final tracked = _trackedEntries;
 
     // Build the flat item list so index math is simple
     final items = <Widget>[

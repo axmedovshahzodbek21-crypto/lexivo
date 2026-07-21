@@ -9,7 +9,7 @@ import '../app_theme.dart';
 import '../l10n.dart';
 import 'learning.dart';
 
-enum _Grade { knew, hard, forgot }
+enum _Grade { knew, hard, forgot, skip }
 
 class SRSReviewScreen extends StatefulWidget {
   final List<SRSWord> words;
@@ -39,6 +39,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   // Quiz mode
   late List<List<String>?> _cardChoices;
   String? _tappedChoice;
+  bool _choicesRevealed = false;
   Timer? _autoAdvanceTimer;
 
   int get _knew => _history.where((g) => g == _Grade.knew).length;
@@ -138,6 +139,8 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
         if (_revealed) { _markForgot(); return true; }
       case LogicalKeyboardKey.keyS:
         _speak(_current.word); return true;
+      case LogicalKeyboardKey.keyN:
+        _markSkip(); return true;
       case LogicalKeyboardKey.backspace:
         _goBack(); return true;
     }
@@ -165,12 +168,12 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     }
   }
 
-  void _markKnew() {
+  void _advance(_Grade grade) {
     _autoAdvanceTimer?.cancel();
-    _history.add(_Grade.knew);
+    _history.add(grade);
     _flipCtrl.reset();
     final next = _currentIndex + 1;
-    setState(() { _currentIndex = next; _revealed = false; _cardDx = 0; _tappedChoice = null; });
+    setState(() { _currentIndex = next; _revealed = false; _cardDx = 0; _tappedChoice = null; _choicesRevealed = false; });
     if (next >= _queue.length) {
       _applyGrades();
     } else if (_autoPlay) {
@@ -178,38 +181,17 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     }
   }
 
-  void _markHard() {
-    _autoAdvanceTimer?.cancel();
-    _history.add(_Grade.hard);
-    _flipCtrl.reset();
-    final next = _currentIndex + 1;
-    setState(() { _currentIndex = next; _revealed = false; _cardDx = 0; _tappedChoice = null; });
-    if (next >= _queue.length) {
-      _applyGrades();
-    } else if (_autoPlay) {
-      _speak(_queue[next].word);
-    }
-  }
-
-  void _markForgot() {
-    _autoAdvanceTimer?.cancel();
-    _history.add(_Grade.forgot);
-    _flipCtrl.reset();
-    final next = _currentIndex + 1;
-    setState(() { _currentIndex = next; _revealed = false; _cardDx = 0; _tappedChoice = null; });
-    if (next >= _queue.length) {
-      _applyGrades();
-    } else if (_autoPlay) {
-      _speak(_queue[next].word);
-    }
-  }
+  void _markKnew()   => _advance(_Grade.knew);
+  void _markHard()   => _advance(_Grade.hard);
+  void _markForgot() => _advance(_Grade.forgot);
+  void _markSkip()   => _advance(_Grade.skip);
 
   void _goBack() {
     _autoAdvanceTimer?.cancel();
     if (_history.isEmpty) return;
     _history.removeLast();
     _flipCtrl.reset();
-    setState(() { _currentIndex--; _revealed = false; _cardDx = 0; _tappedChoice = null; });
+    setState(() { _currentIndex--; _revealed = false; _cardDx = 0; _tappedChoice = null; _choicesRevealed = false; });
     if (_autoPlay) _speak(_queue[_currentIndex].word);
   }
 
@@ -226,6 +208,8 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
           await StorageService.addXP(3, reason: 'SRS Review Hard');
         case _Grade.forgot:
           await StorageService.failSRSWord(_queue[i]);
+        case _Grade.skip:
+          break; // no-op — word stays at current stage for future review
       }
     }
     if (_history.isNotEmpty) {
@@ -267,8 +251,8 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     ));
   }
 
-  Future<void> _speak(String text) async {
-    await _tts.setLanguage('en-US');
+  Future<void> _speak(String text, {String locale = 'en-US'}) async {
+    await _tts.setLanguage(locale);
     await _tts.speak(text);
   }
 
@@ -285,6 +269,27 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
         child: Text(
           _stageProgress(_current),
           style: TextStyle(fontSize: 12, color: context.primary, fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
+  }
+
+  Widget _listenButton(String flag, String locale) {
+    return GestureDetector(
+      onTap: () => _speak(_current.word, locale: locale),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.volume_up, color: Colors.white, size: 13),
+            const SizedBox(width: 4),
+            Text(flag, style: const TextStyle(fontSize: 13)),
+          ],
         ),
       ),
     );
@@ -315,23 +320,13 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
                 style: const TextStyle(fontSize: 13, color: Colors.white54, fontStyle: FontStyle.italic)),
           ],
           const SizedBox(height: 8),
-          GestureDetector(
-            onTap: () => _speak(_current.word),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.volume_up, color: Colors.white, size: 14),
-                  const SizedBox(width: 4),
-                  Text(tr('listen'), style: const TextStyle(color: Colors.white, fontSize: 12)),
-                ],
-              ),
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _listenButton('🇺🇸', 'en-US'),
+              const SizedBox(width: 8),
+              _listenButton('🇬🇧', 'en-GB'),
+            ],
           ),
         ],
       ),
@@ -456,54 +451,64 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
           const SizedBox(height: 8),
           _buildStageIndicator(context),
           const SizedBox(height: 12),
-          _buildWordCard(context),
+          GestureDetector(
+            onTap: _choicesRevealed ? null : () => setState(() => _choicesRevealed = true),
+            child: _buildWordCard(context),
+          ),
           const SizedBox(height: 16),
-          if (answered)
-            AnimatedBuilder(
-              animation: _flipAnim,
-              builder: (ctx, child) => Opacity(opacity: _flipAnim.value, child: child),
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: _buildInfoPanel(context),
+          if (!_choicesRevealed)
+            Center(
+              child: Text(tr('tap_to_reveal'),
+                  style: TextStyle(color: context.textMuted, fontSize: 13)),
+            )
+          else ...[
+            if (answered)
+              AnimatedBuilder(
+                animation: _flipAnim,
+                builder: (ctx, child) => Opacity(opacity: _flipAnim.value, child: child),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: _buildInfoPanel(context),
+                ),
               ),
-            ),
-          ...choices.map((c) => Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: _buildChoiceButton(context, c),
-          )),
-          if (answered && _tappedChoice != correct) ...[
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _markForgot,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      side: const BorderSide(color: Colors.red),
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ...choices.map((c) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _buildChoiceButton(context, c),
+            )),
+            if (answered && _tappedChoice != correct) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _markForgot,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: Text(tr('didnt_know'),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                     ),
-                    child: Text(tr('didnt_know'),
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _markHard,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.amber.shade700,
-                      side: BorderSide(color: Colors.amber.shade700),
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _markHard,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.amber.shade700,
+                        side: BorderSide(color: Colors.amber.shade700),
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: const Text('Hard',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                     ),
-                    child: const Text('Hard',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
           ],
           const SizedBox(height: 20),
         ],
@@ -662,6 +667,11 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
                 color: _history.isNotEmpty ? context.primary : context.textMuted),
             tooltip: 'Previous word',
             onPressed: _history.isNotEmpty ? _goBack : null,
+          ),
+          IconButton(
+            icon: Icon(Icons.arrow_forward_ios, size: 18, color: context.primary),
+            tooltip: 'Skip word',
+            onPressed: _markSkip,
           ),
           IconButton(
             icon: Icon(

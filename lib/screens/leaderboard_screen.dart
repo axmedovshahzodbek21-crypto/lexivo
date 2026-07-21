@@ -175,10 +175,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         itemCount: _entries.length + 1,
         itemBuilder: (context, i) {
           if (i == 0) return _buildPodium(today);
-          final entry = _entries[i - 1 + 3 < _entries.length ? i - 1 + 3 : i - 1];
-          // Skip first 3 (shown in podium) if we have >= 3
+          final entry = _entries[i - 1];
           if (_entries.length >= 3 && i <= 3) return const SizedBox.shrink();
-          final rank = i + (_entries.length >= 3 ? 2 : 0);
+          final rank = i;
           final isMe = myId != null && entry.userId == myId;
           final studiedToday = entry.lastStudyDate == today;
           return _buildRow(entry, rank, isMe, studiedToday);

@@ -222,7 +222,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               children: [
                 Container(width: 36, height: 4, decoration: BoxDecoration(color: context.border, borderRadius: BorderRadius.circular(2))),
                 const SizedBox(height: 16),
-                _Avatar(name: entry.name, size: 60),
+                _Avatar(name: entry.name, size: 60, avatarUrl: entry.avatarUrl),
                 const SizedBox(height: 10),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -371,7 +371,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 children: [
                   Text(medals[idx], style: TextStyle(fontSize: isFirst ? 28 : 22)),
                   const SizedBox(height: 6),
-                  _Avatar(name: entry.name, size: isFirst ? 40 : 32),
+                  _Avatar(name: entry.name, size: isFirst ? 40 : 32, avatarUrl: entry.avatarUrl),
                   const SizedBox(height: 6),
                   if (_savedIds.contains(entry.userId))
                     const Text('⭐', style: TextStyle(fontSize: 10)),
@@ -427,7 +427,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             child: Text('$rank', style: TextStyle(fontWeight: FontWeight.bold, color: context.textMuted, fontSize: 13), textAlign: TextAlign.center),
           ),
           const SizedBox(width: 8),
-          _Avatar(name: entry.name, size: 36),
+          _Avatar(name: entry.name, size: 36, avatarUrl: entry.avatarUrl),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -473,11 +473,21 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 class _Avatar extends StatelessWidget {
   final String name;
   final double size;
-  const _Avatar({required this.name, required this.size});
+  final String? avatarUrl;
+  const _Avatar({required this.name, required this.size, this.avatarUrl});
 
   @override
   Widget build(BuildContext context) {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    if (avatarUrl != null && avatarUrl!.isNotEmpty) {
+      return CircleAvatar(
+        radius: size / 2,
+        backgroundColor: context.primary,
+        backgroundImage: NetworkImage(avatarUrl!),
+        onBackgroundImageError: (_, _) {},
+        child: null,
+      );
+    }
     return CircleAvatar(
       radius: size / 2,
       backgroundColor: context.primary,

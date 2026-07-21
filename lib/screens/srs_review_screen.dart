@@ -285,6 +285,17 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
                               color: Colors.white60,
                             ),
                           ),
+                          if (_current.pronunciation.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              _current.pronunciation,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Colors.white54,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 8),
                           GestureDetector(
                             onTap: () => _speak(_current.word),

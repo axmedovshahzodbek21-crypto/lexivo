@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -32,9 +33,19 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   bool _gradesApplied = false;
   double _cardDx = 0;
 
+  // Quiz mode
+  late List<List<String>?> _cardChoices;
+  String? _tappedChoice;
+  Timer? _autoAdvanceTimer;
+
   int get _knew => _history.where((g) => g == _Grade.knew).length;
   int get _hard => _history.where((g) => g == _Grade.hard).length;
   int get _forgot => _history.where((g) => g == _Grade.forgot).length;
+
+  bool get _isQuizMode {
+    if (_currentIndex >= _cardChoices.length) return false;
+    return _cardChoices[_currentIndex] != null;
+  }
 
   late AnimationController _flipCtrl;
   late Animation<double> _flipAnim;
@@ -44,6 +55,11 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     super.initState();
     appLangNotifier.addListener(_onLangChange);
     _queue = List.from(widget.words)..shuffle();
+
+    // Build choices synchronously from queue — covers most cases instantly
+    _cardChoices = List.generate(_queue.length, (i) => _buildChoicesFor(i, {}));
+    // Async fallback: fill any remaining nulls using learned words
+    _fillFallbackChoices();
 
     _flipCtrl = AnimationController(
       vsync: this,
@@ -58,8 +74,44 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     });
   }
 
+  List<String>? _buildChoicesFor(int idx, Set<String> extra) {
+    final correct = _queue[idx].translation;
+    final pool = <String>{};
+    for (int i = 0; i < _queue.length; i++) {
+      if (i != idx) {
+        final t = _queue[i].translation;
+        if (t != correct) pool.add(t);
+      }
+    }
+    if (pool.length < 2) {
+      for (final t in extra) {
+        if (t != correct) pool.add(t);
+        if (pool.length >= 2) break;
+      }
+    }
+    if (pool.length < 2) return null; // fallback: flip mode
+    final wrong = (pool.toList()..shuffle()).take(2).toList();
+    return ([correct, ...wrong]..shuffle());
+  }
+
+  Future<void> _fillFallbackChoices() async {
+    if (_cardChoices.every((c) => c != null)) return;
+    final learned = await StorageService.getLearnedWords();
+    if (!mounted) return;
+    final extra = learned.map((w) => w.translation).toSet();
+    bool changed = false;
+    for (int i = 0; i < _cardChoices.length; i++) {
+      if (_cardChoices[i] == null) {
+        final c = _buildChoicesFor(i, extra);
+        if (c != null) { _cardChoices[i] = c; changed = true; }
+      }
+    }
+    if (changed) setState(() {});
+  }
+
   @override
   void dispose() {
+    _autoAdvanceTimer?.cancel();
     ServicesBinding.instance.keyboard.removeHandler(_handleKey);
     appLangNotifier.removeListener(_onLangChange);
     _flipCtrl.dispose();
@@ -71,10 +123,11 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     switch (event.logicalKey) {
       case LogicalKeyboardKey.space:
       case LogicalKeyboardKey.enter:
-        if (!_revealed) { _reveal(); return true; }
+        if (!_isQuizMode && !_revealed) { _reveal(); return true; }
       case LogicalKeyboardKey.arrowRight:
       case LogicalKeyboardKey.keyK:
-        if (_revealed) { _markKnew(); return true; }
+        if (_revealed && !_isQuizMode) { _markKnew(); return true; }
+        if (_isQuizMode && _tappedChoice == _current.translation) { _markKnew(); return true; }
       case LogicalKeyboardKey.keyH:
         if (_revealed) { _markHard(); return true; }
       case LogicalKeyboardKey.arrowLeft:
@@ -99,11 +152,22 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     _flipCtrl.forward();
   }
 
+  void _onChoiceTapped(String choice) {
+    if (_tappedChoice != null) return;
+    _autoAdvanceTimer?.cancel();
+    setState(() { _tappedChoice = choice; _revealed = true; });
+    _flipCtrl.forward();
+    if (choice == _current.translation) {
+      _autoAdvanceTimer = Timer(const Duration(milliseconds: 1500), _markKnew);
+    }
+  }
+
   void _markKnew() {
+    _autoAdvanceTimer?.cancel();
     _history.add(_Grade.knew);
     _flipCtrl.reset();
     final next = _currentIndex + 1;
-    setState(() { _currentIndex = next; _revealed = false; _cardDx = 0; });
+    setState(() { _currentIndex = next; _revealed = false; _cardDx = 0; _tappedChoice = null; });
     if (next >= _queue.length) {
       _applyGrades();
     } else if (_autoPlay) {
@@ -112,10 +176,11 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   }
 
   void _markHard() {
+    _autoAdvanceTimer?.cancel();
     _history.add(_Grade.hard);
     _flipCtrl.reset();
     final next = _currentIndex + 1;
-    setState(() { _currentIndex = next; _revealed = false; _cardDx = 0; });
+    setState(() { _currentIndex = next; _revealed = false; _cardDx = 0; _tappedChoice = null; });
     if (next >= _queue.length) {
       _applyGrades();
     } else if (_autoPlay) {
@@ -124,10 +189,11 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   }
 
   void _markForgot() {
+    _autoAdvanceTimer?.cancel();
     _history.add(_Grade.forgot);
     _flipCtrl.reset();
     final next = _currentIndex + 1;
-    setState(() { _currentIndex = next; _revealed = false; _cardDx = 0; });
+    setState(() { _currentIndex = next; _revealed = false; _cardDx = 0; _tappedChoice = null; });
     if (next >= _queue.length) {
       _applyGrades();
     } else if (_autoPlay) {
@@ -136,10 +202,11 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   }
 
   void _goBack() {
+    _autoAdvanceTimer?.cancel();
     if (_history.isEmpty) return;
     _history.removeLast();
     _flipCtrl.reset();
-    setState(() { _currentIndex--; _revealed = false; _cardDx = 0; });
+    setState(() { _currentIndex--; _revealed = false; _cardDx = 0; _tappedChoice = null; });
     if (_autoPlay) _speak(_queue[_currentIndex].word);
   }
 
@@ -164,14 +231,353 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     }
   }
 
-  String _stageProgress(SRSWord word) {
-    return 'Stage ${word.reviewStage + 1} of 4';
-  }
+  String _stageProgress(SRSWord word) => 'Stage ${word.reviewStage + 1} of 4';
 
   Future<void> _speak(String text) async {
     await _tts.setLanguage('en-US');
     await _tts.speak(text);
   }
+
+  // ── Build helpers ─────────────────────────────────────────────────────────
+
+  Widget _buildStageIndicator(BuildContext context) {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: context.primaryBg,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          _stageProgress(_current),
+          style: TextStyle(fontSize: 12, color: context.primary, fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWordCard(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: 200,
+      decoration: BoxDecoration(
+        color: context.primary,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [BoxShadow(color: context.primary.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 8))],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            _current.word,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          const SizedBox(height: 8),
+          Text(_current.partOfSpeech, style: const TextStyle(fontSize: 14, color: Colors.white60)),
+          if (_current.pronunciation.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(_current.pronunciation,
+                style: const TextStyle(fontSize: 13, color: Colors.white54, fontStyle: FontStyle.italic)),
+          ],
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () => _speak(_current.word),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.volume_up, color: Colors.white, size: 14),
+                  const SizedBox(width: 4),
+                  Text(tr('listen'), style: const TextStyle(color: Colors.white, fontSize: 12)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoPanel(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: context.surface,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [...context.cardShadow],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _current.translation,
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: context.appText),
+          ),
+          const SizedBox(height: 8),
+          Text(_current.definition,
+              style: TextStyle(fontSize: 14, color: context.textMuted, height: 1.5)),
+          ...[_current.example1, _current.example2, _current.example3]
+              .where((e) => e.isNotEmpty)
+              .map((e) => Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: context.primaryBg,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(e,
+                      style: TextStyle(
+                          fontSize: 13, color: context.appText,
+                          fontStyle: FontStyle.italic, height: 1.5)),
+                ),
+              )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChoiceButton(BuildContext context, String choice) {
+    final answered = _tappedChoice != null;
+    final isCorrect = choice == _current.translation;
+    final isTapped = choice == _tappedChoice;
+
+    final Color border;
+    final Color text;
+    final Color bg;
+
+    if (!answered) {
+      border = context.border;
+      text = context.appText;
+      bg = context.surface;
+    } else if (isCorrect) {
+      border = Colors.green;
+      text = Colors.white;
+      bg = Colors.green;
+    } else if (isTapped) {
+      border = Colors.red;
+      text = Colors.white;
+      bg = Colors.red;
+    } else {
+      border = context.border;
+      text = context.textMuted;
+      bg = context.surface;
+    }
+
+    return GestureDetector(
+      onTap: answered ? null : () => _onChoiceTapped(choice),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          color: bg,
+          border: Border.all(color: border, width: 2),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Text(
+          choice,
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: text),
+        ),
+      ),
+    );
+  }
+
+  // ── Quiz body ─────────────────────────────────────────────────────────────
+
+  Widget _buildQuizBody(BuildContext context) {
+    final choices = _cardChoices[_currentIndex]!;
+    final answered = _tappedChoice != null;
+    final correct = _current.translation;
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: 8),
+          _buildStageIndicator(context),
+          const SizedBox(height: 12),
+          _buildWordCard(context),
+          const SizedBox(height: 16),
+          if (answered)
+            AnimatedBuilder(
+              animation: _flipAnim,
+              builder: (ctx, child) => Opacity(opacity: _flipAnim.value, child: child),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _buildInfoPanel(context),
+              ),
+            ),
+          ...choices.map((c) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _buildChoiceButton(context, c),
+          )),
+          if (answered && _tappedChoice != correct) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _markForgot,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: Text(tr('didnt_know'),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _markHard,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.amber.shade700,
+                      side: BorderSide(color: Colors.amber.shade700),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: const Text('Hard',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  // ── Flip body (fallback when <2 distractors available) ───────────────────
+
+  Widget _buildFlipBody(BuildContext context) {
+    return Column(
+      children: [
+        const SizedBox(height: 8),
+        _buildStageIndicator(context),
+        const SizedBox(height: 12),
+        GestureDetector(
+          onTap: _reveal,
+          onHorizontalDragUpdate: _revealed
+              ? (d) => setState(() => _cardDx += d.delta.dx)
+              : null,
+          onHorizontalDragEnd: _revealed
+              ? (d) {
+                  if (_cardDx > 80) { _markKnew(); }
+                  else if (_cardDx < -80) { _markForgot(); }
+                  else { setState(() => _cardDx = 0); }
+                }
+              : null,
+          child: Transform.translate(
+            offset: Offset(_cardDx, 0),
+            child: Stack(
+              children: [
+                _buildWordCard(context),
+                if (_revealed && _cardDx > 20)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: (_cardDx / 200).clamp(0.0, 0.75)),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: const Center(
+                        child: Text('✓  KNEW',
+                            style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ),
+                if (_revealed && _cardDx < -20)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: (-_cardDx / 200).clamp(0.0, 0.75)),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: const Center(
+                        child: Text('✗  FORGOT',
+                            style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (!_revealed)
+          Text(tr('tap_to_reveal'), style: TextStyle(color: context.textMuted, fontSize: 13))
+        else
+          AnimatedBuilder(
+            animation: _flipAnim,
+            builder: (ctx, child) => Opacity(opacity: _flipAnim.value, child: child),
+            child: _buildInfoPanel(context),
+          ),
+        const Spacer(),
+        if (_revealed) ...[
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _markForgot,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: Text(tr('didnt_know'),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _markHard,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.amber.shade700,
+                    side: BorderSide(color: Colors.amber.shade700),
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: const Text('Hard',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _markKnew,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: Text(tr('know_it'),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                ),
+              ),
+            ],
+          ),
+        ],
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  // ── Main build ────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -188,6 +594,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
         leading: IconButton(
           icon: Icon(Icons.close, color: context.primary),
           onPressed: () async {
+            _autoAdvanceTimer?.cancel();
             final nav = Navigator.of(context);
             await _applyGrades();
             nav.pop();
@@ -195,19 +602,13 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
         ),
         title: Text(
           '${_currentIndex + 1} / $total',
-          style: TextStyle(
-            color: context.appText,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: context.appText, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: Icon(
-              Icons.arrow_back_ios,
-              size: 18,
-              color: _history.isNotEmpty ? context.primary : context.textMuted,
-            ),
+            icon: Icon(Icons.arrow_back_ios, size: 18,
+                color: _history.isNotEmpty ? context.primary : context.textMuted),
             tooltip: 'Previous word',
             onPressed: _history.isNotEmpty ? _goBack : null,
           ),
@@ -225,10 +626,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
             child: Center(
               child: Text(
                 '✓$_knew  ~$_hard  ✗$_forgot',
-                style: const TextStyle(
-                  color: Colors.green,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
               ),
             ),
           ),
@@ -245,272 +643,17 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  const SizedBox(height: 8),
-
-                  // Stage indicator
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: context.primaryBg,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      _stageProgress(_current),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: context.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Word card — tap to reveal, swipe to grade (after reveal)
-                  GestureDetector(
-                    onTap: _reveal,
-                    onHorizontalDragUpdate: _revealed
-                        ? (d) => setState(() => _cardDx += d.delta.dx)
-                        : null,
-                    onHorizontalDragEnd: _revealed
-                        ? (d) {
-                            if (_cardDx > 80) {
-                              _markKnew();
-                            } else if (_cardDx < -80) {
-                              _markForgot();
-                            } else {
-                              setState(() => _cardDx = 0);
-                            }
-                          }
-                        : null,
-                    child: Transform.translate(
-                      offset: Offset(_cardDx, 0),
-                      child: Stack(
-                        children: [
-                          Container(
-                            width: double.infinity,
-                            height: 200,
-                            decoration: BoxDecoration(
-                              color: context.primary,
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: context.primary.withValues(alpha: 0.3),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  _current.word,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  _current.partOfSpeech,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.white60,
-                                  ),
-                                ),
-                                if (_current.pronunciation.isNotEmpty) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _current.pronunciation,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.white54,
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
-                                ],
-                                const SizedBox(height: 8),
-                                GestureDetector(
-                                  onTap: () => _speak(_current.word),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.2),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(Icons.volume_up, color: Colors.white, size: 14),
-                                        const SizedBox(width: 4),
-                                        Text(tr('listen'), style: const TextStyle(color: Colors.white, fontSize: 12)),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          // Swipe overlay
-                          if (_revealed && _cardDx > 20)
-                            Positioned.fill(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withValues(alpha: (_cardDx / 200).clamp(0.0, 0.75)),
-                                  borderRadius: BorderRadius.circular(24),
-                                ),
-                                child: const Center(
-                                  child: Text('✓  KNEW', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
-                                ),
-                              ),
-                            ),
-                          if (_revealed && _cardDx < -20)
-                            Positioned.fill(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.red.withValues(alpha: (-_cardDx / 200).clamp(0.0, 0.75)),
-                                  borderRadius: BorderRadius.circular(24),
-                                ),
-                                child: const Center(
-                                  child: Text('✗  FORGOT', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  if (!_revealed)
-                    Text(
-                      tr('tap_to_reveal'),
-                      style: TextStyle(color: context.textMuted, fontSize: 13),
-                    )
-                  else
-                    AnimatedBuilder(
-                      animation: _flipAnim,
-                      builder: (context, child) =>
-                          Opacity(opacity: _flipAnim.value, child: child),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: context.surface,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [...context.cardShadow],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _current.translation,
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: context.appText,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _current.definition,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: context.textMuted,
-                                height: 1.5,
-                              ),
-                            ),
-                            ...[_current.example1, _current.example2, _current.example3]
-                                .where((e) => e.isNotEmpty)
-                                .map((e) => Padding(
-                                  padding: const EdgeInsets.only(top: 10),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: context.primaryBg,
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Text(
-                                      e,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: context.appText,
-                                        fontStyle: FontStyle.italic,
-                                        height: 1.5,
-                                      ),
-                                    ),
-                                  ),
-                                )),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                  const Spacer(),
-
-                  if (_revealed) ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: _markForgot,
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.red,
-                              side: const BorderSide(color: Colors.red),
-                              padding: const EdgeInsets.symmetric(vertical: 18),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            ),
-                            child: Text(tr('didnt_know'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: _markHard,
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.amber.shade700,
-                              side: BorderSide(color: Colors.amber.shade700),
-                              padding: const EdgeInsets.symmetric(vertical: 18),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            ),
-                            child: const Text('Hard', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _markKnew,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 18),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            ),
-                            child: Text(tr('know_it'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                  const SizedBox(height: 20),
-                ],
-              ),
+              child: _isQuizMode
+                  ? _buildQuizBody(context)
+                  : _buildFlipBody(context),
             ),
           ),
         ],
       ),
     );
   }
+
+  // ── Finish screen ─────────────────────────────────────────────────────────
 
   Widget _buildFinish(BuildContext context) {
     final total = _knew + _hard + _forgot;
@@ -527,19 +670,11 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
               const SizedBox(height: 20),
               Text(
                 tr('srs_complete'),
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: context.appText,
-                ),
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: context.appText),
               ),
               const SizedBox(height: 16),
-
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 16,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 decoration: BoxDecoration(
                   color: context.primaryBg,
                   borderRadius: BorderRadius.circular(16),
@@ -555,7 +690,6 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
                 ),
               ),
               const SizedBox(height: 16),
-
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -569,10 +703,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
                     Expanded(
                       child: Text(
                         'All words scheduled for their next review. Keep studying daily to master them all!',
-                        style: TextStyle(
-                          color: Colors.blue.shade700,
-                          fontSize: 13,
-                        ),
+                        style: TextStyle(color: Colors.blue.shade700, fontSize: 13),
                       ),
                     ),
                   ],
@@ -587,9 +718,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
                     backgroundColor: context.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                   child: Text(
                     tr('back_to_reviews'),
@@ -607,14 +736,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   Widget _buildStat(BuildContext context, String value, String label, Color color) {
     return Column(
       children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
+        Text(value, style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: color)),
         Text(label, style: TextStyle(fontSize: 12, color: context.textMuted)),
       ],
     );

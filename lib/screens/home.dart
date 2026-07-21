@@ -1632,11 +1632,20 @@ class StarredWordsScreen extends StatefulWidget {
 class _StarredWordsScreenState extends State<StarredWordsScreen> {
   List<Map<String, dynamic>> _starredWords = [];
   bool _loading = true;
+  String _search = '';
+  final Set<String> _expanded = {};
+  final TextEditingController _searchCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadStarredWords();
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _loadStarredWords() async {
@@ -1645,6 +1654,23 @@ class _StarredWordsScreenState extends State<StarredWordsScreen> {
       _starredWords = words;
       _loading = false;
     });
+  }
+
+  Future<void> _unstar(Map<String, dynamic> w) async {
+    await StorageService.removeStarredWord(
+      w['word'] as String,
+      w['collectionName'] as String? ?? '',
+    );
+    await _loadStarredWords();
+  }
+
+  List<Map<String, dynamic>> get _filtered {
+    final q = _search.trim().toLowerCase();
+    if (q.isEmpty) return _starredWords;
+    return _starredWords.where((w) {
+      return (w['word'] as String? ?? '').toLowerCase().contains(q) ||
+          (w['translation'] as String? ?? '').toLowerCase().contains(q);
+    }).toList();
   }
 
   List<List<Map<String, dynamic>>> get _units {
@@ -1701,6 +1727,9 @@ class _StarredWordsScreenState extends State<StarredWordsScreen> {
   @override
   Widget build(BuildContext context) {
     final units = _units;
+    final isSearching = _search.trim().isNotEmpty;
+    final filtered = _filtered;
+
     return Scaffold(
       backgroundColor: context.bg,
       appBar: AppBar(
@@ -1742,98 +1771,283 @@ class _StarredWordsScreenState extends State<StarredWordsScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Star words during flashcard sessions\nto save them here.',
+                    'Star words during learning sessions\nto save them here.',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 14, color: context.textMuted, height: 1.5),
                   ),
                 ],
               ),
             )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: units.length,
-              itemBuilder: (context, unitIndex) {
-                final unit = units[unitIndex];
-                final isLast = unitIndex == units.length - 1;
-                final isFull = unit.length == 30;
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: context.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: context.cardShadow,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Text('⭐', style: TextStyle(fontSize: 20)),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Unit ${unitIndex + 1}',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText),
-                          ),
-                          const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: context.primaryBg,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              '${unit.length} / 30',
-                              style: TextStyle(fontSize: 12, color: context.primary, fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (isLast && !isFull) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          '${30 - unit.length} more to complete this unit',
-                          style: TextStyle(fontSize: 11, color: context.textMuted),
+          : Column(
+              children: [
+                // Search bar
+                if (_starredWords.length > 4)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    child: TextField(
+                      controller: _searchCtrl,
+                      onChanged: (v) => setState(() => _search = v),
+                      decoration: InputDecoration(
+                        hintText: 'Search words...',
+                        hintStyle: TextStyle(color: context.textMuted),
+                        prefixIcon: Icon(Icons.search, color: context.textMuted, size: 20),
+                        suffixIcon: _search.isNotEmpty
+                            ? IconButton(
+                                icon: Icon(Icons.clear, color: context.textMuted, size: 18),
+                                onPressed: () {
+                                  _searchCtrl.clear();
+                                  setState(() => _search = '');
+                                },
+                              )
+                            : null,
+                        filled: true,
+                        fillColor: context.surface,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: context.border),
                         ),
-                      ],
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () => _startLearn(unitIndex, unit),
-                              icon: const Icon(Icons.school, size: 16),
-                              label: const Text('Learn'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: context.primary,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                elevation: 0,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => _startFlashcard(unitIndex, unit),
-                              icon: const Icon(Icons.style, size: 16),
-                              label: const Text('Flashcard'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: context.primary,
-                                side: BorderSide(color: context.primary),
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              ),
-                            ),
-                          ),
-                        ],
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: context.border),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: context.primary),
+                        ),
                       ),
-                    ],
+                    ),
                   ),
-                );
-              },
+                // List
+                Expanded(
+                  child: isSearching
+                      ? filtered.isEmpty
+                          ? Center(
+                              child: Text(
+                                'No results for "$_search"',
+                                style: TextStyle(color: context.textMuted),
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                              itemCount: filtered.length,
+                              itemBuilder: (context, i) => _WordCard(
+                                word: filtered[i],
+                                isExpanded: _expanded.contains(filtered[i]['word']),
+                                onToggle: () => setState(() {
+                                  final w = filtered[i]['word'] as String;
+                                  if (_expanded.contains(w)) {
+                                    _expanded.remove(w);
+                                  } else {
+                                    _expanded.add(w);
+                                  }
+                                }),
+                                onUnstar: () => _unstar(filtered[i]),
+                              ),
+                            )
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          itemCount: units.length,
+                          itemBuilder: (context, unitIndex) {
+                            final unit = units[unitIndex];
+                            final isLast = unitIndex == units.length - 1;
+                            final isFull = unit.length == 30;
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: context.surface,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: context.cardShadow,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Text('⭐', style: TextStyle(fontSize: 20)),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Unit ${unitIndex + 1}',
+                                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText),
+                                      ),
+                                      const Spacer(),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: context.primaryBg,
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                        child: Text(
+                                          '${unit.length} / 30',
+                                          style: TextStyle(fontSize: 12, color: context.primary, fontWeight: FontWeight.w600),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (isLast && !isFull) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${30 - unit.length} more to complete this unit',
+                                      style: TextStyle(fontSize: 11, color: context.textMuted),
+                                    ),
+                                  ],
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: ElevatedButton.icon(
+                                          onPressed: () => _startLearn(unitIndex, unit),
+                                          icon: const Icon(Icons.school, size: 16),
+                                          label: const Text('Learn'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: context.primary,
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(vertical: 10),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                            elevation: 0,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: OutlinedButton.icon(
+                                          onPressed: () => _startFlashcard(unitIndex, unit),
+                                          icon: const Icon(Icons.style, size: 16),
+                                          label: const Text('Flashcard'),
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: context.primary,
+                                            side: BorderSide(color: context.primary),
+                                            padding: const EdgeInsets.symmetric(vertical: 10),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
             ),
+    );
+  }
+}
+
+class _WordCard extends StatelessWidget {
+  final Map<String, dynamic> word;
+  final bool isExpanded;
+  final VoidCallback onToggle;
+  final VoidCallback onUnstar;
+
+  const _WordCard({
+    required this.word,
+    required this.isExpanded,
+    required this.onToggle,
+    required this.onUnstar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final w = word['word'] as String? ?? '';
+    final pos = word['partOfSpeech'] as String? ?? '';
+    final pron = word['pronunciation'] as String? ?? '';
+    final trans = word['translation'] as String? ?? '';
+    final def = word['definition'] as String? ?? '';
+    final ex = word['example1'] as String? ?? '';
+    final col = word['collectionName'] as String? ?? '';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: context.surface,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: context.cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 8, 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: onToggle,
+                    behavior: HitTestBehavior.opaque,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(w, style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: context.appText)),
+                            if (pos.isNotEmpty) ...[
+                              const SizedBox(width: 6),
+                              Text(pos, style: TextStyle(fontSize: 12, color: context.textMuted, fontStyle: FontStyle.italic)),
+                            ],
+                          ],
+                        ),
+                        if (pron.isNotEmpty)
+                          Text(pron, style: TextStyle(fontSize: 12, color: context.textMuted)),
+                        const SizedBox(height: 2),
+                        Text(trans, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: context.primary)),
+                      ],
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.star, color: Colors.amber, size: 20),
+                  onPressed: onUnstar,
+                  tooltip: 'Remove from starred',
+                ),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: onToggle,
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+              child: Text(
+                isExpanded ? 'Show less ▲' : 'Show more ▼',
+                style: TextStyle(fontSize: 12, color: context.primary, fontWeight: FontWeight.w500),
+              ),
+            ),
+          ),
+          if (isExpanded) ...[
+            Divider(height: 1, color: context.border),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (def.isNotEmpty) ...[
+                    Text(def, style: TextStyle(fontSize: 13, color: context.appText, height: 1.4)),
+                    const SizedBox(height: 8),
+                  ],
+                  if (ex.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: context.surface2,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text('"$ex"', style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: context.appText)),
+                    ),
+                  if (col.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(col, style: TextStyle(fontSize: 11, color: context.textMuted)),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

@@ -47,6 +47,8 @@ class SRSWord {
   final String translation;
   final String definition;
   final String example1;
+  final String example2;
+  final String example3;
   final String partOfSpeech;
   final String pronunciation;
   final String collectionName;
@@ -63,6 +65,8 @@ class SRSWord {
     required this.translation,
     required this.definition,
     required this.example1,
+    this.example2 = '',
+    this.example3 = '',
     required this.partOfSpeech,
     required this.pronunciation,
     required this.collectionName,
@@ -108,56 +112,24 @@ class SRSWord {
     }
   }
 
+  SRSWord _copyWith({required int reviewStage, required String nextReviewDate}) => SRSWord(
+    word: word, translation: translation, definition: definition,
+    example1: example1, example2: example2, example3: example3,
+    partOfSpeech: partOfSpeech, pronunciation: pronunciation,
+    collectionName: collectionName, unitTopic: unitTopic, dayNumber: dayNumber,
+    reviewStage: reviewStage, nextReviewDate: nextReviewDate, learnedDate: learnedDate,
+  );
+
   SRSWord dropStage() {
     final newStage = (reviewStage - 1).clamp(0, 3);
-    return SRSWord(
-      word: word,
-      translation: translation,
-      definition: definition,
-      example1: example1,
-      partOfSpeech: partOfSpeech,
-      pronunciation: pronunciation,
-      collectionName: collectionName,
-      unitTopic: unitTopic,
-      dayNumber: dayNumber,
-      reviewStage: newStage,
-      nextReviewDate: _nextDateFromNow(_intervals[newStage]),
-      learnedDate: learnedDate,
-    );
+    return _copyWith(reviewStage: newStage, nextReviewDate: _nextDateFromNow(_intervals[newStage]));
   }
 
   SRSWord advanceStage() {
     final newStage = reviewStage + 1;
-    if (newStage >= 4) {
-      return SRSWord(
-        word: word,
-        translation: translation,
-        definition: definition,
-        example1: example1,
-        partOfSpeech: partOfSpeech,
-        pronunciation: pronunciation,
-        collectionName: collectionName,
-        unitTopic: unitTopic,
-        dayNumber: dayNumber,
-        reviewStage: 4,
-        nextReviewDate: '9999-12-31',
-        learnedDate: learnedDate,
-      );
-    }
-    return SRSWord(
-      word: word,
-      translation: translation,
-      definition: definition,
-      example1: example1,
-      partOfSpeech: partOfSpeech,
-      pronunciation: pronunciation,
-      collectionName: collectionName,
-      unitTopic: unitTopic,
-      dayNumber: dayNumber,
-      reviewStage: newStage,
-      nextReviewDate: _nextDateFromNow(_intervals[newStage]),
-      learnedDate: learnedDate,
-    );
+    return newStage >= 4
+        ? _copyWith(reviewStage: 4, nextReviewDate: '9999-12-31')
+        : _copyWith(reviewStage: newStage, nextReviewDate: _nextDateFromNow(_intervals[newStage]));
   }
 
   Map<String, dynamic> toJson() => {
@@ -166,6 +138,8 @@ class SRSWord {
     'translation': translation,
     'definition': definition,
     'example1': example1,
+    'example2': example2,
+    'example3': example3,
     'partOfSpeech': partOfSpeech,
     'pronunciation': pronunciation,
     'collectionName': collectionName,
@@ -181,6 +155,8 @@ class SRSWord {
     translation: json['translation'],
     definition: json['definition'] ?? '',
     example1: json['example1'] ?? '',
+    example2: json['example2'] ?? '',
+    example3: json['example3'] ?? '',
     partOfSpeech: json['partOfSpeech'] ?? '',
     pronunciation: json['pronunciation'] ?? '',
     collectionName: json['collectionName'] ?? '',
@@ -196,8 +172,8 @@ class SRSWord {
     translation: translation,
     definition: definition,
     example1: example1,
-    example2: '',
-    example3: '',
+    example2: example2,
+    example3: example3,
     partOfSpeech: partOfSpeech,
     pronunciation: pronunciation,
   );
@@ -770,6 +746,8 @@ class StorageService {
             translation: w.translation,
             definition: w.definition,
             example1: w.example1,
+            example2: w.example2,
+            example3: w.example3,
             partOfSpeech: w.partOfSpeech,
             pronunciation: w.pronunciation,
             collectionName: collectionName,

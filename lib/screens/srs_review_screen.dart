@@ -361,24 +361,27 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
                                 height: 1.5,
                               ),
                             ),
-                            if (_current.example1.isNotEmpty) ...[
-                              const SizedBox(height: 12),
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: context.primaryBg,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  _current.example1,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: context.appText,
-                                    height: 1.5,
+                            ...[_current.example1, _current.example2, _current.example3]
+                                .where((e) => e.isNotEmpty)
+                                .map((e) => Padding(
+                                  padding: const EdgeInsets.only(top: 10),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: context.primaryBg,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      e,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: context.appText,
+                                        fontStyle: FontStyle.italic,
+                                        height: 1.5,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
-                            ],
+                                )),
                           ],
                         ),
                       ),

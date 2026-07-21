@@ -225,40 +225,61 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     // Build the flat item list so index math is simple
     final items = <Widget>[
       _buildPodium(today),
-      // Tracked-off-board section
-      if (tracked.isNotEmpty) ...[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(4, 12, 4, 6),
+      // Tracking section — always visible
+      Padding(
+        padding: const EdgeInsets.fromLTRB(4, 12, 4, 6),
+        child: Row(
+          children: [
+            const Text('⭐', style: TextStyle(fontSize: 14)),
+            const SizedBox(width: 6),
+            Text(
+              'Tracking',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.5),
+            ),
+          ],
+        ),
+      ),
+      if (tracked.isEmpty)
+        Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: context.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: context.border),
+          ),
           child: Row(
             children: [
-              const Text('⭐', style: TextStyle(fontSize: 14)),
-              const SizedBox(width: 6),
-              Text(
-                'Tracking',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.5),
+              Text('☆', style: TextStyle(fontSize: 18, color: context.textMuted)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Tap ⭐ on any user to track them here',
+                  style: TextStyle(fontSize: 13, color: context.textMuted),
+                ),
               ),
             ],
           ),
-        ),
+        )
+      else
         ...tracked.map((e) {
           final isMe = myId != null && e.userId == myId;
           final studiedToday = e.lastStudyDate == today;
           return _buildTrackedRow(e, isMe, studiedToday);
         }),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
-          child: Row(
-            children: [
-              Expanded(child: Divider(color: context.border)),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Text('Leaderboard', style: TextStyle(fontSize: 12, color: context.textMuted)),
-              ),
-              Expanded(child: Divider(color: context.border)),
-            ],
-          ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
+        child: Row(
+          children: [
+            Expanded(child: Divider(color: context.border)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text('Leaderboard', style: TextStyle(fontSize: 12, color: context.textMuted)),
+            ),
+            Expanded(child: Divider(color: context.border)),
+          ],
         ),
-      ],
+      ),
       // Main leaderboard rows (skip podium positions)
       for (int i = 1; i <= _entries.length; i++) ...[
         if (!(_entries.length >= 3 && i <= 3)) () {

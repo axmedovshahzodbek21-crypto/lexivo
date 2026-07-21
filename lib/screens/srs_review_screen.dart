@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../data/storage_service.dart';
 import '../app_theme.dart';
@@ -24,6 +25,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   late List<SRSWord> _queue;
   int _currentIndex = 0;
   bool _revealed = false;
+  bool _autoPlay = true;
   int _knew = 0;
   int _forgot = 0;
 
@@ -34,25 +36,45 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   void initState() {
     super.initState();
     appLangNotifier.addListener(_onLangChange);
-    // Sort by oldest due date first — priority queue
-    _queue = List.from(widget.words);
-    _queue.sort((a, b) => a.nextReviewDate.compareTo(b.nextReviewDate));
+    _queue = List.from(widget.words)..shuffle();
 
     _flipCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-    _flipAnim = Tween<double>(
-      begin: 0,
-      end: 1,
-    ).animate(CurvedAnimation(parent: _flipCtrl, curve: Curves.easeInOut));
+    _flipAnim = Tween<double>(begin: 0, end: 1)
+        .animate(CurvedAnimation(parent: _flipCtrl, curve: Curves.easeInOut));
+
+    ServicesBinding.instance.keyboard.addHandler(_handleKey);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_autoPlay && _queue.isNotEmpty) _speak(_queue[0].word);
+    });
   }
 
   @override
   void dispose() {
+    ServicesBinding.instance.keyboard.removeHandler(_handleKey);
     appLangNotifier.removeListener(_onLangChange);
     _flipCtrl.dispose();
     super.dispose();
+  }
+
+  bool _handleKey(KeyEvent event) {
+    if (event is! KeyDownEvent || _isFinished) return false;
+    switch (event.logicalKey) {
+      case LogicalKeyboardKey.space:
+      case LogicalKeyboardKey.enter:
+        if (!_revealed) { _reveal(); return true; }
+      case LogicalKeyboardKey.arrowRight:
+      case LogicalKeyboardKey.keyK:
+        if (_revealed) { _markKnew(); return true; }
+      case LogicalKeyboardKey.arrowLeft:
+      case LogicalKeyboardKey.keyJ:
+        if (_revealed) { _markForgot(); return true; }
+      case LogicalKeyboardKey.keyS:
+        _speak(_current.word); return true;
+    }
+    return false;
   }
 
   void _onLangChange() { if (mounted) setState(() {}); }
@@ -74,6 +96,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     _knew++;
     _flipCtrl.reset();
     setState(() { _currentIndex++; _revealed = false; });
+    if (!_isFinished && _autoPlay) _speak(_queue[_currentIndex].word);
   }
 
   Future<void> _markForgot() async {
@@ -82,6 +105,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     _forgot++;
     _flipCtrl.reset();
     setState(() { _currentIndex++; _revealed = false; });
+    if (!_isFinished && _autoPlay) _speak(_queue[_currentIndex].word);
   }
 
   String _stageProgress(SRSWord word) {
@@ -118,6 +142,15 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
         ),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: Icon(
+              _autoPlay ? Icons.volume_up : Icons.volume_off,
+              color: _autoPlay ? context.primary : context.textMuted,
+              size: 20,
+            ),
+            tooltip: _autoPlay ? 'Auto-play on' : 'Auto-play off',
+            onPressed: () => setState(() => _autoPlay = !_autoPlay),
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Center(

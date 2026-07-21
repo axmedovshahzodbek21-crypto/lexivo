@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../data/storage_service.dart';
+import '../data/word_data.dart';
+import '../services/content_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
+import 'learning.dart';
 
 enum _Grade { knew, hard, forgot }
 
@@ -233,6 +236,37 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
 
   String _stageProgress(SRSWord word) => 'Stage ${word.reviewStage + 1} of 4';
 
+  WordCollection? _collectionFor(SRSWord word) {
+    final name = word.collectionName;
+    if (name == ContentService.a1.name) return ContentService.a1;
+    if (name == ContentService.a2.name) return ContentService.a2;
+    if (name == ContentService.b1.name) return ContentService.b1;
+    if (name == ContentService.advanced.name) return ContentService.advanced;
+    return null;
+  }
+
+  void _openInUnit() {
+    final word = _current;
+    final col = _collectionFor(word);
+    if (col == null) return;
+    WordDay wordDay;
+    try {
+      wordDay = col.days.firstWhere((d) => d.dayNumber == word.dayNumber);
+    } catch (_) {
+      wordDay = col.days.first;
+    }
+    final wordIdx = wordDay.words.indexWhere((w) => w.word == word.word);
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => LearningScreen(
+        wordDay: wordDay,
+        userProfile: widget.userProfile,
+        collectionName: word.collectionName,
+        collection: col,
+        startIndex: wordIdx < 0 ? 0 : wordIdx,
+      ),
+    ));
+  }
+
   Future<void> _speak(String text) async {
     await _tts.setLanguage('en-US');
     await _tts.speak(text);
@@ -339,6 +373,23 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
                           fontStyle: FontStyle.italic, height: 1.5)),
                 ),
               )),
+          if (_collectionFor(_current) != null) ...[
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: _openInUnit,
+                icon: const Icon(Icons.school_outlined, size: 14),
+                label: const Text('Open in unit', style: TextStyle(fontSize: 12)),
+                style: TextButton.styleFrom(
+                  foregroundColor: context.primary,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

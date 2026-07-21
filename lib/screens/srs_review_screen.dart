@@ -26,8 +26,11 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   int _currentIndex = 0;
   bool _revealed = false;
   bool _autoPlay = true;
-  int _knew = 0;
-  int _forgot = 0;
+  final List<bool> _history = []; // true = knew, false = forgot, one entry per graded card
+  bool _gradesApplied = false;
+
+  int get _knew => _history.where((s) => s).length;
+  int get _forgot => _history.where((s) => !s).length;
 
   late AnimationController _flipCtrl;
   late Animation<double> _flipAnim;
@@ -73,6 +76,8 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
         if (_revealed) { _markForgot(); return true; }
       case LogicalKeyboardKey.keyS:
         _speak(_current.word); return true;
+      case LogicalKeyboardKey.backspace:
+        _goBack(); return true;
     }
     return false;
   }
@@ -88,24 +93,53 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     _flipCtrl.forward();
   }
 
-  Future<void> _markKnew() async {
-    await StorageService.reviewSRSWord(_current);
-    await StorageService.markSRSReviewCompleted();
-    await StorageService.recordStudySession();
-    await StorageService.addXP(5, reason: 'SRS Review');
-    _knew++;
+  void _markKnew() {
+    _history.add(true);
     _flipCtrl.reset();
-    setState(() { _currentIndex++; _revealed = false; });
-    if (!_isFinished && _autoPlay) _speak(_queue[_currentIndex].word);
+    final next = _currentIndex + 1;
+    setState(() { _currentIndex = next; _revealed = false; });
+    if (next >= _queue.length) {
+      _applyGrades();
+    } else if (_autoPlay) {
+      _speak(_queue[next].word);
+    }
   }
 
-  Future<void> _markForgot() async {
-    await StorageService.failSRSWord(_current);
-    await StorageService.recordStudySession();
-    _forgot++;
+  void _markForgot() {
+    _history.add(false);
     _flipCtrl.reset();
-    setState(() { _currentIndex++; _revealed = false; });
-    if (!_isFinished && _autoPlay) _speak(_queue[_currentIndex].word);
+    final next = _currentIndex + 1;
+    setState(() { _currentIndex = next; _revealed = false; });
+    if (next >= _queue.length) {
+      _applyGrades();
+    } else if (_autoPlay) {
+      _speak(_queue[next].word);
+    }
+  }
+
+  void _goBack() {
+    if (_history.isEmpty) return;
+    _history.removeLast();
+    _flipCtrl.reset();
+    setState(() { _currentIndex--; _revealed = false; });
+    if (_autoPlay) _speak(_queue[_currentIndex].word);
+  }
+
+  Future<void> _applyGrades() async {
+    if (_gradesApplied) return;
+    _gradesApplied = true;
+    for (int i = 0; i < _history.length; i++) {
+      if (_history[i]) {
+        await StorageService.reviewSRSWord(_queue[i]);
+        await StorageService.addXP(5, reason: 'SRS Review');
+      } else {
+        await StorageService.failSRSWord(_queue[i]);
+      }
+    }
+    if (_history.isNotEmpty) {
+      await StorageService.markSRSReviewCompleted();
+      await StorageService.recordStudySession();
+    }
   }
 
   String _stageProgress(SRSWord word) {
@@ -131,7 +165,11 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.close, color: context.primary),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () async {
+            final nav = Navigator.of(context);
+            await _applyGrades();
+            nav.pop();
+          },
         ),
         title: Text(
           '${_currentIndex + 1} / $total',
@@ -142,6 +180,15 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
         ),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: Icon(
+              Icons.arrow_back_ios,
+              size: 18,
+              color: _history.isNotEmpty ? context.primary : context.textMuted,
+            ),
+            tooltip: 'Previous word',
+            onPressed: _history.isNotEmpty ? _goBack : null,
+          ),
           IconButton(
             icon: Icon(
               _autoPlay ? Icons.volume_up : Icons.volume_off,

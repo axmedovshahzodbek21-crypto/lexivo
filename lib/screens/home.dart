@@ -632,6 +632,9 @@ class _HomeScreenState extends State<HomeScreen>
                                               WordsLearnedScreen(),
                                         ),
                                       ).then((_) => _loadStats()),
+                                      gradient: [const Color(0xFF0E7490), const Color(0xFF22D3EE)],
+                                      edge: const Color(0xFF164E63),
+                                      glow: const Color(0xFF0E7490),
                                     ),
                                     const SizedBox(width: 12),
                                     _buildStatCard(
@@ -645,6 +648,9 @@ class _HomeScreenState extends State<HomeScreen>
                                               StreakCalendarScreen(),
                                         ),
                                       ).then((_) => _loadStats()),
+                                      gradient: [const Color(0xFFEA580C), const Color(0xFFFB923C)],
+                                      edge: const Color(0xFFC2410C),
+                                      glow: const Color(0xFFEA580C),
                                     ),
                                     const SizedBox(width: 12),
                                     _buildStatCard(
@@ -660,13 +666,21 @@ class _HomeScreenState extends State<HomeScreen>
                                               ),
                                         ),
                                       ).then((_) => _loadStats()),
+                                      gradient: _reviewsDue > 0
+                                          ? [const Color(0xFFDC2626), const Color(0xFFF87171)]
+                                          : [const Color(0xFF059669), const Color(0xFF34D399)],
+                                      edge: _reviewsDue > 0 ? const Color(0xFF991B1B) : const Color(0xFF064E3B),
+                                      glow: _reviewsDue > 0 ? const Color(0xFFDC2626) : const Color(0xFF059669),
                                     ),
                                     const SizedBox(width: 12),
                                     _buildStatCard(
                                       context,
-                                      '$_todayLearned/$_dailyGoal',
-                                      'Today\'s\nWords',
-                                      () {},
+                                      '$_xp',
+                                      'Total\nXP',
+                                      () => showXpLevelSheet(context, _xp),
+                                      gradient: [const Color(0xFFD97706), const Color(0xFFFBBF24)],
+                                      edge: const Color(0xFF92400E),
+                                      glow: const Color(0xFFD97706),
                                     ),
                                   ],
                                 ),
@@ -686,13 +700,25 @@ class _HomeScreenState extends State<HomeScreen>
                                     decoration: BoxDecoration(
                                       gradient: const LinearGradient(
                                         colors: [
-                                          Color(0xFF1A1A2E),
-                                          Color(0xFF16213E),
+                                          Color(0xFFA21CAF),
+                                          Color(0xFFE879F9),
                                         ],
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
                                       ),
                                       borderRadius: BorderRadius.circular(20),
+                                      boxShadow: [
+                                        const BoxShadow(
+                                          color: Color(0xFF701A75),
+                                          offset: Offset(0, 8),
+                                          blurRadius: 0,
+                                        ),
+                                        BoxShadow(
+                                          color: const Color(0xFFA21CAF).withValues(alpha: 0.4),
+                                          blurRadius: 20,
+                                          offset: const Offset(0, 12),
+                                        ),
+                                      ],
                                     ),
                                     child: Column(
                                       crossAxisAlignment:
@@ -704,9 +730,7 @@ class _HomeScreenState extends State<HomeScreen>
                                             vertical: 3,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: const Color(
-                                              0xFF6C63FF,
-                                            ).withValues(alpha: 0.4),
+                                            color: Colors.white.withValues(alpha: 0.18),
                                             borderRadius: BorderRadius.circular(
                                               6,
                                             ),
@@ -715,8 +739,8 @@ class _HomeScreenState extends State<HomeScreen>
                                             '✨ ${tr('word_of_day')}',
                                             style: const TextStyle(
                                               fontSize: 11,
-                                              color: Colors.white70,
-                                              fontWeight: FontWeight.w600,
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w700,
                                             ),
                                           ),
                                         ),
@@ -727,6 +751,7 @@ class _HomeScreenState extends State<HomeScreen>
                                             fontSize: 26,
                                             fontWeight: FontWeight.bold,
                                             color: Colors.white,
+                                            shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 4)],
                                           ),
                                         ),
                                         const SizedBox(height: 4),
@@ -734,7 +759,7 @@ class _HomeScreenState extends State<HomeScreen>
                                           _wordOfDay!.pronunciation,
                                           style: const TextStyle(
                                             fontSize: 13,
-                                            color: Colors.white54,
+                                            color: Colors.white60,
                                           ),
                                         ),
                                         const SizedBox(height: 8),
@@ -742,8 +767,9 @@ class _HomeScreenState extends State<HomeScreen>
                                           _wordOfDay!.translation,
                                           style: const TextStyle(
                                             fontSize: 16,
-                                            color: Color(0xFF8B83FF),
-                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w700,
+                                            shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 3)],
                                           ),
                                         ),
                                         const SizedBox(height: 6),
@@ -957,104 +983,228 @@ class _HomeScreenState extends State<HomeScreen>
               ),
               const SizedBox(height: 16),
 
-              GestureDetector(
-                onTap: () => showXpLevelSheet(context, _xp),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: context.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: context.cardShadow,
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              levelName,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                                color: context.appText,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+              // Daily Goal + Level — side by side gradient cards
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Daily Goal card (violet)
+                  Expanded(
+                    flex: 3,
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF5B21B6), Color(0xFF8B5CF6)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          const BoxShadow(
+                            color: Color(0xFF3B0764),
+                            offset: Offset(0, 8),
+                            blurRadius: 0,
                           ),
-                          const SizedBox(width: 8),
+                          BoxShadow(
+                            color: const Color(0xFF5B21B6).withValues(alpha: 0.4),
+                            blurRadius: 20,
+                            offset: const Offset(0, 12),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
                           Row(
-                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                '$_xp XP',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  color: context.primary,
+                              SizedBox(
+                                width: 52,
+                                height: 52,
+                                child: Stack(
+                                  children: [
+                                    CircularProgressIndicator(
+                                      value: (_dailyGoal > 0 ? _todayLearned / _dailyGoal : 0.0).clamp(0.0, 1.0),
+                                      backgroundColor: Colors.white.withValues(alpha: 0.25),
+                                      valueColor: const AlwaysStoppedAnimation(Colors.white),
+                                      strokeWidth: 5,
+                                      strokeCap: StrokeCap.round,
+                                    ),
+                                    Center(
+                                      child: Text(
+                                        _todayLearned >= _dailyGoal ? '✓' : '$_todayLearned',
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w900,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              if (_freezes > 0) ...[
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 3,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue.shade50,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    '🧊 $_freezes',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.blue.shade700,
-                                      fontWeight: FontWeight.w600,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                                      textBaseline: TextBaseline.alphabetic,
+                                      children: [
+                                        Text(
+                                          '$_todayLearned',
+                                          style: const TextStyle(
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.w900,
+                                            color: Colors.white,
+                                            shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 4)],
+                                          ),
+                                        ),
+                                        Text(
+                                          ' / $_dailyGoal',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.white70,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
                                     ),
+                                    const SizedBox(height: 5),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(4),
+                                      child: LinearProgressIndicator(
+                                        value: (_dailyGoal > 0 ? _todayLearned / _dailyGoal : 0.0).clamp(0.0, 1.0),
+                                        backgroundColor: Colors.white.withValues(alpha: 0.25),
+                                        valueColor: const AlwaysStoppedAnimation(Colors.white),
+                                        minHeight: 6,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _todayLearned >= _dailyGoal
+                                          ? 'Goal reached! 🎉'
+                                          : '${_dailyGoal - _todayLearned} words to go',
+                                      style: const TextStyle(fontSize: 10, color: Colors.white70),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text('🧊', style: TextStyle(fontSize: 11)),
+                                const SizedBox(width: 5),
+                                Text(
+                                  _freezes == 0
+                                      ? 'No freezes'
+                                      : _freezes == 1
+                                          ? '1 streak freeze'
+                                          : '$_freezes streak freezes',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ],
-                            ],
+                            ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: levelProgress.clamp(0.0, 1.0),
-                          backgroundColor: context.border,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            context.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  // Level card (rose)
+                  Expanded(
+                    flex: 2,
+                    child: GestureDetector(
+                      onTap: () => showXpLevelSheet(context, _xp),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFBE123C), Color(0xFFFB7185)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                          minHeight: 8,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            const BoxShadow(
+                              color: Color(0xFF881337),
+                              offset: Offset(0, 8),
+                              blurRadius: 0,
+                            ),
+                            BoxShadow(
+                              color: const Color(0xFFBE123C).withValues(alpha: 0.4),
+                              blurRadius: 20,
+                              offset: const Offset(0, 12),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('⭐', style: TextStyle(fontSize: 24)),
+                                const SizedBox(height: 4),
+                                Text(
+                                  levelName,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
+                                    height: 1.1,
+                                    shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 4)],
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  '$_xp XP',
+                                  style: const TextStyle(fontSize: 11, color: Colors.white70),
+                                ),
+                              ],
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 10),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: LinearProgressIndicator(
+                                    value: levelProgress.clamp(0.0, 1.0),
+                                    backgroundColor: Colors.white.withValues(alpha: 0.25),
+                                    valueColor: const AlwaysStoppedAnimation(Colors.white),
+                                    minHeight: 7,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  'Next: $nextLevelXP XP',
+                                  style: const TextStyle(fontSize: 10, color: Colors.white70),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            '$currentLevelMinXP XP',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: context.textMuted,
-                            ),
-                          ),
-                          Text(
-                            '$nextLevelXP XP',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: context.textMuted,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
               const SizedBox(height: 16),
 
@@ -1064,11 +1214,23 @@ class _HomeScreenState extends State<HomeScreen>
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
+                      colors: [Color(0xFFA21CAF), Color(0xFFE879F9)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      const BoxShadow(
+                        color: Color(0xFF701A75),
+                        offset: Offset(0, 7),
+                        blurRadius: 0,
+                      ),
+                      BoxShadow(
+                        color: const Color(0xFFA21CAF).withValues(alpha: 0.4),
+                        blurRadius: 18,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1079,15 +1241,15 @@ class _HomeScreenState extends State<HomeScreen>
                           vertical: 3,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF6C63FF).withValues(alpha: 0.4),
+                          color: Colors.white.withValues(alpha: 0.18),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           '✨ ${tr('word_of_day')}',
                           style: const TextStyle(
                             fontSize: 11,
-                            color: Colors.white70,
-                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
@@ -1098,6 +1260,7 @@ class _HomeScreenState extends State<HomeScreen>
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
+                          shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 4)],
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -1105,7 +1268,7 @@ class _HomeScreenState extends State<HomeScreen>
                         _wordOfDay!.pronunciation,
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Colors.white54,
+                          color: Colors.white60,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -1113,8 +1276,9 @@ class _HomeScreenState extends State<HomeScreen>
                         _wordOfDay!.translation,
                         style: const TextStyle(
                           fontSize: 15,
-                          color: Color(0xFF8B83FF),
-                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 3)],
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -1124,7 +1288,7 @@ class _HomeScreenState extends State<HomeScreen>
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Colors.white60,
+                          color: Colors.white70,
                           height: 1.4,
                         ),
                       ),
@@ -1157,6 +1321,9 @@ class _HomeScreenState extends State<HomeScreen>
                         builder: (context) => WordsLearnedScreen(),
                       ),
                     ).then((_) => _loadStats()),
+                    gradient: [const Color(0xFF0E7490), const Color(0xFF22D3EE)],
+                    edge: const Color(0xFF164E63),
+                    glow: const Color(0xFF0E7490),
                   ),
                   const SizedBox(width: 12),
                   _buildStatCard(
@@ -1169,6 +1336,9 @@ class _HomeScreenState extends State<HomeScreen>
                         builder: (context) => StreakCalendarScreen(),
                       ),
                     ).then((_) => _loadStats()),
+                    gradient: [const Color(0xFFEA580C), const Color(0xFFFB923C)],
+                    edge: const Color(0xFFC2410C),
+                    glow: const Color(0xFFEA580C),
                   ),
                   const SizedBox(width: 12),
                   _buildStatCard(
@@ -1182,13 +1352,21 @@ class _HomeScreenState extends State<HomeScreen>
                             ReviewsDueScreen(userProfile: widget.userProfile),
                       ),
                     ).then((_) => _loadStats()),
+                    gradient: _reviewsDue > 0
+                        ? [const Color(0xFFDC2626), const Color(0xFFF87171)]
+                        : [const Color(0xFF059669), const Color(0xFF34D399)],
+                    edge: _reviewsDue > 0 ? const Color(0xFF991B1B) : const Color(0xFF064E3B),
+                    glow: _reviewsDue > 0 ? const Color(0xFFDC2626) : const Color(0xFF059669),
                   ),
                   const SizedBox(width: 12),
                   _buildStatCard(
                     context,
-                    '$_todayLearned/$_dailyGoal',
-                    'Today\'s\nWords',
-                    () {},
+                    '$_xp',
+                    'Total\nXP',
+                    () => showXpLevelSheet(context, _xp),
+                    gradient: [const Color(0xFFD97706), const Color(0xFFFBBF24)],
+                    edge: const Color(0xFF92400E),
+                    glow: const Color(0xFFD97706),
                   ),
                 ],
               ),
@@ -1573,45 +1751,56 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildStatCard(BuildContext context, String number, String label, VoidCallback onTap) {
-    final isZero = number == '0';
+  Widget _buildStatCard(
+    BuildContext context,
+    String number,
+    String label,
+    VoidCallback onTap, {
+    List<Color> gradient = const [Color(0xFF6C63FF), Color(0xFFA78BFA)],
+    Color edge = const Color(0xFF3F38CC),
+    Color glow = const Color(0x446C63FF),
+  }) {
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
           decoration: BoxDecoration(
-            color: context.surface,
+            gradient: LinearGradient(
+              colors: gradient,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
             borderRadius: BorderRadius.circular(16),
-            boxShadow: context.cardShadow,
+            boxShadow: [
+              BoxShadow(color: edge, offset: const Offset(0, 6), blurRadius: 0),
+              BoxShadow(color: glow.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 10)),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               FittedBox(
                 fit: BoxFit.scaleDown,
-                child: isZero
-                    ? Text(
-                        '—',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: context.textMuted,
-                        ),
-                      )
-                    : Text(
-                        number,
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: context.primary,
-                        ),
-                      ),
+                child: Text(
+                  number,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 4)],
+                  ),
+                ),
               ),
               Text(
                 label,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 10, color: context.textMuted),
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 3)],
+                ),
               ),
             ],
           ),
@@ -2266,65 +2455,48 @@ class _CollectionPickerOverlayState extends State<_CollectionPickerOverlay>
         margin: const EdgeInsets.only(bottom: 4),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: _isBeginnerLevel
-              ? const Color(0xFF2ECC71).withValues(alpha: 0.06)
-              : context.surface2,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: _isBeginnerLevel
-                ? const Color(0xFF2ECC71).withValues(alpha: 0.4)
-                : context.border,
+          gradient: const LinearGradient(
+            colors: [Color(0xFF1A9A50), Color(0xFF2ECC71)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            const BoxShadow(color: Color(0xFF0F6634), offset: Offset(0, 7), blurRadius: 0),
+            BoxShadow(color: const Color(0xFF1A9A50).withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 10)),
+          ],
         ),
         child: Row(
           children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: _isBeginnerLevel
-                    ? const Color(0xFF2ECC71).withValues(alpha: 0.1)
-                    : context.surface2,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Center(
-                child: Text('📚', style: TextStyle(fontSize: 26)),
+            const Text(
+              '📚',
+              style: TextStyle(
+                fontSize: 32,
+                shadows: [Shadow(color: Colors.black38, offset: Offset(0, 2), blurRadius: 6)],
               ),
             ),
             const SizedBox(width: 16),
-            Expanded(
+            const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Leveled Words',
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w900,
                       fontSize: 15,
-                      color: _isBeginnerLevel
-                          ? const Color(0xFF27AE60)
-                          : context.appText,
+                      color: Colors.white,
+                      shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 4)],
                     ),
                   ),
                   Text(
                     'A1 → C2 vocabulary by CEFR level',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: _isBeginnerLevel
-                          ? Colors.green.shade400
-                          : context.textMuted,
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.white70),
                   ),
                 ],
               ),
             ),
-            Icon(
-              Icons.arrow_forward_ios,
-              size: 14,
-              color: _isBeginnerLevel
-                  ? const Color(0xFF2ECC71)
-                  : context.textMuted,
-            ),
+            const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white70),
           ],
         ),
       ),
@@ -2339,6 +2511,8 @@ class _CollectionPickerOverlayState extends State<_CollectionPickerOverlay>
     required Color color,
     required WordCollection collection,
   }) {
+    final lighter = Color.lerp(color, Colors.white, 0.38)!;
+    final edge = Color.lerp(color, Colors.black, 0.28)!;
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
@@ -2353,27 +2527,24 @@ class _CollectionPickerOverlayState extends State<_CollectionPickerOverlay>
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: context.surface,
-          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            colors: [color, lighter],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
-            BoxShadow(
-              color: color.withValues(alpha: 0.15),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
+            BoxShadow(color: edge, offset: const Offset(0, 7), blurRadius: 0),
+            BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 10)),
           ],
         ),
         child: Row(
           children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Center(
-                child: Text(icon, style: const TextStyle(fontSize: 26)),
+            Text(
+              icon,
+              style: const TextStyle(
+                fontSize: 32,
+                shadows: [Shadow(color: Colors.black38, offset: Offset(0, 2), blurRadius: 6)],
               ),
             ),
             const SizedBox(width: 16),
@@ -2383,21 +2554,22 @@ class _CollectionPickerOverlayState extends State<_CollectionPickerOverlay>
                 children: [
                   Text(
                     name,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
                       fontSize: 15,
-                      color: context.appText,
+                      color: Colors.white,
+                      shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 4)],
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     description,
-                    style: TextStyle(fontSize: 12, color: context.textMuted),
+                    style: const TextStyle(fontSize: 12, color: Colors.white70),
                   ),
                 ],
               ),
             ),
-            Icon(Icons.arrow_forward_ios, size: 14, color: color),
+            const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white70),
           ],
         ),
       ),

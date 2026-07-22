@@ -62,6 +62,7 @@ class _HomeScreenState extends State<HomeScreen>
   bool _hideWordOfDay = false;
   bool _hideSession = false;
   bool _hideStats = false;
+  List<String> _sectionOrder = ['goal', 'wod', 'session', 'stats'];
   StreamSubscription<void>? _syncSub;
 
   bool get _isDesktop =>
@@ -131,6 +132,10 @@ class _HomeScreenState extends State<HomeScreen>
       _hideWordOfDay = prefs.getBool('home_hide_wod') ?? false;
       _hideSession = prefs.getBool('home_hide_session') ?? false;
       _hideStats = prefs.getBool('home_hide_stats') ?? false;
+      final orderStr = prefs.getString('home_section_order');
+      _sectionOrder = orderStr != null
+          ? orderStr.split(',')
+          : ['goal', 'wod', 'session', 'stats'];
     });
   }
 
@@ -140,50 +145,45 @@ class _HomeScreenState extends State<HomeScreen>
     await prefs.setBool('home_hide_wod', _hideWordOfDay);
     await prefs.setBool('home_hide_session', _hideSession);
     await prefs.setBool('home_hide_stats', _hideStats);
+    await prefs.setString('home_section_order', _sectionOrder.join(','));
   }
 
   void _showCustomizeSheet() {
+    const sectionIcons = {
+      'goal': '🎯', 'wod': '✨', 'session': '▶️', 'stats': '📊',
+    };
+    const sectionLabels = {
+      'goal': 'Daily Goal & Level', 'wod': 'Word of the Day',
+      'session': 'Start Learning', 'stats': 'Stats Row',
+    };
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheet) {
-          void toggle(String key, bool current) {
-            // current = visible (true=shown). To toggle, hide = current (was visible → now hide)
+          bool isHidden(String key) {
+            switch (key) {
+              case 'goal': return _hideGoalLevel;
+              case 'wod':  return _hideWordOfDay;
+              case 'session': return _hideSession;
+              case 'stats': return _hideStats;
+              default: return false;
+            }
+          }
+
+          void setHidden(String key, bool hidden) {
             setState(() {
               switch (key) {
-                case 'goal': _hideGoalLevel = current; break;
-                case 'wod':  _hideWordOfDay = current; break;
-                case 'session': _hideSession = current; break;
-                case 'stats': _hideStats = current; break;
+                case 'goal': _hideGoalLevel = hidden; break;
+                case 'wod':  _hideWordOfDay = hidden; break;
+                case 'session': _hideSession = hidden; break;
+                case 'stats': _hideStats = hidden; break;
               }
             });
             setSheet(() {});
             _saveLayout();
-          }
-
-          Widget tile(String icon, String label, bool visible, String key) {
-            return SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Row(
-                children: [
-                  Text(icon, style: const TextStyle(fontSize: 20)),
-                  const SizedBox(width: 10),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
-                      color: context.appText,
-                    ),
-                  ),
-                ],
-              ),
-              value: visible,
-              onChanged: (_) => toggle(key, visible),
-              activeThumbColor: const Color(0xFF6C63FF),
-              activeTrackColor: const Color(0xFF6C63FF).withValues(alpha: 0.35),
-            );
           }
 
           return Container(
@@ -208,22 +208,77 @@ class _HomeScreenState extends State<HomeScreen>
                 const SizedBox(height: 16),
                 Text(
                   'Customize Home',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: context.appText,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText),
                 ),
                 Text(
-                  'Toggle sections on or off',
+                  'Drag ≡ to reorder · toggle to show/hide',
                   style: TextStyle(fontSize: 13, color: context.textMuted),
                 ),
-                const SizedBox(height: 4),
-                tile('🎯', 'Daily Goal & Level', !_hideGoalLevel, 'goal'),
-                tile('✨', 'Word of the Day', !_hideWordOfDay, 'wod'),
-                tile('▶️', 'Start Learning', !_hideSession, 'session'),
-                tile('📊', 'Stats Row', !_hideStats, 'stats'),
-                SizedBox(height: MediaQuery.of(ctx).viewInsets.bottom + 12),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: _sectionOrder.length * 60.0,
+                  child: ReorderableListView(
+                    physics: const NeverScrollableScrollPhysics(),
+                    onReorderItem: (oldIdx, newIdx) {
+                      setState(() {
+                        final item = _sectionOrder.removeAt(oldIdx);
+                        _sectionOrder.insert(newIdx, item);
+                      });
+                      setSheet(() {});
+                      _saveLayout();
+                    },
+                    children: [
+                      for (int i = 0; i < _sectionOrder.length; i++)
+                        ListTile(
+                          key: ValueKey(_sectionOrder[i]),
+                          contentPadding: EdgeInsets.zero,
+                          leading: ReorderableDragStartListener(
+                            index: i,
+                            child: Icon(Icons.drag_handle, color: context.textMuted),
+                          ),
+                          title: Row(
+                            children: [
+                              Text(sectionIcons[_sectionOrder[i]]!, style: const TextStyle(fontSize: 18)),
+                              const SizedBox(width: 8),
+                              Text(
+                                sectionLabels[_sectionOrder[i]]!,
+                                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: context.appText),
+                              ),
+                            ],
+                          ),
+                          trailing: Switch(
+                            value: !isHidden(_sectionOrder[i]),
+                            onChanged: (v) => setHidden(_sectionOrder[i], !v),
+                            activeThumbColor: const Color(0xFF6C63FF),
+                            activeTrackColor: const Color(0xFF6C63FF).withValues(alpha: 0.35),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _sectionOrder = ['goal', 'wod', 'session', 'stats'];
+                          _hideGoalLevel = false;
+                          _hideWordOfDay = false;
+                          _hideSession   = false;
+                          _hideStats     = false;
+                        });
+                        setSheet(() {});
+                        _saveLayout();
+                      },
+                      child: Text(
+                        'Reset to default',
+                        style: TextStyle(color: context.textMuted, fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: MediaQuery.of(ctx).viewInsets.bottom + 8),
               ],
             ),
           );
@@ -1115,7 +1170,8 @@ class _HomeScreenState extends State<HomeScreen>
               ),
               const SizedBox(height: 16),
 
-              if (!_hideGoalLevel) ...[
+              for (final sid in _sectionOrder) ...[
+              if (sid == 'goal' && !_hideGoalLevel) ...[
               // Daily Goal + Level — side by side gradient cards
               IntrinsicHeight(child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1342,7 +1398,7 @@ class _HomeScreenState extends State<HomeScreen>
               const SizedBox(height: 16),
               ], // end _hideGoalLevel
 
-              if (_wordOfDay != null && !_hideWordOfDay)
+              if (sid == 'wod' && _wordOfDay != null && !_hideWordOfDay) ...[
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
@@ -1429,14 +1485,15 @@ class _HomeScreenState extends State<HomeScreen>
                     ],
                   ),
                 ),
-              if (!_hideWordOfDay) const SizedBox(height: 16),
+                const SizedBox(height: 16),
+              ],
 
-              if (!_hideSession) ...[
+              if (sid == 'session' && !_hideSession) ...[
                 _buildSessionCard(context),
                 const SizedBox(height: 8),
               ],
 
-              if (!_hideStats) ...[
+              if (sid == 'stats' && !_hideStats) ...[
                 const SizedBox(height: 16),
                 Text(
                   'Your Progress',
@@ -1508,7 +1565,8 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ],
               ),
-              ], // end _hideStats
+              ], // stats
+              ], // end for loop
             ],
           ),
         ),

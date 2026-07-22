@@ -56,6 +56,12 @@ class _HomeScreenState extends State<HomeScreen>
   WordItem? _wordOfDay;
   String _userName = '';
   String? _profileImagePath;
+
+  // Home layout visibility
+  bool _hideGoalLevel = false;
+  bool _hideWordOfDay = false;
+  bool _hideSession = false;
+  bool _hideStats = false;
   StreamSubscription<void>? _syncSub;
 
   bool get _isDesktop =>
@@ -121,7 +127,108 @@ class _HomeScreenState extends State<HomeScreen>
       _todayLearned = todayCount;
       _userName = userName;
       _profileImagePath = profileImagePath;
+      _hideGoalLevel = prefs.getBool('home_hide_goal_level') ?? false;
+      _hideWordOfDay = prefs.getBool('home_hide_wod') ?? false;
+      _hideSession = prefs.getBool('home_hide_session') ?? false;
+      _hideStats = prefs.getBool('home_hide_stats') ?? false;
     });
+  }
+
+  Future<void> _saveLayout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('home_hide_goal_level', _hideGoalLevel);
+    await prefs.setBool('home_hide_wod', _hideWordOfDay);
+    await prefs.setBool('home_hide_session', _hideSession);
+    await prefs.setBool('home_hide_stats', _hideStats);
+  }
+
+  void _showCustomizeSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          void toggle(String key, bool current) {
+            setState(() {
+              switch (key) {
+                case 'goal': _hideGoalLevel = !current; break;
+                case 'wod':  _hideWordOfDay = !current; break;
+                case 'session': _hideSession = !current; break;
+                case 'stats': _hideStats = !current; break;
+              }
+            });
+            setSheet(() {});
+            _saveLayout();
+          }
+
+          Widget tile(String icon, String label, bool visible, String key) {
+            return SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Row(
+                children: [
+                  Text(icon, style: const TextStyle(fontSize: 20)),
+                  const SizedBox(width: 10),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      color: context.appText,
+                    ),
+                  ),
+                ],
+              ),
+              value: visible,
+              onChanged: (_) => toggle(key, visible),
+              activeThumbColor: const Color(0xFF6C63FF),
+              activeTrackColor: const Color(0xFF6C63FF).withValues(alpha: 0.35),
+            );
+          }
+
+          return Container(
+            decoration: BoxDecoration(
+              color: context.surface,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40, height: 4,
+                    decoration: BoxDecoration(
+                      color: context.border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Customize Home',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: context.appText,
+                  ),
+                ),
+                Text(
+                  'Toggle sections on or off',
+                  style: TextStyle(fontSize: 13, color: context.textMuted),
+                ),
+                const SizedBox(height: 4),
+                tile('🎯', 'Daily Goal & Level', !_hideGoalLevel, 'goal'),
+                tile('✨', 'Word of the Day', !_hideWordOfDay, 'wod'),
+                tile('▶️', 'Start Learning', !_hideSession, 'session'),
+                tile('📊', 'Stats Row', !_hideStats, 'stats'),
+                SizedBox(height: MediaQuery.of(ctx).viewInsets.bottom + 12),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 
   bool get _limitReached => _todayLearned >= _dailyGoal;
@@ -963,26 +1070,51 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ),
 
-              Text(
-                _greeting(),
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: context.appText,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _limitReached
-                    ? 'Daily goal complete! $_todayLearned / $_dailyGoal words ✓'
-                    : '$_todayLearned / $_dailyGoal words learned today',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: _limitReached ? Colors.green : context.textMuted,
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _greeting(),
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: context.appText,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _limitReached
+                              ? 'Daily goal complete! $_todayLearned / $_dailyGoal words ✓'
+                              : '$_todayLearned / $_dailyGoal words learned today',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: _limitReached ? Colors.green : context.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: _showCustomizeSheet,
+                    child: Container(
+                      padding: const EdgeInsets.all(9),
+                      decoration: BoxDecoration(
+                        color: context.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: context.cardShadow,
+                      ),
+                      child: Icon(Icons.tune_rounded, size: 20, color: context.textMuted),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
 
+              if (!_hideGoalLevel) ...[
               // Daily Goal + Level — side by side gradient cards
               Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1207,8 +1339,9 @@ class _HomeScreenState extends State<HomeScreen>
                 ],
               ),
               const SizedBox(height: 16),
+              ], // end _hideGoalLevel
 
-              if (_wordOfDay != null)
+              if (_wordOfDay != null && !_hideWordOfDay)
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
@@ -1295,21 +1428,25 @@ class _HomeScreenState extends State<HomeScreen>
                     ],
                   ),
                 ),
-              const SizedBox(height: 16),
+              if (!_hideWordOfDay) const SizedBox(height: 16),
 
-              _buildSessionCard(context),
+              if (!_hideSession) ...[
+                _buildSessionCard(context),
+                const SizedBox(height: 8),
+              ],
 
-              const SizedBox(height: 24),
-              Text(
-                'Your Progress',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: context.appText,
+              if (!_hideStats) ...[
+                const SizedBox(height: 16),
+                Text(
+                  'Your Progress',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: context.appText,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Row(
+                const SizedBox(height: 16),
+                Row(
                 children: [
                   _buildStatCard(
                     context,
@@ -1370,6 +1507,7 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ],
               ),
+              ], // end _hideStats
             ],
           ),
         ),

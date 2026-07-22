@@ -149,12 +149,13 @@ class _HomeScreenState extends State<HomeScreen>
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheet) {
           void toggle(String key, bool current) {
+            // current = visible (true=shown). To toggle, hide = current (was visible → now hide)
             setState(() {
               switch (key) {
-                case 'goal': _hideGoalLevel = !current; break;
-                case 'wod':  _hideWordOfDay = !current; break;
-                case 'session': _hideSession = !current; break;
-                case 'stats': _hideStats = !current; break;
+                case 'goal': _hideGoalLevel = current; break;
+                case 'wod':  _hideWordOfDay = current; break;
+                case 'session': _hideSession = current; break;
+                case 'stats': _hideStats = current; break;
               }
             });
             setSheet(() {});

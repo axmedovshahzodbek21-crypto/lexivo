@@ -1116,7 +1116,7 @@ class _HomeScreenState extends State<HomeScreen>
 
               if (!_hideGoalLevel) ...[
               // Daily Goal + Level — side by side gradient cards
-              Row(
+              IntrinsicHeight(child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Daily Goal card (violet)
@@ -1337,7 +1337,7 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                 ],
-              ),
+              )),
               const SizedBox(height: 16),
               ], // end _hideGoalLevel
 

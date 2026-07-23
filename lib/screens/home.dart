@@ -1468,7 +1468,7 @@ class _HomeScreenState extends State<HomeScreen>
                     color: context.appText,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 Row(
                 children: [
                   _buildStatCard(

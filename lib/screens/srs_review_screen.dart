@@ -217,6 +217,9 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     if (name == ContentService.a2.name) return ContentService.a2;
     if (name == ContentService.b1.name) return ContentService.b1;
     if (name == ContentService.advanced.name) return ContentService.advanced;
+    if (name == thirtyDaysCollection.name) return thirtyDaysCollection;
+    if (name == vocabularyChallengeCollection.name) return vocabularyChallengeCollection;
+    if (name == wordMasteryCollection.name) return wordMasteryCollection;
     return null;
   }
 

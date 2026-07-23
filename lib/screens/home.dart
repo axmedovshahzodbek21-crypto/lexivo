@@ -986,12 +986,6 @@ class _HomeScreenState extends State<HomeScreen>
   // ─── MOBILE LAYOUT ────────────────────────────────────────────────────────────
 
   Widget _buildMobileLayout(BuildContext context) {
-    final levelName = StorageService.getLevelName(_xp);
-    final nextLevelXP = StorageService.getNextLevelXP(_xp);
-    final currentLevelMinXP = StorageService.getCurrentLevelMinXP(_xp);
-    final levelProgress = nextLevelXP == currentLevelMinXP
-        ? 1.0
-        : (_xp - currentLevelMinXP) / (nextLevelXP - currentLevelMinXP);
 
     return Scaffold(
       backgroundColor: context.bg,
@@ -1314,28 +1308,31 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                   const SizedBox(width: 10),
-                  // Level card (rose)
+                  // Day Streak card (orange)
                   Expanded(
                     flex: 2,
                     child: GestureDetector(
-                      onTap: () => showXpLevelSheet(context, _xp),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => StreakCalendarScreen()),
+                      ).then((_) => _loadStats()),
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFFBE123C), Color(0xFFFB7185)],
+                            colors: [Color(0xFFEA580C), Color(0xFFFB923C)],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             const BoxShadow(
-                              color: Color(0xFF881337),
+                              color: Color(0xFFC2410C),
                               offset: Offset(0, 8),
                               blurRadius: 0,
                             ),
                             BoxShadow(
-                              color: const Color(0xFFBE123C).withValues(alpha: 0.4),
+                              color: const Color(0xFFEA580C).withValues(alpha: 0.4),
                               blurRadius: 20,
                               offset: const Offset(0, 12),
                             ),
@@ -1345,48 +1342,22 @@ class _HomeScreenState extends State<HomeScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('⭐', style: TextStyle(fontSize: 24)),
-                                const SizedBox(height: 4),
-                                Text(
-                                  levelName,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w900,
-                                    color: Colors.white,
-                                    height: 1.1,
-                                    shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 4)],
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                Text(
-                                  '$_xp XP',
-                                  style: const TextStyle(fontSize: 11, color: Colors.white70),
-                                ),
-                              ],
+                            const Text('🔥', style: TextStyle(fontSize: 26)),
+                            const SizedBox(height: 4),
+                            Text(
+                              '$_streak',
+                              style: const TextStyle(
+                                fontSize: 44,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                height: 1.0,
+                                shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 4)],
+                              ),
                             ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const SizedBox(height: 10),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(4),
-                                  child: LinearProgressIndicator(
-                                    value: levelProgress.clamp(0.0, 1.0),
-                                    backgroundColor: Colors.white.withValues(alpha: 0.25),
-                                    valueColor: const AlwaysStoppedAnimation(Colors.white),
-                                    minHeight: 7,
-                                  ),
-                                ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  'Next: $nextLevelXP XP',
-                                  style: const TextStyle(fontSize: 10, color: Colors.white70),
-                                ),
-                              ],
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Day Streak',
+                              style: TextStyle(fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w600),
                             ),
                           ],
                         ),
@@ -1401,7 +1372,7 @@ class _HomeScreenState extends State<HomeScreen>
               if (sid == 'wod' && _wordOfDay != null && !_hideWordOfDay) ...[
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [Color(0xFFA21CAF), Color(0xFFE879F9)],
@@ -1412,80 +1383,73 @@ class _HomeScreenState extends State<HomeScreen>
                     boxShadow: [
                       const BoxShadow(
                         color: Color(0xFF701A75),
-                        offset: Offset(0, 7),
+                        offset: Offset(0, 5),
                         blurRadius: 0,
                       ),
                       BoxShadow(
-                        color: const Color(0xFFA21CAF).withValues(alpha: 0.4),
-                        blurRadius: 18,
-                        offset: const Offset(0, 10),
+                        color: const Color(0xFFA21CAF).withValues(alpha: 0.35),
+                        blurRadius: 14,
+                        offset: const Offset(0, 8),
                       ),
                     ],
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.18),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '✨ ${tr('word_of_day')}',
+                                style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              _wordOfDay!.word,
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 3)],
+                              ),
+                            ),
+                            Text(
+                              _wordOfDay!.pronunciation,
+                              style: const TextStyle(fontSize: 11, color: Colors.white60),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _wordOfDay!.translation,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
                         ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Flexible(
                         child: Text(
-                          '✨ ${tr('word_of_day')}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        _wordOfDay!.word,
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 4)],
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        _wordOfDay!.pronunciation,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.white60,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        _wordOfDay!.translation,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 3)],
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _wordOfDay!.definition,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.white70,
-                          height: 1.4,
+                          _wordOfDay!.definition,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 11, color: Colors.white70, height: 1.4),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
               ],
 
               if (sid == 'session' && !_hideSession) ...[
@@ -1519,21 +1483,6 @@ class _HomeScreenState extends State<HomeScreen>
                     gradient: [const Color(0xFF0E7490), const Color(0xFF22D3EE)],
                     edge: const Color(0xFF164E63),
                     glow: const Color(0xFF0E7490),
-                  ),
-                  const SizedBox(width: 12),
-                  _buildStatCard(
-                    context,
-                    '$_streak',
-                    'Day\nStreak',
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => StreakCalendarScreen(),
-                      ),
-                    ).then((_) => _loadStats()),
-                    gradient: [const Color(0xFFEA580C), const Color(0xFFFB923C)],
-                    edge: const Color(0xFFC2410C),
-                    glow: const Color(0xFFEA580C),
                   ),
                   const SizedBox(width: 12),
                   _buildStatCard(
@@ -1789,46 +1738,43 @@ class _HomeScreenState extends State<HomeScreen>
     if (!_limitReached) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         decoration: BoxDecoration(
           color: const Color(0xFF6C63FF),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            const Text(
-              "Today's Session",
-              style: TextStyle(color: Colors.white70, fontSize: 14),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${_dailyGoal - _todayLearned} Words Remaining',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Today's Session",
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${_dailyGoal - _todayLearned} Words Left',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              '$_todayLearned of $_dailyGoal learned',
-              style: const TextStyle(color: Colors.white60, fontSize: 13),
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(width: 12),
             ElevatedButton(
               onPressed: _showPomodoroThenPicker,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: const Color(0xFF6C63FF),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               ),
-              child: const Text(
-                'Start Learning',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
+              child: const Text('Start', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         ),

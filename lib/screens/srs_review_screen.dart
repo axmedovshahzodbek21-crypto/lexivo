@@ -9,7 +9,7 @@ import '../app_theme.dart';
 import '../l10n.dart';
 import 'learning.dart';
 
-enum _Grade { knew, hard, forgot, skip }
+enum _Grade { knew, notYet, skip }
 
 class SRSReviewScreen extends StatefulWidget {
   final List<SRSWord> words;
@@ -42,9 +42,8 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   bool _choicesRevealed = false;
   Timer? _autoAdvanceTimer;
 
-  int get _knew => _history.where((g) => g == _Grade.knew).length;
-  int get _hard => _history.where((g) => g == _Grade.hard).length;
-  int get _forgot => _history.where((g) => g == _Grade.forgot).length;
+  int get _knew   => _history.where((g) => g == _Grade.knew).length;
+  int get _notYet => _history.where((g) => g == _Grade.notYet).length;
 
   bool get _isQuizMode {
     if (_currentIndex >= _cardChoices.length) return false;
@@ -132,11 +131,9 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
       case LogicalKeyboardKey.keyK:
         if (_revealed && !_isQuizMode) { _markKnew(); return true; }
         if (_isQuizMode && _tappedChoice == _current.translation) { _markKnew(); return true; }
-      case LogicalKeyboardKey.keyH:
-        if (_revealed) { _markHard(); return true; }
       case LogicalKeyboardKey.arrowLeft:
       case LogicalKeyboardKey.keyJ:
-        if (_revealed) { _markForgot(); return true; }
+        if (_revealed) { _markNotYet(); return true; }
       case LogicalKeyboardKey.keyS:
         _speak(_current.word); return true;
       case LogicalKeyboardKey.keyN:
@@ -180,8 +177,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   }
 
   void _markKnew()   => _advance(_Grade.knew);
-  void _markHard()   => _advance(_Grade.hard);
-  void _markForgot() => _advance(_Grade.forgot);
+  void _markNotYet() => _advance(_Grade.notYet);
   void _markSkip()   => _advance(_Grade.skip);
 
   void _goBack() {
@@ -201,13 +197,10 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
         case _Grade.knew:
           await StorageService.reviewSRSWord(_queue[i]);
           await StorageService.addXP(5, reason: 'SRS Review');
-        case _Grade.hard:
-          await StorageService.hardSRSWord(_queue[i]);
-          await StorageService.addXP(3, reason: 'SRS Review Hard');
-        case _Grade.forgot:
+        case _Grade.notYet:
           await StorageService.failSRSWord(_queue[i]);
         case _Grade.skip:
-          break; // no-op — word stays at current stage for future review
+          break;
       }
     }
     if (_history.isNotEmpty) {
@@ -470,7 +463,6 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   Widget _buildQuizBody(BuildContext context) {
     final choices = _cardChoices[_currentIndex]!;
     final answered = _tappedChoice != null;
-    final correct = _current.translation;
 
     return SingleChildScrollView(
       child: Column(
@@ -505,70 +497,37 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
             )),
             if (answered) ...[
               const SizedBox(height: 8),
-              if (_tappedChoice == correct)
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: _markHard,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.amber.shade700,
-                          side: BorderSide(color: Colors.amber.shade700),
-                          padding: const EdgeInsets.symmetric(vertical: 18),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                        child: const Text('Hard',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _markNotYet,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
+                      child: const Text('Not yet',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: _markKnew,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 18),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                        child: Text(tr('know_it'),
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _markKnew,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
+                      child: const Text('Know it',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                     ),
-                  ],
-                )
-              else
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: _markForgot,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                          side: const BorderSide(color: Colors.red),
-                          padding: const EdgeInsets.symmetric(vertical: 18),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                        child: Text(tr('didnt_know'),
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: _markHard,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.amber.shade700,
-                          side: BorderSide(color: Colors.amber.shade700),
-                          padding: const EdgeInsets.symmetric(vertical: 18),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                        child: const Text('Hard',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
+              ),
             ],
           ],
           const SizedBox(height: 20),
@@ -593,7 +552,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
           onHorizontalDragEnd: _revealed
               ? (d) {
                   if (_cardDx > 80) { _markKnew(); }
-                  else if (_cardDx < -80) { _markForgot(); }
+                  else if (_cardDx < -80) { _markNotYet(); }
                   else { setState(() => _cardDx = 0); }
                 }
               : null,
@@ -647,28 +606,14 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: _markForgot,
+                  onPressed: _markNotYet,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.red,
                     side: const BorderSide(color: Colors.red),
                     padding: const EdgeInsets.symmetric(vertical: 18),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
-                  child: Text(tr('didnt_know'),
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _markHard,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.amber.shade700,
-                    side: BorderSide(color: Colors.amber.shade700),
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: const Text('Hard',
+                  child: const Text('Not yet',
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
               ),
@@ -682,8 +627,8 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
                     padding: const EdgeInsets.symmetric(vertical: 18),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
-                  child: Text(tr('know_it'),
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  child: const Text('Know it',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
               ),
             ],
@@ -747,7 +692,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
             padding: const EdgeInsets.only(right: 16),
             child: Center(
               child: Text(
-                '✓$_knew  ~$_hard  ✗$_forgot',
+                '✓$_knew  ✗$_notYet',
                 style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
               ),
             ),
@@ -778,7 +723,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   // ── Finish screen ─────────────────────────────────────────────────────────
 
   Widget _buildFinish(BuildContext context) {
-    final total = _knew + _hard + _forgot;
+    final total = _knew + _notYet;
 
     return Scaffold(
       backgroundColor: context.bg,
@@ -806,8 +751,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
                   children: [
                     _buildStat(context, '$total', tr('reviewed'), context.primary),
                     _buildStat(context, '$_knew', tr('know_it'), Colors.green),
-                    _buildStat(context, '$_hard', 'Hard', Colors.amber),
-                    _buildStat(context, '$_forgot', tr('didnt_know'), Colors.red),
+                    _buildStat(context, '$_notYet', 'Not yet', Colors.red),
                   ],
                 ),
               ),

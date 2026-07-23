@@ -1459,7 +1459,7 @@ class _HomeScreenState extends State<HomeScreen>
               ],
 
               if (sid == 'stats' && !_hideStats) ...[
-                const SizedBox(height: 4),
+                const SizedBox(height: 12),
                 Text(
                   'Your Progress',
                   style: TextStyle(

@@ -513,92 +513,109 @@ class _HintRow extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────
-//  STREAK CALENDAR SCREEN
+//  STREAK CALENDAR SCREEN  (three-track)
 // ─────────────────────────────────────────────
+
+const _kUnitColor  = Color(0xFFEA580C);
+const _kSrsColor   = Color(0xFF4338CA);
+const _kWordsColor = Color(0xFF059669);
+
 class StreakCalendarScreen extends StatefulWidget {
   const StreakCalendarScreen({super.key});
   @override
   State<StreakCalendarScreen> createState() => _StreakCalendarScreenState();
 }
 
-class _StreakCalendarScreenState extends State<StreakCalendarScreen>
-    with SingleTickerProviderStateMixin {
-  int _streak = 0;
-  int _totalDays = 0;
-  List<String> _studyDays = [];
+class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
   bool _loading = true;
-  late DateTime _currentMonth;
-  late AnimationController _ctrl;
-  late Animation<double> _fade;
+  int _streak = 0;
+  int _longestStreak = 0;
+  List<String> _unitDoneDays  = [];
+  List<String> _reviewDays    = [];
+  List<String> _wordGoalDays  = [];
+  late DateTime _month;
 
   @override
   void initState() {
     super.initState();
-    appLangNotifier.addListener(_onLangChange);
-    _currentMonth = DateTime(DateTime.now().year, DateTime.now().month);
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
-    _fade = Tween<double>(
-      begin: 0,
-      end: 1,
-    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeIn));
+    appLangNotifier.addListener(_rebuild);
+    _month = DateTime(DateTime.now().year, DateTime.now().month);
     _load();
   }
 
   @override
   void dispose() {
-    appLangNotifier.removeListener(_onLangChange);
-    _ctrl.dispose();
+    appLangNotifier.removeListener(_rebuild);
     super.dispose();
   }
 
-  void _onLangChange() { if (mounted) setState(() {}); }
+  void _rebuild() { if (mounted) setState(() {}); }
 
   Future<void> _load() async {
-    final streak = await StorageService.getStreak();
-    final total = await StorageService.getTotalStudyDays();
-    final days = await StorageService.getStudyDays();
+    final results = await Future.wait([
+      StorageService.getStreak(),
+      StorageService.getStudyDays(),
+      StorageService.getUnitDoneDays(),
+      StorageService.getReviewDays(),
+      StorageService.getWordGoalDays(),
+    ]);
+    final studyDays = results[1] as List<String>;
     setState(() {
-      _streak = streak;
-      _totalDays = total;
-      _studyDays = days;
-      _loading = false;
+      _streak        = results[0] as int;
+      _unitDoneDays  = results[2] as List<String>;
+      _reviewDays    = results[3] as List<String>;
+      _wordGoalDays  = results[4] as List<String>;
+      _longestStreak = _calcLongest(studyDays);
+      _loading       = false;
     });
-    _ctrl.forward();
   }
 
-  bool _wasStudied(DateTime date) {
-    final str =
-        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-    return _studyDays.contains(str);
+  int _calcLongest(List<String> days) {
+    final sorted = [...days]..sort();
+    int longest = 0, current = 0;
+    String prev = '';
+    for (final d in sorted) {
+      if (prev.isNotEmpty) {
+        final diff = DateTime.parse(d).difference(DateTime.parse(prev)).inDays;
+        current = diff == 1 ? current + 1 : 1;
+      } else {
+        current = 1;
+      }
+      if (current > longest) longest = current;
+      prev = d;
+    }
+    return longest;
+  }
+
+  void _prevMonth() => setState(() {
+    _month = DateTime(_month.year, _month.month - 1);
+  });
+
+  void _nextMonth() {
+    final now = DateTime.now();
+    if (_month.year == now.year && _month.month == now.month) return;
+    setState(() { _month = DateTime(_month.year, _month.month + 1); });
   }
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final firstDay = DateTime(_currentMonth.year, _currentMonth.month, 1);
-    final daysInMonth = DateTime(
-      _currentMonth.year,
-      _currentMonth.month + 1,
-      0,
-    ).day;
-    final startWeekday = firstDay.weekday % 7;
-    final monthNames = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
+    if (_loading) {
+      return Scaffold(
+        backgroundColor: context.bg,
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final now      = DateTime.now();
+    final todayStr = '${now.year}-${now.month.toString().padLeft(2,'0')}-${now.day.toString().padLeft(2,'0')}';
+    final monthName = ['January','February','March','April','May','June',
+      'July','August','September','October','November','December'][_month.month - 1];
+    final canGoNext = !(_month.year == now.year && _month.month == now.month);
+
+    // today's task status
+    final unitToday   = _unitDoneDays.contains(todayStr);
+    final reviewToday = _reviewDays.contains(todayStr);
+    final wordsToday  = _wordGoalDays.contains(todayStr);
 
     return Scaffold(
       backgroundColor: context.bg,
@@ -609,248 +626,247 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen>
           icon: Icon(Icons.arrow_back, color: context.primary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
-          tr('study_streak'),
-          style: TextStyle(
-            color: context.appText,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        title: Text('Calendar', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : FadeTransition(
-              opacity: _fade,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildStatCard(
-                            context,
-                            '🔥',
-                            '$_streak',
-                            tr('day_streak'),
-                            const Color(0xFFFF6B35),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _buildStatCard(
-                            context,
-                            '📅',
-                            '$_totalDays',
-                            tr('total_days'),
-                            context.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: context.surface,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [...context.cardShadow],
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              IconButton(
-                                icon: Icon(
-                                  Icons.chevron_left,
-                                  color: context.primary,
-                                ),
-                                onPressed: () => setState(
-                                  () => _currentMonth = DateTime(
-                                    _currentMonth.year,
-                                    _currentMonth.month - 1,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                '${monthNames[_currentMonth.month - 1]} ${_currentMonth.year}',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: context.appText,
-                                ),
-                              ),
-                              IconButton(
-                                icon: Icon(
-                                  Icons.chevron_right,
-                                  color: context.primary,
-                                ),
-                                onPressed:
-                                    _currentMonth.year == now.year &&
-                                        _currentMonth.month == now.month
-                                    ? null
-                                    : () => setState(
-                                        () => _currentMonth = DateTime(
-                                          _currentMonth.year,
-                                          _currentMonth.month + 1,
-                                        ),
-                                      ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children:
-                                [
-                                      'Sun',
-                                      'Mon',
-                                      'Tue',
-                                      'Wed',
-                                      'Thu',
-                                      'Fri',
-                                      'Sat',
-                                    ]
-                                    .map(
-                                      (d) => SizedBox(
-                                        width: 36,
-                                        child: Text(
-                                          d,
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: context.textMuted,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                    )
-                                    .toList(),
-                          ),
-                          const SizedBox(height: 8),
-                          GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 7,
-                                  childAspectRatio: 1,
-                                ),
-                            itemCount: startWeekday + daysInMonth,
-                            itemBuilder: (context, index) {
-                              if (index < startWeekday) return const SizedBox();
-                              final day = index - startWeekday + 1;
-                              final date = DateTime(
-                                _currentMonth.year,
-                                _currentMonth.month,
-                                day,
-                              );
-                              final isToday =
-                                  date.year == now.year &&
-                                  date.month == now.month &&
-                                  date.day == now.day;
-                              final studied = _wasStudied(date);
-                              final isFuture = date.isAfter(now);
-                              return Center(
-                                child: Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: studied
-                                        ? const Color(0xFF2ECC71)
-                                        : isToday
-                                        ? context.primary.withValues(alpha: 0.15)
-                                        : Colors.transparent,
-                                    border: isToday
-                                        ? Border.all(
-                                            color: context.primary,
-                                            width: 2,
-                                          )
-                                        : null,
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      '$day',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: isToday
-                                            ? FontWeight.bold
-                                            : FontWeight.normal,
-                                        color: studied
-                                            ? Colors.white
-                                            : isFuture
-                                            ? context.border
-                                            : context.appText,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              _buildLegend(context, const Color(0xFF2ECC71), tr('studied')),
-                              const SizedBox(width: 20),
-                              _buildLegend(context, context.border, tr('missed')),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Stat tiles ──────────────────────────────────
+            Row(
+              children: [
+                _StatTile(emoji: '🔥', value: '$_streak',        label: 'Streak',         color: const Color(0xFFBE123C)),
+                const SizedBox(width: 10),
+                _StatTile(emoji: '⚡', value: '$_longestStreak', label: 'Longest streak',  color: const Color(0xFF0369A1)),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // ── Today task cards ─────────────────────────────
+            Text('Today', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.textMuted)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _TaskCard(label: 'Unit',   done: unitToday,   color: _kUnitColor),
+                const SizedBox(width: 8),
+                _TaskCard(label: 'Review', done: reviewToday, color: _kSrsColor),
+                const SizedBox(width: 8),
+                _TaskCard(label: 'Words',  done: wordsToday,  color: _kWordsColor),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // ── Month nav ────────────────────────────────────
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(onPressed: _prevMonth, icon: Icon(Icons.chevron_left, color: context.primary)),
+                Text('$monthName ${_month.year}',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+                IconButton(
+                    onPressed: canGoNext ? _nextMonth : null,
+                    icon: Icon(Icons.chevron_right, color: canGoNext ? context.primary : context.border)),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // ── Three mini calendars ─────────────────────────
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: _MiniCalendar(title: 'Unit',   color: _kUnitColor,  days: _unitDoneDays,  month: _month)),
+                const SizedBox(width: 8),
+                Expanded(child: _MiniCalendar(title: 'SRS',    color: _kSrsColor,   days: _reviewDays,    month: _month)),
+                const SizedBox(width: 8),
+                Expanded(child: _MiniCalendar(title: 'Words',  color: _kWordsColor, days: _wordGoalDays,  month: _month)),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // ── Legend ───────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('How to mark a day', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+                  const SizedBox(height: 10),
+                  _LegendRow(color: _kUnitColor,  text: 'Finish Learn + Flashcards + Quiz for any unit'),
+                  const SizedBox(height: 6),
+                  _LegendRow(color: _kSrsColor,   text: 'Complete an SRS review session'),
+                  const SizedBox(height: 6),
+                  _LegendRow(color: _kWordsColor, text: 'Reach your daily word goal'),
+                ],
               ),
             ),
+          ],
+        ),
+      ),
     );
   }
+}
 
-  Widget _buildStatCard(BuildContext context, String emoji, String value, String label, Color color) {
+// ── Stat tile ────────────────────────────────────────────────────────────────
+class _StatTile extends StatelessWidget {
+  final String emoji, value, label;
+  final Color color;
+  const _StatTile({required this.emoji, required this.value, required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 8, offset: const Offset(0, 4))],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 22)),
+            const SizedBox(height: 4),
+            Text(value, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white)),
+            Text(label, style: const TextStyle(fontSize: 11, color: Colors.white70, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Today task card ──────────────────────────────────────────────────────────
+class _TaskCard extends StatelessWidget {
+  final String label;
+  final bool done;
+  final Color color;
+  const _TaskCard({required this.label, required this.done, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: done ? color : context.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: done ? color : context.border, width: 1.5),
+        ),
+        child: Column(
+          children: [
+            Icon(done ? Icons.check_circle : Icons.circle_outlined,
+                color: done ? Colors.white : context.textMuted, size: 22),
+            const SizedBox(height: 4),
+            Text(label,
+                style: TextStyle(
+                    fontSize: 11, fontWeight: FontWeight.bold,
+                    color: done ? Colors.white : context.textMuted)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Mini calendar ────────────────────────────────────────────────────────────
+class _MiniCalendar extends StatelessWidget {
+  final String title;
+  final Color color;
+  final List<String> days;
+  final DateTime month;
+  const _MiniCalendar({required this.title, required this.color, required this.days, required this.month});
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final todayStr = '${now.year}-${now.month.toString().padLeft(2,'0')}-${now.day.toString().padLeft(2,'0')}';
+    final mm = month.month.toString().padLeft(2, '0');
+    final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
+    // Monday-first offset
+    final firstWeekday = DateTime(month.year, month.month, 1).weekday; // 1=Mon
+    final offset = firstWeekday - 1;
+    final monthCount = days.where((d) => d.startsWith('${month.year}-$mm')).length;
+
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: context.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [...context.cardShadow],
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
-          Text(emoji, style: const TextStyle(fontSize: 32)),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
+          Row(
+            children: [
+              Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+              const SizedBox(width: 4),
+              Expanded(child: Text(title, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: context.appText))),
+              Text('$monthCount', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color)),
+            ],
           ),
-          Text(
-            label,
-            style: TextStyle(fontSize: 13, color: context.textMuted),
+          const SizedBox(height: 6),
+          // Day headers M T W T F S S
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: ['M','T','W','T','F','S','S'].map((d) =>
+              Text(d, style: TextStyle(fontSize: 7, color: context.textMuted, fontWeight: FontWeight.bold))
+            ).toList(),
+          ),
+          const SizedBox(height: 4),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7, childAspectRatio: 1, mainAxisSpacing: 2, crossAxisSpacing: 1),
+            itemCount: offset + daysInMonth,
+            itemBuilder: (_, i) {
+              if (i < offset) return const SizedBox();
+              final day = i - offset + 1;
+              final dateStr = '${month.year}-$mm-${day.toString().padLeft(2,'0')}';
+              final done = days.contains(dateStr);
+              final isToday = dateStr == todayStr;
+              final isFuture = DateTime.parse(dateStr).isAfter(DateTime.parse(todayStr));
+              return Center(
+                child: Container(
+                  width: 18, height: 18,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: done ? color : Colors.transparent,
+                    border: isToday ? Border.all(color: color, width: 1.5) : null,
+                  ),
+                  child: Center(
+                    child: Text('$day',
+                        style: TextStyle(
+                            fontSize: 7,
+                            fontWeight: FontWeight.bold,
+                            color: done ? Colors.white : isFuture ? context.border : context.appText)),
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildLegend(BuildContext context, Color color, String label) {
+// ── Legend row ───────────────────────────────────────────────────────────────
+class _LegendRow extends StatelessWidget {
+  final Color color;
+  final String text;
+  const _LegendRow({required this.color, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       children: [
-        Container(
-          width: 14,
-          height: 14,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: TextStyle(fontSize: 12, color: context.textMuted),
-        ),
+        Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        const SizedBox(width: 8),
+        Expanded(child: Text(text, style: TextStyle(fontSize: 12, color: context.textMuted))),
       ],
     );
   }

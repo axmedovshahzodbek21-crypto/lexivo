@@ -431,6 +431,9 @@ class StorageService {
   static const _hasPerfectQuizKey = 'has_perfect_quiz';
   static const _hasCompletedFlashcardKey = 'has_completed_flashcard';
   static const _hasCompletedSRSKey = 'has_completed_srs';
+  static const _unitDoneDaysKey  = 'unit_done_days';
+  static const _reviewDaysKey    = 'review_days';
+  static const _wordGoalDaysKey  = 'word_goal_days';
 
   static const int defaultDailyLimit = 20;
 
@@ -594,6 +597,7 @@ class StorageService {
             : null,
       ),
     );
+    if (allDone) await recordUnitDoneDay();
   }
 
   static Future<void> markFlashcardComplete(
@@ -614,6 +618,7 @@ class StorageService {
             : null,
       ),
     );
+    if (allDone) await recordUnitDoneDay();
   }
 
   static Future<void> markQuizComplete(
@@ -634,6 +639,7 @@ class StorageService {
             : null,
       ),
     );
+    if (allDone) await recordUnitDoneDay();
   }
 
   // ── Daily Word Limit ───────────────────────
@@ -704,7 +710,10 @@ class StorageService {
       jsonEncode(existing.map((e) => e.toJson()).toList()),
     );
     await addToSRS(words, collectionName, unitTopic, dayNumber);
-    if (newCount > 0) await _incrementDailyCount(newCount);
+    if (newCount > 0) {
+      await _incrementDailyCount(newCount);
+      await _checkAndRecordWordGoalDay(prefs);
+    }
   }
 
   // ── SRS Words ─────────────────────────────
@@ -947,6 +956,7 @@ class StorageService {
   static Future<void> markSRSReviewCompleted() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_hasCompletedSRSKey, true);
+    await recordReviewDay();
   }
 
   static Future<bool> hasCompletedQuiz() async {
@@ -967,6 +977,61 @@ class StorageService {
   static Future<bool> hasCompletedSRS() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_hasCompletedSRSKey) ?? false;
+  }
+
+  // ── Three-track day lists ──────────────────
+  static Future<List<String>> getUnitDoneDays() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_unitDoneDaysKey);
+    return raw != null ? List<String>.from(jsonDecode(raw)) : [];
+  }
+
+  static Future<void> recordUnitDoneDay() async {
+    final prefs = await SharedPreferences.getInstance();
+    final today = _todayString();
+    final raw = prefs.getString(_unitDoneDaysKey);
+    final days = raw != null ? List<String>.from(jsonDecode(raw)) : <String>[];
+    if (!days.contains(today)) {
+      days.add(today);
+      await prefs.setString(_unitDoneDaysKey, jsonEncode(days));
+    }
+  }
+
+  static Future<List<String>> getReviewDays() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_reviewDaysKey);
+    return raw != null ? List<String>.from(jsonDecode(raw)) : [];
+  }
+
+  static Future<void> recordReviewDay() async {
+    final prefs = await SharedPreferences.getInstance();
+    final today = _todayString();
+    final raw = prefs.getString(_reviewDaysKey);
+    final days = raw != null ? List<String>.from(jsonDecode(raw)) : <String>[];
+    if (!days.contains(today)) {
+      days.add(today);
+      await prefs.setString(_reviewDaysKey, jsonEncode(days));
+    }
+  }
+
+  static Future<List<String>> getWordGoalDays() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_wordGoalDaysKey);
+    return raw != null ? List<String>.from(jsonDecode(raw)) : [];
+  }
+
+  static Future<void> _checkAndRecordWordGoalDay(SharedPreferences prefs) async {
+    final goal = prefs.getInt('daily_word_goal') ?? defaultDailyLimit;
+    final today = _todayString();
+    final lastDate = prefs.getString(_dailyLimitDateKey);
+    final count = lastDate == today ? (prefs.getInt(_dailyLimitKey) ?? 0) : 0;
+    if (count < goal) return;
+    final raw = prefs.getString(_wordGoalDaysKey);
+    final days = raw != null ? List<String>.from(jsonDecode(raw)) : <String>[];
+    if (!days.contains(today)) {
+      days.add(today);
+      await prefs.setString(_wordGoalDaysKey, jsonEncode(days));
+    }
   }
 
   static Future<int> getMasteredSRSCount() async {

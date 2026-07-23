@@ -1370,6 +1370,7 @@ class _HomeScreenState extends State<HomeScreen>
               ], // end _hideGoalLevel
 
               if (sid == 'wod' && _wordOfDay != null && !_hideWordOfDay) ...[
+                const SizedBox(height: 8),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

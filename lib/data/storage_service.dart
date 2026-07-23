@@ -597,7 +597,6 @@ class StorageService {
             : null,
       ),
     );
-    if (allDone) await recordUnitDoneDay();
   }
 
   static Future<void> markFlashcardComplete(
@@ -618,7 +617,6 @@ class StorageService {
             : null,
       ),
     );
-    if (allDone) await recordUnitDoneDay();
   }
 
   static Future<void> markQuizComplete(
@@ -639,7 +637,6 @@ class StorageService {
             : null,
       ),
     );
-    if (allDone) await recordUnitDoneDay();
   }
 
   // ── Daily Word Limit ───────────────────────

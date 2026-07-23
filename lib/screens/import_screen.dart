@@ -20,7 +20,7 @@ const _languages = [
 ];
 
 String _buildPrompt1(String wordLang, String transLang) => '''
-I have a list of $wordLang words I want to learn. For each word, provide the translation in $transLang, a short definition in $wordLang, and 2 example sentences in $wordLang with their $transLang translations.
+I have a list of $wordLang words I want to learn. For each word, provide the translation in $transLang, a short definition in $wordLang, and 5 example sentences in $wordLang with their $transLang translations.
 
 Format EXACTLY like this for every word. Use plain text only — no markdown, no bold, no asterisks, no extra formatting:
 
@@ -31,6 +31,12 @@ example1: The enormous building towered above the city.
 example1Translation: Ulkan bino shahar ustida baland turardi.
 example2: She faced an enormous challenge at work.
 example2Translation: U ishda ulkan muammoga duch keldi.
+example3: The storm caused enormous damage to the coastline.
+example3Translation: Bo'ron qirg'oqqa ulkan zarar yetkazdi.
+example4: He made an enormous effort to finish the project on time.
+example4Translation: U loyihani o'z vaqtida tugatish uchun ulkan harakat qildi.
+example5: The discovery had an enormous impact on modern science.
+example5Translation: Bu kashfiyot zamonaviy fanga ulkan ta'sir ko'rsatdi.
 ---
 
 Important: the example above uses English/Uzbek only to show the format. In your actual response, write the definition and examples in $wordLang, and the translations in $transLang.
@@ -39,7 +45,7 @@ Here are my words:
 [PASTE YOUR WORDS HERE, one per line]''';
 
 String _buildPrompt2(String wordLang, String transLang) => '''
-I have $wordLang-$transLang word pairs. For each pair, keep my translation exactly as written. Add a short definition in $wordLang and 2 example sentences in $wordLang with their $transLang translations.
+I have $wordLang-$transLang word pairs. For each pair, keep my translation exactly as written. Add a short definition in $wordLang and 5 example sentences in $wordLang with their $transLang translations.
 
 Format EXACTLY like this for every word. Use plain text only — no markdown, no bold, no asterisks, no extra formatting:
 
@@ -50,6 +56,12 @@ example1: The enormous building towered above the city.
 example1Translation: Ulkan bino shahar ustida baland turardi.
 example2: She faced an enormous challenge at work.
 example2Translation: U ishda ulkan muammoga duch keldi.
+example3: The storm caused enormous damage to the coastline.
+example3Translation: Bo'ron qirg'oqqa ulkan zarar yetkazdi.
+example4: He made an enormous effort to finish the project on time.
+example4Translation: U loyihani o'z vaqtida tugatish uchun ulkan harakat qildi.
+example5: The discovery had an enormous impact on modern science.
+example5Translation: Bu kashfiyot zamonaviy fanga ulkan ta'sir ko'rsatdi.
 ---
 
 Important: the example above uses English/Uzbek only to show the format. In your actual response, write the definition and examples in $wordLang, and the translations in $transLang.
@@ -80,6 +92,12 @@ List<ImportedWord> _parseOutput(String text, String langCode) {
       example1Translation: fields['example1translation'] ?? '',
       example2: fields['example2'] ?? '',
       example2Translation: fields['example2translation'] ?? '',
+      example3: fields['example3']?.isNotEmpty == true ? fields['example3'] : null,
+      example3Translation: fields['example3translation']?.isNotEmpty == true ? fields['example3translation'] : null,
+      example4: fields['example4']?.isNotEmpty == true ? fields['example4'] : null,
+      example4Translation: fields['example4translation']?.isNotEmpty == true ? fields['example4translation'] : null,
+      example5: fields['example5']?.isNotEmpty == true ? fields['example5'] : null,
+      example5Translation: fields['example5translation']?.isNotEmpty == true ? fields['example5translation'] : null,
       language: langCode,
       addedAt: DateTime.now().millisecondsSinceEpoch,
       collectionName: '',
@@ -584,6 +602,30 @@ class _WordPreviewCard extends StatelessWidget {
           if (word.example2Translation.isNotEmpty) ...[
             const SizedBox(height: 2),
             Text('↳ ${word.example2Translation}', style: TextStyle(color: context.textMuted, fontSize: 12)),
+          ],
+          if (word.example3 != null && word.example3!.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text('"${word.example3}"', style: TextStyle(color: context.appText, fontSize: 12, fontStyle: FontStyle.italic)),
+          ],
+          if (word.example3Translation != null && word.example3Translation!.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text('↳ ${word.example3Translation}', style: TextStyle(color: context.textMuted, fontSize: 12)),
+          ],
+          if (word.example4 != null && word.example4!.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text('"${word.example4}"', style: TextStyle(color: context.appText, fontSize: 12, fontStyle: FontStyle.italic)),
+          ],
+          if (word.example4Translation != null && word.example4Translation!.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text('↳ ${word.example4Translation}', style: TextStyle(color: context.textMuted, fontSize: 12)),
+          ],
+          if (word.example5 != null && word.example5!.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text('"${word.example5}"', style: TextStyle(color: context.appText, fontSize: 12, fontStyle: FontStyle.italic)),
+          ],
+          if (word.example5Translation != null && word.example5Translation!.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text('↳ ${word.example5Translation}', style: TextStyle(color: context.textMuted, fontSize: 12)),
           ],
         ],
       ),

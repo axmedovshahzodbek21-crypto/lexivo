@@ -281,6 +281,12 @@ class ImportedWord {
   final String example1Translation;
   final String example2;
   final String example2Translation;
+  final String? example3;
+  final String? example3Translation;
+  final String? example4;
+  final String? example4Translation;
+  final String? example5;
+  final String? example5Translation;
   final String language;
   final int addedAt;
   final String collectionName;
@@ -294,6 +300,12 @@ class ImportedWord {
     required this.example1Translation,
     required this.example2,
     required this.example2Translation,
+    this.example3,
+    this.example3Translation,
+    this.example4,
+    this.example4Translation,
+    this.example5,
+    this.example5Translation,
     required this.language,
     required this.addedAt,
     required this.collectionName,
@@ -308,6 +320,12 @@ class ImportedWord {
     'example1Translation': example1Translation,
     'example2': example2,
     'example2Translation': example2Translation,
+    if (example3 != null) 'example3': example3,
+    if (example3Translation != null) 'example3Translation': example3Translation,
+    if (example4 != null) 'example4': example4,
+    if (example4Translation != null) 'example4Translation': example4Translation,
+    if (example5 != null) 'example5': example5,
+    if (example5Translation != null) 'example5Translation': example5Translation,
     'language': language,
     'addedAt': addedAt,
     'collectionName': collectionName,
@@ -322,6 +340,12 @@ class ImportedWord {
     example1Translation: json['example1Translation'] ?? '',
     example2: json['example2'] ?? '',
     example2Translation: json['example2Translation'] ?? '',
+    example3: json['example3'] as String?,
+    example3Translation: json['example3Translation'] as String?,
+    example4: json['example4'] as String?,
+    example4Translation: json['example4Translation'] as String?,
+    example5: json['example5'] as String?,
+    example5Translation: json['example5Translation'] as String?,
     language: json['language'] ?? 'en-US',
     addedAt: json['addedAt'] ?? 0,
     collectionName: json['collectionName'] ?? 'My Words',
@@ -338,7 +362,7 @@ class ImportedWord {
     example1Translation: example1Translation,
     example2: example2,
     example2Translation: example2Translation,
-    example3: '',
+    example3: example3 ?? '',
   );
 }
 

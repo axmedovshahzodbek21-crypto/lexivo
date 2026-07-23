@@ -287,7 +287,6 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   }
 
   Widget _buildWordCard(BuildContext context) {
-    final canOpen = _collectionFor(_current) != null;
     return Container(
       width: double.infinity,
       height: 200,
@@ -326,29 +325,28 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
               ],
             ),
           ),
-          if (canOpen)
-            Positioned(
-              top: 10,
-              right: 12,
-              child: GestureDetector(
-                onTap: _openInUnit,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.school_outlined, color: Colors.white, size: 13),
-                      SizedBox(width: 4),
-                      Text('Unit', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
-                    ],
-                  ),
+          Positioned(
+            top: 10,
+            right: 12,
+            child: GestureDetector(
+              onTap: _openInUnit,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.school_outlined, color: Colors.white, size: 13),
+                    SizedBox(width: 4),
+                    Text('Unit', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                  ],
                 ),
               ),
             ),
+          ),
         ],
       ),
     );
@@ -469,8 +467,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: 8),
-          _buildStageIndicator(context),
-          const SizedBox(height: 12),
+
           GestureDetector(
             onTap: _choicesRevealed ? null : () => setState(() => _choicesRevealed = true),
             child: _buildWordCard(context),
@@ -582,7 +579,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child: const Center(
-                        child: Text('✗  FORGOT',
+                        child: Text('✗  NOT YET',
                             style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
                       ),
                     ),

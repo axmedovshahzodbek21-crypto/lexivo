@@ -790,16 +790,11 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
                         Text('Track breakdown',
                             style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.textMuted)),
                         const SizedBox(height: 8),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(child: _MiniCalendar(title: 'Unit',   color: _kUnitColor,  days: _unitDoneDays,  month: _month)),
-                            const SizedBox(width: 8),
-                            Expanded(child: _MiniCalendar(title: 'SRS',    color: _kSrsColor,   days: _reviewDays,    month: _month)),
-                            const SizedBox(width: 8),
-                            Expanded(child: _MiniCalendar(title: 'Words',  color: _kWordsColor, days: _wordGoalDays,  month: _month)),
-                          ],
-                        ),
+                        _MiniCalendar(title: 'Unit',   color: _kUnitColor,  days: _unitDoneDays,  month: _month),
+                        const SizedBox(height: 10),
+                        _MiniCalendar(title: 'SRS',    color: _kSrsColor,   days: _reviewDays,    month: _month),
+                        const SizedBox(height: 10),
+                        _MiniCalendar(title: 'Words',  color: _kWordsColor, days: _wordGoalDays,  month: _month),
                         const SizedBox(height: 16),
                       ],
                     ),
@@ -912,36 +907,41 @@ class _MiniCalendar extends StatelessWidget {
     final monthCount = days.where((d) => d.startsWith('${month.year}-$mm')).length;
 
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
       decoration: BoxDecoration(
         color: context.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.35), width: 1.5),
       ),
       child: Column(
         children: [
           Row(
             children: [
-              Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-              const SizedBox(width: 4),
-              Expanded(child: Text(title, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: context.appText))),
-              Text('$monthCount', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color)),
+              Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+              const SizedBox(width: 6),
+              Expanded(child: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: context.appText))),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
+                child: Text('$monthCount days', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
+              ),
             ],
           ),
-          const SizedBox(height: 6),
-          // Day headers M T W T F S S
+          const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: ['M','T','W','T','F','S','S'].map((d) =>
-              Text(d, style: TextStyle(fontSize: 7, color: context.textMuted, fontWeight: FontWeight.bold))
+              SizedBox(width: 36, child: Text(d,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 11, color: context.textMuted, fontWeight: FontWeight.bold)))
             ).toList(),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 7, childAspectRatio: 1, mainAxisSpacing: 2, crossAxisSpacing: 1),
+                crossAxisCount: 7, childAspectRatio: 1),
             itemCount: offset + daysInMonth,
             itemBuilder: (_, i) {
               if (i < offset) return const SizedBox();
@@ -952,17 +952,17 @@ class _MiniCalendar extends StatelessWidget {
               final isFuture = DateTime.parse(dateStr).isAfter(DateTime.parse(todayStr));
               return Center(
                 child: Container(
-                  width: 18, height: 18,
+                  width: 30, height: 30,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: done ? color : Colors.transparent,
-                    border: isToday ? Border.all(color: color, width: 1.5) : null,
+                    border: isToday ? Border.all(color: color, width: 2) : null,
                   ),
                   child: Center(
                     child: Text('$day',
                         style: TextStyle(
-                            fontSize: 7,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                            fontWeight: done || isToday ? FontWeight.bold : FontWeight.normal,
                             color: done ? Colors.white : isFuture ? context.border : context.appText)),
                   ),
                 ),

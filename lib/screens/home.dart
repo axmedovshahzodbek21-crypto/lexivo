@@ -1366,11 +1366,11 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ],
               )),
-              const SizedBox(height: 24),
+              const SizedBox(height: 18),
               ], // end _hideGoalLevel
 
               if (sid == 'wod' && _wordOfDay != null && !_hideWordOfDay) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1450,16 +1450,16 @@ class _HomeScreenState extends State<HomeScreen>
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 14),
               ],
 
               if (sid == 'session' && !_hideSession) ...[
                 _buildSessionCard(context),
-                const SizedBox(height: 20),
+                const SizedBox(height: 14),
               ],
 
               if (sid == 'stats' && !_hideStats) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 Text(
                   'Your Progress',
                   style: TextStyle(
@@ -1468,7 +1468,7 @@ class _HomeScreenState extends State<HomeScreen>
                     color: context.appText,
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 14),
                 Row(
                 children: [
                   _buildStatCard(
@@ -1515,7 +1515,7 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ],
               ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 14),
               ], // stats
               ], // end for loop
             ],

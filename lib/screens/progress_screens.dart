@@ -516,7 +516,6 @@ class _HintRow extends StatelessWidget {
 //  STREAK CALENDAR SCREEN  (three-track)
 // ─────────────────────────────────────────────
 
-const _kUnitColor  = Color(0xFFEA580C);
 const _kSrsColor   = Color(0xFF4338CA);
 const _kWordsColor = Color(0xFF059669);
 
@@ -530,7 +529,6 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
   bool _loading = true;
   int _streak = 0;
   int _longestStreak = 0;
-  List<String> _unitDoneDays  = [];
   List<String> _reviewDays    = [];
   List<String> _wordGoalDays  = [];
   late DateTime _month;
@@ -556,16 +554,14 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
     final results = await Future.wait([
       StorageService.getStreak(),
       StorageService.getStudyDays(),
-      StorageService.getUnitDoneDays(),
       StorageService.getReviewDays(),
       StorageService.getWordGoalDays(),
     ]);
     final studyDays = results[1] as List<String>;
     setState(() {
       _streak        = results[0] as int;
-      _unitDoneDays  = results[2] as List<String>;
-      _reviewDays    = results[3] as List<String>;
-      _wordGoalDays  = results[4] as List<String>;
+      _reviewDays    = results[2] as List<String>;
+      _wordGoalDays  = results[3] as List<String>;
       _longestStreak = _calcLongest(studyDays);
       _loading       = false;
     });
@@ -622,7 +618,6 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
       'July','August','September','October','November','December'][_month.month - 1];
     final canGoNext = !(_month.year == now.year && _month.month == now.month);
 
-    final unitToday   = _unitDoneDays.contains(todayStr);
     final reviewToday = _reviewDays.contains(todayStr);
     final wordsToday  = _wordGoalDays.contains(todayStr);
 
@@ -661,8 +656,6 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
             const SizedBox(height: 8),
             Row(
               children: [
-                _TaskCard(label: 'Unit',   done: unitToday,   color: _kUnitColor),
-                const SizedBox(width: 8),
                 _TaskCard(label: 'Review', done: reviewToday, color: _kSrsColor),
                 const SizedBox(width: 8),
                 _TaskCard(label: 'Words',  done: wordsToday,  color: _kWordsColor),
@@ -716,10 +709,9 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
                       final isToday    = dateStr == todayStr;
                       final isSelected = dateStr == _selectedDay;
                       final isFuture   = DateTime.parse(dateStr).isAfter(now);
-                      final hasUnit    = _unitDoneDays.contains(dateStr);
                       final hasReview  = _reviewDays.contains(dateStr);
                       final hasWords   = _wordGoalDays.contains(dateStr);
-                      final anyDone    = hasUnit || hasReview || hasWords;
+                      final anyDone    = hasReview || hasWords;
 
                       return GestureDetector(
                         onTap: isFuture ? null : () => setState(() {
@@ -753,8 +745,6 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  if (hasUnit)   _dot(_kUnitColor),
-                                  if (hasUnit && (hasReview || hasWords)) const SizedBox(width: 2),
                                   if (hasReview) _dot(_kSrsColor),
                                   if (hasReview && hasWords) const SizedBox(width: 2),
                                   if (hasWords)  _dot(_kWordsColor),
@@ -790,8 +780,6 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
                         Text('Track breakdown',
                             style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.textMuted)),
                         const SizedBox(height: 8),
-                        _MiniCalendar(title: 'Unit',   color: _kUnitColor,  days: _unitDoneDays,  month: _month),
-                        const SizedBox(height: 10),
                         _MiniCalendar(title: 'SRS',    color: _kSrsColor,   days: _reviewDays,    month: _month),
                         const SizedBox(height: 10),
                         _MiniCalendar(title: 'Words',  color: _kWordsColor, days: _wordGoalDays,  month: _month),
@@ -809,8 +797,6 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
                 children: [
                   Text('How to mark a day', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
                   const SizedBox(height: 10),
-                  _LegendRow(color: _kUnitColor,  text: 'Finish Learn + Flashcards + Quiz for any unit'),
-                  const SizedBox(height: 6),
                   _LegendRow(color: _kSrsColor,   text: 'Complete an SRS review session'),
                   const SizedBox(height: 6),
                   _LegendRow(color: _kWordsColor, text: 'Reach your daily word goal'),

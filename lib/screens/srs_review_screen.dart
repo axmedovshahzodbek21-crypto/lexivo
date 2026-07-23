@@ -163,9 +163,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     _autoAdvanceTimer?.cancel();
     setState(() { _tappedChoice = choice; _revealed = true; });
     _flipCtrl.forward();
-    if (choice == _current.translation) {
-      _autoAdvanceTimer = Timer(const Duration(milliseconds: 1500), _markKnew);
-    }
+    // No auto-advance — user picks their own grade via the buttons below
   }
 
   void _advance(_Grade grade) {
@@ -296,6 +294,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   }
 
   Widget _buildWordCard(BuildContext context) {
+    final canOpen = _collectionFor(_current) != null;
     return Container(
       width: double.infinity,
       height: 200,
@@ -304,30 +303,59 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
         borderRadius: BorderRadius.circular(24),
         boxShadow: [BoxShadow(color: context.primary.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 8))],
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Stack(
         children: [
-          Text(
-            _current.word,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _current.word,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                const SizedBox(height: 8),
+                Text(_current.partOfSpeech, style: const TextStyle(fontSize: 14, color: Colors.white60)),
+                if (_current.pronunciation.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(_current.pronunciation,
+                      style: const TextStyle(fontSize: 13, color: Colors.white54, fontStyle: FontStyle.italic)),
+                ],
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _listenButton('🇺🇸', 'en-US'),
+                    const SizedBox(width: 8),
+                    _listenButton('🇬🇧', 'en-GB'),
+                  ],
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          Text(_current.partOfSpeech, style: const TextStyle(fontSize: 14, color: Colors.white60)),
-          if (_current.pronunciation.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(_current.pronunciation,
-                style: const TextStyle(fontSize: 13, color: Colors.white54, fontStyle: FontStyle.italic)),
-          ],
-          const SizedBox(height: 8),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _listenButton('🇺🇸', 'en-US'),
-              const SizedBox(width: 8),
-              _listenButton('🇬🇧', 'en-GB'),
-            ],
-          ),
+          if (canOpen)
+            Positioned(
+              top: 10,
+              right: 12,
+              child: GestureDetector(
+                onTap: _openInUnit,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.school_outlined, color: Colors.white, size: 13),
+                      SizedBox(width: 4),
+                      Text('Unit', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -475,39 +503,72 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
               padding: const EdgeInsets.only(bottom: 8),
               child: _buildChoiceButton(context, c),
             )),
-            if (answered && _tappedChoice != correct) ...[
+            if (answered) ...[
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _markForgot,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              if (_tappedChoice == correct)
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _markHard,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.amber.shade700,
+                          side: BorderSide(color: Colors.amber.shade700),
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        child: const Text('Hard',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                       ),
-                      child: Text(tr('didnt_know'),
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _markHard,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.amber.shade700,
-                        side: BorderSide(color: Colors.amber.shade700),
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _markKnew,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        child: Text(tr('know_it'),
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                       ),
-                      child: const Text('Hard',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                )
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _markForgot,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                          side: const BorderSide(color: Colors.red),
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        child: Text(tr('didnt_know'),
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _markHard,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.amber.shade700,
+                          side: BorderSide(color: Colors.amber.shade700),
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        child: const Text('Hard',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      ),
+                    ),
+                  ],
+                ),
             ],
           ],
           const SizedBox(height: 20),

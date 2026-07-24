@@ -476,16 +476,8 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 8),
-              // Word card is outside SingleChildScrollView so its swipe
-              // is never blocked by the scroll view's drag recognizer.
               GestureDetector(
                 onTap: _choicesRevealed ? null : () => setState(() => _choicesRevealed = true),
-                onHorizontalDragUpdate: (d) => setState(() => _cardDx += d.delta.dx),
-                onHorizontalDragEnd: (d) {
-                  if (_cardDx > 80) { _markKnew(); }
-                  else if (_cardDx < -80) { _markNotYet(); }
-                  else { setState(() => _cardDx = 0); }
-                },
                 child: _buildWordCard(context),
               ),
               Expanded(
@@ -553,6 +545,18 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
                 ),
               ),
             ],
+          ),
+          // Full-screen swipe overlay — translucent so taps still reach buttons below
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onHorizontalDragUpdate: (d) => setState(() => _cardDx += d.delta.dx),
+              onHorizontalDragEnd: (d) {
+                if (_cardDx > 80) { _markKnew(); }
+                else if (_cardDx < -80) { _markNotYet(); }
+                else { setState(() => _cardDx = 0); }
+              },
+            ),
           ),
           if (_cardDx > 20)
             IgnorePointer(

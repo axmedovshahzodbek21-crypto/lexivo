@@ -34,18 +34,11 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   bool _autoPlay = true;
   final List<_Grade> _history = [];
   bool _gradesApplied = false;
-  double _cardDx = 0;
-
   // Quiz mode
   late List<List<String>?> _cardChoices;
   String? _tappedChoice;
   bool _choicesRevealed = false;
   Timer? _autoAdvanceTimer;
-
-  // Raw swipe tracking (bypasses gesture arena so choice buttons don't block it)
-  double _panStartX = 0;
-  double _panStartY = 0;
-  bool _panIsHorizontal = false;
 
   int get _knew   => _history.where((g) => g == _Grade.knew).length;
   int get _notYet => _history.where((g) => g == _Grade.notYet).length;
@@ -173,7 +166,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     _history.add(grade);
     _flipCtrl.reset();
     final next = _currentIndex + 1;
-    setState(() { _currentIndex = next; _revealed = false; _cardDx = 0; _tappedChoice = null; _choicesRevealed = false; });
+    setState(() { _currentIndex = next; _revealed = false; _tappedChoice = null; _choicesRevealed = false; });
     if (next >= _queue.length) {
       _applyGrades();
     } else if (_autoPlay) {
@@ -190,7 +183,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     if (_history.isEmpty) return;
     _history.removeLast();
     _flipCtrl.reset();
-    setState(() { _currentIndex--; _revealed = false; _cardDx = 0; _tappedChoice = null; _choicesRevealed = false; });
+    setState(() { _currentIndex--; _revealed = false; _tappedChoice = null; _choicesRevealed = false; });
     if (_autoPlay) _speak(_queue[_currentIndex].word);
   }
 
@@ -472,139 +465,71 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     final choices = _cardChoices[_currentIndex]!;
     final answered = _tappedChoice != null;
 
-    return Listener(
-      behavior: HitTestBehavior.translucent,
-      onPointerDown: (e) {
-        _panStartX = e.position.dx;
-        _panStartY = e.position.dy;
-        _panIsHorizontal = false;
-      },
-      onPointerMove: (e) {
-        final dx = e.position.dx - _panStartX;
-        final dy = e.position.dy - _panStartY;
-        if (!_panIsHorizontal && dx.abs() > 10) {
-          _panIsHorizontal = dx.abs() > dy.abs() * 1.2;
-        }
-        if (_panIsHorizontal) setState(() => _cardDx = dx);
-      },
-      onPointerUp: (e) {
-        if (!_panIsHorizontal) return;
-        if (_cardDx > 80) { _markKnew(); }
-        else if (_cardDx < -80) { _markNotYet(); }
-        else { setState(() => _cardDx = 0); }
-        _panIsHorizontal = false;
-      },
-      onPointerCancel: (_) {
-        setState(() => _cardDx = 0);
-        _panIsHorizontal = false;
-      },
-      child: Transform.translate(
-        offset: Offset(_cardDx, 0),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: _choicesRevealed ? null : () => setState(() => _choicesRevealed = true),
-                  child: _buildWordCard(context),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(top: 8, bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          GestureDetector(
+            onTap: _choicesRevealed ? null : () => setState(() => _choicesRevealed = true),
+            child: _buildWordCard(context),
+          ),
+          const SizedBox(height: 16),
+          if (!_choicesRevealed)
+            Center(
+              child: Text(tr('tap_to_reveal'),
+                  style: TextStyle(color: context.textMuted, fontSize: 13)),
+            )
+          else ...[
+            if (answered)
+              AnimatedBuilder(
+                animation: _flipAnim,
+                builder: (ctx, child) => Opacity(opacity: _flipAnim.value, child: child),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: _buildInfoPanel(context),
                 ),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.only(top: 16, bottom: 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (!_choicesRevealed)
-                          Center(
-                            child: Text(tr('tap_to_reveal'),
-                                style: TextStyle(color: context.textMuted, fontSize: 13)),
-                          )
-                        else ...[
-                          if (answered)
-                            AnimatedBuilder(
-                              animation: _flipAnim,
-                              builder: (ctx, child) => Opacity(opacity: _flipAnim.value, child: child),
-                              child: Padding(
-                                padding: const EdgeInsets.only(bottom: 16),
-                                child: _buildInfoPanel(context),
-                              ),
-                            ),
-                          ...choices.map((c) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: _buildChoiceButton(context, c),
-                          )),
-                          if (answered) ...[
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton(
-                                    onPressed: _markNotYet,
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: Colors.red,
-                                      side: const BorderSide(color: Colors.red),
-                                      padding: const EdgeInsets.symmetric(vertical: 18),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                    ),
-                                    child: Text(tr('not_yet'),
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: _markKnew,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.green,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(vertical: 18),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                    ),
-                                    child: Text(tr('know_it'),
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ],
-                      ],
+              ),
+            ...choices.map((c) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _buildChoiceButton(context, c),
+            )),
+            if (answered) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _markNotYet,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: Text(tr('not_yet'),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                     ),
                   ),
-                ),
-              ],
-            ),
-            if (_cardDx > 20)
-            IgnorePointer(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: (_cardDx / 200).clamp(0.0, 0.75)),
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: const Center(
-                  child: Text('✓  KNEW',
-                      style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
-                ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _markKnew,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: Text(tr('know_it'),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          if (_cardDx < -20)
-            IgnorePointer(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: (-_cardDx / 200).clamp(0.0, 0.75)),
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: const Center(
-                  child: Text('✕  NOT YET',
-                      style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
-                ),
-              ),
-            ),
+            ],
+          ],
         ],
-        ),
       ),
     );
   }
@@ -619,46 +544,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
         const SizedBox(height: 12),
         GestureDetector(
           onTap: _reveal,
-          onHorizontalDragUpdate: (d) => setState(() => _cardDx += d.delta.dx),
-          onHorizontalDragEnd: (d) {
-            if (_cardDx > 80) { _markKnew(); }
-            else if (_cardDx < -80) { _markNotYet(); }
-            else { setState(() => _cardDx = 0); }
-          },
-          child: Transform.translate(
-            offset: Offset(_cardDx, 0),
-            child: Stack(
-              children: [
-                _buildWordCard(context),
-                if (_cardDx > 20)
-                  Positioned.fill(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: (_cardDx / 200).clamp(0.0, 0.75)),
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      child: const Center(
-                        child: Text('✓  KNEW',
-                            style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                  ),
-                if (_cardDx < -20)
-                  Positioned.fill(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: (-_cardDx / 200).clamp(0.0, 0.75)),
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      child: const Center(
-                        child: Text('✗  NOT YET',
-                            style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
+          child: _buildWordCard(context),
         ),
         const SizedBox(height: 16),
         if (!_revealed)

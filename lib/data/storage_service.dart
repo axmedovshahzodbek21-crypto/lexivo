@@ -776,6 +776,7 @@ class StorageService {
 
   static Future<List<DueSRSWord>> getDueWords() async {
     await migrateReviewLogIfNeeded();
+    await _migrateReviewLogToPerWord();
     const intervals = [1, 3, 7, 14, 30];
     final today = DateTime.parse(SRSWord._todayStr());
     final words = await getSRSWords();
@@ -783,7 +784,8 @@ class StorageService {
 
     final result = <DueSRSWord>[];
     for (final word in words) {
-      final completed = log[word.learnedAt] ?? [];
+      final wordKey = '${word.collectionName}::${word.word}';
+      final completed = log[wordKey] ?? [];
       final nextInterval = intervals.firstWhere(
         (i) => !completed.contains(i),
         orElse: () => -1,
@@ -872,36 +874,35 @@ class StorageService {
 
   // ── Interval completion ───────────────────────────────────────────────────
 
-  static Future<void> markIntervalDone(String learnedAt, int interval) async {
+  static Future<void> markIntervalDone(String wordKey, String learnedAt, int interval) async {
     const allIntervals = [1, 3, 7, 14, 30];
     final log = await getReviewLog();
-    final completed = List<int>.from(log[learnedAt] ?? []);
+    final completed = List<int>.from(log[wordKey] ?? []);
     if (!completed.contains(interval)) {
       completed.add(interval);
-      log[learnedAt] = completed;
+      log[wordKey] = completed;
       await saveReviewLog(log);
     }
 
-    // Mastery: all 5 intervals complete → graduate words out of active SRS
+    // Mastery: all 5 intervals complete → graduate this specific word out of active SRS
     if (allIntervals.every((i) => completed.contains(i))) {
       final prefs = await SharedPreferences.getInstance();
       final all = await getSRSWords();
-      final graduated = all.where((w) => w.learnedAt == learnedAt).toList();
-      final remaining = all.where((w) => w.learnedAt != learnedAt).toList();
+      final graduated = all.where((w) => '${w.collectionName}::${w.word}' == wordKey).toList();
+      final remaining = all.where((w) => '${w.collectionName}::${w.word}' != wordKey).toList();
 
-      // Append to mastered store
-      final masteredRaw = prefs.getString(_masteredSRSKey);
-      final masteredList = masteredRaw != null
-          ? (jsonDecode(masteredRaw) as List).cast<Map<String, dynamic>>()
-          : <Map<String, dynamic>>[];
-      masteredList.addAll(graduated.map((w) => w.toJson()));
-      await prefs.setString(_masteredSRSKey, jsonEncode(masteredList));
-
-      // Remove from active SRS
-      await prefs.setString(
-        _srsKey,
-        jsonEncode(remaining.map((e) => e.toJson()).toList()),
-      );
+      if (graduated.isNotEmpty) {
+        final masteredRaw = prefs.getString(_masteredSRSKey);
+        final masteredList = masteredRaw != null
+            ? (jsonDecode(masteredRaw) as List).cast<Map<String, dynamic>>()
+            : <Map<String, dynamic>>[];
+        masteredList.addAll(graduated.map((w) => w.toJson()));
+        await prefs.setString(_masteredSRSKey, jsonEncode(masteredList));
+        await prefs.setString(
+          _srsKey,
+          jsonEncode(remaining.map((e) => e.toJson()).toList()),
+        );
+      }
     }
   }
 
@@ -958,9 +959,40 @@ class StorageService {
     } catch (_) {}
   }
 
+  // One-time migration: converts date-keyed log entries to per-word keys.
+  // Old format: { "2026-07-01": [1, 3] }  (all words learned that day shared one entry)
+  // New format: { "CollectionA::word": [1, 3] }  (each word tracked independently)
+  static Future<void> _migrateReviewLogToPerWord() async {
+    final log = await getReviewLog();
+    if (log.isEmpty) return;
+    final dateKeyPattern = RegExp(r'^\d{4}-\d{2}-\d{2}$');
+    if (!log.keys.any((k) => dateKeyPattern.hasMatch(k))) return; // already migrated
+
+    final words = await getSRSWords();
+    final newLog = <String, List<int>>{};
+
+    // Keep any already-migrated word-keyed entries
+    for (final entry in log.entries) {
+      if (!dateKeyPattern.hasMatch(entry.key)) newLog[entry.key] = entry.value;
+    }
+
+    // For each word, copy the completed intervals from its learnedAt date entry
+    for (final word in words) {
+      final wordKey = '${word.collectionName}::${word.word}';
+      if (newLog.containsKey(wordKey)) continue;
+      final intervals = log[word.learnedAt];
+      if (intervals != null && intervals.isNotEmpty) {
+        newLog[wordKey] = List<int>.from(intervals);
+      }
+    }
+
+    await saveReviewLog(newLog);
+  }
+
   static Future<bool> reviewSRSWord(SRSWord word) async {
     if (word is DueSRSWord) {
-      await markIntervalDone(word.learnedAt, word.dueInterval);
+      final wordKey = '${word.collectionName}::${word.word}';
+      await markIntervalDone(wordKey, word.learnedAt, word.dueInterval);
       return addXP(reviewXP(word.dueInterval), reason: 'SRS Review');
     } else {
       final updated = word.advanceStage();

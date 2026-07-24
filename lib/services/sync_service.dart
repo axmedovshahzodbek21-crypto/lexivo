@@ -356,7 +356,7 @@ class SyncService {
         if (raw == null) return 0;
         try {
           return (jsonDecode(raw) as List)
-              .where((w) => ((w as Map)['reviewStage'] as int? ?? 0) >= 4)
+              .where((w) => ((w as Map)['reviewStage'] as int? ?? 0) >= 5)
               .length;
         } catch (_) { return 0; }
       })();

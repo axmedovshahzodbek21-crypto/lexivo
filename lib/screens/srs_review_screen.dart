@@ -475,6 +475,12 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
 
           GestureDetector(
             onTap: _choicesRevealed ? null : () => setState(() => _choicesRevealed = true),
+            onHorizontalDragUpdate: (d) => setState(() => _cardDx += d.delta.dx),
+            onHorizontalDragEnd: (d) {
+              if (_cardDx > 80) { _markKnew(); }
+              else if (_cardDx < -80) { _markNotYet(); }
+              else { setState(() => _cardDx = 0); }
+            },
             child: _buildWordCard(context),
           ),
           const SizedBox(height: 16),
@@ -537,47 +543,39 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
       ),
     );
 
-    return GestureDetector(
-      onHorizontalDragUpdate: (d) => setState(() => _cardDx += d.delta.dx),
-      onHorizontalDragEnd: (d) {
-        if (_cardDx > 80) { _markKnew(); }
-        else if (_cardDx < -80) { _markNotYet(); }
-        else { setState(() => _cardDx = 0); }
-      },
-      child: Transform.translate(
-        offset: Offset(_cardDx, 0),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            scrollContent,
-            if (_cardDx > 20)
-              IgnorePointer(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: (_cardDx / 200).clamp(0.0, 0.75)),
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: const Center(
-                    child: Text('✓  KNEW',
-                        style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
-                  ),
+    return Transform.translate(
+      offset: Offset(_cardDx, 0),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          scrollContent,
+          if (_cardDx > 20)
+            IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: (_cardDx / 200).clamp(0.0, 0.75)),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: const Center(
+                  child: Text('✓  KNEW',
+                      style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
                 ),
               ),
-            if (_cardDx < -20)
-              IgnorePointer(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: (-_cardDx / 200).clamp(0.0, 0.75)),
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: const Center(
-                    child: Text('✕  NOT YET',
-                        style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
-                  ),
+            ),
+          if (_cardDx < -20)
+            IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: (-_cardDx / 200).clamp(0.0, 0.75)),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: const Center(
+                  child: Text('✕  NOT YET',
+                      style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }

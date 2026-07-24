@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../data/storage_service.dart';
 import '../app_theme.dart';
 
+String _displayXP(int raw) => (raw / 10).toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '');
+
 class XpHistoryScreen extends StatefulWidget {
   const XpHistoryScreen({super.key});
 
@@ -141,6 +143,7 @@ class _XpHistoryScreenState extends State<XpHistoryScreen> {
                     final dayEntries = grouped[dateKey]!;
                     final dayTotal = dayEntries.fold<int>(
                         0, (s, e) => s + (e['amount'] as int));
+                    final dayTotalDisplay = _displayXP(dayTotal);
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -159,7 +162,7 @@ class _XpHistoryScreenState extends State<XpHistoryScreen> {
                                 ),
                               ),
                               Text(
-                                '+$dayTotal XP',
+                                '+$dayTotalDisplay XP',
                                 style: TextStyle(
                                   color: context.primary,
                                   fontSize: 13,
@@ -228,7 +231,7 @@ class _XpHistoryScreenState extends State<XpHistoryScreen> {
                                                 BorderRadius.circular(20),
                                           ),
                                           child: Text(
-                                            '+${entry['amount']} XP',
+                                            '+${_displayXP(entry['amount'] as int)} XP',
                                             style: const TextStyle(
                                               color: Color(0xFF6C63FF),
                                               fontWeight: FontWeight.bold,

@@ -58,7 +58,7 @@ class SRSWord {
   final String nextReviewDate;
   final String learnedDate;
 
-  static const List<int> _intervals = [1, 3, 7, 14];
+  static const List<int> _intervals = [1, 3, 7, 14, 30];
 
   SRSWord({
     required this.word,
@@ -95,7 +95,7 @@ class SRSWord {
     return !review.isAfter(DateTime(today.year, today.month, today.day));
   }
 
-  bool get isMastered => reviewStage >= 4;
+  bool get isMastered => reviewStage >= 5;
 
   String get stageLabel {
     switch (reviewStage) {
@@ -107,6 +107,8 @@ class SRSWord {
         return 'Stage 2 — review in 7 days';
       case 3:
         return 'Stage 3 — review in 14 days';
+      case 4:
+        return 'Stage 4 — review in 30 days';
       default:
         return '⭐ Mastered';
     }
@@ -127,14 +129,14 @@ class SRSWord {
 
   SRSWord advanceStage() {
     final newStage = reviewStage + 1;
-    return newStage >= 4
-        ? _copyWith(reviewStage: 4, nextReviewDate: '9999-12-31')
+    return newStage >= 5
+        ? _copyWith(reviewStage: 5, nextReviewDate: '9999-12-31')
         : _copyWith(reviewStage: newStage, nextReviewDate: _nextDateFromNow(_intervals[newStage]));
   }
 
   SRSWord hardStage() {
     final newStage = reviewStage + 1;
-    if (newStage >= 4) return _copyWith(reviewStage: 4, nextReviewDate: '9999-12-31');
+    if (newStage >= 5) return _copyWith(reviewStage: 5, nextReviewDate: '9999-12-31');
     final days = (_intervals[newStage] / 2).ceil();
     return _copyWith(reviewStage: newStage, nextReviewDate: _nextDateFromNow(days));
   }

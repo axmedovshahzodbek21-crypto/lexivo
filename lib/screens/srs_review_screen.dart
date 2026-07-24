@@ -209,7 +209,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     }
   }
 
-  String _stageProgress(SRSWord word) => 'Stage ${word.reviewStage + 1} of 4';
+  String _stageProgress(SRSWord word) => 'Stage ${word.reviewStage + 1} of 5';
 
   WordCollection? _collectionFor(SRSWord word) {
     final name = word.collectionName;

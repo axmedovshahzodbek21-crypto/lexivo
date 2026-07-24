@@ -196,7 +196,6 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
       switch (_history[i]) {
         case _Grade.knew:
           await StorageService.reviewSRSWord(_queue[i]);
-          await StorageService.addXP(5, reason: 'SRS Review');
         case _Grade.notYet:
           await StorageService.failSRSWord(_queue[i]);
         case _Grade.skip:
@@ -209,7 +208,10 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     }
   }
 
-  String _stageProgress(SRSWord word) => 'Stage ${word.reviewStage + 1} of 5';
+  String _stageProgress(SRSWord word) {
+    if (word is DueSRSWord) return 'Review · Day ${word.dueInterval}';
+    return 'Stage ${word.reviewStage + 1} of 5';
+  }
 
   WordCollection? _collectionFor(SRSWord word) {
     final name = word.collectionName;

@@ -34,6 +34,8 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   bool _autoPlay = true;
   final List<_Grade> _history = [];
   bool _gradesApplied = false;
+  double _cardDx = 0;
+
   // Quiz mode
   late List<List<String>?> _cardChoices;
   String? _tappedChoice;
@@ -166,7 +168,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     _history.add(grade);
     _flipCtrl.reset();
     final next = _currentIndex + 1;
-    setState(() { _currentIndex = next; _revealed = false; _tappedChoice = null; _choicesRevealed = false; });
+    setState(() { _currentIndex = next; _revealed = false; _cardDx = 0; _tappedChoice = null; _choicesRevealed = false; });
     if (next >= _queue.length) {
       _applyGrades();
     } else if (_autoPlay) {
@@ -183,7 +185,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     if (_history.isEmpty) return;
     _history.removeLast();
     _flipCtrl.reset();
-    setState(() { _currentIndex--; _revealed = false; _tappedChoice = null; _choicesRevealed = false; });
+    setState(() { _currentIndex--; _revealed = false; _cardDx = 0; _tappedChoice = null; _choicesRevealed = false; });
     if (_autoPlay) _speak(_queue[_currentIndex].word);
   }
 
@@ -465,15 +467,27 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     final choices = _cardChoices[_currentIndex]!;
     final answered = _tappedChoice != null;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.only(top: 8, bottom: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          GestureDetector(
-            onTap: _choicesRevealed ? null : () => setState(() => _choicesRevealed = true),
-            child: _buildWordCard(context),
-          ),
+    return GestureDetector(
+      onHorizontalDragUpdate: answered ? (d) => setState(() => _cardDx += d.delta.dx) : null,
+      onHorizontalDragEnd: answered ? (d) {
+        if (_cardDx > 80) { _markKnew(); }
+        else if (_cardDx < -80) { _markNotYet(); }
+        else { setState(() => _cardDx = 0); }
+      } : null,
+      child: Transform.translate(
+        offset: Offset(_cardDx, 0),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            SingleChildScrollView(
+              padding: const EdgeInsets.only(top: 8, bottom: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  GestureDetector(
+                    onTap: _choicesRevealed ? null : () => setState(() => _choicesRevealed = true),
+                    child: _buildWordCard(context),
+                  ),
           const SizedBox(height: 16),
           if (!_choicesRevealed)
             Center(
@@ -530,6 +544,36 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
             ],
           ],
         ],
+              ),
+            ),
+            if (answered && _cardDx > 20)
+              IgnorePointer(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: (_cardDx / 200).clamp(0.0, 0.75)),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: const Center(
+                    child: Text('✓  KNEW',
+                        style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ),
+            if (answered && _cardDx < -20)
+              IgnorePointer(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: (-_cardDx / 200).clamp(0.0, 0.75)),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: const Center(
+                    child: Text('✕  NOT YET',
+                        style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -537,8 +581,20 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   // ── Flip body (fallback when <2 distractors available) ───────────────────
 
   Widget _buildFlipBody(BuildContext context) {
-    return Column(
-      children: [
+    return GestureDetector(
+      onHorizontalDragUpdate: _revealed ? (d) => setState(() => _cardDx += d.delta.dx) : null,
+      onHorizontalDragEnd: _revealed ? (d) {
+        if (_cardDx > 80) { _markKnew(); }
+        else if (_cardDx < -80) { _markNotYet(); }
+        else { setState(() => _cardDx = 0); }
+      } : null,
+      child: Transform.translate(
+        offset: Offset(_cardDx, 0),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Column(
+              children: [
         const SizedBox(height: 8),
         _buildStageIndicator(context),
         const SizedBox(height: 12),
@@ -589,9 +645,39 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
             ],
           ),
         ],
-        const SizedBox(height: 20),
-      ],
-    );
+              const SizedBox(height: 20),
+            ],
+          ),
+          if (_revealed && _cardDx > 20)
+            IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: (_cardDx / 200).clamp(0.0, 0.75)),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: const Center(
+                  child: Text('✓  KNEW',
+                      style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ),
+          if (_revealed && _cardDx < -20)
+            IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: (-_cardDx / 200).clamp(0.0, 0.75)),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: const Center(
+                  child: Text('✕  NOT YET',
+                      style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
   }
 
   // ── Main build ────────────────────────────────────────────────────────────

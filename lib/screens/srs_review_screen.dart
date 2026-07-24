@@ -538,23 +538,19 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     );
 
     return GestureDetector(
-      onHorizontalDragUpdate: answered
-          ? (d) => setState(() => _cardDx += d.delta.dx)
-          : null,
-      onHorizontalDragEnd: answered
-          ? (d) {
-              if (_cardDx > 80) { _markKnew(); }
-              else if (_cardDx < -80) { _markNotYet(); }
-              else { setState(() => _cardDx = 0); }
-            }
-          : null,
+      onHorizontalDragUpdate: (d) => setState(() => _cardDx += d.delta.dx),
+      onHorizontalDragEnd: (d) {
+        if (_cardDx > 80) { _markKnew(); }
+        else if (_cardDx < -80) { _markNotYet(); }
+        else { setState(() => _cardDx = 0); }
+      },
       child: Transform.translate(
         offset: Offset(_cardDx, 0),
         child: Stack(
           fit: StackFit.expand,
           children: [
             scrollContent,
-            if (answered && _cardDx > 20)
+            if (_cardDx > 20)
               IgnorePointer(
                 child: Container(
                   decoration: BoxDecoration(
@@ -567,7 +563,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
                   ),
                 ),
               ),
-            if (answered && _cardDx < -20)
+            if (_cardDx < -20)
               IgnorePointer(
                 child: Container(
                   decoration: BoxDecoration(
@@ -596,22 +592,18 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
         const SizedBox(height: 12),
         GestureDetector(
           onTap: _reveal,
-          onHorizontalDragUpdate: _revealed
-              ? (d) => setState(() => _cardDx += d.delta.dx)
-              : null,
-          onHorizontalDragEnd: _revealed
-              ? (d) {
-                  if (_cardDx > 80) { _markKnew(); }
-                  else if (_cardDx < -80) { _markNotYet(); }
-                  else { setState(() => _cardDx = 0); }
-                }
-              : null,
+          onHorizontalDragUpdate: (d) => setState(() => _cardDx += d.delta.dx),
+          onHorizontalDragEnd: (d) {
+            if (_cardDx > 80) { _markKnew(); }
+            else if (_cardDx < -80) { _markNotYet(); }
+            else { setState(() => _cardDx = 0); }
+          },
           child: Transform.translate(
             offset: Offset(_cardDx, 0),
             child: Stack(
               children: [
                 _buildWordCard(context),
-                if (_revealed && _cardDx > 20)
+                if (_cardDx > 20)
                   Positioned.fill(
                     child: Container(
                       decoration: BoxDecoration(
@@ -624,7 +616,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
                       ),
                     ),
                   ),
-                if (_revealed && _cardDx < -20)
+                if (_cardDx < -20)
                   Positioned.fill(
                     child: Container(
                       decoration: BoxDecoration(

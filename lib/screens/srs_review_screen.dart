@@ -556,6 +556,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
                 else if (_cardDx < -80) { _markNotYet(); }
                 else { setState(() => _cardDx = 0); }
               },
+              child: const SizedBox.expand(),
             ),
           ),
           if (_cardDx > 20)

@@ -455,10 +455,10 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
 
     if (vx.abs() > vy.abs()) {
       if (vx > 300) {
-        _showSwipeOverlay(Colors.green.withValues(alpha: 0.85), '😄 ${tr('easy')}');
+        _showSwipeOverlay(Colors.green.withValues(alpha: 0.85), tr('easy'));
         Future.delayed(const Duration(milliseconds: 300), _markEasy);
       } else if (vx < -300) {
-        _showSwipeOverlay(Colors.red.withValues(alpha: 0.85), '😕 ${tr('hard')}');
+        _showSwipeOverlay(Colors.red.withValues(alpha: 0.85), tr('hard'));
         Future.delayed(const Duration(milliseconds: 300), _markHard);
       }
     } else {
@@ -786,7 +786,7 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
                     elevation: 0,
                   ),
                   child: Text(
-                    '😕 ${tr('hard')}',
+                    tr('hard'),
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                   ),
                 ),
@@ -822,7 +822,7 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
                     elevation: 0,
                   ),
                   child: Text(
-                    '😄 ${tr('easy')}',
+                    tr('easy'),
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                   ),
                 ),
@@ -1345,10 +1345,10 @@ class FlashcardFinishScreen extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildStat('$easyCount', '😄 ${tr('easy')}', Colors.green),
+                    _buildStat('$easyCount', tr('easy'), Colors.green),
                     _buildStat(
                       '${hardWords.length}',
-                      '😕 ${tr('hard')}',
+                      tr('hard'),
                       const Color(0xFFE53935),
                     ),
                     _buildStat('$percent%', '✅ ${tr('score')}', context.primary),

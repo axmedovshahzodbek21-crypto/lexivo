@@ -356,7 +356,7 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
                         Row(
                           children: [
                             Text(
-                              '$minXp XP',
+                              '${StorageService.displayXP(minXp)} XP',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -402,7 +402,7 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        '$xpNeeded more XP',
+                        '${StorageService.displayXP(xpNeeded)} more XP',
                         style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: context.primary),
                       ),
                       const SizedBox(height: 10),

@@ -200,6 +200,29 @@ class SRSWord {
   );
 }
 
+// SRSWord with the specific interval currently being reviewed attached.
+class DueSRSWord extends SRSWord {
+  final int dueInterval; // one of 1 | 3 | 7 | 14 | 30
+
+  DueSRSWord._({required SRSWord base, required this.dueInterval})
+      : super(
+          word: base.word,
+          translation: base.translation,
+          definition: base.definition,
+          example1: base.example1,
+          example2: base.example2,
+          example3: base.example3,
+          partOfSpeech: base.partOfSpeech,
+          pronunciation: base.pronunciation,
+          collectionName: base.collectionName,
+          unitTopic: base.unitTopic,
+          dayNumber: base.dayNumber,
+          reviewStage: base.reviewStage,
+          nextReviewDate: base.nextReviewDate,
+          learnedAt: base.learnedAt,
+        );
+}
+
 class HardWord {
   final String word;
   final String translation;
@@ -461,6 +484,7 @@ class StorageService {
   static const _reviewDaysKey    = 'review_days';
   static const _wordGoalDaysKey  = 'word_goal_days';
   static const _reviewLogKey     = 'srs_review_log';
+  static const _masteredSRSKey   = 'mastered_srs_words';
 
   static const int defaultDailyLimit = 20;
 
@@ -750,11 +774,28 @@ class StorageService {
     return list.map((e) => SRSWord.fromJson(e)).toList();
   }
 
-  static Future<List<SRSWord>> getDueWords() async {
-    final all = await getSRSWords();
-    final due = all.where((w) => !w.isMastered && w.isDueToday).toList();
-    due.sort((a, b) => a.nextReviewDate.compareTo(b.nextReviewDate));
-    return due;
+  static Future<List<DueSRSWord>> getDueWords() async {
+    await migrateReviewLogIfNeeded();
+    const intervals = [1, 3, 7, 14, 30];
+    final today = DateTime.parse(SRSWord._todayStr());
+    final words = await getSRSWords();
+    final log = await getReviewLog();
+
+    final result = <DueSRSWord>[];
+    for (final word in words) {
+      final completed = log[word.learnedAt] ?? [];
+      final nextInterval = intervals.firstWhere(
+        (i) => !completed.contains(i),
+        orElse: () => -1,
+      );
+      if (nextInterval == -1) continue;
+      final dueDate = DateTime.parse(word.learnedAt).add(Duration(days: nextInterval));
+      if (!dueDate.isAfter(today)) {
+        result.add(DueSRSWord._(base: word, dueInterval: nextInterval));
+      }
+    }
+    result.sort((a, b) => a.dueInterval.compareTo(b.dueInterval));
+    return result;
   }
 
   static Future<int> getDueCount() async {
@@ -763,8 +804,15 @@ class StorageService {
   }
 
   static Future<List<SRSWord>> getMasteredWords() async {
-    final all = await getSRSWords();
-    return all.where((w) => w.isMastered).toList();
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_masteredSRSKey);
+    if (raw == null) return [];
+    try {
+      final list = jsonDecode(raw) as List;
+      return list.map((e) => SRSWord.fromJson(e as Map<String, dynamic>)).toList();
+    } catch (_) {
+      return [];
+    }
   }
 
   static Future<void> addToSRS(
@@ -822,6 +870,41 @@ class StorageService {
     );
   }
 
+  // ── Interval completion ───────────────────────────────────────────────────
+
+  static Future<void> markIntervalDone(String learnedAt, int interval) async {
+    const allIntervals = [1, 3, 7, 14, 30];
+    final log = await getReviewLog();
+    final completed = List<int>.from(log[learnedAt] ?? []);
+    if (!completed.contains(interval)) {
+      completed.add(interval);
+      log[learnedAt] = completed;
+      await saveReviewLog(log);
+    }
+
+    // Mastery: all 5 intervals complete → graduate words out of active SRS
+    if (allIntervals.every((i) => completed.contains(i))) {
+      final prefs = await SharedPreferences.getInstance();
+      final all = await getSRSWords();
+      final graduated = all.where((w) => w.learnedAt == learnedAt).toList();
+      final remaining = all.where((w) => w.learnedAt != learnedAt).toList();
+
+      // Append to mastered store
+      final masteredRaw = prefs.getString(_masteredSRSKey);
+      final masteredList = masteredRaw != null
+          ? (jsonDecode(masteredRaw) as List).cast<Map<String, dynamic>>()
+          : <Map<String, dynamic>>[];
+      masteredList.addAll(graduated.map((w) => w.toJson()));
+      await prefs.setString(_masteredSRSKey, jsonEncode(masteredList));
+
+      // Remove from active SRS
+      await prefs.setString(
+        _srsKey,
+        jsonEncode(remaining.map((e) => e.toJson()).toList()),
+      );
+    }
+  }
+
   // ── Review Log ───────────────────────────────────────────────────────────
 
   static Future<Map<String, List<int>>> getReviewLog() async {
@@ -876,15 +959,22 @@ class StorageService {
   }
 
   static Future<bool> reviewSRSWord(SRSWord word) async {
-    final updated = word.advanceStage();
-    await updateSRSWord(updated);
+    if (word is DueSRSWord) {
+      await markIntervalDone(word.learnedAt, word.dueInterval);
+    } else {
+      final updated = word.advanceStage();
+      await updateSRSWord(updated);
+    }
     final leveledUp = await addXP(5, reason: 'SRS Review');
     return leveledUp;
   }
 
   static Future<void> failSRSWord(SRSWord word) async {
-    final updated = word.dropStage();
-    await updateSRSWord(updated);
+    if (word is! DueSRSWord) {
+      final updated = word.dropStage();
+      await updateSRSWord(updated);
+    }
+    // DueSRSWord: no-op — interval stays uncompleted, word is due again next session
   }
 
   static Future<void> hardSRSWord(SRSWord word) async {

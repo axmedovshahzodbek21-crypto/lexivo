@@ -552,10 +552,6 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
         _hardWords.map((w) => w.word).toList(),
       );
     }
-    if (!widget.noXP) {
-      final leveledUp = await StorageService.addXP(_easyWords.length * 3 + _hardWords.length, reason: 'Flashcard');
-      if (leveledUp && mounted) _showLevelUpDialog();
-    }
   }
 
   Future<void> _saveExitProgress() async {
@@ -571,73 +567,8 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
       );
     }
     await StorageService.recordStudySession();
-    if (!widget.noXP) {
-      final leveledUp = await StorageService.addXP(_easyWords.length * 3 + _hardWords.length, reason: 'Flashcard');
-      if (leveledUp && mounted) _showLevelUpDialog();
-    }
   }
 
-  void _showLevelUpDialog() async {
-    final xp = await StorageService.getXP();
-    final levelName = StorageService.getLevelName(xp);
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        backgroundColor: const Color(0xFF1A1A2E),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('🎉', style: TextStyle(fontSize: 60)),
-            const SizedBox(height: 16),
-            Text(
-              tr('level_up'),
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              levelName,
-              style: const TextStyle(
-                fontSize: 22,
-                color: Color(0xFF6C63FF),
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              tr('on_fire'),
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white60),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6C63FF),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 12,
-                ),
-              ),
-              child: Text(
-                tr('lets_go'),
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   void _showFinishScreen() {
     if (!mounted) return;

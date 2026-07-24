@@ -961,12 +961,12 @@ class StorageService {
   static Future<bool> reviewSRSWord(SRSWord word) async {
     if (word is DueSRSWord) {
       await markIntervalDone(word.learnedAt, word.dueInterval);
+      return addXP(reviewXP(word.dueInterval), reason: 'SRS Review');
     } else {
       final updated = word.advanceStage();
       await updateSRSWord(updated);
+      return addXP(reviewXP(1), reason: 'SRS Review');
     }
-    final leveledUp = await addXP(5, reason: 'SRS Review');
-    return leveledUp;
   }
 
   static Future<void> failSRSWord(SRSWord word) async {
@@ -1063,6 +1063,16 @@ class StorageService {
     }
     await prefs.setInt(_streakKey, streak);
     await prefs.setString(_lastStudyKey, today);
+
+    // Streak daily bonus — once per day, ×10 integer storage
+    if (lastStudy != today) {
+      final bonusDate = prefs.getString('streak_bonus_date') ?? '';
+      if (bonusDate != today && streak >= 7) {
+        final bonus = streak >= 30 ? 70 : 30;
+        await addXP(bonus, reason: 'Streak Bonus');
+        await prefs.setString('streak_bonus_date', today);
+      }
+    }
   }
 
   static Future<int> getStreak() async {
@@ -1269,32 +1279,49 @@ class StorageService {
     return prefs.getInt(_todayXpKey) ?? 0;
   }
 
-  static String getLevelName(int xp) {
-    if (xp >= 3000) return 'Master';
-    if (xp >= 1500) return 'Advanced';
-    if (xp >= 700)  return 'Upper-Intermediate';
-    if (xp >= 300)  return 'Intermediate';
-    if (xp >= 100)  return 'Elementary';
-    return 'Beginner';
+  // ×10 integer storage: displayed value = stored ÷ 10
+  static String displayXP(int stored) => (stored / 10).toStringAsFixed(1);
+
+  // XP to store (×10) per learn word based on total ever learned
+  static int learnXP(int totalEverLearned) {
+    if (totalEverLearned <= 100) return 10;
+    if (totalEverLearned <= 500) return 5;
+    return 3;
   }
+
+  // XP to store (×10) per SRS review based on interval days
+  static int reviewXP(int intervalDays) {
+    const map = {1: 2, 3: 4, 7: 7, 14: 10, 30: 14};
+    return map[intervalDays] ?? 2;
+  }
+
+  // 10-level system; stored ×10 (displayed = min ÷ 10)
+  static const _levels = [
+    ('Starter',            0,      1499),
+    ('Beginner',           1500,   3999),
+    ('Elementary',         4000,   7999),
+    ('Pre-Intermediate',   8000,   13999),
+    ('Intermediate',       14000,  24999),
+    ('Upper-Intermediate', 25000,  39999),
+    ('Advanced',           40000,  59999),
+    ('Expert',             60000,  84999),
+    ('Master',             85000,  99999),
+    ('Legend',             100000, -1),
+  ];
+
+  static String getLevelName(int xp) =>
+      _levels.lastWhere((l) => xp >= l.$2, orElse: () => _levels.first).$1;
 
   static int getNextLevelXP(int xp) {
-    if (xp >= 3000) return 3000;
-    if (xp >= 1500) return 3000;
-    if (xp >= 700)  return 1500;
-    if (xp >= 300)  return 700;
-    if (xp >= 100)  return 300;
-    return 100;
+    final idx = _levels.lastIndexWhere((l) => xp >= l.$2);
+    if (idx < 0 || idx >= _levels.length - 1) return _levels.last.$2;
+    return _levels[idx + 1].$2;
   }
 
-  static int getCurrentLevelMinXP(int xp) {
-    if (xp >= 3000) return 3000;
-    if (xp >= 1500) return 1500;
-    if (xp >= 700)  return 700;
-    if (xp >= 300)  return 300;
-    if (xp >= 100)  return 100;
-    return 0;
-  }
+  static int getCurrentLevelMinXP(int xp) =>
+      _levels.lastWhere((l) => xp >= l.$2, orElse: () => _levels.first).$2;
+
+  static bool isMaxLevel(int xp) => xp >= _levels.last.$2;
 
   static String _todayString() {
     final now = DateTime.now().subtract(const Duration(hours: 2));

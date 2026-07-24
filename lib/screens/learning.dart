@@ -226,6 +226,10 @@ class _LearningScreenState extends State<LearningScreen> {
       widget.wordDay.topic,
       widget.wordDay.dayNumber,
     );
+    if (!widget.noXP) {
+      final learned = await StorageService.getLearnedWords();
+      await StorageService.addXP(StorageService.learnXP(learned.length), reason: 'Learn');
+    }
     _next();
   }
 
@@ -266,7 +270,6 @@ class _LearningScreenState extends State<LearningScreen> {
 
   Future<void> _showFinishDialog() async {
     _sessionComplete = true;
-    if (!widget.noXP) StorageService.addXP(_learnedIndices.length * 2, reason: 'Learn');
     await StorageService.markLearningComplete(widget.collectionName, widget.wordDay.dayNumber);
     StorageService.clearLearnProgress(widget.collectionName, widget.wordDay.dayNumber);
     SyncService.pushUnitProgress(widget.collectionName, widget.wordDay.dayNumber);

@@ -3,14 +3,18 @@ import '../data/storage_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 
-// All levels in order: [name, minXP, maxXP (exclusive, -1 = infinity)]
+// All levels in order: [name, minXP stored, maxXP stored (-1 = infinity)]
 const _kLevels = [
-  ('Beginner',           0,    100),
-  ('Elementary',         100,  300),
-  ('Intermediate',       300,  700),
-  ('Upper-Intermediate', 700,  1500),
-  ('Advanced',           1500, 3000),
-  ('Master',             3000, -1),
+  ('Starter',            0,      1499),
+  ('Beginner',           1500,   3999),
+  ('Elementary',         4000,   7999),
+  ('Pre-Intermediate',   8000,   13999),
+  ('Intermediate',       14000,  24999),
+  ('Upper-Intermediate', 25000,  39999),
+  ('Advanced',           40000,  59999),
+  ('Expert',             60000,  84999),
+  ('Master',             85000,  99999),
+  ('Legend',             100000, -1),
 ];
 
 void showXpLevelSheet(BuildContext context, int xp) {
@@ -36,7 +40,7 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
   String get _levelName => StorageService.getLevelName(widget.xp);
   int get _nextXP      => StorageService.getNextLevelXP(widget.xp);
   int get _curMinXP    => StorageService.getCurrentLevelMinXP(widget.xp);
-  bool get _isMaxLevel => widget.xp >= 3000;
+  bool get _isMaxLevel => StorageService.isMaxLevel(widget.xp);
 
   double get _progress {
     if (_isMaxLevel) return 1.0;
@@ -150,7 +154,7 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
             Text(tr('total_xp'), style: TextStyle(fontSize: 11, color: context.textMuted)),
             const SizedBox(height: 2),
             Text(
-              '${widget.xp}',
+              StorageService.displayXP(widget.xp),
               style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: context.primary),
             ),
           ],
@@ -175,12 +179,12 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('$_curMinXP XP', style: TextStyle(fontSize: 11, color: context.textMuted)),
+            Text('${StorageService.displayXP(_curMinXP)} XP', style: TextStyle(fontSize: 11, color: context.textMuted)),
             Text(
               '${(_progress * 100).round()}% there',
               style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.primary),
             ),
-            Text('$_nextXP XP', style: TextStyle(fontSize: 11, color: context.textMuted)),
+            Text('${StorageService.displayXP(_nextXP)} XP', style: TextStyle(fontSize: 11, color: context.textMuted)),
           ],
         ),
       ],
@@ -229,7 +233,7 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
       child: Column(
         children: [
           Text(
-            '$_xpToNext XP',
+            '${StorageService.displayXP(_xpToNext)} XP',
             style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: context.primary),
           ),
           Text(
@@ -241,9 +245,9 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
           const SizedBox(height: 8),
           Row(
             children: [
-              Expanded(child: _miniStat(context, '${(_xpToNext / 20).ceil()}', 'learn sessions')),
+              Expanded(child: _miniStat(context, '${(_xpToNext / 10).ceil()}', 'words to learn')),
               Container(width: 1, height: 36, color: context.border),
-              Expanded(child: _miniStat(context, '${(_xpToNext / 30).ceil()}', 'quiz sessions')),
+              Expanded(child: _miniStat(context, '${(_xpToNext / 7).ceil()}', 'Day 7 reviews')),
             ],
           ),
         ],

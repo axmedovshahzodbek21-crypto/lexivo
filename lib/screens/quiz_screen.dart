@@ -628,7 +628,6 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
 
   Future<void> _awardXP() async {
     if (widget.noXP) return;
-    await StorageService.addXP(widget.correctCount * 3 + (widget.totalCount - widget.correctCount), reason: 'Quiz');
     await StorageService.markQuizCompleted(perfect: widget.correctCount == widget.totalCount);
     await StorageService.recordStudySession();
     await StorageService.markQuizComplete(

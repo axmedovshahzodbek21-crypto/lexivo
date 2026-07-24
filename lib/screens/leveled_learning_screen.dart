@@ -132,7 +132,6 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
     ) {
       if (!viaTest) {
         StorageService.markLevelCompletedViaTest(widget.collection.id);
-        StorageService.addXP(100, reason: 'Level Complete');
         _showLevelCompleteScreen();
       }
     });

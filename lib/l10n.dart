@@ -152,8 +152,8 @@ const Map<String, Map<String, String>> _t = {
     'unit': 'Unit',
     'day_label': 'Day {n}',
     'learned': 'Learned',
-    'hard': 'Hard',
-    'easy': 'Easy',
+    'hard': 'Not yet',
+    'easy': 'Know it',
     'skip': 'Skip',
     'done': 'Done',
     'next': 'Next',
@@ -182,7 +182,7 @@ const Map<String, Map<String, String>> _t = {
 
     // ── Learning ────────────────────────────────────────────────────────────────
     'learning_title': 'Learning',
-    'learned_btn': '✓ Learned',
+    'learned_btn': 'Got it ✓',
     'hard_btn': 'Hard',
     'too_hard_btn': '😤 Too Hard',
     'too_hard_badge': '😤 Too Hard',
@@ -735,8 +735,8 @@ const Map<String, Map<String, String>> _t = {
     'unit': 'Bo\'lim',
     'day_label': '{n}-kun',
     'learned': 'O\'rganildi',
-    'hard': 'Qiyin',
-    'easy': 'Oson',
+    'hard': 'Hali emas',
+    'easy': 'Bilaman',
     'skip': 'O\'tkazish',
     'done': 'Bajarildi',
     'next': 'Keyingi',
@@ -765,7 +765,7 @@ const Map<String, Map<String, String>> _t = {
 
     // ── Learning ────────────────────────────────────────────────────────────────
     'learning_title': 'O\'rganish',
-    'learned_btn': '✓ O\'rganildi',
+    'learned_btn': 'O\'rgandim ✓',
     'hard_btn': 'Qiyin',
     'too_hard_btn': '😤 Juda qiyin',
     'too_hard_badge': '😤 Juda qiyin',

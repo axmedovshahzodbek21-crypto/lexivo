@@ -134,7 +134,12 @@ class SyncService {
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final statsPayload = {
+      final reviewLogRaw = prefs.getString('srs_review_log');
+      Map<String, dynamic>? parsedReviewLog;
+      if (reviewLogRaw != null) {
+        try { parsedReviewLog = jsonDecode(reviewLogRaw) as Map<String, dynamic>; } catch (_) {}
+      }
+      final statsPayload = <String, dynamic>{
         'id': user.id,
         'xp': prefs.getInt('total_xp') ?? 0,
         'today_xp': prefs.getInt('today_xp') ?? 0,
@@ -147,6 +152,8 @@ class SyncService {
         'study_days': _getStudyDaysList(prefs),
         'freezes': prefs.getInt('streak_freezes') ?? 0,
         'last_freeze_week': prefs.getString('last_freeze_week'),
+        if (parsedReviewLog != null && parsedReviewLog.isNotEmpty)
+          'review_log': parsedReviewLog,
       };
       try {
         await supabase.from('user_stats').upsert(statsPayload);
@@ -585,6 +592,26 @@ class SyncService {
         final local = _getStudyDaysList(prefs).toSet();
         final merged = {...local, ...(remoteDays as List).cast<String>()}.toList();
         await prefs.setString('study_days', jsonEncode(merged));
+      }
+      // review_log — union merge: keep all completed intervals from both cloud and local
+      final cloudReviewLog = statsRes['review_log'];
+      if (cloudReviewLog is Map) {
+        final localRaw = prefs.getString('srs_review_log');
+        final localLog = <String, Set<int>>{};
+        if (localRaw != null) {
+          try {
+            for (final e in (jsonDecode(localRaw) as Map).entries) {
+              localLog[e.key as String] = Set<int>.from((e.value as List).cast<int>());
+            }
+          } catch (_) {}
+        }
+        for (final e in cloudReviewLog.entries) {
+          final date = e.key as String;
+          final intervals = (e.value as List).cast<int>();
+          localLog[date] = {...(localLog[date] ?? {}), ...intervals};
+        }
+        final mergedLog = {for (final e in localLog.entries) e.key: e.value.toList()};
+        await prefs.setString('srs_review_log', jsonEncode(mergedLog));
       }
     }
 

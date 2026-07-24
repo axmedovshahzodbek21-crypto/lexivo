@@ -467,88 +467,93 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     final choices = _cardChoices[_currentIndex]!;
     final answered = _tappedChoice != null;
 
-    final scrollContent = SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: 8),
-
-          GestureDetector(
-            onTap: _choicesRevealed ? null : () => setState(() => _choicesRevealed = true),
-            onHorizontalDragUpdate: (d) => setState(() => _cardDx += d.delta.dx),
-            onHorizontalDragEnd: (d) {
-              if (_cardDx > 80) { _markKnew(); }
-              else if (_cardDx < -80) { _markNotYet(); }
-              else { setState(() => _cardDx = 0); }
-            },
-            child: _buildWordCard(context),
-          ),
-          const SizedBox(height: 16),
-          if (!_choicesRevealed)
-            Center(
-              child: Text(tr('tap_to_reveal'),
-                  style: TextStyle(color: context.textMuted, fontSize: 13)),
-            )
-          else ...[
-            if (answered)
-              AnimatedBuilder(
-                animation: _flipAnim,
-                builder: (ctx, child) => Opacity(opacity: _flipAnim.value, child: child),
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: _buildInfoPanel(context),
-                ),
-              ),
-            ...choices.map((c) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: _buildChoiceButton(context, c),
-            )),
-            if (answered) ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _markNotYet,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                      child: Text(tr('not_yet'),
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _markKnew,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                      child: Text(tr('know_it'),
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ],
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
-
     return Transform.translate(
       offset: Offset(_cardDx, 0),
       child: Stack(
         fit: StackFit.expand,
         children: [
-          scrollContent,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 8),
+              // Word card is outside SingleChildScrollView so its swipe
+              // is never blocked by the scroll view's drag recognizer.
+              GestureDetector(
+                onTap: _choicesRevealed ? null : () => setState(() => _choicesRevealed = true),
+                onHorizontalDragUpdate: (d) => setState(() => _cardDx += d.delta.dx),
+                onHorizontalDragEnd: (d) {
+                  if (_cardDx > 80) { _markKnew(); }
+                  else if (_cardDx < -80) { _markNotYet(); }
+                  else { setState(() => _cardDx = 0); }
+                },
+                child: _buildWordCard(context),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.only(top: 16, bottom: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (!_choicesRevealed)
+                        Center(
+                          child: Text(tr('tap_to_reveal'),
+                              style: TextStyle(color: context.textMuted, fontSize: 13)),
+                        )
+                      else ...[
+                        if (answered)
+                          AnimatedBuilder(
+                            animation: _flipAnim,
+                            builder: (ctx, child) => Opacity(opacity: _flipAnim.value, child: child),
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: _buildInfoPanel(context),
+                            ),
+                          ),
+                        ...choices.map((c) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: _buildChoiceButton(context, c),
+                        )),
+                        if (answered) ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: _markNotYet,
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.red,
+                                    side: const BorderSide(color: Colors.red),
+                                    padding: const EdgeInsets.symmetric(vertical: 18),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                  ),
+                                  child: Text(tr('not_yet'),
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: _markKnew,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 18),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                  ),
+                                  child: Text(tr('know_it'),
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
           if (_cardDx > 20)
             IgnorePointer(
               child: Container(

@@ -56,7 +56,7 @@ class SRSWord {
   final int dayNumber;
   final int reviewStage;
   final String nextReviewDate;
-  final String learnedDate;
+  final String learnedAt;
 
   static const List<int> _intervals = [1, 3, 7, 14, 30];
 
@@ -74,9 +74,9 @@ class SRSWord {
     required this.dayNumber,
     this.reviewStage = 0,
     String? nextReviewDate,
-    String? learnedDate,
+    String? learnedAt,
   }) : nextReviewDate = nextReviewDate ?? _nextDateFromNow(1),
-       learnedDate = learnedDate ?? _todayStr();
+       learnedAt = learnedAt ?? _todayStr();
 
   static String _todayStr() {
     final now = DateTime.now().subtract(const Duration(hours: 2));
@@ -119,7 +119,7 @@ class SRSWord {
     example1: example1, example2: example2, example3: example3,
     partOfSpeech: partOfSpeech, pronunciation: pronunciation,
     collectionName: collectionName, unitTopic: unitTopic, dayNumber: dayNumber,
-    reviewStage: reviewStage, nextReviewDate: nextReviewDate, learnedDate: learnedDate,
+    reviewStage: reviewStage, nextReviewDate: nextReviewDate, learnedAt: learnedAt,
   );
 
   SRSWord dropStage() {
@@ -156,7 +156,7 @@ class SRSWord {
     'dayNumber': dayNumber,
     'reviewStage': reviewStage,
     'nextReviewDate': nextReviewDate,
-    'learnedDate': learnedDate,
+    'learnedAt': learnedAt,
   };
 
   factory SRSWord.fromJson(Map<String, dynamic> json) => SRSWord(
@@ -173,7 +173,7 @@ class SRSWord {
     dayNumber: json['dayNumber'] ?? 0,
     reviewStage: json['reviewStage'] ?? 0,
     nextReviewDate: json['nextReviewDate'],
-    learnedDate: json['learnedDate'] ?? _todayStr(),
+    learnedAt: json['learnedAt'] ?? json['learnedDate'] ?? _todayStr(),
   );
 
   WordItem toWordItem() => WordItem(
@@ -460,6 +460,7 @@ class StorageService {
   static const _unitDoneDaysKey  = 'unit_done_days';
   static const _reviewDaysKey    = 'review_days';
   static const _wordGoalDaysKey  = 'word_goal_days';
+  static const _reviewLogKey     = 'srs_review_log';
 
   static const int defaultDailyLimit = 20;
 
@@ -819,6 +820,59 @@ class StorageService {
       _srsKey,
       jsonEncode(existing.map((e) => e.toJson()).toList()),
     );
+  }
+
+  // ── Review Log ───────────────────────────────────────────────────────────
+
+  static Future<Map<String, List<int>>> getReviewLog() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_reviewLogKey);
+    if (raw == null) return {};
+    try {
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      return decoded.map((k, v) => MapEntry(k, (v as List).map((e) => e as int).toList()));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  static Future<void> saveReviewLog(Map<String, List<int>> log) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_reviewLogKey, jsonEncode(log));
+  }
+
+  // One-time migration: converts existing reviewStage data into reviewLog entries
+  // so existing users keep their progress when upgrading to the log-based system.
+  static Future<void> migrateReviewLogIfNeeded() async {
+    final log = await getReviewLog();
+    if (log.isNotEmpty) return; // already migrated
+
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_srsKey);
+    if (raw == null) return;
+
+    try {
+      final words = (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
+      if (words.isEmpty) return;
+
+      const intervals = [1, 3, 7, 14, 30];
+      final Map<String, int> minStageByDate = {};
+      for (final w in words) {
+        final date = (w['learnedAt'] ?? w['learnedDate'] ?? '') as String;
+        if (date.isEmpty) continue;
+        final stage = (w['reviewStage'] as num? ?? 0).toInt();
+        final current = minStageByDate[date];
+        if (current == null || stage < current) minStageByDate[date] = stage;
+      }
+
+      final newLog = <String, List<int>>{};
+      for (final entry in minStageByDate.entries) {
+        final completedCount = entry.value.clamp(0, 5);
+        newLog[entry.key] = intervals.sublist(0, completedCount);
+      }
+
+      if (newLog.isNotEmpty) await saveReviewLog(newLog);
+    } catch (_) {}
   }
 
   static Future<bool> reviewSRSWord(SRSWord word) async {

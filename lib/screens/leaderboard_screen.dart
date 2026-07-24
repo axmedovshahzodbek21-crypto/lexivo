@@ -493,43 +493,58 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   crossAxisCount: 7,
                   mainAxisSpacing: 2,
                   crossAxisSpacing: 0,
-                  childAspectRatio: 0.9,
+                  childAspectRatio: 1.0,
                   children: cells.map((dateStr) {
                     if (dateStr == null) return const SizedBox();
                     final day = int.parse(dateStr.split('-')[2]);
                     final hasReview = reviewSet.contains(dateStr);
                     final hasWords = wordsSet.contains(dateStr);
                     final studied = studiedSet.contains(dateStr);
-                    final hasAny = hasReview || hasWords || studied;
+                    final anyDone = hasReview || hasWords || studied;
                     final isToday = dateStr == _todayStr;
-                    return Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: isToday ? Border.all(color: context.primary, width: 1.5) : null,
+                    return Padding(
+                      padding: const EdgeInsets.all(2),
+                      child: Stack(
+                        children: [
+                          ClipOval(
+                            child: Container(
+                              color: anyDone ? const Color(0xFF252438) : Colors.transparent,
+                              child: Stack(children: [
+                                if (hasWords) Align(
+                                  alignment: Alignment.topCenter,
+                                  child: FractionallySizedBox(
+                                    heightFactor: 0.5, widthFactor: 1.0,
+                                    child: Container(color: const Color(0xFF059669)),
+                                  ),
+                                ),
+                                if (hasReview) Align(
+                                  alignment: Alignment.bottomCenter,
+                                  child: FractionallySizedBox(
+                                    heightFactor: 0.5, widthFactor: 1.0,
+                                    child: Container(color: const Color(0xFF4338CA)),
+                                  ),
+                                ),
+                                if (!hasReview && !hasWords && studied) Container(color: const Color(0xFF2ECC71)),
+                              ]),
+                            ),
                           ),
-                          child: Center(
+                          if (isToday) Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: ctx.primary, width: 1.5),
+                              ),
+                            ),
+                          ),
+                          Center(
                             child: Text('$day', style: TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.w600,
-                              color: isToday ? context.primary : hasAny ? context.appText : context.textMuted,
+                              color: anyDone ? Colors.white : isToday ? ctx.primary : ctx.textMuted,
                             )),
                           ),
-                        ),
-                        const SizedBox(height: 2),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            if (hasReview) Container(width: 4, height: 4, margin: const EdgeInsets.symmetric(horizontal: 1), decoration: const BoxDecoration(color: Color(0xFF4338CA), shape: BoxShape.circle)),
-                            if (hasWords) Container(width: 4, height: 4, margin: const EdgeInsets.symmetric(horizontal: 1), decoration: const BoxDecoration(color: Color(0xFF059669), shape: BoxShape.circle)),
-                            if (!hasReview && !hasWords && studied) Container(width: 4, height: 4, decoration: const BoxDecoration(color: Color(0xFF2ECC71), shape: BoxShape.circle)),
-                          ],
-                        ),
-                      ],
+                        ],
+                      ),
                     );
                   }).toList(),
                 ),
@@ -538,11 +553,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   children: [
                     Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFF4338CA), shape: BoxShape.circle)),
                     const SizedBox(width: 4),
-                    Text('Review', style: TextStyle(fontSize: 10, color: context.textMuted)),
+                    Text('Review', style: TextStyle(fontSize: 10, color: ctx.textMuted)),
                     const SizedBox(width: 12),
                     Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFF059669), shape: BoxShape.circle)),
                     const SizedBox(width: 4),
-                    Text('Words', style: TextStyle(fontSize: 10, color: context.textMuted)),
+                    Text('Words', style: TextStyle(fontSize: 10, color: ctx.textMuted)),
                   ],
                 ),
               ],

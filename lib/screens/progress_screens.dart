@@ -598,10 +598,6 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
     });
   }
 
-  Widget _dot(Color color) => Container(
-    width: 5, height: 5,
-    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-  );
 
   @override
   Widget build(BuildContext context) {
@@ -717,42 +713,51 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
                         onTap: isFuture ? null : () => setState(() {
                           _selectedDay = _selectedDay == dateStr ? null : dateStr;
                         }),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 34, height: 34,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: isSelected
-                                    ? context.primary.withValues(alpha: 0.15)
-                                    : Colors.transparent,
-                                border: isToday
-                                    ? Border.all(color: context.primary, width: 1.5)
-                                    : null,
-                              ),
-                              child: Center(
-                                child: Text('$day', style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: (isToday || isSelected) ? FontWeight.bold : FontWeight.normal,
-                                  color: isFuture ? context.border : context.appText,
-                                )),
-                              ),
+                        child: Opacity(
+                          opacity: isFuture ? 0.25 : 1.0,
+                          child: Padding(
+                            padding: const EdgeInsets.all(3),
+                            child: Stack(
+                              children: [
+                                ClipOval(
+                                  child: Container(
+                                    color: anyDone ? context.surface2 : Colors.transparent,
+                                    child: Stack(children: [
+                                      if (hasWords) Align(
+                                        alignment: Alignment.topCenter,
+                                        child: FractionallySizedBox(
+                                          heightFactor: 0.5, widthFactor: 1.0,
+                                          child: Container(color: _kWordsColor),
+                                        ),
+                                      ),
+                                      if (hasReview) Align(
+                                        alignment: Alignment.bottomCenter,
+                                        child: FractionallySizedBox(
+                                          heightFactor: 0.5, widthFactor: 1.0,
+                                          child: Container(color: _kSrsColor),
+                                        ),
+                                      ),
+                                    ]),
+                                  ),
+                                ),
+                                if (isToday || isSelected) Positioned.fill(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: context.primary, width: 1.5),
+                                    ),
+                                  ),
+                                ),
+                                Center(
+                                  child: Text('$day', style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: (isToday || isSelected) ? FontWeight.bold : FontWeight.normal,
+                                    color: anyDone ? Colors.white : context.appText,
+                                  )),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 3),
-                            if (anyDone)
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (hasReview) _dot(_kSrsColor),
-                                  if (hasReview && hasWords) const SizedBox(width: 2),
-                                  if (hasWords)  _dot(_kWordsColor),
-                                ],
-                              )
-                            else
-                              const SizedBox(height: 5),
-                          ],
+                          ),
                         ),
                       );
                     },

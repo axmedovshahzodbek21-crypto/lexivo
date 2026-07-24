@@ -256,7 +256,7 @@ const Map<String, Map<String, String>> _t = {
     'srs_mastered_after': '⭐ Mastered after this!',
     'srs_next_in': 'Next review in {n} days',
     'srs_all_scheduled': 'All words scheduled for their next review. Keep studying daily to master them all!',
-    'know_it': 'Got it! ✓',
+    'know_it': 'Know it ✓',
     'didnt_know': 'I didn\'t know',
     'show_answer': 'Show Answer',
     'next_review': 'Next review',

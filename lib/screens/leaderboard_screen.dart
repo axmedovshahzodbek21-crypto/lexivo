@@ -14,6 +14,8 @@ class LeaderboardEntry {
   final int todayCount;
   final int totalLearned;
   final List<String> studyDays;
+  final List<String> reviewDays;
+  final List<String> wordGoalDays;
 
   const LeaderboardEntry({
     required this.userId,
@@ -25,17 +27,19 @@ class LeaderboardEntry {
     this.todayCount = 0,
     this.totalLearned = 0,
     this.studyDays = const [],
+    this.reviewDays = const [],
+    this.wordGoalDays = const [],
   });
 
+  static List<String> _parseList(dynamic raw) {
+    if (raw == null) return [];
+    try {
+      final decoded = raw is String ? jsonDecode(raw) : raw;
+      return List<String>.from(decoded as List);
+    } catch (_) { return []; }
+  }
+
   factory LeaderboardEntry.fromMap(Map<String, dynamic> m) {
-    List<String> days = [];
-    final raw = m['study_days'];
-    if (raw != null) {
-      try {
-        final decoded = raw is String ? jsonDecode(raw) : raw;
-        days = List<String>.from(decoded as List);
-      } catch (_) {}
-    }
     return LeaderboardEntry(
       userId: m['user_id'] as String,
       name: (m['name'] as String?) ?? 'Learner',
@@ -45,7 +49,9 @@ class LeaderboardEntry {
       lastStudyDate: m['last_study_date'] as String?,
       todayCount: (m['today_count'] as num?)?.toInt() ?? 0,
       totalLearned: (m['total_learned'] as num?)?.toInt() ?? 0,
-      studyDays: days,
+      studyDays: _parseList(m['study_days']),
+      reviewDays: _parseList(m['review_days']),
+      wordGoalDays: _parseList(m['word_goal_days']),
     );
   }
 }
@@ -377,6 +383,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   void _showStreakSheet(LeaderboardEntry entry) {
     final now = DateTime.now();
     final studiedSet = entry.studyDays.toSet();
+    final reviewSet = entry.reviewDays.toSet();
+    final wordsSet = entry.wordGoalDays.toSet();
     final avgPerDay = entry.studyDays.isEmpty ? 0 : (entry.totalLearned / entry.studyDays.length).round();
     var calYear = now.year;
     var calMonth = now.month; // 1-based
@@ -485,35 +493,56 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   crossAxisCount: 7,
                   mainAxisSpacing: 2,
                   crossAxisSpacing: 0,
-                  childAspectRatio: 1.1,
+                  childAspectRatio: 0.9,
                   children: cells.map((dateStr) {
                     if (dateStr == null) return const SizedBox();
                     final day = int.parse(dateStr.split('-')[2]);
+                    final hasReview = reviewSet.contains(dateStr);
+                    final hasWords = wordsSet.contains(dateStr);
                     final studied = studiedSet.contains(dateStr);
+                    final hasAny = hasReview || hasWords || studied;
                     final isToday = dateStr == _todayStr;
-                    return Container(
-                      margin: const EdgeInsets.all(1),
-                      decoration: BoxDecoration(
-                        color: studied ? const Color(0xFF2ECC71) : Colors.transparent,
-                        shape: BoxShape.circle,
-                        border: isToday && !studied ? Border.all(color: context.primary, width: 1.5) : null,
-                      ),
-                      child: Center(
-                        child: Text('$day', style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w600,
-                          color: studied ? Colors.white : isToday ? context.primary : context.textMuted,
-                        )),
-                      ),
+                    return Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: isToday ? Border.all(color: context.primary, width: 1.5) : null,
+                          ),
+                          child: Center(
+                            child: Text('$day', style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              color: isToday ? context.primary : hasAny ? context.appText : context.textMuted,
+                            )),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            if (hasReview) Container(width: 4, height: 4, margin: const EdgeInsets.symmetric(horizontal: 1), decoration: const BoxDecoration(color: Color(0xFF4338CA), shape: BoxShape.circle)),
+                            if (hasWords) Container(width: 4, height: 4, margin: const EdgeInsets.symmetric(horizontal: 1), decoration: const BoxDecoration(color: Color(0xFF059669), shape: BoxShape.circle)),
+                            if (!hasReview && !hasWords && studied) Container(width: 4, height: 4, decoration: const BoxDecoration(color: Color(0xFF2ECC71), shape: BoxShape.circle)),
+                          ],
+                        ),
+                      ],
                     );
                   }).toList(),
                 ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Container(width: 10, height: 10, decoration: const BoxDecoration(color: Color(0xFF2ECC71), shape: BoxShape.circle)),
+                    Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFF4338CA), shape: BoxShape.circle)),
                     const SizedBox(width: 4),
-                    Text('Studied', style: TextStyle(fontSize: 10, color: context.textMuted)),
+                    Text('Review', style: TextStyle(fontSize: 10, color: context.textMuted)),
+                    const SizedBox(width: 12),
+                    Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFF059669), shape: BoxShape.circle)),
+                    const SizedBox(width: 4),
+                    Text('Words', style: TextStyle(fontSize: 10, color: context.textMuted)),
                   ],
                 ),
               ],

@@ -150,6 +150,8 @@ class SyncService {
         'last_study_date': prefs.getString('last_study_date'),
         'total_days': _getStudyDaysCount(prefs),
         'study_days': _getStudyDaysList(prefs),
+        'review_days': _getDaysList(prefs, 'review_days'),
+        'word_goal_days': _getDaysList(prefs, 'word_goal_days'),
         'freezes': prefs.getInt('streak_freezes') ?? 0,
         'last_freeze_week': prefs.getString('last_freeze_week'),
         if (parsedReviewLog != null && parsedReviewLog.isNotEmpty)
@@ -771,6 +773,12 @@ class SyncService {
 
   static List<String> _getStudyDaysList(SharedPreferences prefs) {
     final raw = prefs.getString('study_days');
+    if (raw == null) return [];
+    try { return List<String>.from(jsonDecode(raw) as List); } catch (_) { return []; }
+  }
+
+  static List<String> _getDaysList(SharedPreferences prefs, String key) {
+    final raw = prefs.getString(key);
     if (raw == null) return [];
     try { return List<String>.from(jsonDecode(raw) as List); } catch (_) { return []; }
   }

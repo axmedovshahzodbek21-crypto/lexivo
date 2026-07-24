@@ -698,7 +698,15 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     final total = _queue.length;
     final progress = _currentIndex / total;
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        _autoAdvanceTimer?.cancel();
+        await _applyGrades();
+        if (context.mounted) Navigator.of(context).pop();
+      },
+      child: Scaffold(
       backgroundColor: context.bg,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -767,7 +775,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
           ),
         ],
       ),
-    );
+    ));
   }
 
   // ── Finish screen ─────────────────────────────────────────────────────────

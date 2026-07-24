@@ -465,7 +465,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     final choices = _cardChoices[_currentIndex]!;
     final answered = _tappedChoice != null;
 
-    return SingleChildScrollView(
+    final scrollContent = SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -532,6 +532,54 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
           ],
           const SizedBox(height: 20),
         ],
+      ),
+    );
+
+    return GestureDetector(
+      onHorizontalDragUpdate: answered
+          ? (d) => setState(() => _cardDx += d.delta.dx)
+          : null,
+      onHorizontalDragEnd: answered
+          ? (d) {
+              if (_cardDx > 80) { _markKnew(); }
+              else if (_cardDx < -80) { _markNotYet(); }
+              else { setState(() => _cardDx = 0); }
+            }
+          : null,
+      child: Transform.translate(
+        offset: Offset(_cardDx, 0),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            scrollContent,
+            if (answered && _cardDx > 20)
+              IgnorePointer(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: (_cardDx / 200).clamp(0.0, 0.75)),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: const Center(
+                    child: Text('✓  KNEW',
+                        style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ),
+            if (answered && _cardDx < -20)
+              IgnorePointer(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: (-_cardDx / 200).clamp(0.0, 0.75)),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: const Center(
+                    child: Text('✕  NOT YET',
+                        style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

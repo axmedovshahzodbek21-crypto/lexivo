@@ -1377,7 +1377,8 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ),
                 const SizedBox(height: 14),
-                Row(
+                IntrinsicHeight(child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _buildStatCard(
                     context,
@@ -1475,7 +1476,7 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                 ],
-              ),
+              )),
                 const SizedBox(height: 14),
               ], // stats
               ], // end for loop
@@ -1891,10 +1892,9 @@ class _HomeScreenState extends State<HomeScreen>
                 child: Text(
                   number,
                   style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
                     color: Colors.white,
-                    shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 4)],
                   ),
                 ),
               ),
@@ -1905,7 +1905,6 @@ class _HomeScreenState extends State<HomeScreen>
                   fontSize: 10,
                   color: Colors.white,
                   fontWeight: FontWeight.w600,
-                  shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 3)],
                 ),
               ),
             ],

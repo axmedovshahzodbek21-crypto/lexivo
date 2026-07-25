@@ -1642,6 +1642,14 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildDrawer(BuildContext context) {
     final levelName = StorageService.getLevelName(_xp);
+    final isMax = StorageService.isMaxLevel(_xp);
+    final currentMin = StorageService.getCurrentLevelMinXP(_xp);
+    final nextMin = StorageService.getNextLevelXP(_xp);
+    final nextLevelName = isMax ? levelName : StorageService.getLevelName(nextMin);
+    final xpProgress = isMax
+        ? 1.0
+        : ((_xp - currentMin) / (nextMin - currentMin)).clamp(0.0, 1.0);
+    final goalProgress = (_dailyGoal > 0 ? _todayLearned / _dailyGoal : 0.0).clamp(0.0, 1.0);
 
     return Drawer(
       backgroundColor: context.bg,
@@ -1731,6 +1739,7 @@ class _HomeScreenState extends State<HomeScreen>
                             ),
                           ),
                           const SizedBox(height: 8),
+                          // Level + XP pills
                           Row(
                             children: [
                               Container(
@@ -1761,6 +1770,42 @@ class _HomeScreenState extends State<HomeScreen>
                               ),
                             ],
                           ),
+                          const SizedBox(height: 12),
+                          // XP progress bar
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: xpProgress,
+                              backgroundColor: Colors.white.withValues(alpha: 0.2),
+                              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                              minHeight: 5,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            isMax
+                                ? 'Max level reached 🏆'
+                                : '${StorageService.displayXP(nextMin - _xp)} XP to $nextLevelName',
+                            style: const TextStyle(color: Colors.white60, fontSize: 10),
+                          ),
+                          const SizedBox(height: 14),
+                          // Stats row: streak | words | due
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Row(
+                              children: [
+                                _drawerStat('🔥', '$_streak', 'Streak'),
+                                Container(width: 1, height: 32, color: Colors.white.withValues(alpha: 0.25)),
+                                _drawerStat('📚', '$_wordsLearned', 'Words'),
+                                Container(width: 1, height: 32, color: Colors.white.withValues(alpha: 0.25)),
+                                _drawerStat('🔄', '$_reviewsDue', 'Due'),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -1784,6 +1829,55 @@ class _HomeScreenState extends State<HomeScreen>
                       Navigator.push(context,
                           MaterialPageRoute(builder: (context) => StatsScreen())).then((_) => _loadStats());
                     }),
+                    // ── Today's goal card ──
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 6, 12, 2),
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: context.surface,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: context.border),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Text('🎯', style: TextStyle(fontSize: 14)),
+                                const SizedBox(width: 6),
+                                Text("Today's Goal",
+                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: context.appText)),
+                                const Spacer(),
+                                Text('$_todayLearned / $_dailyGoal',
+                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.primary)),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: goalProgress,
+                                backgroundColor: context.border,
+                                valueColor: AlwaysStoppedAnimation<Color>(context.primary),
+                                minHeight: 6,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _todayLearned >= _dailyGoal
+                                  ? 'Goal reached! 🎉'
+                                  : '${_dailyGoal - _todayLearned} more to go',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: _todayLearned >= _dailyGoal ? context.primary : context.textMuted,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       child: Divider(color: context.border),
@@ -1811,6 +1905,22 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _drawerStat(String icon, String value, String label) {
+    return Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 14)),
+          const SizedBox(height: 2),
+          Text(value,
+              style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+          Text(label,
+              style: const TextStyle(color: Colors.white60, fontSize: 9, fontWeight: FontWeight.w500)),
+        ],
       ),
     );
   }

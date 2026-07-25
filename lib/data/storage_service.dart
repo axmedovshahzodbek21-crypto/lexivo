@@ -780,9 +780,65 @@ class StorageService {
     return list.map((e) => SRSWord.fromJson(e)).toList();
   }
 
+  // Unlearns any SRS word whose nextReviewDate is 3+ days in the past.
+  static Future<void> checkAndUnlearn() async {
+    const intervals = [1, 3, 7, 14, 30];
+    final today = DateTime.now();
+    final words = await getSRSWords();
+    final log = await getReviewLog();
+
+    final toUnlearn = <SRSWord>[];
+    for (final word in words) {
+      if (word.nextReviewDate == '9999-12-31') continue; // graduated
+      final dueDate = DateTime.tryParse(word.nextReviewDate);
+      if (dueDate == null) continue;
+      final daysOverdue = DateTime(today.year, today.month, today.day)
+          .difference(DateTime(dueDate.year, dueDate.month, dueDate.day))
+          .inDays;
+      if (daysOverdue < 3) continue;
+
+      // Double-check it's not graduated via review log
+      final wordKey = '${word.collectionName}::${word.word}';
+      final completed = log[wordKey] ?? [];
+      final hasNext = intervals.any((i) => !completed.contains(i));
+      if (hasNext) toUnlearn.add(word);
+    }
+
+    if (toUnlearn.isEmpty) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final unlearnedWords = toUnlearn.map((w) => w.word).toSet();
+
+    // Remove from SRS
+    final remainingSRS = words.where((w) => !toUnlearn.contains(w)).toList();
+    await prefs.setString(_srsKey, jsonEncode(remainingSRS.map((w) => w.toJson()).toList()));
+
+    // Remove from learned words
+    final learned = await getLearnedWords();
+    final remainingLearned = learned.where((w) => !unlearnedWords.contains(w.word)).toList();
+    await prefs.setString(_learnedKey, jsonEncode(remainingLearned.map((w) => w.toJson()).toList()));
+
+    // Remove from review log
+    final updatedLog = Map<String, List<int>>.from(log);
+    for (final w in toUnlearn) { updatedLog.remove('${w.collectionName}::${w.word}'); }
+    await prefs.setString(_reviewLogKey, jsonEncode(updatedLog));
+
+    // Reset unit progress so the user can re-learn the affected units
+    final allProgress = await _getAllUnitProgress();
+    final unitKeys = toUnlearn.map((w) => _unitKey(w.collectionName, w.dayNumber)).toSet();
+    for (final key in unitKeys) {
+      allProgress[key] = const UnitProgress();
+    }
+    await prefs.setString(
+      _unitProgressKey,
+      jsonEncode(allProgress.map((k, v) => MapEntry(k, v.toJson()))),
+    );
+  }
+
   static Future<List<DueSRSWord>> getDueWords() async {
     await migrateReviewLogIfNeeded();
     await _migrateReviewLogToPerWord();
+    await checkAndUnlearn();
     const intervals = [1, 3, 7, 14, 30];
     final today = DateTime.parse(SRSWord._todayStr());
     final words = await getSRSWords();

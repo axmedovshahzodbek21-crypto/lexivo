@@ -177,16 +177,51 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.bg,
-      appBar: AppBar(
-        backgroundColor: context.surface,
-        elevation: 0,
-        title: Text(tr('leaderboard_title'), style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.refresh_rounded, color: context.primary),
-            onPressed: _loadAll,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(70),
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFFF59E0B), Color(0xFFEF4444)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
           ),
-        ],
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const SizedBox(width: 2),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(tr('leaderboard_title'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+                        Text('Top learners by total XP', style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    width: 36, height: 36,
+                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),
+                    child: IconButton(
+                      icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
+                      onPressed: _loadAll,
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
       body: _loading
           ? Center(child: CircularProgressIndicator(color: context.primary))
@@ -571,69 +606,66 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   Widget _buildPodium(String today) {
     if (_entries.length < 3) return const SizedBox.shrink();
     final myId = _myId;
-    final medals = ['🥇', '🥈', '🥉'];
-    final order = [1, 0, 2]; // show 2nd, 1st, 3rd left to right for podium effect
+
+    final configs = [
+      (idx: 1, medal: '🥈', topPad: 16.0, avatarSize: 40.0,
+       grad: [const Color(0xFFC0C0C0).withValues(alpha: 0.18), const Color(0xFFC0C0C0).withValues(alpha: 0.04)],
+       border: const Color(0xFFC0C0C0).withValues(alpha: 0.5)),
+      (idx: 0, medal: '🥇', topPad: 36.0, avatarSize: 52.0,
+       grad: [const Color(0xFFFFD700).withValues(alpha: 0.22), const Color(0xFFF59E0B).withValues(alpha: 0.06)],
+       border: const Color(0xFFFFD700).withValues(alpha: 0.65)),
+      (idx: 2, medal: '🥉', topPad: 16.0, avatarSize: 40.0,
+       grad: [const Color(0xFFCD7F32).withValues(alpha: 0.18), const Color(0xFFCD7F32).withValues(alpha: 0.04)],
+       border: const Color(0xFFCD7F32).withValues(alpha: 0.5)),
+    ];
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
-        children: order.map((idx) {
-          final entry = _entries[idx];
+        children: configs.map((cfg) {
+          final entry = _entries[cfg.idx];
           final isMe = myId != null && entry.userId == myId;
           final studiedToday = entry.lastStudyDate == today;
-          final isFirst = idx == 0;
           return Expanded(
             child: GestureDetector(
               onTap: () => _showStreakSheet(entry),
               child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: isFirst ? 20 : 12),
-              decoration: BoxDecoration(
-                color: isMe
-                    ? context.primary.withValues(alpha: 0.15)
-                    : context.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isMe ? context.primary : context.border,
-                  width: isMe ? 2 : 1,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                padding: EdgeInsets.fromLTRB(8, cfg.topPad, 8, 14),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: cfg.grad, begin: Alignment.topCenter, end: Alignment.bottomCenter),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: isMe ? context.primary : cfg.border, width: isMe ? 2.5 : 1.5),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(cfg.medal, style: TextStyle(fontSize: cfg.idx == 0 ? 30 : 22)),
+                    const SizedBox(height: 8),
+                    _Avatar(name: entry.name, size: cfg.avatarSize, avatarUrl: entry.avatarUrl),
+                    const SizedBox(height: 6),
+                    if (_savedIds.contains(entry.userId)) const Text('⭐', style: TextStyle(fontSize: 10)),
+                    Text(entry.name,
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.appText),
+                      maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${entry.xp.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')} XP',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800,
+                        color: cfg.idx == 0 ? const Color(0xFFB45309) : context.primary),
+                    ),
+                    if (entry.streak > 0) Text('🔥 ${entry.streak}', style: const TextStyle(fontSize: 10)),
+                    if (studiedToday)
+                      Container(
+                        margin: const EdgeInsets.only(top: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
+                        child: const Text('TODAY', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.green)),
+                      ),
+                  ],
                 ),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(medals[idx], style: TextStyle(fontSize: isFirst ? 28 : 22)),
-                  const SizedBox(height: 6),
-                  _Avatar(name: entry.name, size: isFirst ? 40 : 32, avatarUrl: entry.avatarUrl),
-                  const SizedBox(height: 6),
-                  if (_savedIds.contains(entry.userId))
-                    const Text('⭐', style: TextStyle(fontSize: 10)),
-                  Text(
-                    entry.name,
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.appText),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${entry.xp} XP',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: context.primary),
-                  ),
-                  if (entry.streak > 0)
-                    Text('🔥 ${entry.streak}', style: const TextStyle(fontSize: 10)),
-                  if (studiedToday)
-                    Container(
-                      margin: const EdgeInsets.only(top: 4),
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text('TODAY', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.green)),
-                    ),
-                ],
-              ),
-            ),
             ),
           );
         }).toList(),
@@ -642,62 +674,78 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   }
 
   Widget _buildRow(LeaderboardEntry entry, int rank, bool isMe, bool studiedToday) {
+    final Color rankBg;
+    final Color rankColor;
+    if (isMe) {
+      rankBg = context.primary;
+      rankColor = Colors.white;
+    } else if (rank <= 3) {
+      rankBg = const Color(0xFFFFD700).withValues(alpha: 0.18);
+      rankColor = const Color(0xFFB45309);
+    } else if (rank <= 10) {
+      rankBg = context.primary.withValues(alpha: 0.1);
+      rankColor = context.primary;
+    } else {
+      rankBg = context.surface2;
+      rankColor = context.textMuted;
+    }
+
     return GestureDetector(
       onTap: () => _showStreakSheet(entry),
       child: Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: isMe ? context.primary.withValues(alpha: 0.1) : context.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: isMe ? context.primary : context.border, width: isMe ? 1.5 : 1),
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 28,
-            child: Text('$rank', style: TextStyle(fontWeight: FontWeight.bold, color: context.textMuted, fontSize: 13), textAlign: TextAlign.center),
-          ),
-          const SizedBox(width: 8),
-          _Avatar(name: entry.name, size: 36, avatarUrl: entry.avatarUrl),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    if (_savedIds.contains(entry.userId)) const Text('⭐', style: TextStyle(fontSize: 12)),
-                    Flexible(child: Text(entry.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: context.appText), overflow: TextOverflow.ellipsis)),
-                    if (isMe) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: context.primary, borderRadius: BorderRadius.circular(20)),
-                        child: const Text('YOU', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
-                      ),
-                    ],
-                    if (studiedToday) ...[
-                      const SizedBox(width: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
-                        child: const Text('TODAY', style: TextStyle(color: Colors.green, fontSize: 9, fontWeight: FontWeight.bold)),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${entry.xp.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')} XP${entry.streak > 0 ? ' · 🔥 ${entry.streak}' : ''}',
-                  style: TextStyle(fontSize: 11, color: context.textMuted),
-                ),
-              ],
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: isMe ? context.primary.withValues(alpha: 0.1) : context.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: isMe ? context.primary : context.border, width: isMe ? 1.5 : 1),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 32, height: 32,
+              decoration: BoxDecoration(color: rankBg, borderRadius: BorderRadius.circular(10)),
+              alignment: Alignment.center,
+              child: Text('$rank', style: TextStyle(fontWeight: FontWeight.w900, color: rankColor, fontSize: 13)),
             ),
-          ),
-        ],
+            const SizedBox(width: 10),
+            _Avatar(name: entry.name, size: 38, avatarUrl: entry.avatarUrl),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      if (_savedIds.contains(entry.userId)) const Text('⭐', style: TextStyle(fontSize: 12)),
+                      Flexible(child: Text(entry.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: context.appText), overflow: TextOverflow.ellipsis)),
+                      if (isMe) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(color: context.primary, borderRadius: BorderRadius.circular(20)),
+                          child: const Text('YOU', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${entry.xp.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')} XP${entry.streak > 0 ? ' · 🔥 ${entry.streak}' : ''}',
+                    style: TextStyle(fontSize: 11, color: context.textMuted),
+                  ),
+                ],
+              ),
+            ),
+            if (studiedToday)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
+                child: const Text('TODAY', style: TextStyle(color: Colors.green, fontSize: 9, fontWeight: FontWeight.bold)),
+              ),
+          ],
+        ),
       ),
-    ),
     );
   }
 }

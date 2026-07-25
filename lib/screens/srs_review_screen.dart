@@ -28,7 +28,9 @@ class SRSReviewScreen extends StatefulWidget {
 class _SRSReviewScreenState extends State<SRSReviewScreen>
     with SingleTickerProviderStateMixin {
   final FlutterTts _tts = FlutterTts();
+  late List<SRSWord> _originalQueue;
   late List<SRSWord> _queue;
+  bool _shuffled = false;
   int _currentIndex = 0;
   bool _revealed = false;
   bool _autoPlay = true;
@@ -57,7 +59,8 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   void initState() {
     super.initState();
     appLangNotifier.addListener(_onLangChange);
-    _queue = List.from(widget.words)..shuffle();
+    _originalQueue = List.from(widget.words);
+    _queue = List.from(widget.words);
 
     // Build choices synchronously from queue — covers most cases instantly
     _cardChoices = List.generate(_queue.length, (i) => _buildChoicesFor(i, {}));
@@ -145,6 +148,22 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   }
 
   void _onLangChange() { if (mounted) setState(() {}); }
+
+  void _toggleShuffle() {
+    setState(() {
+      _shuffled = !_shuffled;
+      _queue = _shuffled
+          ? (List.from(_originalQueue)..shuffle())
+          : List.from(_originalQueue);
+      _currentIndex = 0;
+      _revealed = false;
+      _tappedChoice = null;
+      _choicesRevealed = false;
+      _history.clear();
+      _cardChoices = List.generate(_queue.length, (i) => _buildChoicesFor(i, {}));
+    });
+    if (_autoPlay && _queue.isNotEmpty) _speak(_queue[0].word);
+  }
 
   SRSWord get _current => _queue[_currentIndex];
   bool get _isFinished => _currentIndex >= _queue.length;
@@ -734,6 +753,15 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
         ),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: Icon(
+              Icons.shuffle,
+              color: _shuffled ? context.primary : context.textMuted,
+              size: 20,
+            ),
+            tooltip: _shuffled ? 'Shuffled' : 'In order',
+            onPressed: _toggleShuffle,
+          ),
           IconButton(
             icon: Icon(
               _autoPlay ? Icons.volume_up : Icons.volume_off,

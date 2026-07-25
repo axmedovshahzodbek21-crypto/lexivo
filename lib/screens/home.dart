@@ -1644,7 +1644,7 @@ class _HomeScreenState extends State<HomeScreen>
     final levelName = StorageService.getLevelName(_xp);
 
     return Drawer(
-      backgroundColor: context.surface,
+      backgroundColor: context.bg,
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1654,10 +1654,17 @@ class _HomeScreenState extends State<HomeScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // ── Gradient profile header ──
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.all(24),
-                      decoration: const BoxDecoration(color: Color(0xFF6C63FF)),
+                      padding: const EdgeInsets.fromLTRB(20, 28, 20, 22),
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF6C63FF), Color(0xFF9F97FF)],
+                        ),
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -1666,35 +1673,32 @@ class _HomeScreenState extends State<HomeScreen>
                               Navigator.pop(context);
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(
-                                  builder: (context) => SettingsScreen(),
-                                ),
+                                MaterialPageRoute(builder: (context) => SettingsScreen()),
                               ).then((_) => _loadStats());
                             },
                             child: Stack(
                               children: [
                                 Container(
-                                  width: 64,
-                                  height: 64,
+                                  width: 70,
+                                  height: 70,
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.2),
-                                    borderRadius: BorderRadius.circular(32),
-                                    border: Border.all(color: Colors.white30, width: 2),
+                                    borderRadius: BorderRadius.circular(35),
+                                    gradient: const LinearGradient(
+                                      colors: [Colors.white, Color(0xFF9F97FF)],
+                                    ),
                                   ),
-                                  child: _profileImagePath != null
-                                      ? ClipRRect(
-                                          borderRadius: BorderRadius.circular(32),
-                                          child: Image.file(
-                                            File(_profileImagePath!),
-                                            fit: BoxFit.cover,
-                                          ),
-                                        )
-                                      : const Center(
-                                          child: Text(
-                                            '👤',
-                                            style: TextStyle(fontSize: 30),
-                                          ),
-                                        ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(2.5),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(32),
+                                      child: Container(
+                                        color: Colors.white.withValues(alpha: 0.2),
+                                        child: _profileImagePath != null
+                                            ? Image.file(File(_profileImagePath!), fit: BoxFit.cover)
+                                            : const Center(child: Text('👤', style: TextStyle(fontSize: 30))),
+                                      ),
+                                    ),
+                                  ),
                                 ),
                                 Positioned(
                                   bottom: 0,
@@ -1705,18 +1709,15 @@ class _HomeScreenState extends State<HomeScreen>
                                     decoration: BoxDecoration(
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(11),
+                                      boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
                                     ),
-                                    child: const Icon(
-                                      Icons.edit,
-                                      color: Color(0xFF6C63FF),
-                                      size: 13,
-                                    ),
+                                    child: const Icon(Icons.edit, color: Color(0xFF6C63FF), size: 13),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 14),
                           Text(
                             _userName.isNotEmpty
                                 ? _userName
@@ -1725,26 +1726,37 @@ class _HomeScreenState extends State<HomeScreen>
                                 : 'Learner',
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 18,
+                              fontSize: 20,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 8),
                           Row(
                             children: [
-                              Text(
-                                levelName,
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 13,
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.22),
+                                  borderRadius: BorderRadius.circular(20),
                                 ),
+                                child: Text(levelName,
+                                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
                               ),
                               const SizedBox(width: 8),
-                              Text(
-                                '${StorageService.displayXP(_xp)} XP',
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 13,
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.22),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text('⚡', style: TextStyle(fontSize: 11)),
+                                    const SizedBox(width: 3),
+                                    Text('${StorageService.displayXP(_xp)} XP',
+                                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                                  ],
                                 ),
                               ),
                             ],
@@ -1752,73 +1764,49 @@ class _HomeScreenState extends State<HomeScreen>
                         ],
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    _buildDrawerTile(
-                      context,
-                      icon: '⭐',
-                      label: 'Starred Words',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const StarredWordsScreen(),
-                          ),
-                        );
-                      },
+                    const SizedBox(height: 12),
+                    // ── Nav tiles ──
+                    _buildDrawerTile(context, icon: '⭐', label: 'Starred Words',
+                        iconBg: const Color(0xFFf59e0b), onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (context) => const StarredWordsScreen()));
+                    }),
+                    _buildDrawerTile(context, icon: '📖', label: 'Word Library',
+                        iconBg: const Color(0xFF0ea5e9), onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (context) => const WordsLibraryScreen()));
+                    }),
+                    _buildDrawerTile(context, icon: '📊', label: 'Stats',
+                        iconBg: const Color(0xFF10b981), onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (context) => StatsScreen())).then((_) => _loadStats());
+                    }),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      child: Divider(color: context.border),
                     ),
-                    _buildDrawerTile(
-                      context,
-                      icon: '📖',
-                      label: 'Word Library',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const WordsLibraryScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                    _buildDrawerTile(
-                      context,
-                      icon: '📊',
-                      label: 'Stats',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => StatsScreen()),
-                        ).then((_) => _loadStats());
-                      },
-                    ),
-                    Divider(indent: 20, endIndent: 20, color: context.border),
-                    _buildDrawerTile(
-                      context,
-                      icon: '⚙️',
-                      label: 'Settings',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => SettingsScreen()),
-                        ).then((_) => _loadStats());
-                      },
-                    ),
+                    _buildDrawerTile(context, icon: '⚙️', label: 'Settings',
+                        iconBg: const Color(0xFF6b7280), onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (context) => SettingsScreen())).then((_) => _loadStats());
+                    }),
                   ],
                 ),
               ),
             ),
+            // ── Gradient Lexivo watermark ──
             Padding(
               padding: const EdgeInsets.all(20),
-              child: Text(
-                'Lexivo',
-                style: TextStyle(
-                  color: context.textMuted,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
+              child: ShaderMask(
+                shaderCallback: (bounds) => const LinearGradient(
+                  colors: [Color(0xFF6C63FF), Color(0xFF9F97FF)],
+                ).createShader(bounds),
+                child: const Text('Lexivo',
+                    style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -1832,20 +1820,42 @@ class _HomeScreenState extends State<HomeScreen>
     required String icon,
     required String label,
     required VoidCallback onTap,
+    Color iconBg = const Color(0xFF6C63FF),
   }) {
-    return ListTile(
-      leading: Text(icon, style: const TextStyle(fontSize: 22)),
-      title: Text(
-        label,
-        style: TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w600,
-          color: context.appText,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          splashColor: context.primary.withValues(alpha: 0.12),
+          highlightColor: context.primary.withValues(alpha: 0.06),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: iconBg.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(child: Text(icon, style: const TextStyle(fontSize: 20))),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(label,
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: context.appText)),
+                ),
+                Icon(Icons.chevron_right_rounded, color: context.textMuted, size: 20),
+              ],
+            ),
+          ),
         ),
       ),
-      onTap: onTap,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      horizontalTitleGap: 8,
     );
   }
 

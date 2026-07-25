@@ -413,7 +413,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.all(20),
               children: [
                 // Profile Section
-                _buildSectionHeader(context, tr('profile')),
+                _buildSectionHeader(context, tr('profile'), icon: '👤', iconBg: const Color(0xFF6366F1).withValues(alpha: 0.12)),
                 _buildCard(
                   context,
                   child: Row(
@@ -514,7 +514,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 const SizedBox(height: 24),
 
-                _buildSectionHeader(context, tr('appearance')),
+                _buildSectionHeader(context, tr('appearance'), icon: '🎨', iconBg: const Color(0xFFF59E0B).withValues(alpha: 0.12)),
                 _buildCard(
                   context,
                   child: Column(
@@ -544,7 +544,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 24),
 
                 // Language Section
-                _buildSectionHeader(context, tr('language')),
+                _buildSectionHeader(context, tr('language'), icon: '🌐', iconBg: const Color(0xFF3B82F6).withValues(alpha: 0.12)),
                 _buildCard(
                   context,
                   child: Column(
@@ -571,7 +571,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 const SizedBox(height: 24),
 
-                _buildSectionHeader(context, tr('notifications')),
+                _buildSectionHeader(context, tr('notifications'), icon: '🔔', iconBg: const Color(0xFFEF4444).withValues(alpha: 0.1)),
                 _buildCard(
                   context,
                   child: SwitchListTile(
@@ -666,7 +666,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 const SizedBox(height: 24),
 
-                _buildSectionHeader(context, tr('english_level')),
+                _buildSectionHeader(context, tr('english_level'), icon: '📊', iconBg: const Color(0xFF10B981).withValues(alpha: 0.12)),
                 _buildCard(
                   context,
                   child: Column(
@@ -769,9 +769,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
 
                 const SizedBox(height: 24),
-                const SizedBox(height: 24),
 
-                _buildSectionHeader(context, tr('display')),
+                _buildSectionHeader(context, tr('display'), icon: '🔤', iconBg: const Color(0xFF6366F1).withValues(alpha: 0.12)),
                 _buildCard(
                   context,
                   child: Column(
@@ -828,7 +827,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                 ),
-                _buildSectionHeader(context, tr('daily_goal_section')),
+                _buildSectionHeader(context, tr('daily_goal_section'), icon: '🎯', iconBg: const Color(0xFFF97316).withValues(alpha: 0.12)),
                 _buildCard(
                   context,
                   child: Column(
@@ -887,7 +886,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 const SizedBox(height: 24),
 
-                _buildSectionHeader(context, tr('about')),
+                _buildSectionHeader(context, tr('about'), icon: 'ℹ️', iconBg: const Color(0xFF6366F1).withValues(alpha: 0.12)),
                 _buildCard(
                   context,
                   child: Column(
@@ -950,7 +949,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 const SizedBox(height: 24),
 
-                _buildSectionHeader(context, tr('account')),
+                _buildSectionHeader(context, tr('account'), icon: '🔑', iconBg: const Color(0xFF6366F1).withValues(alpha: 0.12)),
                 _buildCard(
                   context,
                   child: Column(
@@ -1025,7 +1024,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 const SizedBox(height: 24),
 
-                _buildSectionHeader(context, tr('data')),
+                _buildSectionHeader(context, tr('data'), icon: '⚠️', iconBg: const Color(0xFFEF4444).withValues(alpha: 0.1)),
                 _buildCard(
                   context,
                   child: ListTile(
@@ -1200,17 +1199,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title) {
+  Widget _buildSectionHeader(BuildContext context, String title, {String icon = '', Color? iconBg}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.bold,
-          color: context.textMuted,
-          letterSpacing: 0.5,
-        ),
+      child: Row(
+        children: [
+          if (icon.isNotEmpty) ...[
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: iconBg ?? context.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: Center(child: Text(icon, style: const TextStyle(fontSize: 15))),
+            ),
+            const SizedBox(width: 8),
+          ],
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: context.appText,
+            ),
+          ),
+        ],
       ),
     );
   }

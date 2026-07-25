@@ -700,6 +700,12 @@ class StorageService {
     return prefs.getInt(_dailyLimitKey) ?? 0;
   }
 
+  static Future<List<LearnedWord>> getTodayLearnedWords() async {
+    final all = await getLearnedWords();
+    final today = _todayString();
+    return all.where((w) => w.learnedAt.startsWith(today)).toList();
+  }
+
   static Future<bool> canLearnMore() async {
     final prefs = await SharedPreferences.getInstance();
     final goal = prefs.getInt('daily_word_goal') ?? defaultDailyLimit;

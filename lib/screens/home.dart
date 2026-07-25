@@ -299,6 +299,119 @@ class _HomeScreenState extends State<HomeScreen>
 
   bool get _limitReached => _todayLearned >= _dailyGoal;
 
+  void _showTodayWordsSheet() async {
+    final words = await StorageService.getTodayLearnedWords();
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.35,
+        maxChildSize: 0.92,
+        builder: (_, controller) => Container(
+          decoration: BoxDecoration(
+            color: context.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 12, bottom: 4),
+                child: Center(
+                  child: Container(
+                    width: 40, height: 4,
+                    decoration: BoxDecoration(
+                      color: context.border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Words Learned Today',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF5B21B6).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${words.length} words',
+                        style: const TextStyle(fontSize: 12, color: Color(0xFF5B21B6), fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: words.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('📚', style: TextStyle(fontSize: 40)),
+                            const SizedBox(height: 12),
+                            Text('No words learned yet today', style: TextStyle(fontSize: 15, color: context.textMuted)),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        controller: controller,
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                        itemCount: words.length,
+                        itemBuilder: (_, i) {
+                          final w = words[words.length - 1 - i]; // newest first
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: context.bg,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: context.border),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        w.word,
+                                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText),
+                                      ),
+                                      if (w.collectionName.isNotEmpty)
+                                        Text(w.collectionName, style: TextStyle(fontSize: 11, color: context.textMuted)),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  w.translation,
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: context.primary),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showPomodoroThenPicker() {
     showModalBottomSheet(
       context: context,
@@ -1449,7 +1562,9 @@ class _HomeScreenState extends State<HomeScreen>
                     child: AnimatedBuilder(
                       animation: _heartbeat,
                       builder: (_, child) => Transform.scale(scale: _heartbeat.value, child: child),
-                      child: Container(
+                      child: GestureDetector(
+                        onTap: _showTodayWordsSheet,
+                        child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
@@ -1507,6 +1622,7 @@ class _HomeScreenState extends State<HomeScreen>
                           ],
                         ],
                       ),
+                    ),
                     ),
                     ),
                   ),

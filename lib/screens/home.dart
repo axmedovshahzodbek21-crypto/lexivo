@@ -1170,135 +1170,48 @@ class _HomeScreenState extends State<HomeScreen>
               IntrinsicHeight(child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Daily Goal card (violet)
+                  // Total XP card (orange)
                   Expanded(
                     flex: 3,
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF5B21B6), Color(0xFF8B5CF6)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                    child: GestureDetector(
+                      onTap: () => showXpLevelSheet(context, _xp),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFD97706), Color(0xFFFBBF24)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFD97706).withValues(alpha: 0.4),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
                         ),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF5B21B6).withValues(alpha: 0.4),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Row(
-                            children: [
-                              SizedBox(
-                                width: 52,
-                                height: 52,
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    Positioned.fill(
-                                      child: CircularProgressIndicator(
-                                        value: (_dailyGoal > 0 ? _todayLearned / _dailyGoal : 0.0).clamp(0.0, 1.0),
-                                        backgroundColor: Colors.white.withValues(alpha: 0.25),
-                                        valueColor: const AlwaysStoppedAnimation(Colors.white),
-                                        strokeWidth: 5,
-                                        strokeCap: StrokeCap.round,
-                                      ),
-                                    ),
-                                    Text(
-                                      _todayLearned >= _dailyGoal ? '✓' : '$_todayLearned',
-                                      style: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w900,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              StorageService.displayXP(_xp),
+                              style: const TextStyle(
+                                fontSize: 40,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                height: 1.0,
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                                      textBaseline: TextBaseline.alphabetic,
-                                      children: [
-                                        Text(
-                                          '$_todayLearned',
-                                          style: const TextStyle(
-                                            fontSize: 22,
-                                            fontWeight: FontWeight.w900,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        Text(
-                                          ' / $_dailyGoal',
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.white70,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 5),
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(4),
-                                      child: LinearProgressIndicator(
-                                        value: (_dailyGoal > 0 ? _todayLearned / _dailyGoal : 0.0).clamp(0.0, 1.0),
-                                        backgroundColor: Colors.white.withValues(alpha: 0.25),
-                                        valueColor: const AlwaysStoppedAnimation(Colors.white),
-                                        minHeight: 6,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _todayLearned >= _dailyGoal
-                                          ? 'Goal reached! 🎉'
-                                          : '${_dailyGoal - _todayLearned} words to go',
-                                      style: const TextStyle(fontSize: 10, color: Colors.white70),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Text('🧊', style: TextStyle(fontSize: 11)),
-                                const SizedBox(width: 5),
-                                Text(
-                                  _freezes == 0
-                                      ? 'No freezes'
-                                      : _freezes == 1
-                                          ? '1 streak freeze'
-                                          : '$_freezes streak freezes',
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Total XP',
+                              style: TextStyle(fontSize: 13, color: Colors.white70, fontWeight: FontWeight.w600),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -1499,14 +1412,67 @@ class _HomeScreenState extends State<HomeScreen>
                     glow: _reviewsDue > 0 ? const Color(0xFFDC2626) : const Color(0xFF059669),
                   ),
                   const SizedBox(width: 12),
-                  _buildStatCard(
-                    context,
-                    StorageService.displayXP(_xp),
-                    'Total\nXP',
-                    () => showXpLevelSheet(context, _xp),
-                    gradient: [const Color(0xFFD97706), const Color(0xFFFBBF24)],
-                    edge: const Color(0xFF92400E),
-                    glow: const Color(0xFFD97706),
+                  // Daily Goal mini-card
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF5B21B6), Color(0xFF8B5CF6)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          const BoxShadow(color: Color(0xFF3B0764), offset: Offset(0, 6), blurRadius: 0),
+                          BoxShadow(color: const Color(0xFF5B21B6).withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 10)),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 38,
+                            height: 38,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Positioned.fill(
+                                  child: CircularProgressIndicator(
+                                    value: (_dailyGoal > 0 ? _todayLearned / _dailyGoal : 0.0).clamp(0.0, 1.0),
+                                    backgroundColor: Colors.white.withValues(alpha: 0.25),
+                                    valueColor: const AlwaysStoppedAnimation(Colors.white),
+                                    strokeWidth: 4,
+                                    strokeCap: StrokeCap.round,
+                                  ),
+                                ),
+                                Text(
+                                  _todayLearned >= _dailyGoal ? '✓' : '$_todayLearned',
+                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.white),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '$_todayLearned / $_dailyGoal',
+                            style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w700),
+                          ),
+                          Text(
+                            _todayLearned >= _dailyGoal ? 'Done! 🎉' : '${_dailyGoal - _todayLearned} to go',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 9, color: Colors.white70),
+                          ),
+                          if (_freezes > 0) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              '🧊 $_freezes freeze${_freezes == 1 ? '' : 's'}',
+                              style: const TextStyle(fontSize: 9, color: Colors.white70),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),

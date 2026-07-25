@@ -711,27 +711,28 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
             nav.pop();
           },
         ),
-        title: Text(
-          '${_currentIndex + 1} / $total',
-          style: TextStyle(color: context.appText, fontWeight: FontWeight.bold),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            GestureDetector(
+              onTap: _history.isNotEmpty ? _goBack : null,
+              child: Icon(Icons.arrow_back_ios, size: 16,
+                  color: _history.isNotEmpty ? context.primary : context.textMuted),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              '${_currentIndex + 1} / $total',
+              style: TextStyle(color: context.appText, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(width: 10),
+            GestureDetector(
+              onTap: _markSkip,
+              child: Icon(Icons.arrow_forward_ios, size: 16, color: context.primary),
+            ),
+          ],
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: Icon(Icons.arrow_back_ios, size: 18,
-                color: _history.isNotEmpty ? context.primary : context.textMuted),
-            tooltip: 'Previous word',
-            onPressed: _history.isNotEmpty ? _goBack : null,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-          ),
-          IconButton(
-            icon: Icon(Icons.arrow_forward_ios, size: 18, color: context.primary),
-            tooltip: 'Skip word',
-            onPressed: _markSkip,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-          ),
           IconButton(
             icon: Icon(
               _autoPlay ? Icons.volume_up : Icons.volume_off,

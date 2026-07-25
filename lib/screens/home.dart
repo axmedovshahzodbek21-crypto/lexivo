@@ -1183,15 +1183,10 @@ class _HomeScreenState extends State<HomeScreen>
                         ),
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
-                          const BoxShadow(
-                            color: Color(0xFF3B0764),
-                            offset: Offset(0, 8),
-                            blurRadius: 0,
-                          ),
                           BoxShadow(
                             color: const Color(0xFF5B21B6).withValues(alpha: 0.4),
                             blurRadius: 20,
-                            offset: const Offset(0, 12),
+                            offset: const Offset(0, 8),
                           ),
                         ],
                       ),
@@ -1205,22 +1200,23 @@ class _HomeScreenState extends State<HomeScreen>
                                 width: 52,
                                 height: 52,
                                 child: Stack(
+                                  alignment: Alignment.center,
                                   children: [
-                                    CircularProgressIndicator(
-                                      value: (_dailyGoal > 0 ? _todayLearned / _dailyGoal : 0.0).clamp(0.0, 1.0),
-                                      backgroundColor: Colors.white.withValues(alpha: 0.25),
-                                      valueColor: const AlwaysStoppedAnimation(Colors.white),
-                                      strokeWidth: 5,
-                                      strokeCap: StrokeCap.round,
+                                    Positioned.fill(
+                                      child: CircularProgressIndicator(
+                                        value: (_dailyGoal > 0 ? _todayLearned / _dailyGoal : 0.0).clamp(0.0, 1.0),
+                                        backgroundColor: Colors.white.withValues(alpha: 0.25),
+                                        valueColor: const AlwaysStoppedAnimation(Colors.white),
+                                        strokeWidth: 5,
+                                        strokeCap: StrokeCap.round,
+                                      ),
                                     ),
-                                    Center(
-                                      child: Text(
-                                        _todayLearned >= _dailyGoal ? '✓' : '$_todayLearned',
-                                        style: const TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w900,
-                                          color: Colors.white,
-                                        ),
+                                    Text(
+                                      _todayLearned >= _dailyGoal ? '✓' : '$_todayLearned',
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white,
                                       ),
                                     ),
                                   ],

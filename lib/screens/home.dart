@@ -43,8 +43,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _controller;
+  late AnimationController _heartbeatController;
+  late Animation<double> _heartbeat;
   int _wordsLearned = 0;
   int _streak = 0;
   int _reviewsDue = 0;
@@ -77,6 +79,13 @@ class _HomeScreenState extends State<HomeScreen>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
+    _heartbeatController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+    _heartbeat = Tween<double>(begin: 1.0, end: 1.015).animate(
+      CurvedAnimation(parent: _heartbeatController, curve: Curves.easeInOut),
+    );
     _dailyGoal = widget.dailyWordGoal;
     _pickWordOfDay();
     _loadStats();
@@ -88,6 +97,7 @@ class _HomeScreenState extends State<HomeScreen>
   void dispose() {
     appLangNotifier.removeListener(_onLangChange);
     _syncSub?.cancel();
+    _heartbeatController.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -1173,44 +1183,48 @@ class _HomeScreenState extends State<HomeScreen>
                   // Total XP card (orange)
                   Expanded(
                     flex: 3,
-                    child: GestureDetector(
-                      onTap: () => showXpLevelSheet(context, _xp),
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFD97706), Color(0xFFFBBF24)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFD97706).withValues(alpha: 0.4),
-                              blurRadius: 20,
-                              offset: const Offset(0, 8),
+                    child: AnimatedBuilder(
+                      animation: _heartbeat,
+                      builder: (_, child) => Transform.scale(scale: _heartbeat.value, child: child),
+                      child: GestureDetector(
+                        onTap: () => showXpLevelSheet(context, _xp),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFD97706), Color(0xFFFBBF24)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              StorageService.displayXP(_xp),
-                              style: const TextStyle(
-                                fontSize: 40,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
-                                height: 1.0,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFD97706).withValues(alpha: 0.4),
+                                blurRadius: 20,
+                                offset: const Offset(0, 8),
                               ),
-                            ),
-                            const SizedBox(height: 6),
-                            const Text(
-                              'Total XP',
-                              style: TextStyle(fontSize: 13, color: Colors.white70, fontWeight: FontWeight.w600),
-                            ),
-                          ],
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                StorageService.displayXP(_xp),
+                                style: const TextStyle(
+                                  fontSize: 40,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                  height: 1.0,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              const Text(
+                                'Total XP',
+                                style: TextStyle(fontSize: 13, color: Colors.white70, fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -1219,55 +1233,59 @@ class _HomeScreenState extends State<HomeScreen>
                   // Day Streak card (orange)
                   Expanded(
                     flex: 2,
-                    child: GestureDetector(
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => StreakCalendarScreen()),
-                      ).then((_) => _loadStats()),
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFEA580C), Color(0xFFFB923C)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            const BoxShadow(
-                              color: Color(0xFFC2410C),
-                              offset: Offset(0, 8),
-                              blurRadius: 0,
+                    child: AnimatedBuilder(
+                      animation: _heartbeat,
+                      builder: (_, child) => Transform.scale(scale: _heartbeat.value, child: child),
+                      child: GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => StreakCalendarScreen()),
+                        ).then((_) => _loadStats()),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFEA580C), Color(0xFFFB923C)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
-                            BoxShadow(
-                              color: const Color(0xFFEA580C).withValues(alpha: 0.4),
-                              blurRadius: 20,
-                              offset: const Offset(0, 12),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('🔥', style: TextStyle(fontSize: 26)),
-                            const SizedBox(height: 4),
-                            Text(
-                              '$_streak',
-                              style: const TextStyle(
-                                fontSize: 44,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
-                                height: 1.0,
-                                shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 4)],
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              const BoxShadow(
+                                color: Color(0xFFC2410C),
+                                offset: Offset(0, 8),
+                                blurRadius: 0,
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Day Streak',
-                              style: TextStyle(fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w600),
-                            ),
-                          ],
+                              BoxShadow(
+                                color: const Color(0xFFEA580C).withValues(alpha: 0.4),
+                                blurRadius: 20,
+                                offset: const Offset(0, 12),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('🔥', style: TextStyle(fontSize: 26)),
+                              const SizedBox(height: 4),
+                              Text(
+                                '$_streak',
+                                style: const TextStyle(
+                                  fontSize: 44,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                  height: 1.0,
+                                  shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 4)],
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Day Streak',
+                                style: TextStyle(fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -1279,7 +1297,10 @@ class _HomeScreenState extends State<HomeScreen>
 
               if (sid == 'wod' && _wordOfDay != null && !_hideWordOfDay) ...[
                 const SizedBox(height: 4),
-                Container(
+                AnimatedBuilder(
+                  animation: _heartbeat,
+                  builder: (_, child) => Transform.scale(scale: _heartbeat.value, child: child),
+                  child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
@@ -1358,11 +1379,16 @@ class _HomeScreenState extends State<HomeScreen>
                     ],
                   ),
                 ),
+                ),
                 const SizedBox(height: 14),
               ],
 
               if (sid == 'session' && !_hideSession) ...[
-                _buildSessionCard(context),
+                AnimatedBuilder(
+                  animation: _heartbeat,
+                  builder: (_, child) => Transform.scale(scale: _heartbeat.value, child: child),
+                  child: _buildSessionCard(context),
+                ),
                 const SizedBox(height: 14),
               ],
 
@@ -1415,7 +1441,10 @@ class _HomeScreenState extends State<HomeScreen>
                   const SizedBox(width: 12),
                   // Daily Goal mini-card
                   Expanded(
-                    child: Container(
+                    child: AnimatedBuilder(
+                      animation: _heartbeat,
+                      builder: (_, child) => Transform.scale(scale: _heartbeat.value, child: child),
+                      child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
@@ -1473,6 +1502,7 @@ class _HomeScreenState extends State<HomeScreen>
                           ],
                         ],
                       ),
+                    ),
                     ),
                   ),
                 ],
@@ -1880,46 +1910,50 @@ class _HomeScreenState extends State<HomeScreen>
     Color glow = const Color(0x446C63FF),
   }) {
     return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: gradient,
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+      child: AnimatedBuilder(
+        animation: _heartbeat,
+        builder: (_, child) => Transform.scale(scale: _heartbeat.value, child: child),
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: gradient,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(color: edge, offset: const Offset(0, 6), blurRadius: 0),
+                BoxShadow(color: glow.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 10)),
+              ],
             ),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(color: edge, offset: const Offset(0, 6), blurRadius: 0),
-              BoxShadow(color: glow.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 10)),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  number,
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    number,
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
-              ),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

@@ -529,7 +529,6 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
   bool _loading = true;
   int _streak = 0;
   int _longestStreak = 0;
-  List<String> _studyDays     = [];
   List<String> _reviewDays    = [];
   List<String> _wordGoalDays  = [];
   late DateTime _month;
@@ -561,7 +560,6 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
     final studyDays = results[1] as List<String>;
     setState(() {
       _streak        = results[0] as int;
-      _studyDays     = studyDays;
       _reviewDays    = results[2] as List<String>;
       _wordGoalDays  = results[3] as List<String>;
       _longestStreak = _calcLongest(studyDays);
@@ -709,8 +707,7 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
                       final isFuture   = DateTime.parse(dateStr).isAfter(now);
                       final hasReview  = _reviewDays.contains(dateStr);
                       final hasWords   = _wordGoalDays.contains(dateStr);
-                      final studied    = _studyDays.contains(dateStr);
-                      final anyDone    = hasReview || hasWords || studied;
+                      final anyDone    = hasReview || hasWords;
 
                       return GestureDetector(
                         onTap: isFuture ? null : () => setState(() {
@@ -740,8 +737,6 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
                                           child: Container(color: _kSrsColor),
                                         ),
                                       ),
-                                      if (!hasReview && !hasWords && studied)
-                                        Container(color: const Color(0xFF2ECC71)),
                                     ]),
                                   ),
                                 ),

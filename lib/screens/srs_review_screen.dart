@@ -751,7 +751,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
             ),
           ],
         ),
-        centerTitle: true,
+        centerTitle: false,
         actions: [
           IconButton(
             icon: Icon(

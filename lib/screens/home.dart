@@ -467,7 +467,7 @@ class _HomeScreenState extends State<HomeScreen>
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 Text(
-                                  '$levelName · $_xp XP',
+                                  '$levelName · ${StorageService.displayXP(_xp)} XP',
                                   style: const TextStyle(
                                     color: Colors.white60,
                                     fontSize: 11,
@@ -694,7 +694,7 @@ class _HomeScreenState extends State<HomeScreen>
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
                                                 Text(
-                                                  '$_xp XP',
+                                                  '${StorageService.displayXP(_xp)} XP',
                                                   style: TextStyle(
                                                     fontWeight: FontWeight.bold,
                                                     color: context.primary,
@@ -838,7 +838,7 @@ class _HomeScreenState extends State<HomeScreen>
                                     const SizedBox(width: 12),
                                     _buildStatCard(
                                       context,
-                                      '$_xp',
+                                      StorageService.displayXP(_xp),
                                       'Total\nXP',
                                       () => showXpLevelSheet(context, _xp),
                                       gradient: [const Color(0xFFD97706), const Color(0xFFFBBF24)],
@@ -1501,7 +1501,7 @@ class _HomeScreenState extends State<HomeScreen>
                   const SizedBox(width: 12),
                   _buildStatCard(
                     context,
-                    '$_xp',
+                    StorageService.displayXP(_xp),
                     'Total\nXP',
                     () => showXpLevelSheet(context, _xp),
                     gradient: [const Color(0xFFD97706), const Color(0xFFFBBF24)],
@@ -1623,7 +1623,7 @@ class _HomeScreenState extends State<HomeScreen>
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                '$_xp XP',
+                                '${StorageService.displayXP(_xp)} XP',
                                 style: const TextStyle(
                                   color: Colors.white70,
                                   fontSize: 13,

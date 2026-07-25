@@ -540,8 +540,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                     final day = int.parse(dateStr.split('-')[2]);
                     final hasReview = reviewSet.contains(dateStr);
                     final hasWords = wordsSet.contains(dateStr);
-                    final studied = studiedSet.contains(dateStr);
-                    final anyDone = hasReview || hasWords || studied;
+                    final anyDone = hasReview || hasWords;
                     final isToday = dateStr == _todayStr;
                     return Padding(
                       padding: const EdgeInsets.all(2),
@@ -565,7 +564,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                     child: Container(color: const Color(0xFF4338CA)),
                                   ),
                                 ),
-                                if (!hasReview && !hasWords && studied) Container(color: const Color(0xFF2ECC71)),
                               ]),
                             ),
                           ),

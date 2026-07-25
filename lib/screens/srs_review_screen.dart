@@ -722,11 +722,15 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
                 color: _history.isNotEmpty ? context.primary : context.textMuted),
             tooltip: 'Previous word',
             onPressed: _history.isNotEmpty ? _goBack : null,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),
           IconButton(
             icon: Icon(Icons.arrow_forward_ios, size: 18, color: context.primary),
             tooltip: 'Skip word',
             onPressed: _markSkip,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),
           IconButton(
             icon: Icon(

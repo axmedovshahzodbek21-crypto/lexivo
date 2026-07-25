@@ -351,9 +351,15 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     return RefreshIndicator(
       onRefresh: _loadAll,
       color: context.primary,
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: items,
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: items,
+          ),
+        ),
       ),
     );
   }

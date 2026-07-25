@@ -1237,7 +1237,6 @@ class _HomeScreenState extends State<HomeScreen>
                                             fontSize: 22,
                                             fontWeight: FontWeight.w900,
                                             color: Colors.white,
-                                            shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 4)],
                                           ),
                                         ),
                                         Text(

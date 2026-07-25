@@ -378,6 +378,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
               style: TextStyle(fontSize: 14, color: context.textMuted, height: 1.5)),
           ...[_current.example1, _current.example2, _current.example3]
               .where((e) => e.isNotEmpty)
+              .take(1)
               .map((e) => Padding(
                 padding: const EdgeInsets.only(top: 10),
                 child: Container(

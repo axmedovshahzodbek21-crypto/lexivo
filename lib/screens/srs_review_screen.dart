@@ -224,6 +224,8 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     if (_history.isNotEmpty) {
       await StorageService.markSRSReviewCompleted();
       await StorageService.recordStudySession();
+      final remaining = await StorageService.getDueWords();
+      if (remaining.isEmpty) await StorageService.recordReviewDay();
     }
   }
 

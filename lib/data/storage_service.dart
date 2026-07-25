@@ -1171,7 +1171,6 @@ class StorageService {
   static Future<void> markSRSReviewCompleted() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_hasCompletedSRSKey, true);
-    await recordReviewDay();
   }
 
   static Future<bool> hasCompletedQuiz() async {

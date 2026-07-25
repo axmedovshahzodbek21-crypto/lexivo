@@ -1706,6 +1706,18 @@ class _HomeScreenState extends State<HomeScreen>
         decoration: BoxDecoration(
           color: const Color(0xFF6C63FF),
           borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            const BoxShadow(
+              color: Color(0xFF3D37B3),
+              offset: Offset(0, 6),
+              blurRadius: 0,
+            ),
+            BoxShadow(
+              color: const Color(0xFF6C63FF).withValues(alpha: 0.4),
+              blurRadius: 16,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
         child: Row(
           children: [

@@ -10,6 +10,7 @@ import '../services/sync_service.dart';
 import 'learning.dart';
 import 'flashcard.dart';
 import '../l10n.dart';
+import 'story_reader_screen.dart';
 
 class CollectionsScreen extends StatefulWidget {
   final String userProfile;
@@ -27,7 +28,16 @@ class CollectionsScreen extends StatefulWidget {
 
 class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
   Map<int, UnitProgress> _progressMap = {};
+  Map<int, StoryUnlockInfo> _storyUnlockMap = {};
   StreamSubscription<void>? _syncSub;
+
+  static const _storyCollections = {
+    '30 Days of Powerful Words',
+    '24 Vocabulary Challenge',
+    'Word Mastery',
+  };
+
+  bool get _hasStories => _storyCollections.contains(widget.collection.name);
 
   bool get _isDesktop =>
       defaultTargetPlatform == TargetPlatform.windows ||
@@ -72,7 +82,17 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
         day.dayNumber,
       );
     }
-    setState(() => _progressMap = map);
+    Map<int, StoryUnlockInfo> storyMap = {};
+    if (_hasStories) {
+      storyMap = await StorageService.getStoryUnlockInfoBatch(
+        widget.collection.name,
+        widget.collection.days,
+      );
+    }
+    setState(() {
+      _progressMap = map;
+      _storyUnlockMap = storyMap;
+    });
   }
 
   Color get _color {
@@ -224,9 +244,11 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
                     final day = widget.collection.days[index];
                     final progress =
                         _progressMap[day.dayNumber] ?? const UnitProgress();
+                    final storyInfo =
+                        _storyUnlockMap[day.dayNumber] ?? const StoryUnlockInfo();
                     return GestureDetector(
                       onTap: () => _onUnitTap(context, day, index, progress),
-                      child: _buildUnitCard(context, day, progress),
+                      child: _buildUnitCard(context, day, progress, storyInfo),
                     );
                   },
                 ),
@@ -238,7 +260,7 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
     );
   }
 
-  Widget _buildUnitCard(BuildContext context, WordDay day, UnitProgress progress) {
+  Widget _buildUnitCard(BuildContext context, WordDay day, UnitProgress progress, StoryUnlockInfo storyInfo) {
     final isComplete = progress.isComplete;
     final stages = progress.stagesComplete;
 
@@ -335,7 +357,7 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
                 fontWeight: FontWeight.bold,
               ),
             )
-          else if (isComplete)
+          else if (isComplete) ...[
             Text(
               'Complete ✓',
               style: TextStyle(
@@ -343,13 +365,91 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
                 color: Colors.green.shade600,
                 fontWeight: FontWeight.bold,
               ),
-            )
+            ),
+            if (storyInfo.anyUnlocked)
+              Text(
+                '📚 ${storyInfo.unlockedCount}',
+                style: const TextStyle(
+                  fontSize: 9,
+                  color: Color(0xFFF59E0B),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+          ]
           else
             Text(
               '${day.words.length} words',
               style: TextStyle(fontSize: 10, color: context.textMuted),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _storySlot(
+    BuildContext sheetCtx,
+    WordDay day,
+    int storyNumber,
+    bool unlocked,
+  ) {
+    const emojis = ['📖', '📕', '📗'];
+    const labels = ['Stage 4 Unlocked', 'Mastered', '30 Days Later'];
+    final emoji = emojis[storyNumber - 1];
+    final label = 'Story $storyNumber · ${labels[storyNumber - 1]}';
+    const amber = Color(0xFFF59E0B);
+
+    return GestureDetector(
+      onTap: unlocked
+          ? () {
+              Navigator.pop(sheetCtx);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => StoryReaderScreen(
+                    collectionName: widget.collection.name,
+                    unitNumber: day.dayNumber,
+                    storyNumber: storyNumber,
+                    unitTopic: day.topic,
+                    color: _color,
+                  ),
+                ),
+              );
+            }
+          : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: unlocked
+              ? amber.withValues(alpha: 0.08)
+              : sheetCtx.surface2,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: unlocked
+                ? amber.withValues(alpha: 0.35)
+                : sheetCtx.border,
+          ),
+        ),
+        child: Row(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 16)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: unlocked ? amber : sheetCtx.textMuted,
+                ),
+              ),
+            ),
+            Icon(
+              unlocked ? Icons.arrow_forward_ios : Icons.lock_outline,
+              size: 13,
+              color: unlocked ? amber : sheetCtx.textMuted,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -536,6 +636,35 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
             const SizedBox(height: 8),
             Divider(color: sheetContext.border),
             const SizedBox(height: 8),
+
+            if (_hasStories) Builder(
+              builder: (_) {
+                final storyInfo = _storyUnlockMap[day.dayNumber] ?? const StoryUnlockInfo();
+                if (!storyInfo.anyUnlocked) return const SizedBox.shrink();
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '📚 Stories',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: sheetContext.appText,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _storySlot(sheetContext, day, 1, storyInfo.story1Unlocked),
+                    const SizedBox(height: 6),
+                    _storySlot(sheetContext, day, 2, storyInfo.story2Unlocked),
+                    const SizedBox(height: 6),
+                    _storySlot(sheetContext, day, 3, storyInfo.story3Unlocked),
+                    const SizedBox(height: 12),
+                    Divider(color: sheetContext.border),
+                    const SizedBox(height: 8),
+                  ],
+                );
+              },
+            ),
 
             Row(
               children: [

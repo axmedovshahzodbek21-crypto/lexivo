@@ -295,6 +295,26 @@ class HardWord {
 }
 
 // ─────────────────────────────────────────────
+//  STORY UNLOCK
+// ─────────────────────────────────────────────
+
+class StoryUnlockInfo {
+  final bool story1Unlocked;
+  final bool story2Unlocked;
+  final bool story3Unlocked;
+
+  const StoryUnlockInfo({
+    this.story1Unlocked = false,
+    this.story2Unlocked = false,
+    this.story3Unlocked = false,
+  });
+
+  bool get anyUnlocked => story1Unlocked || story2Unlocked || story3Unlocked;
+  int get unlockedCount =>
+      [story1Unlocked, story2Unlocked, story3Unlocked].where((b) => b).length;
+}
+
+// ─────────────────────────────────────────────
 //  IMPORTED WORDS MODEL
 // ─────────────────────────────────────────────
 
@@ -1733,5 +1753,61 @@ class StorageService {
   static Future<bool> isLevelCompletedViaTest(String levelId) async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool('level_test_complete_$levelId') ?? false;
+  }
+
+  // ── Story Unlock ──────────────────────────────────────────────────────────
+
+  static Future<Map<int, StoryUnlockInfo>> getStoryUnlockInfoBatch(
+    String collectionName,
+    List<WordDay> days,
+  ) async {
+    final srsWords = await getSRSWords();
+    final prefs = await SharedPreferences.getInstance();
+    final today = _todayString();
+    final result = <int, StoryUnlockInfo>{};
+
+    for (final day in days) {
+      final unitWords = srsWords
+          .where(
+            (w) =>
+                w.collectionName == collectionName &&
+                w.dayNumber == day.dayNumber,
+          )
+          .toList();
+
+      if (unitWords.isEmpty) {
+        result[day.dayNumber] = const StoryUnlockInfo();
+        continue;
+      }
+
+      final threshold = (day.words.length * 0.8).ceil();
+      final stage4Count = unitWords.where((w) => w.reviewStage >= 4).length;
+      final stage5Count = unitWords.where((w) => w.reviewStage >= 5).length;
+
+      final story1 = stage4Count >= threshold;
+      final story2 = stage5Count >= threshold;
+
+      bool story3 = false;
+      if (story2) {
+        final key = 'story2_unlock_${collectionName}_${day.dayNumber}';
+        String? unlockDate = prefs.getString(key);
+        if (unlockDate == null) {
+          await prefs.setString(key, today);
+          unlockDate = today;
+        }
+        final unlockDt = DateTime.parse(unlockDate);
+        final story3Dt = unlockDt.add(const Duration(days: 30));
+        final todayDt = DateTime.parse(today);
+        story3 = !story3Dt.isAfter(todayDt);
+      }
+
+      result[day.dayNumber] = StoryUnlockInfo(
+        story1Unlocked: story1,
+        story2Unlocked: story2,
+        story3Unlocked: story3,
+      );
+    }
+
+    return result;
   }
 }

@@ -1400,8 +1400,8 @@ class StorageService {
   // XP to store (×10) per learn word based on total ever learned
   static int learnXP(int totalEverLearned) {
     if (totalEverLearned <= 100) return 10;
-    if (totalEverLearned <= 500) return 5;
-    return 3;
+    if (totalEverLearned <= 500) return 7;
+    return 5;
   }
 
   // XP to store (×10) per SRS review based on interval days

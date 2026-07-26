@@ -56,6 +56,11 @@ class LeaderboardEntry {
   }
 }
 
+String _fmtXp(int raw) {
+  final d = raw / 10.0;
+  return d == d.truncateToDouble() ? d.truncate().toString() : d.toStringAsFixed(1);
+}
+
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
 
@@ -409,7 +414,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${entry.xp.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')} XP${entry.streak > 0 ? ' · 🔥 ${entry.streak}' : ''}',
+                    '${_fmtXp(entry.xp)} XP${entry.streak > 0 ? ' · 🔥 ${entry.streak}' : ''}',
                     style: TextStyle(fontSize: 11, color: context.textMuted),
                   ),
                 ],
@@ -655,7 +660,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                       maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
                     const SizedBox(height: 2),
                     Text(
-                      '${entry.xp.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')} XP',
+                      '${_fmtXp(entry.xp)} XP',
                       style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800,
                         color: cfg.idx == 0 ? const Color(0xFFB45309) : context.primary),
                     ),
@@ -735,7 +740,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${entry.xp.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')} XP${entry.streak > 0 ? ' · 🔥 ${entry.streak}' : ''}',
+                    '${_fmtXp(entry.xp)} XP${entry.streak > 0 ? ' · 🔥 ${entry.streak}' : ''}',
                     style: TextStyle(fontSize: 11, color: context.textMuted),
                   ),
                 ],

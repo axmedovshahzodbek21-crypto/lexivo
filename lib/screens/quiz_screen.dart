@@ -628,9 +628,24 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
 
   Future<void> _awardXP() async {
     if (widget.noXP) return;
-    await StorageService.markQuizCompleted(perfect: widget.correctCount == widget.totalCount);
+    final isPerfect = widget.correctCount == widget.totalCount;
+    await StorageService.markQuizCompleted(perfect: isPerfect);
     await StorageService.recordStudySession();
     await StorageService.recordQuizSession();
+    final alreadyAwarded = await StorageService.hasQuizXPAwarded(
+      widget.collectionName, widget.wordDay.dayNumber);
+    if (!alreadyAwarded) {
+      final wordCount = widget.wordDay.words.length;
+      final baseXp = (wordCount * 5).round(); // 0.5 XP per word
+      final bonus  = isPerfect ? 30 : 0;      // +3.0 XP perfect bonus
+      await StorageService.addXP(
+        baseXp + bonus,
+        reason: 'Quiz',
+        source: 'Unit ${widget.wordDay.dayNumber} · ${widget.collectionName}',
+      );
+      await StorageService.markQuizXPAwarded(
+        widget.collectionName, widget.wordDay.dayNumber);
+    }
     await StorageService.markQuizComplete(
       widget.collectionName,
       widget.wordDay.dayNumber,

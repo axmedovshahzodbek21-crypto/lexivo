@@ -1245,6 +1245,44 @@ class StorageService {
     }
   }
 
+  // ── One-time flashcard / quiz XP per unit ─────────────────────────────────
+
+  static Future<bool> hasFlashcardXPAwarded(String collectionName, int dayNumber) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('flash_xp_units');
+    if (raw == null) return false;
+    return (jsonDecode(raw) as List).contains(_unitKey(collectionName, dayNumber));
+  }
+
+  static Future<void> markFlashcardXPAwarded(String collectionName, int dayNumber) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('flash_xp_units');
+    final list = raw != null ? List<String>.from(jsonDecode(raw)) : <String>[];
+    final k = _unitKey(collectionName, dayNumber);
+    if (!list.contains(k)) {
+      list.add(k);
+      await prefs.setString('flash_xp_units', jsonEncode(list));
+    }
+  }
+
+  static Future<bool> hasQuizXPAwarded(String collectionName, int dayNumber) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('quiz_xp_units');
+    if (raw == null) return false;
+    return (jsonDecode(raw) as List).contains(_unitKey(collectionName, dayNumber));
+  }
+
+  static Future<void> markQuizXPAwarded(String collectionName, int dayNumber) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('quiz_xp_units');
+    final list = raw != null ? List<String>.from(jsonDecode(raw)) : <String>[];
+    final k = _unitKey(collectionName, dayNumber);
+    if (!list.contains(k)) {
+      list.add(k);
+      await prefs.setString('quiz_xp_units', jsonEncode(list));
+    }
+  }
+
   // ── Activity flags (for achievements) ─────────────────────────────────────
 
   static Future<void> markQuizCompleted({required bool perfect}) async {

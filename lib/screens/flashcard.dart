@@ -537,6 +537,18 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
     await StorageService.recordFlashcardSession();
     await StorageService.markFlashcardCompleted();
     if (_hardWords.isEmpty) {
+      final alreadyAwarded = await StorageService.hasFlashcardXPAwarded(
+        widget.collectionName, widget.wordDay.dayNumber);
+      if (!alreadyAwarded) {
+        final wordCount = widget.wordDay.words.length;
+        await StorageService.addXP(
+          (wordCount * 3).round(),
+          reason: 'Flashcard',
+          source: 'Unit ${widget.wordDay.dayNumber} · ${widget.collectionName}',
+        );
+        await StorageService.markFlashcardXPAwarded(
+          widget.collectionName, widget.wordDay.dayNumber);
+      }
       await StorageService.markFlashcardComplete(
         widget.collectionName,
         widget.wordDay.dayNumber,

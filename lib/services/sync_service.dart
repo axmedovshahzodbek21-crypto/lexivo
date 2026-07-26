@@ -175,6 +175,8 @@ class SyncService {
         'study_days': _getStudyDaysList(prefs),
         'review_days': _getDaysList(prefs, 'review_days'),
         'word_goal_days': _getDaysList(prefs, 'word_goal_days'),
+        'today_word_goal': prefs.getInt('today_word_goal'),
+        'today_word_goal_date': prefs.getString('today_word_goal_date'),
         'freezes': prefs.getInt('streak_freezes') ?? 0,
         'last_freeze_week': prefs.getString('last_freeze_week'),
         if (parsedReviewLog != null && parsedReviewLog.isNotEmpty)
@@ -639,6 +641,19 @@ class SyncService {
         final cloudCount  = (statsRes['today_count'] as num? ?? 0).toInt();
         await prefs.setInt('daily_words_learned', prefs.getString('daily_words_date') == todayStr ? max(localCount, cloudCount) : cloudCount);
         await prefs.setString('daily_words_date', cloudCountDate!);
+      }
+
+      // today_word_goal: only sync if cloud date matches today and local has no goal set for today
+      final cloudWordGoalDate = statsRes['today_word_goal_date'] as String?;
+      if (cloudWordGoalDate == todayStr) {
+        final cloudGoal = statsRes['today_word_goal'] as int?;
+        if (cloudGoal != null) {
+          final localGoalDate = prefs.getString('today_word_goal_date');
+          if (localGoalDate != todayStr) {
+            await prefs.setInt('today_word_goal', cloudGoal);
+            await prefs.setString('today_word_goal_date', cloudWordGoalDate!);
+          }
+        }
       }
 
       // last_study_date: take the more recent of local and cloud

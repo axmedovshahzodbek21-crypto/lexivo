@@ -220,13 +220,15 @@ class _LearningScreenState extends State<LearningScreen> {
       _skippedIndices.remove(_currentIndex);
       _hardIndices.remove(_currentIndex);
     });
+    final existing = await StorageService.getLearnedWords();
+    final isNew = !existing.any((e) => e.word == word.word && e.collectionName == widget.collectionName);
     await StorageService.saveLearnedWords(
       [word],
       widget.collectionName,
       widget.wordDay.topic,
       widget.wordDay.dayNumber,
     );
-    if (!widget.noXP) {
+    if (!widget.noXP && isNew) {
       final learned = await StorageService.getLearnedWords();
       await StorageService.addXP(StorageService.learnXP(learned.length), reason: 'Learn', source: 'Unit ${widget.wordDay.dayNumber} · ${widget.collectionName}');
     }

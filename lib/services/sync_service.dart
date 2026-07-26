@@ -75,6 +75,8 @@ class SyncService {
     await prefs.remove('has_perfect_quiz');
     await prefs.remove('has_completed_flashcard');
     await prefs.remove('has_completed_srs');
+    await prefs.remove('flash_xp_units');
+    await prefs.remove('quiz_xp_units');
     // Pattern-based session-progress keys (per collection/day)
     final toRemove = prefs.getKeys().where((k) =>
         k.startsWith('learn_progress_') ||

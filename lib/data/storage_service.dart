@@ -496,6 +496,8 @@ class StorageService {
   static const _dailyLimitKey = 'daily_words_learned';
   static const _dailyLimitDateKey = 'daily_words_date';
   static const _unitProgressKey = 'unit_progress';
+  static const _todayWordGoalKey     = 'today_word_goal';
+  static const _todayWordGoalDateKey = 'today_word_goal_date';
   static const _hasCompletedQuizKey = 'has_completed_quiz';
   static const _hasPerfectQuizKey = 'has_perfect_quiz';
   static const _hasCompletedFlashcardKey = 'has_completed_flashcard';
@@ -1362,9 +1364,25 @@ class StorageService {
     return raw != null ? List<String>.from(jsonDecode(raw)) : [];
   }
 
+  static Future<int?> getTodayWordGoal() async {
+    final prefs = await SharedPreferences.getInstance();
+    final date = prefs.getString(_todayWordGoalDateKey);
+    if (date != _todayString()) return null;
+    return prefs.getInt(_todayWordGoalKey);
+  }
+
+  static Future<void> setTodayWordGoal(int goal) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_todayWordGoalKey, goal);
+    await prefs.setString(_todayWordGoalDateKey, _todayString());
+    await _checkAndRecordWordGoalDay(prefs);
+  }
+
   static Future<void> _checkAndRecordWordGoalDay(SharedPreferences prefs) async {
-    final goal = prefs.getInt('daily_word_goal') ?? defaultDailyLimit;
     final today = _todayString();
+    final goalDate = prefs.getString(_todayWordGoalDateKey);
+    final goal = goalDate == today ? prefs.getInt(_todayWordGoalKey) : null;
+    if (goal == null) return;
     final lastDate = prefs.getString(_dailyLimitDateKey);
     final count = lastDate == today ? (prefs.getInt(_dailyLimitKey) ?? 0) : 0;
     if (count < goal) return;

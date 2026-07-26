@@ -55,6 +55,8 @@ class SyncService {
     await prefs.remove('unit_done_days');
     await prefs.remove('review_days');
     await prefs.remove('word_goal_days');
+    await prefs.remove('today_word_goal');
+    await prefs.remove('today_word_goal_date');
     await prefs.setInt('total_xp', 0);
     await prefs.setInt('today_xp', 0);
     await prefs.remove('xp_history');

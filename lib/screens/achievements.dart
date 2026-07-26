@@ -11,7 +11,8 @@ class _AchDef {
   final String title;
   final String description;
   final String category;
-  const _AchDef(this.id, this.emoji, this.title, this.description, this.category);
+  final int xp;
+  const _AchDef(this.id, this.emoji, this.title, this.description, this.category, this.xp);
 }
 
 class _Stats {
@@ -44,30 +45,39 @@ const _fsNames = {3:'Flash Spark',7:'Flash Week',10:'Flash Habit',30:'Flash Mont
 const _qdNames = {3:'Quiz Curious',7:'Quiz Week',10:'Quiz Habit',30:'Quiz Month',50:'Quiz Addict',100:'Quiz Century',111:'Quiz Triple',123:'Quiz Master'};
 const _qsNames = {3:'Quiz Spark',7:'Quiz Warrior',10:'Quiz Machine',30:'Quiz Marathoner',50:'Quiz Inferno',100:'Quiz Legend',111:'Quiz Triple',123:'Quiz God'};
 
+int _milestoneXp(int n) {
+  if (n >= 107) return 25;
+  if (n >= 99)  return 20;
+  if (n >= 57)  return 15;
+  if (n >= 30)  return 10;
+  if (n >= 10)  return 5;
+  return 3;
+}
+
 List<_AchDef> _gen(String prefix, String cat, String base, Map<int,String> names, String Function(int) desc) =>
-    _ms.map((n) => _AchDef('${prefix}_$n', _icon(n, base), names[n] ?? '$n', desc(n), cat)).toList();
+    _ms.map((n) => _AchDef('${prefix}_$n', _icon(n, base), names[n] ?? '$n', desc(n), cat, _milestoneXp(n))).toList();
 
 final List<_AchDef> _allAchs = [
   // words
-  const _AchDef('first_word',  '🌱', 'First Step',       'Learn your first word',        'words'),
-  const _AchDef('words_10',    '📚', 'Getting Started',  'Learn 10 words',               'words'),
-  const _AchDef('words_50',    '📖', 'Word Collector',   'Learn 50 words',               'words'),
-  const _AchDef('words_100',   '💯', 'Centurion',        'Learn 100 words',              'words'),
-  const _AchDef('words_250',   '🏆', 'Word Master',      'Learn 250 words',              'words'),
-  const _AchDef('words_500',   '👑', 'Lexicon Master',   'Learn 500 words',              'words'),
-  const _AchDef('words_1000',  '🌍', 'Lexivo Legend',    'Learn 1000 words',             'words'),
+  const _AchDef('first_word',  '🌱', 'First Step',       'Learn your first word',        'words',      2),
+  const _AchDef('words_10',    '📚', 'Getting Started',  'Learn 10 words',               'words',      5),
+  const _AchDef('words_50',    '📖', 'Word Collector',   'Learn 50 words',               'words',      10),
+  const _AchDef('words_100',   '💯', 'Centurion',        'Learn 100 words',              'words',      15),
+  const _AchDef('words_250',   '🏆', 'Word Master',      'Learn 250 words',              'words',      25),
+  const _AchDef('words_500',   '👑', 'Lexicon Master',   'Learn 500 words',              'words',      40),
+  const _AchDef('words_1000',  '🌍', 'Lexivo Legend',    'Learn 1000 words',             'words',      75),
   // xp
-  const _AchDef('xp_100',      '✨', 'XP Earner',        'Earn 100 XP',                  'xp'),
-  const _AchDef('xp_500',      '💎', 'XP Hunter',        'Earn 500 XP',                  'xp'),
-  const _AchDef('xp_1000',     '🚀', 'XP Legend',        'Earn 1000 XP',                 'xp'),
-  const _AchDef('xp_2000',     '🏆', 'XP Master',        'Earn 2000 XP',                 'xp'),
+  const _AchDef('xp_100',      '✨', 'XP Earner',        'Earn 100 XP',                  'xp',         5),
+  const _AchDef('xp_500',      '💎', 'XP Hunter',        'Earn 500 XP',                  'xp',         10),
+  const _AchDef('xp_1000',     '🚀', 'XP Legend',        'Earn 1000 XP',                 'xp',         20),
+  const _AchDef('xp_2000',     '🏆', 'XP Master',        'Earn 2000 XP',                 'xp',         35),
   // srs
-  const _AchDef('srs_first',       '🔄', 'Reviewer',         'Complete your first SRS review', 'srs'),
-  const _AchDef('srs_mastered_10', '🧠', 'Memory Champion',  'Master 10 words in SRS',         'srs'),
+  const _AchDef('srs_first',       '🔄', 'Reviewer',        'Complete your first SRS review', 'srs',   5),
+  const _AchDef('srs_mastered_10', '🧠', 'Memory Champion', 'Master 10 words in SRS',         'srs',   10),
   // milestones
-  const _AchDef('flashcard_first', '🃏', 'Flashcard Fan',    'Complete a flashcard session',   'milestones'),
-  const _AchDef('quiz_first',      '❓', 'Quiz Taker',       'Complete a quiz',                'milestones'),
-  const _AchDef('quiz_perfect',    '🎯', 'Perfect Score',    'Score 100% on a quiz',           'milestones'),
+  const _AchDef('flashcard_first', '🃏', 'Flashcard Fan',   'Complete a flashcard session',   'milestones', 3),
+  const _AchDef('quiz_first',      '❓', 'Quiz Taker',      'Complete a quiz',                'milestones', 3),
+  const _AchDef('quiz_perfect',    '🎯', 'Perfect Score',   'Score 100% on a quiz',           'milestones', 10),
   ..._gen('sd', 'study_days',   '📅', _sdNames, (n) => 'Study on $n different days'),
   ..._gen('ss', 'study_streak', '🔥', _ssNames, (n) => 'Study $n days in a row'),
   ..._gen('fd', 'flash_days',   '🃏', _fdNames, (n) => 'Do flashcards on $n different days'),
@@ -209,10 +219,15 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
       quizPerfect: quizPerfect, flashFirst: flashFirst,
     );
 
-    // Save dates for newly unlocked achievements
+    // Save dates + award XP for newly unlocked achievements
     final Map<String, String?> dates = {};
     for (final d in _allAchs) {
       if (_isUnlocked(d, stats)) {
+        final existingDate = await StorageService.getAchievementDate(d.id);
+        if (existingDate == null) {
+          // First time detected as unlocked — award XP
+          await StorageService.addXP(d.xp * 10, reason: 'Achievement', source: d.title);
+        }
         await StorageService.saveAchievementDate(d.id);
       }
       dates[d.id] = await StorageService.getAchievementDate(d.id);
@@ -242,6 +257,8 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     final total = _allAchs.length;
     final unlocked = stats == null ? 0 : _allAchs.where((d) => _isUnlocked(d, stats)).length;
     final progress = total == 0 ? 0.0 : unlocked / total;
+    final xpEarned = stats == null ? 0 : _allAchs.where((d) => _isUnlocked(d, stats)).fold(0, (s, d) => s + d.xp);
+    final xpTotal  = _allAchs.fold(0, (s, d) => s + d.xp);
 
     final byCategory = <String, List<_AchDef>>{};
     for (final d in _allAchs) {
@@ -292,6 +309,16 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                         minHeight: 7,
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    Row(children: [
+                      Text('✨', style: const TextStyle(fontSize: 13)),
+                      const SizedBox(width: 4),
+                      Text('$xpEarned XP earned',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.primary)),
+                      const SizedBox(width: 4),
+                      Text('/ $xpTotal total',
+                        style: TextStyle(fontSize: 11, color: context.textMuted)),
+                    ]),
                   ]),
                 ),
 
@@ -299,14 +326,24 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                 for (final cat in _catOrder) ...[
                   if ((byCategory[cat]?.isNotEmpty ?? false)) ...[
                     _CategoryHeader(cat: cat, achs: byCategory[cat]!, stats: stats),
-                    const SizedBox(height: 6),
-                    for (final def in byCategory[cat]!)
-                      _AchRow(
-                        def: def,
-                        unlocked: _isUnlocked(def, stats),
-                        prog: _progress(def, stats),
-                        onTap: () => _showDetail(def),
-                      ),
+                    const SizedBox(height: 8),
+                    GridView.count(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
+                      childAspectRatio: 1.35,
+                      children: [
+                        for (final def in byCategory[cat]!)
+                          _AchCard(
+                            def: def,
+                            unlocked: _isUnlocked(def, stats),
+                            prog: _progress(def, stats),
+                            onTap: () => _showDetail(def),
+                          ),
+                      ],
+                    ),
                     const SizedBox(height: 20),
                   ],
                 ],
@@ -347,46 +384,119 @@ class _CategoryHeader extends StatelessWidget {
   }
 }
 
-class _AchRow extends StatelessWidget {
+class _AchCard extends StatelessWidget {
   final _AchDef def;
   final bool unlocked;
   final (int, int, String)? prog;
   final VoidCallback onTap;
-  const _AchRow({required this.def, required this.unlocked, required this.prog, required this.onTap});
+  const _AchCard({required this.def, required this.unlocked, required this.prog, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: unlocked ? context.surface : context.surface2,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: unlocked ? context.primary.withValues(alpha: 0.25) : context.border,
+      child: Opacity(
+        opacity: unlocked ? 1.0 : 0.6,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
+          decoration: BoxDecoration(
+            color: unlocked ? context.surface : context.surface2,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: unlocked ? context.primary.withValues(alpha: 0.28) : context.border,
+            ),
+            boxShadow: unlocked ? [
+              BoxShadow(
+                color: context.primary.withValues(alpha: 0.08),
+                blurRadius: 8, offset: const Offset(0, 2),
+              ),
+            ] : null,
           ),
+          child: Stack(children: [
+            // XP badge top-right
+            Positioned(
+              top: 0, right: 0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  gradient: unlocked ? LinearGradient(
+                    colors: [context.primary, context.primary.withValues(alpha: 0.75)],
+                  ) : null,
+                  color: unlocked ? null : context.border,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text('+${def.xp} XP',
+                  style: TextStyle(
+                    fontSize: 8, fontWeight: FontWeight.w800,
+                    color: unlocked ? Colors.white : context.textMuted,
+                  )),
+              ),
+            ),
+            // Card content
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Emoji icon
+                Container(
+                  width: 38, height: 38,
+                  decoration: BoxDecoration(
+                    color: unlocked
+                        ? context.primary.withValues(alpha: 0.1)
+                        : context.border.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: Text(def.emoji,
+                      style: TextStyle(
+                        fontSize: 20,
+                        color: unlocked ? null : Colors.grey,
+                      )),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                // Title
+                Text(def.title,
+                  style: TextStyle(
+                    fontSize: 11, fontWeight: FontWeight.bold,
+                    color: unlocked ? context.appText : context.textMuted,
+                    height: 1.2,
+                  ),
+                  maxLines: 2, overflow: TextOverflow.ellipsis),
+                const Spacer(),
+                // Progress bar or check
+                if (unlocked)
+                  Row(children: [
+                    Container(
+                      width: 14, height: 14,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [context.primary, context.primary.withValues(alpha: 0.75)],
+                        ),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Center(child: Text('✓', style: TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold))),
+                    ),
+                    const SizedBox(width: 4),
+                    Text('Achieved', style: TextStyle(fontSize: 9, color: context.primary, fontWeight: FontWeight.w600)),
+                  ])
+                else if (prog != null) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: LinearProgressIndicator(
+                      value: prog!.$1 / prog!.$2,
+                      backgroundColor: context.border,
+                      valueColor: AlwaysStoppedAnimation(context.primary),
+                      minHeight: 3,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text('${prog!.$1}/${prog!.$2} ${prog!.$3}',
+                    style: TextStyle(fontSize: 8, color: context.textMuted)),
+                ],
+              ],
+            ),
+          ]),
         ),
-        child: Row(children: [
-          Text(def.emoji, style: TextStyle(fontSize: 20, color: unlocked ? null : Colors.grey)),
-          const SizedBox(width: 10),
-          Expanded(child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(def.title, style: TextStyle(
-                fontSize: 12, fontWeight: FontWeight.bold,
-                color: unlocked ? context.appText : context.textMuted)),
-              Text(def.description, style: TextStyle(fontSize: 10, color: context.textMuted),
-                maxLines: 1, overflow: TextOverflow.ellipsis),
-            ],
-          )),
-          if (unlocked)
-            Text('✓', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.primary))
-          else if (prog != null)
-            Text('${((prog!.$1 / prog!.$2) * 100).round()}%',
-              style: TextStyle(fontSize: 10, color: context.textMuted)),
-        ]),
       ),
     );
   }
@@ -427,7 +537,32 @@ class _DetailSheet extends StatelessWidget {
           Text(def.title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
           const SizedBox(height: 4),
           Text(def.description, style: TextStyle(fontSize: 14, color: context.textMuted), textAlign: TextAlign.center),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
+          // XP reward
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            decoration: BoxDecoration(
+              color: unlocked
+                  ? context.primary.withValues(alpha: 0.08)
+                  : context.surface2,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: unlocked
+                    ? context.primary.withValues(alpha: 0.2)
+                    : context.border,
+              ),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Text('✨', style: TextStyle(fontSize: 16)),
+              const SizedBox(width: 6),
+              Text('+${def.xp} XP reward',
+                style: TextStyle(
+                  fontSize: 14, fontWeight: FontWeight.w700,
+                  color: unlocked ? context.primary : context.textMuted,
+                )),
+            ]),
+          ),
+          const SizedBox(height: 16),
           if (unlocked) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),

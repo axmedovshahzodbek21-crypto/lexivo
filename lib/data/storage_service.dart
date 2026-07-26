@@ -1348,7 +1348,7 @@ class StorageService {
     return prefs.getInt(_xpKey) ?? 0;
   }
 
-  static Future<bool> addXP(int amount, {String reason = 'Study'}) async {
+  static Future<bool> addXP(int amount, {String reason = 'Study', String? source}) async {
     final prefs = await SharedPreferences.getInstance();
     final current = prefs.getInt(_xpKey) ?? 0;
     final newXP = current + amount;
@@ -1361,11 +1361,13 @@ class StorageService {
     await prefs.setString(_lastXpDateKey, today);
     final rawHistory = prefs.getString(_xpHistoryKey);
     final List<dynamic> history = rawHistory != null ? jsonDecode(rawHistory) : [];
-    history.add({
+    final entry = <String, dynamic>{
       'amount': amount,
       'reason': reason,
       'timestamp': DateTime.now().millisecondsSinceEpoch,
-    });
+    };
+    if (source != null) entry['source'] = source;
+    history.add(entry);
     if (history.length > 200) history.removeRange(0, history.length - 200);
     await prefs.setString(_xpHistoryKey, jsonEncode(history));
     final oldLevel = getLevelName(current);

@@ -228,7 +228,7 @@ class _LearningScreenState extends State<LearningScreen> {
     );
     if (!widget.noXP) {
       final learned = await StorageService.getLearnedWords();
-      await StorageService.addXP(StorageService.learnXP(learned.length), reason: 'Learn');
+      await StorageService.addXP(StorageService.learnXP(learned.length), reason: 'Learn', source: 'Unit ${widget.wordDay.dayNumber} · ${widget.collectionName}');
     }
     _next();
   }

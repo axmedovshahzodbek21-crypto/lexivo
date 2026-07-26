@@ -267,86 +267,138 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
 
     return Scaffold(
       backgroundColor: context.bg,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: context.primary),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(tr('achievements_title'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
-      ),
       body: stats == null
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-              children: [
-                // Overall progress
-                Container(
-                  margin: const EdgeInsets.only(bottom: 20),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: context.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(16),
+          : CustomScrollView(
+              slivers: [
+                // ── Hero app bar ───────────────────────────────────────────
+                SliverAppBar(
+                  expandedHeight: 200,
+                  pinned: true,
+                  backgroundColor: context.primary,
+                  leading: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
                   ),
-                  child: Column(children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('$unlocked / $total unlocked',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: context.appText)),
-                        Text('${(progress * 100).round()}%',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: context.primary)),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: progress,
-                        backgroundColor: context.border,
-                        valueColor: AlwaysStoppedAnimation(context.primary),
-                        minHeight: 7,
+                  flexibleSpace: FlexibleSpaceBar(
+                    collapseMode: CollapseMode.pin,
+                    background: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            context.primary,
+                            Color.lerp(context.primary, const Color(0xFFC084FC), 0.6)!,
+                          ],
+                        ),
+                      ),
+                      child: SafeArea(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 48, 20, 16),
+                          child: Row(
+                            children: [
+                              // Ring progress
+                              SizedBox(
+                                width: 90, height: 90,
+                                child: Stack(alignment: Alignment.center, children: [
+                                  CircularProgressIndicator(
+                                    value: 1,
+                                    strokeWidth: 7,
+                                    color: Colors.white.withValues(alpha: 0.15),
+                                  ),
+                                  CircularProgressIndicator(
+                                    value: progress,
+                                    strokeWidth: 7,
+                                    color: Colors.white,
+                                    strokeCap: StrokeCap.round,
+                                  ),
+                                  Column(mainAxisSize: MainAxisSize.min, children: [
+                                    Text('${(progress * 100).round()}%',
+                                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white)),
+                                    Text('done', style: TextStyle(fontSize: 9, color: Colors.white.withValues(alpha: 0.7))),
+                                  ]),
+                                ]),
+                              ),
+                              const SizedBox(width: 20),
+                              Expanded(child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(tr('achievements_title'),
+                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
+                                      color: Colors.white.withValues(alpha: 0.7),
+                                      letterSpacing: 0.08)),
+                                  const SizedBox(height: 4),
+                                  Text('$unlocked / $total',
+                                    style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800, color: Colors.white, height: 1.0)),
+                                  Text('badges unlocked',
+                                    style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.65))),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                      const Text('✨', style: TextStyle(fontSize: 12)),
+                                      const SizedBox(width: 4),
+                                      Text('$xpEarned XP earned',
+                                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
+                                      Text('  / $xpTotal',
+                                        style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.6))),
+                                    ]),
+                                  ),
+                                ],
+                              )),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Row(children: [
-                      Text('✨', style: const TextStyle(fontSize: 13)),
-                      const SizedBox(width: 4),
-                      Text('$xpEarned XP earned',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.primary)),
-                      const SizedBox(width: 4),
-                      Text('/ $xpTotal total',
-                        style: TextStyle(fontSize: 11, color: context.textMuted)),
-                    ]),
-                  ]),
+                  ),
                 ),
 
-                // Category sections
-                for (final cat in _catOrder) ...[
-                  if ((byCategory[cat]?.isNotEmpty ?? false)) ...[
-                    _CategoryHeader(cat: cat, achs: byCategory[cat]!, stats: stats),
-                    const SizedBox(height: 8),
-                    GridView.count(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 8,
-                      mainAxisSpacing: 8,
-                      childAspectRatio: 1.35,
-                      children: [
-                        for (final def in byCategory[cat]!)
-                          _AchCard(
-                            def: def,
-                            unlocked: _isUnlocked(def, stats),
-                            prog: _progress(def, stats),
-                            onTap: () => _showDetail(def),
-                          ),
-                      ],
+                // ── Category sections ──────────────────────────────────────
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, i) {
+                        final cat = _catOrder[i];
+                        final achs = byCategory[cat] ?? [];
+                        if (achs.isEmpty) return const SizedBox.shrink();
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _CategoryHeader(cat: cat, achs: achs, stats: stats),
+                            const SizedBox(height: 10),
+                            GridView.count(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 10,
+                              mainAxisSpacing: 10,
+                              childAspectRatio: 0.95,
+                              children: [
+                                for (final def in achs)
+                                  _AchCard(
+                                    def: def,
+                                    unlocked: _isUnlocked(def, stats),
+                                    prog: _progress(def, stats),
+                                    onTap: () => _showDetail(def),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 24),
+                          ],
+                        );
+                      },
+                      childCount: _catOrder.length,
                     ),
-                    const SizedBox(height: 20),
-                  ],
-                ],
+                  ),
+                ),
               ],
             ),
     );
@@ -365,22 +417,50 @@ class _CategoryHeader extends StatelessWidget {
     final icon  = meta?.$1 ?? '🏅';
     final label = meta?.$2 ?? cat;
     final unlockedCount = achs.where((d) => _isUnlocked(d, stats)).length;
-    return Row(children: [
-      Text(icon, style: const TextStyle(fontSize: 15)),
-      const SizedBox(width: 6),
-      Text(label, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: context.appText)),
-      const Spacer(),
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        decoration: BoxDecoration(
-          color: unlockedCount > 0 ? context.primary.withValues(alpha: 0.12) : context.surface2,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text('$unlockedCount/${achs.length}',
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold,
-            color: unlockedCount > 0 ? context.primary : context.textMuted)),
+    final pct = achs.isEmpty ? 0.0 : unlockedCount / achs.length;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: context.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: context.border),
       ),
-    ]);
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            width: 28, height: 28,
+            decoration: BoxDecoration(
+              color: context.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Center(child: Text(icon, style: const TextStyle(fontSize: 14))),
+          ),
+          const SizedBox(width: 8),
+          Expanded(child: Text(label,
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: context.appText))),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: unlockedCount > 0 ? context.primary.withValues(alpha: 0.12) : context.surface2,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text('$unlockedCount/${achs.length}',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold,
+                color: unlockedCount > 0 ? context.primary : context.textMuted)),
+          ),
+        ]),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(3),
+          child: LinearProgressIndicator(
+            value: pct,
+            backgroundColor: context.border,
+            valueColor: AlwaysStoppedAnimation(context.primary),
+            minHeight: 4,
+          ),
+        ),
+      ]),
+    );
   }
 }
 
@@ -438,28 +518,38 @@ class _AchCard extends StatelessWidget {
               children: [
                 // Emoji icon
                 Container(
-                  width: 38, height: 38,
+                  width: 42, height: 42,
                   decoration: BoxDecoration(
                     color: unlocked
-                        ? context.primary.withValues(alpha: 0.1)
+                        ? context.primary.withValues(alpha: 0.12)
                         : context.border.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
                     child: Text(def.emoji,
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: 22,
                         color: unlocked ? null : Colors.grey,
                       )),
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 // Title
                 Text(def.title,
                   style: TextStyle(
-                    fontSize: 11, fontWeight: FontWeight.bold,
+                    fontSize: 12, fontWeight: FontWeight.bold,
                     color: unlocked ? context.appText : context.textMuted,
                     height: 1.2,
+                  ),
+                  maxLines: 2, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 3),
+                // Description hint (always visible — key UX improvement)
+                Text(def.description,
+                  style: TextStyle(
+                    fontSize: 9.5, height: 1.3,
+                    color: unlocked
+                        ? context.primary.withValues(alpha: 0.75)
+                        : context.textMuted,
                   ),
                   maxLines: 2, overflow: TextOverflow.ellipsis),
                 const Spacer(),
@@ -490,7 +580,7 @@ class _AchCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text('${prog!.$1}/${prog!.$2} ${prog!.$3}',
+                  Text('${prog!.$1} / ${prog!.$2} ${prog!.$3}',
                     style: TextStyle(fontSize: 8, color: context.textMuted)),
                 ],
               ],

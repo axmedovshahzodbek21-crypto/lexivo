@@ -182,6 +182,22 @@ class SyncService {
     } catch (_) {}
   }
 
+  static Future<void> pushXpEntry({required int amount, required String reason, String? source, required int ts}) async {
+    final user = currentUser;
+    if (user == null) return;
+    try {
+      await supabase.from('xp_history').upsert({
+        'user_id': user.id,
+        'amount': amount,
+        'reason': reason,
+        'source': source,
+        'ts': ts,
+      }, onConflict: 'user_id,ts', ignoreDuplicates: true);
+    } catch (e) {
+      debugPrint('pushXpEntry error: $e');
+    }
+  }
+
   static Future<bool> pushAll() async {
     lastPushError = null;
     final user = currentUser;
@@ -416,6 +432,26 @@ class SyncService {
         await supabase.from('achievements').upsert(
           ids.map((id) => {'user_id': uid, 'achievement_id': id}).toList(),
           onConflict: 'user_id,achievement_id',
+          ignoreDuplicates: true,
+        );
+      }
+    }
+
+    // xp_history — upsert local entries
+    final xpRaw = prefs.getString('xp_history');
+    if (xpRaw != null) {
+      final List<dynamic> xpList = jsonDecode(xpRaw);
+      if (xpList.isNotEmpty) {
+        final rows = xpList.take(500).map((e) => {
+          'user_id': uid,
+          'amount': e['amount'] as int,
+          'reason': (e['reason'] as String?) ?? 'Study',
+          'source': e['source'] as String?,
+          'ts': e['timestamp'] as int,
+        }).toList();
+        await supabase.from('xp_history').upsert(
+          rows,
+          onConflict: 'user_id,ts',
           ignoreDuplicates: true,
         );
       }
@@ -755,6 +791,41 @@ class SyncService {
       if (cloudIds.contains('a1_complete'))     await prefs.setBool('level_test_complete_a1_leveled', true);
       if (cloudIds.contains('a2_complete'))     await prefs.setBool('level_test_complete_a2_leveled', true);
       if (cloudIds.contains('b1_complete'))     await prefs.setBool('level_test_complete_b1_leveled', true);
+    }
+
+    // xp_history — fetch cloud and merge into local (dedup by timestamp)
+    try {
+      final xpRes = await supabase.from('xp_history')
+          .select('amount,reason,source,ts')
+          .eq('user_id', uid)
+          .order('ts')
+          .limit(500);
+      if (xpRes.isNotEmpty) {
+        final rawHistory = prefs.getString('xp_history');
+        final List<dynamic> local = rawHistory != null ? jsonDecode(rawHistory) : [];
+        final localTs = <int>{};
+        for (final e in local) { localTs.add(e['timestamp'] as int); }
+        final toAdd = <Map<String, dynamic>>[];
+        for (final row in xpRes) {
+          final ts = row['ts'] as int;
+          if (!localTs.contains(ts)) {
+            toAdd.add({
+              'amount': row['amount'] as int,
+              'reason': (row['reason'] as String?) ?? 'Study',
+              if (row['source'] != null) 'source': row['source'] as String,
+              'timestamp': ts,
+            });
+          }
+        }
+        if (toAdd.isNotEmpty) {
+          final merged = [...local, ...toAdd];
+          merged.sort((a, b) => (a['timestamp'] as int).compareTo(b['timestamp'] as int));
+          if (merged.length > 500) merged.removeRange(0, merged.length - 500);
+          await prefs.setString('xp_history', jsonEncode(merged));
+        }
+      }
+    } catch (e) {
+      debugPrint('xp_history pull error: $e');
     }
 
     _onPull.add(null);

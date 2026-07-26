@@ -1475,18 +1475,20 @@ class StorageService {
     await prefs.setString(_lastXpDateKey, today);
     final rawHistory = prefs.getString(_xpHistoryKey);
     final List<dynamic> history = rawHistory != null ? jsonDecode(rawHistory) : [];
+    final ts = DateTime.now().millisecondsSinceEpoch;
     final entry = <String, dynamic>{
       'amount': amount,
       'reason': reason,
-      'timestamp': DateTime.now().millisecondsSinceEpoch,
+      'timestamp': ts,
     };
     if (source != null) entry['source'] = source;
     history.add(entry);
-    if (history.length > 200) history.removeRange(0, history.length - 200);
+    if (history.length > 500) history.removeRange(0, history.length - 500);
     await prefs.setString(_xpHistoryKey, jsonEncode(history));
     final oldLevel = getLevelName(current);
     final newLevel = getLevelName(newXP);
     unawaited(SyncService.pushStats());
+    unawaited(SyncService.pushXpEntry(amount: amount, reason: reason, source: source, ts: ts));
     return oldLevel != newLevel;
   }
 

@@ -47,12 +47,17 @@ class SyncService {
 
   static Future<void> clearLocalUserData() async {
     final prefs = await SharedPreferences.getInstance();
+    // Explicit known keys
     await prefs.setString('srs_words', '[]');
     await prefs.setString('learned_words', '[]');
     await prefs.setStringList('starred_words', []);
     await prefs.remove('unit_progress');
+    await prefs.remove('unit_done_days');
+    await prefs.remove('review_days');
+    await prefs.remove('word_goal_days');
     await prefs.setInt('total_xp', 0);
     await prefs.setInt('today_xp', 0);
+    await prefs.remove('xp_history');
     await prefs.setInt('streak', 0);
     await prefs.setInt('daily_words_learned', 0);
     await prefs.setInt('streak_freezes', 0);
@@ -61,6 +66,22 @@ class SyncService {
     await prefs.remove('daily_words_date');
     await prefs.remove('last_freeze_week');
     await prefs.remove('study_days');
+    await prefs.remove('srs_review_log');
+    await prefs.remove('mastered_srs_words');
+    await prefs.remove('marked_hard_words');
+    await prefs.remove('has_completed_quiz');
+    await prefs.remove('has_perfect_quiz');
+    await prefs.remove('has_completed_flashcard');
+    await prefs.remove('has_completed_srs');
+    // Pattern-based session-progress keys (per collection/day)
+    final toRemove = prefs.getKeys().where((k) =>
+        k.startsWith('learn_progress_') ||
+        k.startsWith('learn_marks_') ||
+        k.startsWith('flashcard_progress_') ||
+        k.startsWith('leveled_session_'));
+    for (final key in toRemove) {
+      await prefs.remove(key);
+    }
   }
 
   // ── Push a single unit's progress directly (independent of full pushAll) ──

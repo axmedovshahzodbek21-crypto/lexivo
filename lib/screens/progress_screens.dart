@@ -804,7 +804,7 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
                   const SizedBox(height: 10),
                   _LegendRow(color: _kSrsColor,   text: 'Complete an SRS review session'),
                   const SizedBox(height: 6),
-                  _LegendRow(color: _kWordsColor, text: 'Reach your daily word goal'),
+                  _LegendRow(color: _kWordsColor, text: 'Learn new words'),
                 ],
               ),
             ),

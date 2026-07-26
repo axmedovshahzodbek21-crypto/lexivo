@@ -1363,11 +1363,7 @@ class StorageService {
   }
 
   static Future<void> _checkAndRecordWordGoalDay(SharedPreferences prefs) async {
-    final goal = prefs.getInt('daily_word_goal') ?? defaultDailyLimit;
     final today = _todayString();
-    final lastDate = prefs.getString(_dailyLimitDateKey);
-    final count = lastDate == today ? (prefs.getInt(_dailyLimitKey) ?? 0) : 0;
-    if (count < goal) return;
     final raw = prefs.getString(_wordGoalDaysKey);
     final days = raw != null ? List<String>.from(jsonDecode(raw)) : <String>[];
     if (!days.contains(today)) {

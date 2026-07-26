@@ -533,8 +533,8 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
   List<String> _wordGoalDays  = [];
   late DateTime _month;
   String? _selectedDay;
-  int? _todayWordGoal;
-  int  _todayWordsCount = 0;
+  int _dailyGoal = 10;
+  int _todayWordsCount = 0;
 
   @override
   void initState() {
@@ -558,96 +558,19 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
       StorageService.getStudyDays(),
       StorageService.getReviewDays(),
       StorageService.getWordGoalDays(),
-      StorageService.getTodayWordGoal(),
       StorageService.getTodayLearnedCount(),
     ]);
+    final prefs = await SharedPreferences.getInstance();
     final studyDays = results[1] as List<String>;
     setState(() {
-      _streak           = results[0] as int;
-      _reviewDays       = results[2] as List<String>;
-      _wordGoalDays     = results[3] as List<String>;
-      _todayWordGoal    = results[4] as int?;
-      _todayWordsCount  = results[5] as int;
-      _longestStreak    = _calcLongest(studyDays);
-      _loading          = false;
+      _streak          = results[0] as int;
+      _reviewDays      = results[2] as List<String>;
+      _wordGoalDays    = results[3] as List<String>;
+      _todayWordsCount = results[4] as int;
+      _dailyGoal       = prefs.getInt('daily_word_goal') ?? 10;
+      _longestStreak   = _calcLongest(studyDays);
+      _loading         = false;
     });
-  }
-
-  Future<void> _showGoalPicker() async {
-    int picked = _todayWordGoal ?? 10;
-    await showModalBottomSheet(
-      context: context,
-      backgroundColor: context.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModal) => Padding(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 36),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(width: 40, height: 4, decoration: BoxDecoration(
-                color: context.border, borderRadius: BorderRadius.circular(2))),
-              const SizedBox(height: 20),
-              Text("Today's word goal",
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: context.appText)),
-              const SizedBox(height: 6),
-              Text('How many new words do you want to learn today?',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: context.textMuted)),
-              const SizedBox(height: 24),
-              Text('$picked words',
-                style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: _kWordsColor)),
-              Slider(
-                value: picked.toDouble(),
-                min: 5, max: 100,
-                divisions: 19,
-                activeColor: _kWordsColor,
-                inactiveColor: context.border,
-                label: '$picked',
-                onChanged: (v) => setModal(() => picked = v.round()),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [5, 10, 15, 20, 30, 50].map((n) => GestureDetector(
-                  onTap: () => setModal(() => picked = n),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: picked == n ? _kWordsColor : context.surface2,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text('$n', style: TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.bold,
-                      color: picked == n ? Colors.white : context.textMuted)),
-                  ),
-                )).toList(),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _kWordsColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  onPressed: () async {
-                    final nav = Navigator.of(ctx);
-                    await StorageService.setTodayWordGoal(picked);
-                    nav.pop();
-                    _load();
-                  },
-                  child: const Text('Set goal', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   int _calcLongest(List<String> days) {
@@ -741,12 +664,9 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
                   label: 'Words',
                   done: wordsToday,
                   color: _kWordsColor,
-                  onTap: _showGoalPicker,
-                  subtitle: _todayWordGoal == null
-                      ? 'Tap to set goal'
-                      : wordsToday
-                          ? '$_todayWordGoal words ✓'
-                          : '${_todayWordsCount.clamp(0, _todayWordGoal!)}/$_todayWordGoal words',
+                  subtitle: wordsToday
+                      ? '$_dailyGoal words ✓'
+                      : '${_todayWordsCount.clamp(0, _dailyGoal)}/$_dailyGoal words',
                 ),
               ],
             ),
@@ -943,41 +863,37 @@ class _TaskCard extends StatelessWidget {
   final String label;
   final bool done;
   final Color color;
-  final VoidCallback? onTap;
   final String? subtitle;
-  const _TaskCard({required this.label, required this.done, required this.color, this.onTap, this.subtitle});
+  const _TaskCard({required this.label, required this.done, required this.color, this.subtitle});
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-          decoration: BoxDecoration(
-            color: done ? color : context.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: done ? color : context.border, width: 1.5),
-          ),
-          child: Column(
-            children: [
-              Icon(done ? Icons.check_circle : (onTap != null ? Icons.edit_outlined : Icons.circle_outlined),
-                  color: done ? Colors.white : context.textMuted, size: 22),
-              const SizedBox(height: 4),
-              Text(label,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: done ? color : context.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: done ? color : context.border, width: 1.5),
+        ),
+        child: Column(
+          children: [
+            Icon(done ? Icons.check_circle : Icons.circle_outlined,
+                color: done ? Colors.white : context.textMuted, size: 22),
+            const SizedBox(height: 4),
+            Text(label,
+                style: TextStyle(
+                    fontSize: 11, fontWeight: FontWeight.bold,
+                    color: done ? Colors.white : context.textMuted)),
+            if (subtitle != null) ...[
+              const SizedBox(height: 2),
+              Text(subtitle!,
+                  textAlign: TextAlign.center,
                   style: TextStyle(
-                      fontSize: 11, fontWeight: FontWeight.bold,
-                      color: done ? Colors.white : context.textMuted)),
-              if (subtitle != null) ...[
-                const SizedBox(height: 2),
-                Text(subtitle!,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        fontSize: 9, fontWeight: FontWeight.w600,
-                        color: done ? Colors.white70 : context.textMuted)),
-              ],
+                      fontSize: 9, fontWeight: FontWeight.w600,
+                      color: done ? Colors.white70 : context.textMuted)),
             ],
-          ),
+          ],
         ),
       ),
     );

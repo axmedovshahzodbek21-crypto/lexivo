@@ -5,7 +5,6 @@ import '../data/storage_service.dart';
 import '../app_theme.dart';
 import 'achievements.dart';
 import 'xp_level_sheet.dart';
-import 'xp_history_screen.dart';
 import '../l10n.dart';
 
 class StatsScreen extends StatefulWidget {
@@ -375,54 +374,6 @@ class _StatsScreenState extends State<StatsScreen> {
                       ),
                       const SizedBox(height: 24),
 
-                      GestureDetector(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const XpHistoryScreen(),
-                          ),
-                        ),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          margin: const EdgeInsets.only(bottom: 16),
-                          decoration: BoxDecoration(
-                            color: context.surface,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: context.cardShadow,
-                          ),
-                          child: Row(
-                            children: [
-                              const Text('⭐', style: TextStyle(fontSize: 28)),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'XP History',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                        color: context.appText,
-                                      ),
-                                    ),
-                                    Text(
-                                      'See all your XP earned',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: context.appText.withValues(alpha: 0.5),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Icon(Icons.arrow_forward_ios,
-                                  color: context.appText.withValues(alpha: 0.3), size: 14),
-                            ],
-                          ),
-                        ),
-                      ),
                       GestureDetector(
                         onTap: () => Navigator.push(
                           context,

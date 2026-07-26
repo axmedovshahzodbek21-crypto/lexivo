@@ -3,6 +3,9 @@ import '../data/storage_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 
+String _displayXP(int raw) =>
+    (raw / 10).toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '');
+
 // All levels in order: [name, minXP stored, maxXP stored (-1 = infinity)]
 const _kLevels = [
   ('Starter',            0,      1499),
@@ -36,6 +39,7 @@ class _XpLevelSheet extends StatefulWidget {
 
 class _XpLevelSheetState extends State<_XpLevelSheet> {
   String? _peekedLevel;
+  List<Map<String, dynamic>> _history = [];
 
   String get _levelName => StorageService.getLevelName(widget.xp);
   int get _nextXP      => StorageService.getNextLevelXP(widget.xp);
@@ -54,6 +58,12 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
   void initState() {
     super.initState();
     appLangNotifier.addListener(_onLangChange);
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    final h = await StorageService.getXPHistory();
+    if (mounted) setState(() => _history = h);
   }
 
   @override
@@ -102,6 +112,8 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
                   _buildNextLevelCallout(context),
                   const SizedBox(height: 20),
                   _buildLadder(context),
+                  const SizedBox(height: 20),
+                  _buildHistory(context),
                   const SizedBox(height: 20),
                   SizedBox(
                     width: double.infinity,
@@ -450,6 +462,124 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
           Text(label, style: TextStyle(fontSize: 10, color: context.textMuted)),
         ],
       ),
+    );
+  }
+
+  Widget _buildHistory(BuildContext context) {
+    if (_history.isEmpty) return const SizedBox.shrink();
+
+    // Group by date
+    final grouped = <String, List<Map<String, dynamic>>>{};
+    for (final e in _history) {
+      final d = DateTime.fromMillisecondsSinceEpoch(e['timestamp'] as int);
+      final key = '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+      (grouped[key] ??= []).add(e);
+    }
+    final dateKeys = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
+
+    String dayLabel(String key) {
+      final today = DateTime.now();
+      final tk = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      final yk = () { final y = today.subtract(const Duration(days: 1)); return '${y.year}-${y.month.toString().padLeft(2, '0')}-${y.day.toString().padLeft(2, '0')}'; }();
+      if (key == tk) return 'Today';
+      if (key == yk) return 'Yesterday';
+      final p = key.split('-');
+      final months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return '${months[int.parse(p[1]) - 1]} ${int.parse(p[2])}';
+    }
+
+    String icon(String reason) {
+      switch (reason) {
+        case 'Learn': return '📖';
+        case 'Quiz': return '🧠';
+        case 'Flashcard': return '🃏';
+        case 'SRS Review': return '🔄';
+        case 'Level Complete': return '🏆';
+        default: return '⭐';
+      }
+    }
+
+    String timeLabel(int ts) {
+      final d = DateTime.fromMillisecondsSinceEpoch(ts);
+      return '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'XP HISTORY',
+          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.textMuted, letterSpacing: 1),
+        ),
+        const SizedBox(height: 10),
+        ...dateKeys.map((dateKey) {
+          final entries = grouped[dateKey]!;
+          final dayTotal = entries.fold<int>(0, (s, e) => s + (e['amount'] as int));
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 8, bottom: 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(dayLabel(dateKey), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.textMuted)),
+                    Text('+${_displayXP(dayTotal)} XP', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.primary)),
+                  ],
+                ),
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  color: context.surface,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: context.cardShadow,
+                ),
+                child: Column(
+                  children: List.generate(entries.length, (j) {
+                    final e = entries[j];
+                    final isLast = j == entries.length - 1;
+                    return Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                          child: Row(
+                            children: [
+                              Text(icon(e['reason'] as String), style: const TextStyle(fontSize: 20)),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(e['reason'] as String, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.appText)),
+                                    Text(timeLabel(e['timestamp'] as int), style: TextStyle(fontSize: 11, color: context.textMuted)),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: context.primary.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  '+${_displayXP(e['amount'] as int)} XP',
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.primary),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (!isLast) Divider(height: 1, indent: 44, color: context.border),
+                      ],
+                    );
+                  }),
+                ),
+              ),
+              const SizedBox(height: 4),
+            ],
+          );
+        }),
+      ],
     );
   }
 }

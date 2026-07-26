@@ -1161,6 +1161,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 await db.from('srs_words').delete().eq('user_id', user.id);
                 await db.from('learned_words').delete().eq('user_id', user.id);
                 await db.from('starred_words').delete().eq('user_id', user.id);
+                await db.from('xp_history').delete().eq('user_id', user.id);
                 await db.from('user_stats').delete().eq('id', user.id);
                 await db.from('unit_progress').delete().eq('user_id', user.id);
                 // Signal all devices (website etc.) that a reset happened

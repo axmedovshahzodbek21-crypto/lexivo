@@ -630,6 +630,7 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
     if (widget.noXP) return;
     await StorageService.markQuizCompleted(perfect: widget.correctCount == widget.totalCount);
     await StorageService.recordStudySession();
+    await StorageService.recordQuizSession();
     await StorageService.markQuizComplete(
       widget.collectionName,
       widget.wordDay.dayNumber,

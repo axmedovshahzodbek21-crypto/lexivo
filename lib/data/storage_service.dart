@@ -1231,6 +1231,20 @@ class StorageService {
     if (current > 0) await prefs.setInt(_freezesKey, current - 1);
   }
 
+  // ── Achievement dates ─────────────────────────────────────────────────────
+
+  static Future<String?> getAchievementDate(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('ach_date_$id');
+  }
+
+  static Future<void> saveAchievementDate(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getString('ach_date_$id') == null) {
+      await prefs.setString('ach_date_$id', DateTime.now().toIso8601String());
+    }
+  }
+
   // ── Activity flags (for achievements) ─────────────────────────────────────
 
   static Future<void> markQuizCompleted({required bool perfect}) async {
@@ -1339,6 +1353,68 @@ class StorageService {
   static Future<int> getTotalStudyDays() async {
     final days = await getStudyDays();
     return days.length;
+  }
+
+  // ── Flash / Quiz Activity Tracking ─────────
+
+  static Future<void> _recordActivityDay(String daysKey, String streakKey, String lastKey) async {
+    final prefs = await SharedPreferences.getInstance();
+    final today = _todayString();
+    final last = prefs.getString(lastKey);
+    if (last != today) {
+      final raw = prefs.getString(daysKey);
+      final days = raw != null ? List<String>.from(jsonDecode(raw)) : <String>[];
+      days.add(today);
+      await prefs.setString(daysKey, jsonEncode(days));
+      int streak = prefs.getInt(streakKey) ?? 0;
+      if (last == null) {
+        streak = 1;
+      } else if (_isYesterday(last)) {
+        streak += 1;
+      } else {
+        streak = 1;
+      }
+      await prefs.setInt(streakKey, streak);
+      await prefs.setString(lastKey, today);
+    }
+  }
+
+  static Future<void> recordFlashcardSession() async =>
+      _recordActivityDay('flash_days', 'flash_streak', 'flash_last_day');
+
+  static Future<int> getFlashcardTotalDays() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('flash_days');
+    if (raw == null) return 0;
+    return (jsonDecode(raw) as List).length;
+  }
+
+  static Future<int> getFlashcardStreak() async {
+    final prefs = await SharedPreferences.getInstance();
+    final last = prefs.getString('flash_last_day');
+    if (last == null) return 0;
+    final today = _todayString();
+    if (last == today || _isYesterday(last)) return prefs.getInt('flash_streak') ?? 0;
+    return 0;
+  }
+
+  static Future<void> recordQuizSession() async =>
+      _recordActivityDay('quiz_days', 'quiz_streak', 'quiz_last_day');
+
+  static Future<int> getQuizTotalDays() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('quiz_days');
+    if (raw == null) return 0;
+    return (jsonDecode(raw) as List).length;
+  }
+
+  static Future<int> getQuizStreak() async {
+    final prefs = await SharedPreferences.getInstance();
+    final last = prefs.getString('quiz_last_day');
+    if (last == null) return 0;
+    final today = _todayString();
+    if (last == today || _isYesterday(last)) return prefs.getInt('quiz_streak') ?? 0;
+    return 0;
   }
 
   // ── XP System ──────────────────────────────

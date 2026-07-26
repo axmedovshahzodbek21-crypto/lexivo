@@ -534,6 +534,7 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
       );
     }
     await StorageService.recordStudySession();
+    await StorageService.recordFlashcardSession();
     await StorageService.markFlashcardCompleted();
     if (_hardWords.isEmpty) {
       await StorageService.markFlashcardComplete(

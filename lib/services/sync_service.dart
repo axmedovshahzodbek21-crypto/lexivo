@@ -175,8 +175,6 @@ class SyncService {
         'last_study_date': prefs.getString('last_study_date'),
         'total_days': _getStudyDaysCount(prefs),
         'study_days': _getStudyDaysList(prefs),
-        'review_days': _getDaysList(prefs, 'review_days'),
-        'word_goal_days': _getDaysList(prefs, 'word_goal_days'),
         'freezes': prefs.getInt('streak_freezes') ?? 0,
         'last_freeze_week': prefs.getString('last_freeze_week'),
         if (parsedReviewLog != null && parsedReviewLog.isNotEmpty)
@@ -325,8 +323,9 @@ class SyncService {
     if (hardRaw != null) {
       final hardList = List<String>.from(jsonDecode(hardRaw) as List);
       if (hardList.isNotEmpty) {
+        final now = DateTime.now().toUtc().toIso8601String();
         await supabase.from('hard_words').insert(
-          hardList.map((w) => {'user_id': uid, 'word': w}).toList(),
+          hardList.map((w) => {'user_id': uid, 'word': w, 'added_at': now}).toList(),
         );
       }
     }
@@ -766,7 +765,7 @@ class SyncService {
     }
 
     // Learned words — merge: keep local, add remote words not already in local
-    final learnedRes = await supabase.from('learned_words').select('word,collection').eq('user_id', uid);
+    final learnedRes = await supabase.from('learned_words').select('word,collection,learned_at').eq('user_id', uid);
     if (learnedRes.isNotEmpty) {
       final existingRaw = prefs.getString('learned_words') ?? '[]';
       final existingList = (jsonDecode(existingRaw) as List).cast<Map<String, dynamic>>();
@@ -775,7 +774,11 @@ class SyncService {
       for (final r in learnedRes) {
         final word = r['word'] as String;
         if (!localWords.contains(word)) {
-          merged.add({'word': word, 'collectionName': r['collection'] ?? ''});
+          merged.add({
+            'word': word,
+            'collectionName': r['collection'] ?? '',
+            'learnedAt': r['learned_at'] ?? DateTime.now().toIso8601String(),
+          });
         }
       }
       await prefs.setString('learned_words', jsonEncode(merged));
@@ -873,9 +876,4 @@ class SyncService {
     try { return List<String>.from(jsonDecode(raw) as List); } catch (_) { return []; }
   }
 
-  static List<String> _getDaysList(SharedPreferences prefs, String key) {
-    final raw = prefs.getString(key);
-    if (raw == null) return [];
-    try { return List<String>.from(jsonDecode(raw) as List); } catch (_) { return []; }
-  }
 }

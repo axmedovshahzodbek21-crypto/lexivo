@@ -280,6 +280,10 @@ class SyncService {
         }
         await prefs.setString('sync_settings_ts', cloudSettingsTs);
       }
+      // Apply avatar_url even when settings timestamp didn't win (pic upload is independent)
+      if (row['avatar_url'] != null && prefs.getString('profile_image_url') == null) {
+        await prefs.setString('profile_image_url', row['avatar_url'] as String);
+      }
 
       // ── Lists (always union-merge) ──────────────────────────────────────────
 

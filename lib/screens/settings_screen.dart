@@ -103,6 +103,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final urlWithBust = '$url?t=${DateTime.now().millisecondsSinceEpoch}';
         await prefs.setString('profile_image_url', urlWithBust);
         await supabase.from('profiles').upsert({'id': user.id, 'avatar_url': urlWithBust});
+        SyncService.pushSettings();
         if (mounted) setState(() => _profileImageUrl = urlWithBust);
       } catch (_) {}
     }

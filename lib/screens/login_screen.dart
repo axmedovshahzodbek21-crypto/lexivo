@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
+import '../services/sync_service.dart';
 import 'main_shell.dart';
 import 'onboarding.dart';
 import 'signup_screen.dart';
@@ -176,6 +177,7 @@ class _LoginScreenState extends State<LoginScreen> {
       await prefs.setBool('guest_mode', true);
     } else {
       await prefs.setBool('guest_mode', false);
+      SyncService.pullAll();
     }
     if (!mounted) return;
     final done = prefs.getBool('onboarding_completed') ?? false;

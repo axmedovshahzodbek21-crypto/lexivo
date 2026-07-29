@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/notification_service.dart';
 import '../services/supabase_service.dart';
+import '../services/sync_service.dart';
 import '../data/storage_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
@@ -77,6 +78,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await prefs.setString('user_name', name);
     await prefs.setString('name_updated_at', DateTime.now().toUtc().toIso8601String());
     setState(() => _userName = name);
+    SyncService.pushSettings();
   }
 
   Future<void> _pickProfileImage(ImageSource source) async {
@@ -287,6 +289,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       userName: userName,
       enabled: value,
     );
+    SyncService.pushSettings();
   }
 
   Future<void> _pickNotifTime() async {
@@ -313,6 +316,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         enabled: true,
       );
     }
+    SyncService.pushSettings();
   }
 
   Future<void> _setThemeMode(String mode) async {
@@ -338,6 +342,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('daily_word_goal', goal);
     setState(() => _dailyWordGoal = goal);
+    SyncService.pushSettings();
   }
 
   Future<void> _handleSave() async {

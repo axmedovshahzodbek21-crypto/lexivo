@@ -6,6 +6,7 @@ import 'screens/login_screen.dart';
 import 'services/notification_service.dart';
 import 'services/supabase_service.dart';
 import 'services/content_service.dart';
+import 'services/sync_service.dart';
 import 'data/storage_service.dart';
 import 'app_observers.dart';
 import 'l10n.dart';
@@ -127,6 +128,8 @@ class _SplashRouterState extends State<SplashRouter> {
         );
         return;
       }
+    } else {
+      SyncService.pullAll();
     }
 
     final completed = prefs.getBool('onboarding_completed') ?? false;

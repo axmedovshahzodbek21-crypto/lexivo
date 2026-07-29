@@ -10,6 +10,7 @@ import 'learning.dart';
 import 'flashcard.dart';
 import '../l10n.dart';
 import 'story_reader_screen.dart';
+import 'matching_screen.dart';
 
 class CollectionsScreen extends StatefulWidget {
   final String userProfile;
@@ -684,6 +685,13 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
                     _startQuiz(context, day);
                   }),
                 ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _smallActionBtn(sheetContext, tr('match_btn'), const Color(0xFFEC4899), () {
+                    Navigator.pop(sheetContext);
+                    _startMatching(context, day);
+                  }),
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -993,6 +1001,18 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
         ),
       ),
     ).then((_) => _loadProgress());
+  }
+
+  void _startMatching(BuildContext context, WordDay day) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MatchingScreen(
+          wordDay: day,
+          collectionName: widget.collection.name,
+        ),
+      ),
+    );
   }
 }
 

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/word_data.dart';
+import '../services/sync_service.dart';
 
 class LearnedWord {
   final String word;
@@ -476,6 +477,45 @@ class UnitProgress {
 }
 
 // ─────────────────────────────────────────────
+//  CUSTOM LIST MODEL
+// ─────────────────────────────────────────────
+
+class CustomList {
+  final String id;
+  final String name;
+  final String createdAt;
+  final List<String> words;
+
+  CustomList({
+    required this.id,
+    required this.name,
+    required this.createdAt,
+    List<String>? words,
+  }) : words = words ?? [];
+
+  CustomList copyWith({String? name, List<String>? words}) => CustomList(
+    id: id,
+    name: name ?? this.name,
+    createdAt: createdAt,
+    words: words ?? this.words,
+  );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'createdAt': createdAt,
+    'words': words,
+  };
+
+  factory CustomList.fromJson(Map<String, dynamic> json) => CustomList(
+    id: json['id'] as String,
+    name: json['name'] as String,
+    createdAt: json['createdAt'] as String,
+    words: List<String>.from(json['words'] as List? ?? []),
+  );
+}
+
+// ─────────────────────────────────────────────
 //  STORAGE SERVICE
 // ─────────────────────────────────────────────
 
@@ -667,6 +707,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
             : null,
       ),
     );
+    SyncService.pushLists();
   }
 
   static Future<void> markFlashcardComplete(
@@ -687,6 +728,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
             : null,
       ),
     );
+    SyncService.pushLists();
   }
 
   static Future<void> markQuizComplete(
@@ -707,6 +749,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
             : null,
       ),
     );
+    SyncService.pushLists();
   }
 
   // ── Daily Word Limit ───────────────────────
@@ -787,6 +830,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
       await _incrementDailyCount(newCount);
       await _checkAndRecordWordGoalDay(prefs);
     }
+    SyncService.pushLists();
   }
 
   // ── SRS Words ─────────────────────────────
@@ -985,6 +1029,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
         );
       }
     }
+    SyncService.pushLists();
   }
 
   // ── Review Log ───────────────────────────────────────────────────────────
@@ -1484,6 +1529,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     history.add(entry);
     if (history.length > 500) history.removeRange(0, history.length - 500);
     await prefs.setString(_xpHistoryKey, jsonEncode(history));
+    SyncService.pushStats();
     final oldLevel = getLevelName(current);
     final newLevel = getLevelName(newXP);
     return oldLevel != newLevel;
@@ -1924,6 +1970,56 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     }
 
     return result;
+  }
+
+  // ── Custom Lists ──────────────────────────────────────────────────────────
+
+  static const _customListsKey = 'custom_lists';
+
+  static Future<List<CustomList>> getCustomLists() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_customListsKey);
+    if (raw == null) return [];
+    final list = jsonDecode(raw) as List;
+    return list.map((e) => CustomList.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  static Future<void> saveCustomList(CustomList list) async {
+    final prefs = await SharedPreferences.getInstance();
+    final all = await getCustomLists();
+    final idx = all.indexWhere((l) => l.id == list.id);
+    if (idx >= 0) { all[idx] = list; } else { all.add(list); }
+    await prefs.setString(_customListsKey, jsonEncode(all.map((l) => l.toJson()).toList()));
+  }
+
+  static Future<void> deleteCustomList(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final all = await getCustomLists();
+    all.removeWhere((l) => l.id == id);
+    await prefs.setString(_customListsKey, jsonEncode(all.map((l) => l.toJson()).toList()));
+  }
+
+  static Future<void> addWordToList(String listId, String word) async {
+    final all = await getCustomLists();
+    final idx = all.indexWhere((l) => l.id == listId);
+    if (idx < 0) return;
+    final list = all[idx];
+    if (list.words.contains(word)) return;
+    await saveCustomList(list.copyWith(words: [...list.words, word]));
+  }
+
+  static Future<void> removeWordFromList(String listId, String word) async {
+    final all = await getCustomLists();
+    final idx = all.indexWhere((l) => l.id == listId);
+    if (idx < 0) return;
+    final list = all[idx];
+    await saveCustomList(list.copyWith(words: list.words.where((w) => w != word).toList()));
+  }
+
+  static Future<bool> isWordInList(String listId, String word) async {
+    final all = await getCustomLists();
+    final list = all.cast<CustomList?>().firstWhere((l) => l?.id == listId, orElse: () => null);
+    return list?.words.contains(word) ?? false;
   }
 
   static Future<void> clearAllProgress() async {

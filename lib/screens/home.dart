@@ -15,6 +15,7 @@ import 'search_screen.dart';
 import 'settings_screen.dart';
 import 'free_time_screen.dart';
 import 'pomodoro_setup_screen.dart';
+import 'custom_lists_screen.dart';
 import '../data/word_data.dart';
 import '../data/storage_service.dart';
 import 'xp_level_sheet.dart';
@@ -613,6 +614,16 @@ class _HomeScreenState extends State<HomeScreen>
                       context,
                       MaterialPageRoute(
                         builder: (context) => const StarredWordsScreen(),
+                      ),
+                    ),
+                  ),
+                  _buildSidebarTile(
+                    '📋',
+                    tr('my_lists'),
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CustomListsScreen(),
                       ),
                     ),
                   ),
@@ -1812,6 +1823,12 @@ class _HomeScreenState extends State<HomeScreen>
                       Navigator.pop(context);
                       Navigator.push(context,
                           MaterialPageRoute(builder: (context) => const StarredWordsScreen()));
+                    }),
+                    _buildDrawerTile(context, icon: '📋', label: 'My Lists',
+                        iconBg: const Color(0xFF6C63FF), onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (context) => const CustomListsScreen()));
                     }),
                     _buildDrawerTile(context, icon: '📖', label: 'Word Library',
                         iconBg: const Color(0xFF0ea5e9), onTap: () {

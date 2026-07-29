@@ -1962,6 +1962,6 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
         k.startsWith('learn_marks_') ||
         k.startsWith('flashcard_progress_') ||
         k.startsWith('leveled_session_'));
-    for (final key in toRemove) await prefs.remove(key);
+    for (final key in toRemove) { await prefs.remove(key); }
   }
 }

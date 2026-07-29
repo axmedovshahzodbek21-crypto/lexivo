@@ -31,8 +31,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _profileImageUrl;
   String _themeMode = 'system';
   bool _loading = true;
-  bool _saving = false;
-  bool _saved = false;
 
   final _nameController = TextEditingController();
 
@@ -367,14 +365,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              child: _saving
-                  ? SizedBox(width: 20, height: 20, key: const ValueKey('spinner'), child: CircularProgressIndicator(strokeWidth: 2, color: context.primary))
-                  : _saved
-                  ? Icon(Icons.check_circle, color: const Color(0xFF2ECC71), key: const ValueKey('check'))
-                  : TextButton(
-                      key: const ValueKey('save'),
+            child: TextButton(
                       onPressed: _handleSave,
                       style: TextButton.styleFrom(
                         backgroundColor: context.primary,
@@ -386,7 +377,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       child: Text(tr('save'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                     ),
-            ),
           ),
         ],
       ),

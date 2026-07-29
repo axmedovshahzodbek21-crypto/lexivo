@@ -102,7 +102,7 @@ class SyncService {
         'learned_words':    arr('learned_words'),
         'srs_words':        arr('srs_words'),
         'starred_words':    starredNames,
-        'hard_words':       days('marked_hard_words'),
+        'hard_words':       days('marked_hard_words').map((w) => {'word': w, 'addedAt': '1970-01-01T00:00:00.000Z'}).toList(),
         'study_days':       days('study_days'),
         'review_days':      days('review_days'),
         'word_goal_days':   days('word_goal_days'),
@@ -286,14 +286,27 @@ class SyncService {
         if (changed) await prefs.setStringList('starred_words', merged);
       }
 
-      // hard_words (simple string list)
-      final cloudHard = (row['hard_words'] as List? ?? []).cast<String>();
-      if (cloudHard.isNotEmpty) {
-        final localRaw = prefs.getString('marked_hard_words') ?? '[]';
-        final localHard = (jsonDecode(localRaw) as List).cast<String>().toSet();
-        final merged = {...localHard, ...cloudHard}.toList();
-        if (merged.length > localHard.length) {
-          await prefs.setString('marked_hard_words', jsonEncode(merged));
+      // hard_words: cloud sends HardWordEntry[]; extract active word strings
+      final cloudHardRaw = row['hard_words'] as List? ?? [];
+      if (cloudHardRaw.isNotEmpty) {
+        final cloudActiveWords = cloudHardRaw.map((item) {
+          if (item is String) return item;
+          if (item is Map<String, dynamic>) {
+            final addedAt = item['addedAt'] as String? ?? '';
+            final removedAt = item['removedAt'] as String?;
+            if (removedAt == null || addedAt.compareTo(removedAt) > 0) {
+              return item['word'] as String?;
+            }
+          }
+          return null;
+        }).whereType<String>().toList();
+        if (cloudActiveWords.isNotEmpty) {
+          final localRaw = prefs.getString('marked_hard_words') ?? '[]';
+          final localHard = (jsonDecode(localRaw) as List).cast<String>().toSet();
+          final merged = {...localHard, ...cloudActiveWords}.toList();
+          if (merged.length > localHard.length) {
+            await prefs.setString('marked_hard_words', jsonEncode(merged));
+          }
         }
       }
 

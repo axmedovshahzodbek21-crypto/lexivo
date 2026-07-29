@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
+import '../services/sync_service.dart';
 import 'main_shell.dart';
 import 'onboarding.dart';
 
@@ -67,6 +68,7 @@ class _SignupScreenState extends State<SignupScreen> {
   Future<void> _goToApp() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('guest_mode', false);
+    SyncService.pushAll();
     if (!mounted) return;
     final done = prefs.getBool('onboarding_completed') ?? false;
     Navigator.pushReplacement(

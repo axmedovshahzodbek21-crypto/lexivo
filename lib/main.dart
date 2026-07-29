@@ -129,7 +129,6 @@ class _SplashRouterState extends State<SplashRouter> {
       }
     }
 
-    // Start sync only for signed-in users
     final completed = prefs.getBool('onboarding_completed') ?? false;
     if (completed) {
       Navigator.pushReplacement(

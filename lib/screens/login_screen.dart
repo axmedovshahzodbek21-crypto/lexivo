@@ -4,7 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
-import '../services/sync_service.dart';
 import 'main_shell.dart';
 import 'onboarding.dart';
 import 'signup_screen.dart';
@@ -54,8 +53,6 @@ class _LoginScreenState extends State<LoginScreen> {
         email: email, password: password,
       );
       if (!mounted) return;
-      await SyncService.pullAll();
-      SyncService.startSync();
       if (!mounted) return;
       _goToApp();
     } on AuthException catch (e) {
@@ -87,8 +84,6 @@ class _LoginScreenState extends State<LoginScreen> {
         accessToken: googleAuth.accessToken,
       );
       if (!mounted) return;
-      await SyncService.pullAll();
-      SyncService.startSync();
       if (!mounted) return;
       _goToApp();
     } on AuthException catch (e) {

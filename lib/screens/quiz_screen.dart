@@ -1,6 +1,5 @@
 import 'break_screen.dart';
 import '../data/storage_service.dart';
-import '../services/sync_service.dart';
 import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
 import 'dart:math';
@@ -650,7 +649,6 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
       widget.collectionName,
       widget.wordDay.dayNumber,
     );
-    SyncService.pushUnitProgress(widget.collectionName, widget.wordDay.dayNumber);
     final progress = await StorageService.getUnitProgress(
       widget.collectionName,
       widget.wordDay.dayNumber,

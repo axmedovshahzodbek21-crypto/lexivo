@@ -6,7 +6,6 @@ import '../data/word_data.dart';
 import '../data/storage_service.dart';
 import '../app_theme.dart';
 import '../app_observers.dart';
-import '../services/sync_service.dart';
 import 'learning.dart';
 import 'flashcard.dart';
 import '../l10n.dart';
@@ -29,7 +28,6 @@ class CollectionsScreen extends StatefulWidget {
 class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
   Map<int, UnitProgress> _progressMap = {};
   Map<int, StoryUnlockInfo> _storyUnlockMap = {};
-  StreamSubscription<void>? _syncSub;
 
   static const _storyCollections = {
     '30 Days of Powerful Words',
@@ -49,7 +47,6 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
     super.initState();
     appLangNotifier.addListener(_onLangChange);
     _loadProgress();
-    _syncSub = SyncService.onPull.listen((_) => _loadProgress());
   }
 
   void _onLangChange() { if (mounted) setState(() {}); }
@@ -70,7 +67,6 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
   void dispose() {
     appLangNotifier.removeListener(_onLangChange);
     routeObserver.unsubscribe(this);
-    _syncSub?.cancel();
     super.dispose();
   }
 

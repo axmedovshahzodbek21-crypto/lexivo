@@ -3,7 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
-import '../services/sync_service.dart';
 import 'main_shell.dart';
 import 'onboarding.dart';
 
@@ -56,8 +55,6 @@ class _SignupScreenState extends State<SignupScreen> {
     try {
       await Supabase.instance.client.auth.signUp(email: email, password: pass);
       if (!mounted) return;
-      await SyncService.pullAll();
-      SyncService.startSync();
       if (!mounted) return;
       _goToApp();
     } on AuthException catch (e) {

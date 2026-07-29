@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import '../services/sync_service.dart';
 import 'package:flutter/foundation.dart';
 import 'break_screen.dart';
 import 'package:flutter/material.dart';
@@ -274,7 +273,6 @@ class _LearningScreenState extends State<LearningScreen> {
     _sessionComplete = true;
     await StorageService.markLearningComplete(widget.collectionName, widget.wordDay.dayNumber);
     StorageService.clearLearnProgress(widget.collectionName, widget.wordDay.dayNumber);
-    SyncService.pushUnitProgress(widget.collectionName, widget.wordDay.dayNumber);
     if (!mounted) return;
     final nextUnit = _nextUnit;
     final nav = Navigator.of(context);

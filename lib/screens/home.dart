@@ -17,7 +17,6 @@ import 'free_time_screen.dart';
 import 'pomodoro_setup_screen.dart';
 import '../data/word_data.dart';
 import '../data/storage_service.dart';
-import '../services/sync_service.dart';
 import 'xp_level_sheet.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
@@ -65,7 +64,6 @@ class _HomeScreenState extends State<HomeScreen>
   bool _hideSession = false;
   bool _hideStats = false;
   List<String> _sectionOrder = ['goal', 'wod', 'session', 'stats'];
-  StreamSubscription<void>? _syncSub;
 
   bool get _isDesktop =>
       defaultTargetPlatform == TargetPlatform.windows ||
@@ -89,14 +87,12 @@ class _HomeScreenState extends State<HomeScreen>
     _dailyGoal = widget.dailyWordGoal;
     _pickWordOfDay();
     _loadStats();
-    _syncSub = SyncService.onPull.listen((_) => _loadStats());
     appLangNotifier.addListener(_onLangChange);
   }
 
   @override
   void dispose() {
     appLangNotifier.removeListener(_onLangChange);
-    _syncSub?.cancel();
     _heartbeatController.dispose();
     _controller.dispose();
     super.dispose();

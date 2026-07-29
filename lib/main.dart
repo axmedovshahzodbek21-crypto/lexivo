@@ -5,7 +5,6 @@ import 'screens/main_shell.dart';
 import 'screens/login_screen.dart';
 import 'services/notification_service.dart';
 import 'services/supabase_service.dart';
-import 'services/sync_service.dart';
 import 'services/content_service.dart';
 import 'data/storage_service.dart';
 import 'app_observers.dart';
@@ -131,7 +130,6 @@ class _SplashRouterState extends State<SplashRouter> {
     }
 
     // Start sync only for signed-in users
-    if (currentUser != null) SyncService.startSync();
     final completed = prefs.getBool('onboarding_completed') ?? false;
     if (completed) {
       Navigator.pushReplacement(

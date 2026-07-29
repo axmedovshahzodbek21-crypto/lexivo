@@ -9,7 +9,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/notification_service.dart';
 import '../services/supabase_service.dart';
 import '../data/storage_service.dart';
-import '../services/sync_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import 'login_screen.dart';
@@ -36,19 +35,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _saved = false;
 
   final _nameController = TextEditingController();
-  StreamSubscription<void>? _syncSub;
 
   @override
   void initState() {
     super.initState();
     _load();
     appLangNotifier.addListener(_onLangChange);
-    _syncSub = SyncService.onPull.listen((_) { if (mounted) _load(); });
   }
 
   @override
   void dispose() {
-    _syncSub?.cancel();
     appLangNotifier.removeListener(_onLangChange);
     _nameController.dispose();
     super.dispose();
@@ -347,20 +343,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _handleSave() async {
-    setState(() => _saving = true);
-    final ok = await SyncService.pushAll();
-    if (!mounted) return;
-    setState(() { _saving = false; _saved = ok; });
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(ok ? tr('saved_to_cloud') : (SyncService.lastPushError ?? tr('save_failed'))),
-      backgroundColor: ok ? const Color(0xFF2ECC71) : Colors.red,
-      duration: const Duration(seconds: 6),
-    ));
-    if (ok) {
-      Future.delayed(const Duration(milliseconds: 800), () {
-        if (mounted) Navigator.pop(context);
-      });
-    }
+    if (mounted) Navigator.pop(context);
   }
 
   @override
@@ -1052,8 +1035,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _signOut() async {
-    SyncService.stopSync();
-    await SyncService.clearLocalUserData();
     await Supabase.instance.client.auth.signOut();
     if (!mounted) return;
     Navigator.pushAndRemoveUntil(
@@ -1117,7 +1098,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (confirmed != true || !mounted) return;
     final navigator = Navigator.of(context);
     try {
-      SyncService.stopSync();
       await Supabase.instance.client.rpc('delete_own_account');
       await Supabase.instance.client.auth.signOut();
       if (!mounted) return;
@@ -1154,7 +1134,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ElevatedButton(
             onPressed: () async {
               final navigator = Navigator.of(context);
-              SyncService.stopSync();
               final user = Supabase.instance.client.auth.currentUser;
               if (user != null) {
                 final db = Supabase.instance.client;
@@ -1169,8 +1148,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   'reset_at': DateTime.now().toIso8601String(),
                 }).eq('id', user.id);
               }
-              await SyncService.clearLocalUserData();
-              if (user != null) SyncService.startSync();
+              await StorageService.clearAllProgress();
               final prefs = await SharedPreferences.getInstance();
               if (!mounted) return;
               navigator.pushAndRemoveUntil(

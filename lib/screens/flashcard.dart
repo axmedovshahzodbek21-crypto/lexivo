@@ -1,6 +1,5 @@
 import 'quiz_screen.dart';
 import 'break_screen.dart';
-import '../services/sync_service.dart';
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -557,7 +556,6 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
         widget.collectionName,
         widget.wordDay.dayNumber,
       );
-      SyncService.pushUnitProgress(widget.collectionName, widget.wordDay.dayNumber);
     } else {
       await StorageService.saveFlashcardProgress(
         widget.collectionName,

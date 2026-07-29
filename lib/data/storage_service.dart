@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/word_data.dart';
-import '../services/sync_service.dart';
 
 class LearnedWord {
   final String word;
@@ -1487,8 +1486,6 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     await prefs.setString(_xpHistoryKey, jsonEncode(history));
     final oldLevel = getLevelName(current);
     final newLevel = getLevelName(newXP);
-    unawaited(SyncService.pushStats());
-    unawaited(SyncService.pushXpEntry(amount: amount, reason: reason, source: source, ts: ts));
     return oldLevel != newLevel;
   }
 
@@ -1927,5 +1924,44 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     }
 
     return result;
+  }
+
+  static Future<void> clearAllProgress() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('srs_words', '[]');
+    await prefs.setString('learned_words', '[]');
+    await prefs.setStringList('starred_words', []);
+    await prefs.remove('unit_progress');
+    await prefs.remove('unit_done_days');
+    await prefs.remove('review_days');
+    await prefs.remove('word_goal_days');
+    await prefs.remove('today_word_goal');
+    await prefs.remove('today_word_goal_date');
+    await prefs.setInt('total_xp', 0);
+    await prefs.setInt('today_xp', 0);
+    await prefs.remove('xp_history');
+    await prefs.setInt('streak', 0);
+    await prefs.setInt('daily_words_learned', 0);
+    await prefs.setInt('streak_freezes', 0);
+    await prefs.remove('last_xp_date');
+    await prefs.remove('last_study_date');
+    await prefs.remove('daily_words_date');
+    await prefs.remove('last_freeze_week');
+    await prefs.remove('study_days');
+    await prefs.remove('srs_review_log');
+    await prefs.remove('mastered_srs_words');
+    await prefs.remove('marked_hard_words');
+    await prefs.remove('has_completed_quiz');
+    await prefs.remove('has_perfect_quiz');
+    await prefs.remove('has_completed_flashcard');
+    await prefs.remove('has_completed_srs');
+    await prefs.remove('flash_xp_units');
+    await prefs.remove('quiz_xp_units');
+    final toRemove = prefs.getKeys().where((k) =>
+        k.startsWith('learn_progress_') ||
+        k.startsWith('learn_marks_') ||
+        k.startsWith('flashcard_progress_') ||
+        k.startsWith('leveled_session_'));
+    for (final key in toRemove) await prefs.remove(key);
   }
 }

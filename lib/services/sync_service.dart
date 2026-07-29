@@ -59,6 +59,8 @@ class SyncService {
         'notifications_enabled': prefs.getBool('notifications_enabled') ?? true,
         'notif_time':            prefs.getString('notif_time') ?? '20:00',
         'user_name':             prefs.getString('user_name') ?? '',
+        'language_level':        prefs.getString('language_level'),
+        'avatar_url':            prefs.getString('profile_image_url'),
         'settings_updated_at':   ts,
       });
       await prefs.setString('sync_settings_ts', ts);
@@ -97,10 +99,22 @@ class SyncService {
         catch (_) { return null; }
       }).whereType<String>().toList();
 
+      // srs_words: combine active + mastered so web sees the full set
+      final srsActive = arr('srs_words').cast<Map<String, dynamic>>();
+      final srsMastered = arr('mastered_srs_words').cast<Map<String, dynamic>>();
+      final combinedSrs = [...srsActive, ...srsMastered];
+
+      // achievements: scan all ach_date_* prefs keys
+      final allKeys = prefs.getKeys();
+      final achievementEntries = allKeys
+          .where((k) => k.startsWith('ach_date_'))
+          .map((k) => {'id': k.substring('ach_date_'.length), 'date': prefs.getString(k)!})
+          .toList();
+
       await _sb.from('user_data').upsert({
         'id': uid,
         'learned_words':    arr('learned_words'),
-        'srs_words':        arr('srs_words'),
+        'srs_words':        combinedSrs,
         'starred_words':    starredNames,
         'hard_words':       days('marked_hard_words').map((w) => {'word': w, 'addedAt': '1970-01-01T00:00:00.000Z'}).toList(),
         'study_days':       days('study_days'),
@@ -111,6 +125,7 @@ class SyncService {
         'unit_progress':    obj('unit_progress'),
         'review_log':       obj('srs_review_log'),
         'imported_words':   arr('imported_words'),
+        'achievements':     achievementEntries,
         'lists_updated_at': ts,
       });
       await prefs.setString('sync_lists_ts', ts);
@@ -211,6 +226,13 @@ class SyncService {
         if (row['user_name'] != null) {
           await prefs.setString('user_name', row['user_name'] as String);
         }
+        if (row['language_level'] != null) {
+          await prefs.setString('language_level', row['language_level'] as String);
+          await prefs.setString('english_level', row['language_level'] as String);
+        }
+        if (row['avatar_url'] != null) {
+          await prefs.setString('profile_image_url', row['avatar_url'] as String);
+        }
         await prefs.setString('sync_settings_ts', cloudSettingsTs);
       }
 
@@ -234,9 +256,14 @@ class SyncService {
         }
       }
 
-      // srs_words: union by key, take higher reviewStage
+      // srs_words: union by key, take higher reviewStage; skip words already mastered locally
       final cloudSRS = (row['srs_words'] as List? ?? []).cast<Map<String, dynamic>>();
       if (cloudSRS.isNotEmpty) {
+        final masteredRaw = prefs.getString('mastered_srs_words') ?? '[]';
+        final masteredIds = (jsonDecode(masteredRaw) as List)
+            .cast<Map<String, dynamic>>()
+            .map((w) => '${w['word']}_${w['collectionName']}')
+            .toSet();
         final localRaw = prefs.getString('srs_words') ?? '[]';
         final localList = (jsonDecode(localRaw) as List).cast<Map<String, dynamic>>();
         final localMap = <String, Map<String, dynamic>>{
@@ -245,6 +272,7 @@ class SyncService {
         bool changed = false;
         for (final cw in cloudSRS) {
           final key = '${cw['word']}_${cw['collectionName']}';
+          if (masteredIds.contains(key)) continue;
           final lw = localMap[key];
           if (lw == null) {
             localMap[key] = cw;
@@ -396,6 +424,16 @@ class SyncService {
           }
         }
         if (changed) await prefs.setString('srs_review_log', jsonEncode(localLog));
+      }
+
+      // achievements: apply {id, date} entries from cloud
+      final cloudAchs = (row['achievements'] as List? ?? []).cast<Map<String, dynamic>>();
+      for (final ach in cloudAchs) {
+        final id = ach['id'] as String?;
+        final date = ach['date'] as String?;
+        if (id != null && date != null && prefs.getString('ach_date_$id') == null) {
+          await prefs.setString('ach_date_$id', date);
+        }
       }
 
       // imported_words

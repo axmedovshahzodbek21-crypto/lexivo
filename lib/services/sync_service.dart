@@ -151,6 +151,16 @@ class SyncService {
         return;
       }
 
+      // If the cloud row has no sync timestamps it was created empty (e.g. by
+      // the web pushing before having any local data). Push local state on top
+      // so the real data wins.
+      final hasCloudData = (row['stats_updated_at'] as String?) != null ||
+          (row['lists_updated_at'] as String?) != null;
+      if (!hasCloudData) {
+        await pushAll();
+        return;
+      }
+
       // ── Stats ───────────────────────────────────────────────────────────────
       final cloudStatsTs = (row['stats_updated_at'] as String?) ?? '';
       final localStatsTs = prefs.getString('sync_stats_ts') ?? '';

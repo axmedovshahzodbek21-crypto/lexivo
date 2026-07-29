@@ -1171,6 +1171,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     if (!list.contains(word)) {
       list.add(word);
       await prefs.setString(_markedHardKey, jsonEncode(list));
+      SyncService.pushLists();
     }
   }
 
@@ -1187,6 +1188,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     final list = raw != null ? List<String>.from(jsonDecode(raw)) : <String>[];
     list.remove(word);
     await prefs.setString(_markedHardKey, jsonEncode(list));
+    SyncService.pushLists();
   }
 
   // ── Streak & Study Days ────────────────────
@@ -1732,6 +1734,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     if (!existing.contains(entry)) {
       existing.add(entry);
       await prefs.setStringList(_starredKey, existing);
+      SyncService.pushLists();
     }
   }
 
@@ -1746,6 +1749,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
       return map['word'] == word && map['collectionName'] == collectionName;
     });
     await prefs.setStringList(_starredKey, existing);
+    SyncService.pushLists();
   }
 
   static Future<List<Map<String, dynamic>>> getStarredWords() async {

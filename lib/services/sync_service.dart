@@ -60,7 +60,8 @@ class SyncService {
         'notif_time':            prefs.getString('notif_time') ?? '20:00',
         'user_name':             prefs.getString('user_name') ?? '',
         'language_level':        prefs.getString('language_level'),
-        'avatar_url':            prefs.getString('profile_image_url'),
+        if (prefs.getString('profile_image_url') != null)
+          'avatar_url':          prefs.getString('profile_image_url'),
         'settings_updated_at':   ts,
       });
       await prefs.setString('sync_settings_ts', ts);

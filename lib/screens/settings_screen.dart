@@ -1133,7 +1133,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
               final user = Supabase.instance.client.auth.currentUser;
               if (user != null) {
                 final db = Supabase.instance.client;
-                await db.from('user_data').delete().eq('id', user.id);
+                final ts = DateTime.now().toUtc().toIso8601String();
+                await db.from('user_data').upsert({
+                  'id': user.id,
+                  'total_xp': 0, 'streak': 0, 'streak_freezes': 0,
+                  'last_study_date': null, 'last_freeze_week': null,
+                  'today_xp': 0, 'today_xp_date': null,
+                  'daily_words_learned': 0, 'daily_words_date': null,
+                  'stats_updated_at': ts,
+                  'learned_words': [], 'srs_words': [], 'starred_words': [],
+                  'hard_words': [], 'study_days': [], 'review_days': [],
+                  'word_goal_days': [], 'unit_done_days': [], 'xp_history': [],
+                  'unit_progress': {}, 'review_log': {}, 'imported_words': [],
+                  'achievements': [], 'lists_updated_at': ts,
+                  'reset_at': ts,
+                });
                 await db.from('srs_words').delete().eq('user_id', user.id);
                 await db.from('learned_words').delete().eq('user_id', user.id);
                 await db.from('starred_words').delete().eq('user_id', user.id);

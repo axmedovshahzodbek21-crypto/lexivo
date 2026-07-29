@@ -19,6 +19,30 @@ class SyncService {
     return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
   }
 
+  static Future<void> _clearProgress(SharedPreferences prefs) async {
+    await prefs.setString('srs_words', '[]');
+    await prefs.setString('learned_words', '[]');
+    await prefs.setStringList('starred_words', []);
+    await prefs.setInt('total_xp', 0);
+    await prefs.setInt('today_xp', 0);
+    await prefs.setInt('streak', 0);
+    await prefs.setInt('daily_words_learned', 0);
+    await prefs.setInt('streak_freezes', 0);
+    for (final k in [
+      'unit_progress', 'unit_done_days', 'review_days', 'word_goal_days',
+      'study_days', 'xp_history', 'srs_review_log', 'marked_hard_words',
+      'mastered_srs_words', 'last_xp_date', 'last_study_date',
+      'daily_words_date', 'last_freeze_week', 'imported_words',
+      'sync_stats_ts', 'sync_settings_ts', 'sync_lists_ts',
+    ]) { await prefs.remove(k); }
+    for (final k in prefs.getKeys().where((k) =>
+        k.startsWith('learn_progress_') || k.startsWith('learn_marks_') ||
+        k.startsWith('flashcard_progress_') || k.startsWith('leveled_session_') ||
+        k.startsWith('ach_date_'))) {
+      await prefs.remove(k);
+    }
+  }
+
   // ── Push ─────────────────────────────────────────────────────────────────────
 
   static Future<void> pushStats() async {
@@ -148,6 +172,16 @@ class SyncService {
 
       if (row == null) {
         await pushAll();
+        return;
+      }
+
+      // Cross-device reset: if the cloud row carries a newer reset_at, clear
+      // local data so this device also resets instead of pushing old data back.
+      final cloudResetAt = (row['reset_at'] as String?) ?? '';
+      final localResetAt = prefs.getString('last_reset_at') ?? '';
+      if (cloudResetAt.isNotEmpty && cloudResetAt.compareTo(localResetAt) > 0) {
+        await _clearProgress(prefs);
+        await prefs.setString('last_reset_at', cloudResetAt);
         return;
       }
 

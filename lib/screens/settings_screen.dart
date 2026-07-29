@@ -1094,6 +1094,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final navigator = Navigator.of(context);
     try {
       await Supabase.instance.client.rpc('delete_own_account');
+      await StorageService.clearAllProgress();
       await Supabase.instance.client.auth.signOut();
       if (!mounted) return;
       navigator.pushAndRemoveUntil(
@@ -1132,16 +1133,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               final user = Supabase.instance.client.auth.currentUser;
               if (user != null) {
                 final db = Supabase.instance.client;
+                await db.from('user_data').delete().eq('id', user.id);
                 await db.from('srs_words').delete().eq('user_id', user.id);
                 await db.from('learned_words').delete().eq('user_id', user.id);
                 await db.from('starred_words').delete().eq('user_id', user.id);
                 await db.from('xp_history').delete().eq('user_id', user.id);
                 await db.from('user_stats').delete().eq('id', user.id);
                 await db.from('unit_progress').delete().eq('user_id', user.id);
-                // Signal all devices (website etc.) that a reset happened
-                await db.from('profiles').update({
-                  'reset_at': DateTime.now().toIso8601String(),
-                }).eq('id', user.id);
               }
               await StorageService.clearAllProgress();
               final prefs = await SharedPreferences.getInstance();

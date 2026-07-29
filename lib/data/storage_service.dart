@@ -2057,7 +2057,11 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
         k.startsWith('learn_progress_') ||
         k.startsWith('learn_marks_') ||
         k.startsWith('flashcard_progress_') ||
-        k.startsWith('leveled_session_'));
+        k.startsWith('leveled_session_') ||
+        k.startsWith('ach_date_'));
     for (final key in toRemove) { await prefs.remove(key); }
+    await prefs.remove('sync_stats_ts');
+    await prefs.remove('sync_settings_ts');
+    await prefs.remove('sync_lists_ts');
   }
 }

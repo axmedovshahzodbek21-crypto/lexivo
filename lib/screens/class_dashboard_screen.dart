@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
+import '../data/storage_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import 'class_words_screen.dart';
@@ -263,7 +264,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     child: Row(children: [
       _stat('${_students.length}', tr('students')),
       _statDiv(),
-      _stat('$_totalXp', 'Total XP'),
+      _stat(StorageService.displayXP(_totalXp), 'Total XP'),
       _statDiv(),
       _stat('$_avgStreak', 'Avg Streak'),
       _statDiv(),
@@ -316,7 +317,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         ]),
         const SizedBox(height: 8),
         Row(children: [
-          _pill('${s.xp} XP', context.primary),
+          _pill('${StorageService.displayXP(s.xp)} XP', context.primary),
           const SizedBox(width: 6),
           GestureDetector(
             onTap: () => _showStreakSheet(s),

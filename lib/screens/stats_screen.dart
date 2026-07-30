@@ -214,7 +214,7 @@ class _StatsScreenState extends State<StatsScreen> {
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
-                                      '+$_todayXP XP today',
+                                      '+${StorageService.displayXP(_todayXP)} XP today',
                                       style: const TextStyle(
                                         fontSize: 12,
                                         color: Colors.white,

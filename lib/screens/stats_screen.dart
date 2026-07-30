@@ -196,7 +196,7 @@ class _StatsScreenState extends State<StatsScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  '$_totalXP XP total',
+                                  '${StorageService.displayXP(_totalXP)} XP total',
                                   style: const TextStyle(
                                     fontSize: 13,
                                     color: Colors.white70,
@@ -250,7 +250,7 @@ class _StatsScreenState extends State<StatsScreen> {
                                   ),
                                 ),
                                 Text(
-                                  '${nextLevelXP - _totalXP} XP to next level',
+                                  '${StorageService.displayXP(nextLevelXP - _totalXP)} XP to next level',
                                   style: const TextStyle(
                                     fontSize: 11,
                                     color: Colors.white70,
@@ -588,7 +588,7 @@ class _StatsScreenState extends State<StatsScreen> {
             context,
             '⚡',
             'XP per study day',
-            _totalDays > 0 ? '${(_totalXP / _totalDays).round()}' : '—',
+            _totalDays > 0 ? StorageService.displayXP((_totalXP / _totalDays).round()) : '—',
           ),
         ],
       ),

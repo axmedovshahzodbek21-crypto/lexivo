@@ -678,11 +678,17 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
             // ── Stat tiles ──────────────────────────────────
             Row(
               children: [
-                _StatTile(emoji: '🔥', value: '$_streak',        label: 'Streak',        color: const Color(0xFFBE123C)),
+                _StatTile(emoji: '🔥', value: '$_streak',        label: 'Streak',        color: const Color(0xFFBE123C),
+                  infoTitle: 'Current Streak',
+                  infoBody: 'Days in a row where you completed BOTH SRS review and your word goal. Miss a day without a streak freeze and it resets to 0.'),
                 const SizedBox(width: 10),
-                _StatTile(emoji: '⚡', value: '$_longestStreak', label: 'Longest streak', color: const Color(0xFF0369A1)),
+                _StatTile(emoji: '⚡', value: '$_longestStreak', label: 'Longest streak', color: const Color(0xFF0369A1),
+                  infoTitle: 'Longest Streak',
+                  infoBody: 'Your all-time personal best — the longest consecutive run of perfect days you\'ve ever achieved. It never resets.'),
                 const SizedBox(width: 10),
-                _StatTile(emoji: '🏆', value: '$_activeDays',    label: 'Full days',      color: const Color(0xFFB45309)),
+                _StatTile(emoji: '🏆', value: '$_activeDays',    label: 'Full days',      color: const Color(0xFFB45309),
+                  infoTitle: 'Full Days',
+                  infoBody: 'Total count of days where you completed both tasks. Every perfect day adds 1 — this is your lifetime tally of fully productive days.'),
               ],
             ),
             const SizedBox(height: 4),
@@ -729,7 +735,11 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
             const SizedBox(height: 8),
             Row(
               children: [
-                _TaskCard(label: 'Review', done: reviewToday, color: _kSrsColor),
+                _TaskCard(
+                  label: 'Review', done: reviewToday, color: _kSrsColor,
+                  infoTitle: 'SRS Review',
+                  infoBody: 'Spaced Repetition System — words you\'ve learned come back for review at growing intervals. Complete all words due today to mark the blue half of your day circle.',
+                ),
                 const SizedBox(width: 8),
                 _TaskCard(
                   label: 'Words',
@@ -738,6 +748,8 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
                   subtitle: wordsToday
                       ? '$_dailyGoal words ✓'
                       : '${_todayWordsCount.clamp(0, _dailyGoal)}/$_dailyGoal words',
+                  infoTitle: 'Daily Word Goal',
+                  infoBody: 'Learn new words each day to hit your personal target. Set the number in Settings. Reach it to mark the green half of your day circle.',
                 ),
               ],
             ),
@@ -923,10 +935,60 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
 }
 
 // ── Stat tile ────────────────────────────────────────────────────────────────
+// ── Shared info dialog ───────────────────────────────────────────────────────
+void _showInfoDialog(BuildContext context, {
+  required String emoji,
+  required String title,
+  required String body,
+  required Color color,
+}) {
+  showDialog(
+    context: context,
+    builder: (_) => Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: context.surface,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Colored accent bar
+            Container(height: 3, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 12),
+            Row(children: [
+              Text(emoji, style: const TextStyle(fontSize: 18)),
+              const SizedBox(width: 8),
+              Expanded(child: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: context.appText))),
+            ]),
+            const SizedBox(height: 8),
+            Text(body, style: TextStyle(fontSize: 12, color: context.textMuted, height: 1.5)),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  backgroundColor: color,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Got it', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 class _StatTile extends StatelessWidget {
   final String emoji, value, label;
   final Color color;
-  const _StatTile({required this.emoji, required this.value, required this.label, required this.color});
+  final String? infoTitle;
+  final String? infoBody;
+  const _StatTile({required this.emoji, required this.value, required this.label, required this.color, this.infoTitle, this.infoBody});
 
   @override
   Widget build(BuildContext context) {
@@ -944,7 +1006,20 @@ class _StatTile extends StatelessWidget {
             Text(emoji, style: const TextStyle(fontSize: 22)),
             const SizedBox(height: 4),
             Text(value, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white)),
-            Text(label, style: const TextStyle(fontSize: 11, color: Colors.white70, fontWeight: FontWeight.w600)),
+            Row(
+              children: [
+                Expanded(child: Text(label, style: const TextStyle(fontSize: 11, color: Colors.white70, fontWeight: FontWeight.w600))),
+                if (infoTitle != null)
+                  GestureDetector(
+                    onTap: () => _showInfoDialog(context, emoji: emoji, title: infoTitle!, body: infoBody!, color: color),
+                    child: Container(
+                      width: 14, height: 14,
+                      decoration: BoxDecoration(color: Colors.white24, shape: BoxShape.circle),
+                      child: const Center(child: Text('i', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white))),
+                    ),
+                  ),
+              ],
+            ),
           ],
         ),
       ),
@@ -958,7 +1033,9 @@ class _TaskCard extends StatelessWidget {
   final bool done;
   final Color color;
   final String? subtitle;
-  const _TaskCard({required this.label, required this.done, required this.color, this.subtitle});
+  final String? infoTitle;
+  final String? infoBody;
+  const _TaskCard({required this.label, required this.done, required this.color, this.subtitle, this.infoTitle, this.infoBody});
 
   @override
   Widget build(BuildContext context) {
@@ -975,10 +1052,29 @@ class _TaskCard extends StatelessWidget {
             Icon(done ? Icons.check_circle : Icons.circle_outlined,
                 color: done ? Colors.white : context.textMuted, size: 22),
             const SizedBox(height: 4),
-            Text(label,
-                style: TextStyle(
-                    fontSize: 11, fontWeight: FontWeight.bold,
-                    color: done ? Colors.white : context.textMuted)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(label,
+                    style: TextStyle(
+                        fontSize: 11, fontWeight: FontWeight.bold,
+                        color: done ? Colors.white : context.textMuted)),
+                if (infoTitle != null) ...[
+                  const SizedBox(width: 4),
+                  GestureDetector(
+                    onTap: () => _showInfoDialog(context, emoji: label == 'Review' ? '🔁' : '✏️', title: infoTitle!, body: infoBody!, color: color),
+                    child: Container(
+                      width: 13, height: 13,
+                      decoration: BoxDecoration(
+                        color: done ? Colors.white24 : context.border,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(child: Text('i', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: done ? Colors.white : context.textMuted))),
+                    ),
+                  ),
+                ],
+              ],
+            ),
             if (subtitle != null) ...[
               const SizedBox(height: 2),
               Text(subtitle!,

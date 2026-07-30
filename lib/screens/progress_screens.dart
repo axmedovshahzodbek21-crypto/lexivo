@@ -818,43 +818,46 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
                               child: Padding(
                                 padding: const EdgeInsets.all(3),
                                 child: Stack(
+                                  clipBehavior: Clip.hardEdge,
                                   children: [
-                                    ClipOval(
-                                      child: Container(
-                                        color: anyDone ? context.surface2 : Colors.transparent,
-                                        child: Stack(children: [
-                                          if (hasWords) Align(
-                                            alignment: Alignment.topCenter,
-                                            child: FractionallySizedBox(
-                                              heightFactor: 0.5, widthFactor: 1.0,
-                                              child: Container(color: _kWordsColor),
+                                    Positioned.fill(
+                                      child: ClipOval(
+                                        child: Container(
+                                          color: anyDone ? context.surface2 : Colors.transparent,
+                                          child: Stack(children: [
+                                            if (hasWords) Align(
+                                              alignment: Alignment.topCenter,
+                                              child: FractionallySizedBox(
+                                                heightFactor: 0.5, widthFactor: 1.0,
+                                                child: Container(color: _kWordsColor),
+                                              ),
                                             ),
-                                          ),
-                                          if (hasReview) Align(
-                                            alignment: Alignment.bottomCenter,
-                                            child: FractionallySizedBox(
-                                              heightFactor: 0.5, widthFactor: 1.0,
-                                              child: Container(color: _kSrsColor),
+                                            if (hasReview) Align(
+                                              alignment: Alignment.bottomCenter,
+                                              child: FractionallySizedBox(
+                                                heightFactor: 0.5, widthFactor: 1.0,
+                                                child: Container(color: _kSrsColor),
+                                              ),
                                             ),
-                                          ),
-                                          if (srsLocked) Align(
-                                            alignment: Alignment.bottomCenter,
-                                            child: FractionallySizedBox(
-                                              heightFactor: 0.5, widthFactor: 1.0,
-                                              child: Container(
-                                                color: const Color(0x4D525252),
-                                                child: const Center(
-                                                  child: Text('🔒', style: TextStyle(fontSize: 7)),
+                                            if (srsLocked) Align(
+                                              alignment: Alignment.bottomCenter,
+                                              child: FractionallySizedBox(
+                                                heightFactor: 0.5, widthFactor: 1.0,
+                                                child: Container(
+                                                  color: const Color(0x4D525252),
+                                                  child: const Center(
+                                                    child: Text('🔒', style: TextStyle(fontSize: 7)),
+                                                  ),
                                                 ),
                                               ),
                                             ),
-                                          ),
-                                          if ((hasReview || srsLocked) && hasWords)
-                                            Align(
-                                              alignment: Alignment.center,
-                                              child: Container(height: 1, color: Colors.black26),
-                                            ),
-                                        ]),
+                                            if ((hasReview || srsLocked) && hasWords)
+                                              Align(
+                                                alignment: Alignment.center,
+                                                child: Container(height: 1, color: Colors.black26),
+                                              ),
+                                          ]),
+                                        ),
                                       ),
                                     ),
                                     if (isToday || isSelected) Positioned.fill(

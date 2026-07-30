@@ -211,9 +211,27 @@ class SyncService {
         prefs.getInt('streak_freezes') ?? 0, (row['streak_freezes'] as num? ?? 0).toInt(),
       ));
 
-      if (cloudStatsNewer) {
-        final today = _todayStr();
+      // Daily accumulators: always take max regardless of which side has newer timestamp
+      final today = _todayStr();
+      final cloudTodayXpDate = row['today_xp_date'] as String?;
+      if (cloudTodayXpDate == today) {
+        final localTodayXp = prefs.getString('last_xp_date') == today
+            ? (prefs.getInt('today_xp') ?? 0) : 0;
+        await prefs.setInt('today_xp',
+            max((row['today_xp'] as num? ?? 0).toInt(), localTodayXp));
+        await prefs.setString('last_xp_date', today);
+      }
 
+      final cloudDailyDate = row['daily_words_date'] as String?;
+      if (cloudDailyDate == today) {
+        final localCount = prefs.getString('daily_words_date') == today
+            ? (prefs.getInt('daily_words_learned') ?? 0) : 0;
+        await prefs.setInt('daily_words_learned',
+            max((row['daily_words_learned'] as num? ?? 0).toInt(), localCount));
+        await prefs.setString('daily_words_date', today);
+      }
+
+      if (cloudStatsNewer) {
         final cloudLastStudy = row['last_study_date'] as String?;
         final localLastStudy = prefs.getString('last_study_date');
         if (cloudLastStudy != null &&
@@ -223,24 +241,6 @@ class SyncService {
 
         if (row['last_freeze_week'] != null) {
           await prefs.setString('last_freeze_week', row['last_freeze_week'] as String);
-        }
-
-        final cloudTodayXpDate = row['today_xp_date'] as String?;
-        if (cloudTodayXpDate == today) {
-          final localTodayXp = prefs.getString('last_xp_date') == today
-              ? (prefs.getInt('today_xp') ?? 0) : 0;
-          await prefs.setInt('today_xp',
-              max((row['today_xp'] as num? ?? 0).toInt(), localTodayXp));
-          await prefs.setString('last_xp_date', today);
-        }
-
-        final cloudDailyDate = row['daily_words_date'] as String?;
-        if (cloudDailyDate == today) {
-          final localCount = prefs.getString('daily_words_date') == today
-              ? (prefs.getInt('daily_words_learned') ?? 0) : 0;
-          await prefs.setInt('daily_words_learned',
-              max((row['daily_words_learned'] as num? ?? 0).toInt(), localCount));
-          await prefs.setString('daily_words_date', today);
         }
 
         await prefs.setString('sync_stats_ts', cloudStatsTs);

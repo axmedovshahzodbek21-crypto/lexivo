@@ -529,12 +529,15 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
   bool _loading = true;
   int _streak = 0;
   int _longestStreak = 0;
-  List<String> _reviewDays    = [];
-  List<String> _wordGoalDays  = [];
+  int _activeDays = 0;
+  List<String> _reviewDays     = [];
+  List<String> _wordGoalDays   = [];
+  List<String> _srsLockedDays  = [];
   late DateTime _month;
   String? _selectedDay;
   int _dailyGoal = 10;
   int _todayWordsCount = 0;
+  bool _showBreakdown = false;
 
   @override
   void initState() {
@@ -555,20 +558,28 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
   Future<void> _load() async {
     final results = await Future.wait([
       StorageService.getStreak(),
-      StorageService.getStudyDays(),
       StorageService.getReviewDays(),
       StorageService.getWordGoalDays(),
       StorageService.getTodayLearnedCount(),
+      StorageService.getSRSLockedDays(),
+      StorageService.getDueWords(),
     ]);
     final prefs = await SharedPreferences.getInstance();
-    final studyDays = results[1] as List<String>;
+    final reviewDays   = results[1] as List<String>;
+    final wordGoalDays = results[2] as List<String>;
+    final dueWords     = results[5] as List<dynamic>;
+    // Record SRS locked day if nothing is due today
+    if (dueWords.isEmpty) await StorageService.recordSRSLockedDay();
+    final completeDays = reviewDays.where((d) => wordGoalDays.contains(d)).toList();
     setState(() {
       _streak          = results[0] as int;
-      _reviewDays      = results[2] as List<String>;
-      _wordGoalDays    = results[3] as List<String>;
-      _todayWordsCount = results[4] as int;
+      _reviewDays      = reviewDays;
+      _wordGoalDays    = wordGoalDays;
+      _todayWordsCount = results[3] as int;
+      _srsLockedDays   = results[4] as List<String>;
       _dailyGoal       = prefs.getInt('daily_word_goal') ?? 10;
-      _longestStreak   = _calcLongest(studyDays);
+      _longestStreak   = _calcLongest(completeDays);
+      _activeDays      = completeDays.length;
       _loading         = false;
     });
   }
@@ -594,6 +605,27 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
     _month = DateTime(_month.year, _month.month - 1);
     _selectedDay = null;
   });
+
+  int _calcCurrentStreak(List<String> days) {
+    if (days.isEmpty) return 0;
+    final sorted = [...days]..sort();
+    sorted.sort((a, b) => b.compareTo(a)); // descending
+    final today     = DateTime.now();
+    final todayStr  = '${today.year}-${today.month.toString().padLeft(2,'0')}-${today.day.toString().padLeft(2,'0')}';
+    final yesterday = today.subtract(const Duration(days: 1));
+    final yStr      = '${yesterday.year}-${yesterday.month.toString().padLeft(2,'0')}-${yesterday.day.toString().padLeft(2,'0')}';
+    if (sorted.first != todayStr && sorted.first != yStr) { return 0; }
+    int count = 0;
+    DateTime expected = sorted.first == todayStr ? today : yesterday;
+    for (final d in sorted) {
+      final expStr = '${expected.year}-${expected.month.toString().padLeft(2,'0')}-${expected.day.toString().padLeft(2,'0')}';
+      if (d == expStr) {
+        count++;
+        expected = expected.subtract(const Duration(days: 1));
+      } else { break; }
+    }
+    return count;
+  }
 
   void _nextMonth() {
     final now = DateTime.now();
@@ -649,9 +681,48 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
                 _StatTile(emoji: '🔥', value: '$_streak',        label: 'Streak',        color: const Color(0xFFBE123C)),
                 const SizedBox(width: 10),
                 _StatTile(emoji: '⚡', value: '$_longestStreak', label: 'Longest streak', color: const Color(0xFF0369A1)),
+                const SizedBox(width: 10),
+                _StatTile(emoji: '🏆', value: '$_activeDays',    label: 'Full days',      color: const Color(0xFFB45309)),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 4),
+
+            // ── Task breakdown (collapsible) ─────────────────
+            GestureDetector(
+              onTap: () => setState(() => _showBreakdown = !_showBreakdown),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('Task breakdown',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.textMuted)),
+                    const SizedBox(width: 4),
+                    Icon(_showBreakdown ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                        size: 14, color: context.textMuted),
+                  ],
+                ),
+              ),
+            ),
+            if (_showBreakdown) ...[
+              _BreakdownRow(
+                label: 'Words',
+                color: _kWordsColor,
+                current: _calcCurrentStreak(_wordGoalDays),
+                longest: _calcLongest(_wordGoalDays),
+                total: _wordGoalDays.length,
+              ),
+              const SizedBox(height: 8),
+              _BreakdownRow(
+                label: 'SRS',
+                color: _kSrsColor,
+                current: _calcCurrentStreak(_reviewDays),
+                longest: _calcLongest(_reviewDays),
+                total: _reviewDays.length,
+              ),
+              const SizedBox(height: 8),
+            ],
+            const SizedBox(height: 8),
 
             // ── Today task cards ─────────────────────────────
             Text('Today', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.textMuted)),
@@ -720,7 +791,8 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
                       final isFuture   = DateTime.parse(dateStr).isAfter(now);
                       final hasReview  = _reviewDays.contains(dateStr);
                       final hasWords   = _wordGoalDays.contains(dateStr);
-                      final anyDone    = hasReview || hasWords;
+                      final srsLocked  = !hasReview && _srsLockedDays.contains(dateStr);
+                      final anyDone    = hasReview || hasWords || srsLocked;
 
                       return GestureDetector(
                         onTap: isFuture ? null : () => setState(() {
@@ -728,47 +800,69 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
                         }),
                         child: Opacity(
                           opacity: isFuture ? 0.25 : 1.0,
-                          child: Padding(
-                            padding: const EdgeInsets.all(3),
-                            child: Stack(
-                              children: [
-                                ClipOval(
-                                  child: Container(
-                                    color: anyDone ? context.surface2 : Colors.transparent,
-                                    child: Stack(children: [
-                                      if (hasWords) Align(
-                                        alignment: Alignment.topCenter,
-                                        child: FractionallySizedBox(
-                                          heightFactor: 0.5, widthFactor: 1.0,
-                                          child: Container(color: _kWordsColor),
-                                        ),
+                          child: Center(
+                            child: AspectRatio(
+                              aspectRatio: 1.0,
+                              child: Padding(
+                                padding: const EdgeInsets.all(3),
+                                child: Stack(
+                                  children: [
+                                    ClipOval(
+                                      child: Container(
+                                        color: anyDone ? context.surface2 : Colors.transparent,
+                                        child: Stack(children: [
+                                          if (hasWords) Align(
+                                            alignment: Alignment.topCenter,
+                                            child: FractionallySizedBox(
+                                              heightFactor: 0.5, widthFactor: 1.0,
+                                              child: Container(color: _kWordsColor),
+                                            ),
+                                          ),
+                                          if (hasReview) Align(
+                                            alignment: Alignment.bottomCenter,
+                                            child: FractionallySizedBox(
+                                              heightFactor: 0.5, widthFactor: 1.0,
+                                              child: Container(color: _kSrsColor),
+                                            ),
+                                          ),
+                                          if (srsLocked) Align(
+                                            alignment: Alignment.bottomCenter,
+                                            child: FractionallySizedBox(
+                                              heightFactor: 0.5, widthFactor: 1.0,
+                                              child: Container(
+                                                color: const Color(0x4D525252),
+                                                child: const Center(
+                                                  child: Text('🔒', style: TextStyle(fontSize: 7)),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          if ((hasReview || srsLocked) && hasWords)
+                                            Align(
+                                              alignment: Alignment.center,
+                                              child: Container(height: 1, color: Colors.black26),
+                                            ),
+                                        ]),
                                       ),
-                                      if (hasReview) Align(
-                                        alignment: Alignment.bottomCenter,
-                                        child: FractionallySizedBox(
-                                          heightFactor: 0.5, widthFactor: 1.0,
-                                          child: Container(color: _kSrsColor),
-                                        ),
-                                      ),
-                                    ]),
-                                  ),
-                                ),
-                                if (isToday || isSelected) Positioned.fill(
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: context.primary, width: 1.5),
                                     ),
-                                  ),
+                                    if (isToday || isSelected) Positioned.fill(
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: context.primary, width: 1.5),
+                                        ),
+                                      ),
+                                    ),
+                                    Center(
+                                      child: Text('$day', style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: (isToday || isSelected) ? FontWeight.bold : FontWeight.normal,
+                                        color: anyDone ? Colors.white : context.appText,
+                                      )),
+                                    ),
+                                  ],
                                 ),
-                                Center(
-                                  child: Text('$day', style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: (isToday || isSelected) ? FontWeight.bold : FontWeight.normal,
-                                    color: anyDone ? Colors.white : context.appText,
-                                  )),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
                         ),
@@ -798,7 +892,7 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
                         Text('Track breakdown',
                             style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.textMuted)),
                         const SizedBox(height: 8),
-                        _MiniCalendar(title: 'SRS',    color: _kSrsColor,   days: _reviewDays,    month: _month),
+                        _MiniCalendar(title: 'SRS',    color: _kSrsColor,   days: _reviewDays,    month: _month, lockedDays: _srsLockedDays),
                         const SizedBox(height: 10),
                         _MiniCalendar(title: 'Words',  color: _kWordsColor, days: _wordGoalDays,  month: _month),
                         const SizedBox(height: 16),
@@ -906,7 +1000,8 @@ class _MiniCalendar extends StatelessWidget {
   final Color color;
   final List<String> days;
   final DateTime month;
-  const _MiniCalendar({required this.title, required this.color, required this.days, required this.month});
+  final List<String> lockedDays;
+  const _MiniCalendar({required this.title, required this.color, required this.days, required this.month, this.lockedDays = const []});
 
   @override
   Widget build(BuildContext context) {
@@ -935,8 +1030,11 @@ class _MiniCalendar extends StatelessWidget {
               Expanded(child: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: context.appText))),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
-                child: Text('$monthCount days', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
+                decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(10)),
+                child: Text(
+                  '$monthCount ${monthCount == 1 ? 'day' : 'days'}',
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
               ),
             ],
           ),
@@ -960,23 +1058,31 @@ class _MiniCalendar extends StatelessWidget {
               if (i < offset) return const SizedBox();
               final day = i - offset + 1;
               final dateStr = '${month.year}-$mm-${day.toString().padLeft(2,'0')}';
-              final done = days.contains(dateStr);
-              final isToday = dateStr == todayStr;
+              final done     = days.contains(dateStr);
+              final locked   = !done && lockedDays.contains(dateStr);
+              final isToday  = dateStr == todayStr;
               final isFuture = DateTime.parse(dateStr).isAfter(DateTime.parse(todayStr));
               return Center(
                 child: Container(
                   width: 30, height: 30,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: done ? color : Colors.transparent,
-                    border: isToday ? Border.all(color: color, width: 2) : null,
+                    color: done ? color : locked ? const Color(0x66525252) : Colors.transparent,
+                    border: isToday ? Border.all(color: color, width: 2.5) : null,
+                    boxShadow: done
+                        ? [BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 6)]
+                        : isToday
+                            ? [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 8)]
+                            : null,
                   ),
                   child: Center(
-                    child: Text('$day',
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: done || isToday ? FontWeight.bold : FontWeight.normal,
-                            color: done ? Colors.white : isFuture ? context.border : context.appText)),
+                    child: locked
+                        ? const Text('🔒', style: TextStyle(fontSize: 7))
+                        : Text('$day',
+                            style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: done || isToday ? FontWeight.bold : FontWeight.normal,
+                                color: done ? Colors.white : isFuture ? context.border : context.appText)),
                   ),
                 ),
               );
@@ -984,6 +1090,60 @@ class _MiniCalendar extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ── Breakdown row ────────────────────────────────────────────────────────────
+class _BreakdownRow extends StatelessWidget {
+  final String label;
+  final Color color;
+  final int current, longest, total;
+  const _BreakdownRow({required this.label, required this.color, required this.current, required this.longest, required this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: context.surface2,
+        borderRadius: BorderRadius.circular(12),
+        border: Border(left: BorderSide(color: color, width: 3)),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 40,
+            child: Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color)),
+          ),
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _StatChip(value: current, label: 'Current'),
+                _StatChip(value: longest, label: 'Longest'),
+                _StatChip(value: total,   label: 'Days'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatChip extends StatelessWidget {
+  final int value;
+  final String label;
+  const _StatChip({required this.value, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text('$value', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: context.appText)),
+        Text(label,    style: TextStyle(fontSize: 9,  fontWeight: FontWeight.w600, color: context.textMuted)),
+      ],
     );
   }
 }

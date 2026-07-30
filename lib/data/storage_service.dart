@@ -542,6 +542,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
   static const _unitDoneDaysKey  = 'unit_done_days';
   static const _reviewDaysKey    = 'review_days';
   static const _wordGoalDaysKey  = 'word_goal_days';
+  static const _srsLockedDaysKey = 'srs_locked_days';
   static const _reviewLogKey     = 'srs_review_log';
   static const _masteredSRSKey   = 'mastered_srs_words';
 
@@ -1395,6 +1396,23 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     if (!days.contains(today)) {
       days.add(today);
       await prefs.setString(_reviewDaysKey, jsonEncode(days));
+    }
+  }
+
+  static Future<List<String>> getSRSLockedDays() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_srsLockedDaysKey);
+    return raw != null ? List<String>.from(jsonDecode(raw)) : [];
+  }
+
+  static Future<void> recordSRSLockedDay() async {
+    final prefs = await SharedPreferences.getInstance();
+    final today = _todayString();
+    final raw = prefs.getString(_srsLockedDaysKey);
+    final days = raw != null ? List<String>.from(jsonDecode(raw)) : <String>[];
+    if (!days.contains(today)) {
+      days.add(today);
+      await prefs.setString(_srsLockedDaysKey, jsonEncode(days));
     }
   }
 

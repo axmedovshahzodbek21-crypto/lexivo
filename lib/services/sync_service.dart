@@ -51,23 +51,51 @@ class SyncService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final ts = _now();
-      await _sb.from('user_data').upsert({
-        'id': uid,
-        'total_xp':            prefs.getInt('total_xp') ?? 0,
-        'streak':              prefs.getInt('streak') ?? 0,
-        'streak_freezes':      prefs.getInt('streak_freezes') ?? 0,
-        'last_study_date':     prefs.getString('last_study_date'),
-        'last_freeze_week':    prefs.getString('last_freeze_week'),
-        if (prefs.getString('last_xp_date') == _todayStr()) ...{
-          'today_xp':      prefs.getInt('today_xp') ?? 0,
-          'today_xp_date': prefs.getString('last_xp_date'),
-        },
-        if (prefs.getString('daily_words_date') == _todayStr()) ...{
-          'daily_words_learned': prefs.getInt('daily_words_learned') ?? 0,
-          'daily_words_date':    prefs.getString('daily_words_date'),
-        },
-        'stats_updated_at':    ts,
-      });
+      final todayStr = _todayStr();
+      List<String> daysList(String key) {
+        final raw = prefs.getString(key);
+        if (raw == null) return [];
+        try { return (jsonDecode(raw) as List).cast<String>(); } catch (_) { return []; }
+      }
+      final studyDays = daysList('study_days');
+      await Future.wait([
+        _sb.from('user_data').upsert({
+          'id': uid,
+          'total_xp':            prefs.getInt('total_xp') ?? 0,
+          'streak':              prefs.getInt('streak') ?? 0,
+          'streak_freezes':      prefs.getInt('streak_freezes') ?? 0,
+          'last_study_date':     prefs.getString('last_study_date'),
+          'last_freeze_week':    prefs.getString('last_freeze_week'),
+          if (prefs.getString('last_xp_date') == todayStr) ...{
+            'today_xp':      prefs.getInt('today_xp') ?? 0,
+            'today_xp_date': prefs.getString('last_xp_date'),
+          },
+          if (prefs.getString('daily_words_date') == todayStr) ...{
+            'daily_words_learned': prefs.getInt('daily_words_learned') ?? 0,
+            'daily_words_date':    prefs.getString('daily_words_date'),
+          },
+          'stats_updated_at':    ts,
+        }),
+        _sb.from('user_stats').upsert({
+          'id':               uid,
+          'xp':               prefs.getInt('total_xp') ?? 0,
+          'streak':           prefs.getInt('streak') ?? 0,
+          'freezes':          prefs.getInt('streak_freezes') ?? 0,
+          'last_study_date':  prefs.getString('last_study_date'),
+          'last_freeze_week': prefs.getString('last_freeze_week'),
+          'total_days':       studyDays.length,
+          'study_days':       studyDays,
+          if (prefs.getString('last_xp_date') == todayStr) ...{
+            'today_xp':      prefs.getInt('today_xp') ?? 0,
+            'today_xp_date': prefs.getString('last_xp_date'),
+          },
+          if (prefs.getString('daily_words_date') == todayStr) ...{
+            'today_count':      prefs.getInt('daily_words_learned') ?? 0,
+            'today_count_date': prefs.getString('daily_words_date'),
+          },
+          'xp_updated_at':    ts,
+        }),
+      ]);
       await prefs.setString('sync_stats_ts', ts);
     } catch (_) {}
   }
@@ -78,20 +106,32 @@ class SyncService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final ts = _now();
-      await _sb.from('user_data').upsert({
-        'id': uid,
-        'daily_word_goal':       prefs.getInt('daily_word_goal') ?? 15,
-        'quiz_direction':        prefs.getString('quiz_direction') ?? 'word-to-uz',
-        'reduce_motion':         prefs.getBool('reduce_motion') ?? false,
-        'show_on_leaderboard':   prefs.getBool('show_on_leaderboard') ?? true,
-        'notifications_enabled': prefs.getBool('notifications_enabled') ?? true,
-        'notif_time':            prefs.getString('notif_time') ?? '20:00',
-        'user_name':             prefs.getString('user_name') ?? '',
-        'language_level':        prefs.getString('language_level'),
-        if (prefs.getString('profile_image_url') != null)
-          'avatar_url':          prefs.getString('profile_image_url'),
-        'settings_updated_at':   ts,
-      });
+      final showOnLeaderboard = prefs.getBool('show_on_leaderboard') ?? true;
+      final userName = prefs.getString('user_name') ?? '';
+      final languageLevel = prefs.getString('language_level');
+      final avatarUrl = prefs.getString('profile_image_url');
+      await Future.wait([
+        _sb.from('user_data').upsert({
+          'id': uid,
+          'daily_word_goal':       prefs.getInt('daily_word_goal') ?? 15,
+          'quiz_direction':        prefs.getString('quiz_direction') ?? 'word-to-uz',
+          'reduce_motion':         prefs.getBool('reduce_motion') ?? false,
+          'show_on_leaderboard':   showOnLeaderboard,
+          'notifications_enabled': prefs.getBool('notifications_enabled') ?? true,
+          'notif_time':            prefs.getString('notif_time') ?? '20:00',
+          'user_name':             userName,
+          'language_level':        languageLevel,
+          if (avatarUrl != null) 'avatar_url': avatarUrl,
+          'settings_updated_at':   ts,
+        }),
+        _sb.from('profiles').upsert({
+          'id':                  uid,
+          'name':                userName,
+          'show_on_leaderboard': showOnLeaderboard,
+          'language_level':      languageLevel,
+          if (avatarUrl != null) 'avatar_url': avatarUrl,
+        }),
+      ]);
       await prefs.setString('sync_settings_ts', ts);
     } catch (_) {}
   }
@@ -140,23 +180,32 @@ class SyncService {
           .map((k) => {'id': k.substring('ach_date_'.length), 'date': prefs.getString(k)!})
           .toList();
 
-      await _sb.from('user_data').upsert({
-        'id': uid,
-        'learned_words':    arr('learned_words'),
-        'srs_words':        combinedSrs,
-        'starred_words':    starredNames,
-        'hard_words':       days('marked_hard_words').map((w) => {'word': w, 'addedAt': '1970-01-01T00:00:00.000Z'}).toList(),
-        'study_days':       days('study_days'),
-        'review_days':      days('review_days'),
-        'word_goal_days':   days('word_goal_days'),
-        'unit_done_days':   days('unit_done_days'),
-        'xp_history':       arr('xp_history'),
-        'unit_progress':    obj('unit_progress'),
-        'review_log':       obj('srs_review_log'),
-        'imported_words':   arr('imported_words'),
-        'achievements':     achievementEntries,
-        'lists_updated_at': ts,
-      });
+      final reviewDays = days('review_days');
+      final wordGoalDays = days('word_goal_days');
+      await Future.wait([
+        _sb.from('user_data').upsert({
+          'id': uid,
+          'learned_words':    arr('learned_words'),
+          'srs_words':        combinedSrs,
+          'starred_words':    starredNames,
+          'hard_words':       days('marked_hard_words').map((w) => {'word': w, 'addedAt': '1970-01-01T00:00:00.000Z'}).toList(),
+          'study_days':       days('study_days'),
+          'review_days':      reviewDays,
+          'word_goal_days':   wordGoalDays,
+          'unit_done_days':   days('unit_done_days'),
+          'xp_history':       arr('xp_history'),
+          'unit_progress':    obj('unit_progress'),
+          'review_log':       obj('srs_review_log'),
+          'imported_words':   arr('imported_words'),
+          'achievements':     achievementEntries,
+          'lists_updated_at': ts,
+        }),
+        _sb.from('user_stats').upsert({
+          'id':             uid,
+          'review_days':    reviewDays,
+          'word_goal_days': wordGoalDays,
+        }),
+      ]);
       await prefs.setString('sync_lists_ts', ts);
     } catch (_) {}
   }

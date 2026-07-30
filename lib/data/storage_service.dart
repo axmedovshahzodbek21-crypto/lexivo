@@ -755,11 +755,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
   // ── Daily Word Limit ───────────────────────
 
   static Future<int> getTodayLearnedCount() async {
-    final prefs = await SharedPreferences.getInstance();
-    final today = _todayString();
-    final lastDate = prefs.getString(_dailyLimitDateKey);
-    if (lastDate != today) return 0;
-    return prefs.getInt(_dailyLimitKey) ?? 0;
+    return (await getTodayLearnedWords()).length;
   }
 
   static Future<List<LearnedWord>> getTodayLearnedWords() async {
@@ -1614,15 +1610,18 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
   }
 
   static bool _isYesterday(String dateStr) {
-    final yesterday = DateTime.parse(_todayString()).subtract(const Duration(days: 1));
+    final today = DateTime.tryParse(_todayString());
+    if (today == null) return false;
+    final yesterday = today.subtract(const Duration(days: 1));
     final yesterdayStr =
         '${yesterday.year}-${yesterday.month.toString().padLeft(2, '0')}-${yesterday.day.toString().padLeft(2, '0')}';
     return dateStr == yesterdayStr;
   }
 
   static int _daysBetween(String from, String to) {
-    final fromDate = DateTime.parse(from);
-    final toDate = DateTime.parse(to);
+    final fromDate = DateTime.tryParse(from);
+    final toDate = DateTime.tryParse(to);
+    if (fromDate == null || toDate == null) return 0;
     return toDate.difference(fromDate).inDays;
   }
   // ── Leveled Words Session ──────────────────

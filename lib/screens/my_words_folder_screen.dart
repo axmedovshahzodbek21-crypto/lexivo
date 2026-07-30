@@ -107,12 +107,23 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
   }
 
   Widget _buildList() {
-    return ListView.separated(
+    const cardColors = [
+      Color(0xFF5B8AF0), Color(0xFFFF6B6B), Color(0xFF06D6A0), Color(0xFFFFD166),
+      Color(0xFFA78BFA), Color(0xFFFF9F43), Color(0xFFF72585), Color(0xFF4ECDC4),
+      Color(0xFF3D8BFF), Color(0xFFFF5E57), Color(0xFF00C9A7), Color(0xFFFFC75F),
+    ];
+    return GridView.builder(
       padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 0.95,
+      ),
       itemCount: _collections.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (context, i) {
         final col = _collections[i];
+        final color = cardColors[i % cardColors.length];
         return GestureDetector(
           onTap: () async {
             await Navigator.push(context, MaterialPageRoute(
@@ -124,38 +135,23 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
             _load();
           },
           child: Container(
-            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: context.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: context.border),
-              boxShadow: context.cardShadow,
+              color: color,
+              borderRadius: BorderRadius.circular(18),
             ),
-            child: Row(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 48, height: 48,
-                  decoration: BoxDecoration(
-                    color: context.primaryBg,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Center(child: Text('📖', style: TextStyle(fontSize: 24))),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(col.name,
-                        style: TextStyle(fontWeight: FontWeight.bold, color: context.appText, fontSize: 15),
-                        overflow: TextOverflow.ellipsis),
-                      const SizedBox(height: 3),
-                      Text('${col.count} ${col.count == 1 ? 'item' : 'items'}',
-                        style: TextStyle(color: context.textMuted, fontSize: 12)),
-                    ],
-                  ),
-                ),
-                Icon(Icons.chevron_right, color: context.textMuted),
+                const Text('📖', style: TextStyle(fontSize: 26)),
+                const Spacer(),
+                Text(col.name,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 2),
+                Text('${col.count} ${col.count == 1 ? 'item' : 'items'}',
+                  style: const TextStyle(color: Colors.white70, fontSize: 11)),
               ],
             ),
           ),

@@ -3,6 +3,12 @@ import '../app_theme.dart';
 import '../data/storage_service.dart';
 import 'my_words_folder_screen.dart';
 
+const _cardColors = [
+  Color(0xFF5B8AF0), Color(0xFFFF6B6B), Color(0xFF06D6A0), Color(0xFFFFD166),
+  Color(0xFFA78BFA), Color(0xFFFF9F43), Color(0xFFF72585), Color(0xFF4ECDC4),
+  Color(0xFF3D8BFF), Color(0xFFFF5E57), Color(0xFF00C9A7), Color(0xFFFFC75F),
+];
+
 class ImportedWordsScreen extends StatefulWidget {
   const ImportedWordsScreen({super.key});
 
@@ -90,12 +96,11 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                if (_creating)
-                  _buildCreateRow(),
+                if (_creating) _buildCreateRow(),
                 Expanded(
                   child: _folders.isEmpty && !_creating
                       ? _buildEmpty()
-                      : _buildList(),
+                      : _buildGrid(),
                 ),
               ],
             ),
@@ -184,13 +189,19 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
     );
   }
 
-  Widget _buildList() {
-    return ListView.separated(
+  Widget _buildGrid() {
+    return GridView.builder(
       padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 0.95,
+      ),
       itemCount: _folders.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (context, i) {
         final folder = _folders[i];
+        final color = _cardColors[i % _cardColors.length];
         return GestureDetector(
           onTap: () async {
             await Navigator.push(context, MaterialPageRoute(
@@ -198,47 +209,25 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
             ));
             _load();
           },
+          onLongPress: () => _deleteFolder(folder.name),
           child: Container(
-            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: context.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: context.border),
-              boxShadow: context.cardShadow,
+              color: color,
+              borderRadius: BorderRadius.circular(18),
             ),
-            child: Row(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 48, height: 48,
-                  decoration: BoxDecoration(
-                    color: context.primaryBg,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Center(child: Text('📁', style: TextStyle(fontSize: 24))),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(folder.name,
-                        style: TextStyle(fontWeight: FontWeight.bold, color: context.appText, fontSize: 15),
-                        overflow: TextOverflow.ellipsis),
-                      const SizedBox(height: 3),
-                      Text(
-                        '${folder.collectionCount} ${folder.collectionCount == 1 ? 'unit' : 'units'} · ${folder.wordCount} ${folder.wordCount == 1 ? 'item' : 'items'}',
-                        style: TextStyle(color: context.textMuted, fontSize: 12)),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.delete_outline, color: context.textMuted, size: 20),
-                  onPressed: () => _deleteFolder(folder.name),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-                const SizedBox(width: 4),
-                Icon(Icons.chevron_right, color: context.textMuted),
+                const Text('📁', style: TextStyle(fontSize: 26)),
+                const Spacer(),
+                Text(folder.name,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 2),
+                Text('${folder.wordCount} words',
+                  style: const TextStyle(color: Colors.white70, fontSize: 11)),
               ],
             ),
           ),

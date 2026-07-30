@@ -58,10 +58,14 @@ class SyncService {
         'streak_freezes':      prefs.getInt('streak_freezes') ?? 0,
         'last_study_date':     prefs.getString('last_study_date'),
         'last_freeze_week':    prefs.getString('last_freeze_week'),
-        'today_xp':            prefs.getInt('today_xp') ?? 0,
-        'today_xp_date':       prefs.getString('last_xp_date'),
-        'daily_words_learned': prefs.getInt('daily_words_learned') ?? 0,
-        'daily_words_date':    prefs.getString('daily_words_date'),
+        if (prefs.getString('last_xp_date') == _todayStr()) ...{
+          'today_xp':      prefs.getInt('today_xp') ?? 0,
+          'today_xp_date': prefs.getString('last_xp_date'),
+        },
+        if (prefs.getString('daily_words_date') == _todayStr()) ...{
+          'daily_words_learned': prefs.getInt('daily_words_learned') ?? 0,
+          'daily_words_date':    prefs.getString('daily_words_date'),
+        },
         'stats_updated_at':    ts,
       });
       await prefs.setString('sync_stats_ts', ts);

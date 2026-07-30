@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
 import '../data/storage_service.dart';
+import '../services/sync_service.dart';
 import 'my_words_folder_screen.dart';
 
 const _cardColors = [
@@ -35,6 +36,7 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
   }
 
   Future<void> _load() async {
+    await SyncService.pullAll();
     final folders = await StorageService.getImportedFolders();
     if (mounted) setState(() { _folders = folders; _loading = false; });
   }

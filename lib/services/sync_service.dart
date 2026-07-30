@@ -121,7 +121,7 @@ class SyncService {
           'notif_time':            prefs.getString('notif_time') ?? '20:00',
           'user_name':             userName,
           'language_level':        languageLevel,
-          if (avatarUrl != null) 'avatar_url': avatarUrl,
+          'avatar_url':            ?avatarUrl,
           'settings_updated_at':   ts,
         }),
         _sb.from('profiles').upsert({
@@ -129,7 +129,7 @@ class SyncService {
           'name':                userName,
           'show_on_leaderboard': showOnLeaderboard,
           'language_level':      languageLevel,
-          if (avatarUrl != null) 'avatar_url': avatarUrl,
+          'avatar_url':          ?avatarUrl,
         }),
       ]);
       await prefs.setString('sync_settings_ts', ts);

@@ -23,7 +23,7 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
   final notifEnabled = prefs.getBool('notifications_enabled') ?? true;
   final notifTime = await NotificationService.getSavedTime();
-  final streak = await StorageService.getStreak();
+  final streak = await StorageService.getStreak().catchError((_) => 0);
   final userName = prefs.getString('user_name') ?? '';
   await NotificationService.scheduleReminder(
     customTime: notifTime,
@@ -129,7 +129,22 @@ class _SplashRouterState extends State<SplashRouter> {
         return;
       }
     } else {
+      // Signed-in users go straight to the app regardless of local onboarding flag —
+      // they already have an account so onboarding is irrelevant on a new device.
       SyncService.pullAll();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => MainShell(
+            wordSource: prefs.getString('word_source') ?? 'prebuilt',
+            exampleStyle: prefs.getString('example_style') ?? 'reallife',
+            userProfile: prefs.getString('user_profile') ?? 'worker',
+            languageLevel: prefs.getString('language_level') ?? 'intermediate',
+            dailyWordGoal: prefs.getInt('daily_word_goal') ?? 15,
+          ),
+        ),
+      );
+      return;
     }
 
     final completed = prefs.getBool('onboarding_completed') ?? false;

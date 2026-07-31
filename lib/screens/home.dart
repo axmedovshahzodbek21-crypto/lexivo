@@ -18,6 +18,7 @@ import 'pomodoro_setup_screen.dart';
 import 'custom_lists_screen.dart';
 import '../data/word_data.dart';
 import '../data/storage_service.dart';
+import '../services/sync_service.dart';
 import 'xp_level_sheet.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
@@ -43,7 +44,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _controller;
   late AnimationController _heartbeatController;
   late Animation<double> _heartbeat;
@@ -86,17 +87,27 @@ class _HomeScreenState extends State<HomeScreen>
       CurvedAnimation(parent: _heartbeatController, curve: Curves.easeInOut),
     );
     _dailyGoal = widget.dailyWordGoal;
+    WidgetsBinding.instance.addObserver(this);
     _pickWordOfDay();
     _loadStats();
+    SyncService.pullAll().then((_) { if (mounted) _loadStats(); });
     appLangNotifier.addListener(_onLangChange);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     appLangNotifier.removeListener(_onLangChange);
     _heartbeatController.dispose();
     _controller.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      SyncService.pullAll().then((_) { if (mounted) _loadStats(); });
+    }
   }
 
   void _onLangChange() { if (mounted) setState(() {}); }

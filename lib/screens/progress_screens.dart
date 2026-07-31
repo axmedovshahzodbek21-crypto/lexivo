@@ -559,7 +559,6 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
   Future<void> _load() async {
     await SyncService.pullAll();
     final results = await Future.wait([
-      StorageService.getStreak(),
       StorageService.getReviewDays(),
       StorageService.getWordGoalDays(),
       StorageService.getTodayLearnedCount(),
@@ -567,23 +566,45 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
       StorageService.getDueWords(),
     ]);
     final prefs = await SharedPreferences.getInstance();
-    final reviewDays   = results[1] as List<String>;
-    final wordGoalDays = results[2] as List<String>;
-    final dueWords     = results[5] as List<dynamic>;
+    final reviewDays   = results[0] as List<String>;
+    final wordGoalDays = results[1] as List<String>;
+    final dueWords     = results[4] as List<dynamic>;
     // Record SRS locked day if nothing is due today
     if (dueWords.isEmpty) await StorageService.recordSRSLockedDay();
     final completeDays = reviewDays.where((d) => wordGoalDays.contains(d)).toList();
     setState(() {
-      _streak          = results[0] as int;
+      _streak          = _calcCurrentStreak(completeDays);
       _reviewDays      = reviewDays;
       _wordGoalDays    = wordGoalDays;
-      _todayWordsCount = results[3] as int;
-      _srsLockedDays   = results[4] as List<String>;
+      _todayWordsCount = results[2] as int;
+      _srsLockedDays   = results[3] as List<String>;
       _dailyGoal       = prefs.getInt('daily_word_goal') ?? 10;
       _longestStreak   = _calcLongest(completeDays);
       _activeDays      = completeDays.length;
       _loading         = false;
     });
+  }
+
+  String _dateStr(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  // Current streak = consecutive complete days ending today or yesterday
+  int _calcCurrentStreak(List<String> days) {
+    if (days.isEmpty) return 0;
+    final set = days.toSet();
+    // Use same -2h offset as storage_service so "today" matches
+    final now = DateTime.now().subtract(const Duration(hours: 2));
+    final today = _dateStr(now);
+    final yesterday = _dateStr(now.subtract(const Duration(days: 1)));
+    // Streak must be anchored to today or yesterday
+    if (!set.contains(today) && !set.contains(yesterday)) return 0;
+    var cursor = set.contains(today) ? now : now.subtract(const Duration(days: 1));
+    int streak = 0;
+    while (set.contains(_dateStr(cursor))) {
+      streak++;
+      cursor = cursor.subtract(const Duration(days: 1));
+    }
+    return streak;
   }
 
   int _calcLongest(List<String> days) {
@@ -607,27 +628,6 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
     _month = DateTime(_month.year, _month.month - 1);
     _selectedDay = null;
   });
-
-  int _calcCurrentStreak(List<String> days) {
-    if (days.isEmpty) return 0;
-    final sorted = [...days]..sort();
-    sorted.sort((a, b) => b.compareTo(a)); // descending
-    final today     = DateTime.now();
-    final todayStr  = '${today.year}-${today.month.toString().padLeft(2,'0')}-${today.day.toString().padLeft(2,'0')}';
-    final yesterday = today.subtract(const Duration(days: 1));
-    final yStr      = '${yesterday.year}-${yesterday.month.toString().padLeft(2,'0')}-${yesterday.day.toString().padLeft(2,'0')}';
-    if (sorted.first != todayStr && sorted.first != yStr) { return 0; }
-    int count = 0;
-    DateTime expected = sorted.first == todayStr ? today : yesterday;
-    for (final d in sorted) {
-      final expStr = '${expected.year}-${expected.month.toString().padLeft(2,'0')}-${expected.day.toString().padLeft(2,'0')}';
-      if (d == expStr) {
-        count++;
-        expected = expected.subtract(const Duration(days: 1));
-      } else { break; }
-    }
-    return count;
-  }
 
   void _nextMonth() {
     final now = DateTime.now();

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:lexivo/services/content_service.dart';
 import '../data/storage_service.dart';
+import '../services/sync_service.dart';
 import '../app_theme.dart';
 import 'achievements.dart';
 import 'xp_level_sheet.dart';
@@ -49,6 +50,7 @@ class _StatsScreenState extends State<StatsScreen> {
   void _onLangChange() { if (mounted) setState(() {}); }
 
   Future<void> _load() async {
+    await SyncService.pullAll();
     final words = await StorageService.getLearnedWords();
     final days = await StorageService.getTotalStudyDays();
     final streak = await StorageService.getStreak();

@@ -4,6 +4,33 @@ import '../data/storage_service.dart';
 import '../services/sync_service.dart';
 import 'my_words_folder_screen.dart';
 
+class _HeartbeatCard extends StatefulWidget {
+  final Widget child;
+  const _HeartbeatCard({required this.child});
+  @override
+  State<_HeartbeatCard> createState() => _HeartbeatCardState();
+}
+
+class _HeartbeatCardState extends State<_HeartbeatCard> with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))
+      ..repeat(reverse: true);
+    _scale = Tween<double>(begin: 1.0, end: 1.015)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) => ScaleTransition(scale: _scale, child: widget.child);
+}
+
 const _cardColors = [
   Color(0xFF5B8AF0), Color(0xFFFF6B6B), Color(0xFF06D6A0), Color(0xFFFFD166),
   Color(0xFFA78BFA), Color(0xFFFF9F43), Color(0xFFF72585), Color(0xFF4ECDC4),
@@ -212,25 +239,31 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
             _load();
           },
           onLongPress: () => _deleteFolder(folder.name),
-          child: Container(
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('📁', style: TextStyle(fontSize: 26)),
-                const Spacer(),
-                Text(folder.name,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 2),
-                Text('${folder.wordCount} words',
-                  style: const TextStyle(color: Colors.white70, fontSize: 11)),
-              ],
+          child: _HeartbeatCard(
+            child: Container(
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.25), offset: const Offset(0, 6)),
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.18), offset: const Offset(0, 10), blurRadius: 24),
+                ],
+              ),
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('📁', style: TextStyle(fontSize: 26)),
+                  const Spacer(),
+                  Text(folder.name,
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 2),
+                  Text('${folder.wordCount} words',
+                    style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                ],
+              ),
             ),
           ),
         );

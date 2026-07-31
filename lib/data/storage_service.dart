@@ -1896,6 +1896,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
         .toList();
     existing.addAll(fresh);
     await prefs.setString(_importedKey, jsonEncode(existing.map((e) => e.toJson()).toList()));
+    SyncService.pushLists();
   }
 
   static Future<void> deleteImportedWord(
@@ -1909,6 +1910,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
       w.word == word && w.collectionName == collectionName && w.folderName == folderName
     );
     await prefs.setString(_importedKey, jsonEncode(existing.map((e) => e.toJson()).toList()));
+    SyncService.pushLists();
   }
 
   static Future<void> deleteImportedCollection(String collectionName, {String? folderName}) async {
@@ -1918,6 +1920,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
       w.collectionName == collectionName && w.folderName == folderName
     );
     await prefs.setString(_importedKey, jsonEncode(existing.map((e) => e.toJson()).toList()));
+    SyncService.pushLists();
   }
 
   static Future<void> deleteImportedFolder(String folderName) async {
@@ -1925,6 +1928,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     final existing = await getImportedWords();
     existing.removeWhere((w) => w.folderName == folderName);
     await prefs.setString(_importedKey, jsonEncode(existing.map((e) => e.toJson()).toList()));
+    SyncService.pushLists();
   }
 
   static Future<void> markLevelCompletedViaTest(String levelId) async {

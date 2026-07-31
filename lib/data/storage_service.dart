@@ -322,6 +322,7 @@ class ImportedWord {
   final String word;
   final String translation;
   final String definition;
+  final String? definitionUz;
   final String example1;
   final String example1Translation;
   final String example2;
@@ -341,6 +342,7 @@ class ImportedWord {
     required this.word,
     required this.translation,
     required this.definition,
+    this.definitionUz,
     required this.example1,
     required this.example1Translation,
     required this.example2,
@@ -361,6 +363,7 @@ class ImportedWord {
     'word': word,
     'translation': translation,
     'definition': definition,
+    if (definitionUz != null) 'definitionUz': definitionUz,
     'example1': example1,
     'example1Translation': example1Translation,
     'example2': example2,
@@ -381,6 +384,7 @@ class ImportedWord {
     word: json['word'] ?? '',
     translation: json['translation'] ?? '',
     definition: json['definition'] ?? '',
+    definitionUz: json['definitionUz'] as String?,
     example1: json['example1'] ?? '',
     example1Translation: json['example1Translation'] ?? '',
     example2: json['example2'] ?? '',
@@ -403,6 +407,7 @@ class ImportedWord {
     pronunciation: '',
     translation: translation,
     definition: definition,
+    definitionUz: definitionUz ?? '',
     example1: example1,
     example1Translation: example1Translation,
     example2: example2,

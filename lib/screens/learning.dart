@@ -540,11 +540,13 @@ class _LearningScreenState extends State<LearningScreen> {
                                           style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
                                         ),
                                         const SizedBox(height: 4),
-                                        Text(
-                                          '${_currentWord.partOfSpeech} • ${_currentWord.pronunciation}',
-                                          style: const TextStyle(fontSize: 13, color: Colors.white70),
-                                        ),
-                                        const SizedBox(height: 12),
+                                        if (_currentWord.partOfSpeech.isNotEmpty || _currentWord.pronunciation.isNotEmpty) ...[
+                                          Text(
+                                            '${_currentWord.partOfSpeech} • ${_currentWord.pronunciation}',
+                                            style: const TextStyle(fontSize: 13, color: Colors.white70),
+                                          ),
+                                          const SizedBox(height: 12),
+                                        ],
                                         Row(
                                           children: [
                                             _buildPronounceButton(tr('american'), () => _speakAmerican(_currentWord.word)),

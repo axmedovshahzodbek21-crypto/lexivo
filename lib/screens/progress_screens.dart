@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/storage_service.dart';
+import '../services/sync_service.dart';
 import '../app_theme.dart';
 import 'srs_review_screen.dart';
 import '../l10n.dart';
@@ -556,6 +557,7 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
   void _rebuild() { if (mounted) setState(() {}); }
 
   Future<void> _load() async {
+    await SyncService.pullAll();
     final results = await Future.wait([
       StorageService.getStreak(),
       StorageService.getReviewDays(),

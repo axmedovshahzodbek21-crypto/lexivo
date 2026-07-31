@@ -260,6 +260,15 @@ class SyncService {
       await prefs.setInt('streak', max(
         prefs.getInt('streak') ?? 0, (row['streak'] as num? ?? 0).toInt(),
       ));
+      // Write last_study_date immediately with streak so getStreak() never sees
+      // streak > 0 with a null/stale date and resets it.
+      final cloudLastStudyEarly = row['last_study_date'] as String?;
+      if (cloudLastStudyEarly != null) {
+        final localLastStudyEarly = prefs.getString('last_study_date');
+        if (localLastStudyEarly == null || cloudLastStudyEarly.compareTo(localLastStudyEarly) >= 0) {
+          await prefs.setString('last_study_date', cloudLastStudyEarly);
+        }
+      }
       await prefs.setInt('streak_freezes', max(
         prefs.getInt('streak_freezes') ?? 0, (row['streak_freezes'] as num? ?? 0).toInt(),
       ));

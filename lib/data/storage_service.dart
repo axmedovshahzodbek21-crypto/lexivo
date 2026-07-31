@@ -408,6 +408,15 @@ class ImportedWord {
     example2: example2,
     example2Translation: example2Translation,
     example3: example3 ?? '',
+    example3Translation: example3Translation ?? '',
+    extraExamples: [
+      if (example4 != null && example4!.isNotEmpty) example4!,
+      if (example5 != null && example5!.isNotEmpty) example5!,
+    ],
+    extraExampleTranslations: [
+      if (example4 != null && example4!.isNotEmpty) example4Translation ?? '',
+      if (example5 != null && example5!.isNotEmpty) example5Translation ?? '',
+    ],
   );
 }
 

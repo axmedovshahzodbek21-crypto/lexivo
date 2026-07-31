@@ -93,20 +93,37 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
   }
 
   Color get _color {
-    if (widget.collection == thirtyDaysCollection) {
-      return const Color(0xFF6C63FF);
-    }
-    if (widget.collection == vocabularyChallengeCollection) {
-      return const Color(0xFFFF6584);
-    }
+    if (widget.collection == thirtyDaysCollection) return const Color(0xFF6C63FF);
+    if (widget.collection == vocabularyChallengeCollection) return const Color(0xFFFF6584);
+    return const Color(0xFF1a9a50);
+  }
+
+  Color get _colorLight {
+    if (widget.collection == thirtyDaysCollection) return const Color(0xFF9b8fff);
+    if (widget.collection == vocabularyChallengeCollection) return const Color(0xFFff9eb5);
     return const Color(0xFF2ECC71);
   }
+
+  LinearGradient get _gradient => LinearGradient(
+    colors: [_color, _colorLight],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 
   String get _icon {
     if (widget.collection == thirtyDaysCollection) return '🏆';
     if (widget.collection == vocabularyChallengeCollection) return '💡';
     return '🎯';
   }
+
+  Widget _statPill(String label) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.22),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -141,91 +158,73 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(_isDesktop ? 28 : 20),
-                  margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                    color: _color,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    children: [
-                      Text(
-                        _icon,
-                        style: TextStyle(fontSize: _isDesktop ? 48 : 36),
-                      ),
-                      SizedBox(width: _isDesktop ? 20 : 0),
-                      if (_isDesktop) ...[
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                widget.collection.name,
-                                style: const TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                widget.collection.description,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.white70,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '${widget.collection.days.length} units • ${widget.collection.days.fold(0, (sum, d) => sum + d.words.length)} words',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.white60,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ] else ...[
-                        const SizedBox(height: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                widget.collection.name,
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                widget.collection.description,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.white70,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '${widget.collection.days.length} units • ${widget.collection.days.fold(0, (sum, d) => sum + d.words.length)} words',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.white60,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                Builder(builder: (context) {
+                  final totalWords = widget.collection.days.fold(0, (s, d) => s + d.words.length);
+                  final completedUnits = _progressMap.values.where((p) => p.isComplete).length;
+                  final progressPct = widget.collection.days.isEmpty ? 0.0 : completedUnits / widget.collection.days.length;
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      gradient: _gradient,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(color: _color.withValues(alpha: 0.45), offset: const Offset(0, 8), blurRadius: 24),
                       ],
-                    ],
-                  ),
-                ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(_icon, style: const TextStyle(fontSize: 32)),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(widget.collection.name,
+                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white,
+                                      shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 4)]),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(widget.collection.description,
+                                    style: const TextStyle(fontSize: 12, color: Colors.white70)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            _statPill('${widget.collection.days.length} units'),
+                            _statPill('$totalWords words'),
+                            _statPill('$completedUnits done'),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: progressPct,
+                            minHeight: 6,
+                            backgroundColor: Colors.white.withValues(alpha: 0.25),
+                            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
+                        if (progressPct > 0) ...[
+                          const SizedBox(height: 4),
+                          Text('${(progressPct * 100).round()}% complete',
+                            style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                        ],
+                      ],
+                    ),
+                  );
+                }),
 
                 GridView.builder(
                   shrinkWrap: true,
@@ -261,124 +260,111 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
     final isComplete = progress.isComplete;
     final stages = progress.stagesComplete;
 
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: isComplete ? context.successBg : context.surface,
         borderRadius: BorderRadius.circular(16),
-        border: isComplete
-            ? Border.all(color: Colors.green.shade300, width: 1.5)
-            : null,
-        boxShadow: context.cardShadow,
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Stack(
-            alignment: Alignment.topRight,
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: isComplete
-                      ? Colors.green.withValues(alpha: 0.15)
-                      : _color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(
-                  child: Text(
-                    '${day.dayNumber}',
-                    style: TextStyle(
-                      color: isComplete ? Colors.green : _color,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              ),
-              if (isComplete)
-                Positioned(
-                  top: -2,
-                  right: -2,
-                  child: Container(
-                    width: 16,
-                    height: 16,
-                    decoration: const BoxDecoration(
-                      color: Colors.green,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.check,
-                      color: Colors.white,
-                      size: 10,
-                    ),
-                  ),
-                ),
-            ],
+        boxShadow: [
+          BoxShadow(
+            color: isComplete
+                ? Colors.green.withValues(alpha: 0.18)
+                : Colors.black.withValues(alpha: 0.07),
+            offset: const Offset(0, 4),
+            blurRadius: 12,
           ),
-          const SizedBox(height: 4),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            child: Text(
-              day.topic,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: isComplete
-                    ? Colors.green.shade700
-                    : context.appText,
-              ),
-            ),
-          ),
-          const SizedBox(height: 3),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _stageDot(context, '📖', progress.learnDone),
-              const SizedBox(width: 3),
-              _stageDot(context, '🃏', progress.flashcardDone),
-              const SizedBox(width: 3),
-              _stageDot(context, '🧠', progress.quizDone),
-            ],
-          ),
-          const SizedBox(height: 2),
-          if (!isComplete && stages > 0)
-            Text(
-              '$stages/3',
-              style: TextStyle(
-                fontSize: 9,
-                color: Colors.orange.shade600,
-                fontWeight: FontWeight.bold,
-              ),
-            )
-          else if (isComplete) ...[
-            Text(
-              'Complete ✓',
-              style: TextStyle(
-                fontSize: 9,
-                color: Colors.green.shade600,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            if (storyInfo.anyUnlocked)
-              Text(
-                '📚 ${storyInfo.unlockedCount}',
-                style: const TextStyle(
-                  fontSize: 9,
-                  color: Color(0xFFF59E0B),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-          ]
-          else
-            Text(
-              '${day.words.length} words',
-              style: TextStyle(fontSize: 10, color: context.textMuted),
-            ),
         ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            color: context.surface,
+            border: Border.all(
+              color: isComplete ? Colors.green.shade300 : context.border,
+              width: 1.5,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Gradient top accent strip
+              Container(
+                height: 3,
+                decoration: BoxDecoration(
+                  gradient: isComplete
+                      ? const LinearGradient(colors: [Color(0xFF22c55e), Color(0xFF4ade80)])
+                      : _gradient,
+                ),
+              ),
+              // Content
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isComplete ? Colors.green : _color,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              '${day.dayNumber}',
+                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900),
+                            ),
+                          ),
+                          const Spacer(),
+                          if (isComplete)
+                            const Icon(Icons.check_circle_rounded, color: Colors.green, size: 14)
+                          else if (storyInfo.anyUnlocked)
+                            const Text('📚', style: TextStyle(fontSize: 10)),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      Expanded(
+                        child: Text(
+                          day.topic,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: isComplete ? Colors.green.shade700 : context.appText,
+                            height: 1.3,
+                          ),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(3),
+                        child: LinearProgressIndicator(
+                          value: stages / 3,
+                          minHeight: 4,
+                          backgroundColor: context.border,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            isComplete ? Colors.green : _color,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Row(
+                        children: [
+                          _stageDot(context, '📖', progress.learnDone),
+                          const SizedBox(width: 3),
+                          _stageDot(context, '🃏', progress.flashcardDone),
+                          const SizedBox(width: 3),
+                          _stageDot(context, '🧠', progress.quizDone),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -881,11 +867,14 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
     return ElevatedButton(
       onPressed: onTap,
       style: ElevatedButton.styleFrom(
-        backgroundColor: color.withValues(alpha: 0.1),
-        foregroundColor: color,
+        backgroundColor: color,
+        foregroundColor: Colors.white,
         elevation: 0,
         padding: const EdgeInsets.symmetric(vertical: 10),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shadowColor: color.withValues(alpha: 0.4),
+      ).copyWith(
+        elevation: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.pressed) ? 0 : 3),
       ),
       child: Text(
         label,

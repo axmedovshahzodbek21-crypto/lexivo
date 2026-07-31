@@ -320,6 +320,8 @@ class StoryUnlockInfo {
 
 class ImportedWord {
   final String word;
+  final String? partOfSpeech;
+  final String? pronunciation;
   final String translation;
   final String definition;
   final String? definitionUz;
@@ -340,6 +342,8 @@ class ImportedWord {
 
   ImportedWord({
     required this.word,
+    this.partOfSpeech,
+    this.pronunciation,
     required this.translation,
     required this.definition,
     this.definitionUz,
@@ -361,6 +365,8 @@ class ImportedWord {
 
   Map<String, dynamic> toJson() => {
     'word': word,
+    if (partOfSpeech != null) 'partOfSpeech': partOfSpeech,
+    if (pronunciation != null) 'pronunciation': pronunciation,
     'translation': translation,
     'definition': definition,
     if (definitionUz != null) 'definitionUz': definitionUz,
@@ -382,6 +388,8 @@ class ImportedWord {
 
   factory ImportedWord.fromJson(Map<String, dynamic> json) => ImportedWord(
     word: json['word'] ?? '',
+    partOfSpeech: json['partOfSpeech'] as String?,
+    pronunciation: json['pronunciation'] as String?,
     translation: json['translation'] ?? '',
     definition: json['definition'] ?? '',
     definitionUz: json['definitionUz'] as String?,
@@ -403,8 +411,8 @@ class ImportedWord {
 
   WordItem toWordItem() => WordItem(
     word: word,
-    partOfSpeech: '',
-    pronunciation: '',
+    partOfSpeech: partOfSpeech ?? '',
+    pronunciation: pronunciation ?? '',
     translation: translation,
     definition: definition,
     definitionUz: definitionUz ?? '',

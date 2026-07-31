@@ -25,6 +25,8 @@ I have a list of $wordLang words I want to learn. For each word, provide the tra
 Format EXACTLY like this for every word. Use plain text only — no markdown, no bold, no asterisks, no extra formatting:
 
 word: enormous
+partOfSpeech: adjective
+pronunciation: /ɪˈnɔːrməs/
 translation: ulkan
 definition: extremely large in size or extent
 definitionUz: Ulkan — juda katta yoki keng hajmga ega bo'lgan narsa yoki hodisa.
@@ -51,6 +53,8 @@ I have $wordLang-$transLang word pairs. For each pair, keep my translation exact
 Format EXACTLY like this for every word. Use plain text only — no markdown, no bold, no asterisks, no extra formatting:
 
 word: enormous
+partOfSpeech: adjective
+pronunciation: /ɪˈnɔːrməs/
 translation: ulkan
 definition: extremely large in size or extent
 definitionUz: Ulkan — juda katta yoki keng hajmga ega bo'lgan narsa yoki hodisa.
@@ -88,6 +92,8 @@ List<ImportedWord> _parseOutput(String text, String langCode) {
     if (!fields.containsKey('word') || !fields.containsKey('translation')) continue;
     result.add(ImportedWord(
       word: fields['word']!,
+      partOfSpeech: fields['partofspeech']?.isNotEmpty == true ? fields['partofspeech'] : null,
+      pronunciation: fields['pronunciation']?.isNotEmpty == true ? fields['pronunciation'] : null,
       translation: fields['translation']!,
       definition: fields['definition'] ?? '',
       definitionUz: fields['definitionuz']?.isNotEmpty == true ? fields['definitionuz'] : null,

@@ -124,9 +124,33 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
+  static String _homeDateStr(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  static int _homeCalcStreak(List<String> days) {
+    if (days.isEmpty) return 0;
+    final set = days.toSet();
+    final now = DateTime.now().subtract(const Duration(hours: 2));
+    final today = _homeDateStr(now);
+    final yesterday = _homeDateStr(now.subtract(const Duration(days: 1)));
+    if (!set.contains(today) && !set.contains(yesterday)) return 0;
+    int count = 0;
+    DateTime cur = set.contains(today)
+        ? now
+        : now.subtract(const Duration(days: 1));
+    while (set.contains(_homeDateStr(cur))) {
+      count++;
+      cur = cur.subtract(const Duration(days: 1));
+    }
+    return count;
+  }
+
   Future<void> _loadStats() async {
     final learned = await StorageService.getLearnedWords();
-    final streak = await StorageService.getStreak();
+    final reviewDays   = await StorageService.getReviewDays();
+    final wordGoalDays = await StorageService.getWordGoalDays();
+    final completeDays = reviewDays.where((d) => wordGoalDays.contains(d)).toList();
+    final streak = _homeCalcStreak(completeDays);
     final dueWords = await StorageService.getDueWords();
     final xp = await StorageService.getXP();
     final freezes = await StorageService.getFreezesAvailable();

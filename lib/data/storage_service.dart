@@ -2071,59 +2071,13 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
 
   static Future<void> clearAllProgress() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('srs_words', '[]');
-    await prefs.setString('learned_words', '[]');
-    await prefs.setStringList('starred_words', []);
-    await prefs.remove('unit_progress');
-    await prefs.remove('unit_done_days');
-    await prefs.remove('review_days');
-    await prefs.remove('word_goal_days');
-    await prefs.remove('today_word_goal');
-    await prefs.remove('today_word_goal_date');
-    await prefs.setInt('total_xp', 0);
-    await prefs.setInt('today_xp', 0);
-    await prefs.remove('xp_history');
-    await prefs.setInt('streak', 0);
-    await prefs.setInt('daily_words_learned', 0);
-    await prefs.setInt('streak_freezes', 0);
-    await prefs.remove('last_xp_date');
-    await prefs.remove('last_study_date');
-    await prefs.remove('daily_words_date');
-    await prefs.remove('last_freeze_week');
-    await prefs.remove('study_days');
-    await prefs.remove('srs_review_log');
-    await prefs.remove('mastered_srs_words');
-    await prefs.remove('marked_hard_words');
-    await prefs.remove('has_completed_quiz');
-    await prefs.remove('has_perfect_quiz');
-    await prefs.remove('has_completed_flashcard');
-    await prefs.remove('has_completed_srs');
-    await prefs.remove('flash_xp_units');
-    await prefs.remove('quiz_xp_units');
-    final toRemove = prefs.getKeys().where((k) =>
-        k.startsWith('learn_progress_') ||
-        k.startsWith('learn_marks_') ||
-        k.startsWith('flashcard_progress_') ||
-        k.startsWith('leveled_session_') ||
-        k.startsWith('ach_date_') ||
-        k.startsWith('level_test_complete_'));
-    for (final key in toRemove) { await prefs.remove(key); }
-    await prefs.remove('sync_stats_ts');
-    await prefs.remove('sync_settings_ts');
-    await prefs.remove('sync_lists_ts');
-    // Flashcard/quiz streaks
-    await prefs.remove('flash_days');
-    await prefs.remove('flash_last_day');
-    await prefs.remove('flash_streak');
-    await prefs.remove('quiz_days');
-    await prefs.remove('quiz_last_day');
-    await prefs.remove('quiz_streak');
-    // Other missing keys
-    await prefs.remove('daily_word_goal');
-    await prefs.remove('streak_bonus_date');
-    await prefs.remove('srs_locked_days');
-    // User-created content — most important: these are personal and must not leak
-    await prefs.remove('imported_words');
-    await prefs.remove('custom_lists');
+    // Clear ALL keys except device-level preferences that are not user-specific.
+    // This is deliberately nuclear — any future key added to the app is
+    // automatically cleared on sign-out without needing to update this list.
+    const keepKeys = {'ui_language', 'text_scale', 'theme_mode', 'reduce_motion'};
+    final toRemove = prefs.getKeys().where((k) => !keepKeys.contains(k)).toList();
+    for (final key in toRemove) {
+      await prefs.remove(key);
+    }
   }
 }

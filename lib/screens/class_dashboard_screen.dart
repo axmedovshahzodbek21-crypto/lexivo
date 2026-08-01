@@ -71,6 +71,16 @@ String _timeAgo(String iso) {
   return '${(diff.inDays / 7).floor()}w ago';
 }
 
+// ── In-memory cache (lives for the app session) ──────────────────────────────
+
+typedef _CachedDashboard = ({
+  List<StudentRow> students,
+  List<ActivityRow> activity,
+  List<CollectionMeta> collections,
+  List<Map<String, dynamic>> hardWords,
+});
+final _dashboardCache = <String, _CachedDashboard>{};
+
 // ── Screen ───────────────────────────────────────────────────────────────────
 
 class ClassDashboardScreen extends StatefulWidget {
@@ -96,6 +106,14 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     super.initState();
     _tabs = TabController(length: 4, vsync: this);
     appLangNotifier.addListener(_onLang);
+    final cached = _dashboardCache[widget.classId];
+    if (cached != null) {
+      _students = cached.students;
+      _activity = cached.activity;
+      _collections = cached.collections;
+      _hardWords = cached.hardWords;
+      _loading = false;
+    }
     _load();
   }
 
@@ -109,7 +127,8 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   void _onLang() { if (mounted) setState(() {}); }
 
   Future<void> _load() async {
-    if (mounted) setState(() => _loading = true);
+    final hasCached = _dashboardCache.containsKey(widget.classId);
+    if (mounted && !hasCached) setState(() => _loading = true);
     try {
       final results = await Future.wait<dynamic>([
         supabase.rpc('get_class_dashboard', params: {'p_class_id': widget.classId}),
@@ -131,9 +150,15 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         .map((e) => Map<String, dynamic>.from(e as Map))
         .toList();
 
+      _dashboardCache[widget.classId] = (
+        students: students,
+        activity: activity,
+        collections: collections,
+        hardWords: hardWords,
+      );
       if (mounted) setState(() { _students = students; _activity = activity; _collections = collections; _hardWords = hardWords; _loading = false; });
     } catch (_) {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && !hasCached) setState(() => _loading = false);
     }
   }
 

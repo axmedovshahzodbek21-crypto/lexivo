@@ -11,6 +11,7 @@ import 'flashcard.dart';
 import '../l10n.dart';
 import 'story_reader_screen.dart';
 import 'matching_screen.dart';
+import '../services/supabase_service.dart';
 
 class CollectionsScreen extends StatefulWidget {
   final String userProfile;
@@ -248,6 +249,9 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
                     );
                   },
                 ),
+
+                const SizedBox(height: 24),
+                _MasteryHeatmapSection(collection: widget.collection),
               ],
             ),
           ),
@@ -1041,6 +1045,246 @@ class InfoRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── Word Mastery Heatmap ──────────────────────────────────────────────────
+
+class _MasteryHeatmapSection extends StatefulWidget {
+  final WordCollection collection;
+  const _MasteryHeatmapSection({required this.collection});
+
+  @override
+  State<_MasteryHeatmapSection> createState() => _MasteryHeatmapSectionState();
+}
+
+class _MasteryHeatmapSectionState extends State<_MasteryHeatmapSection> {
+  Map<String, double> _srsScores = {};
+  Map<String, double> _gateScores = {};
+  bool _loaded = false;
+  int? _selectedUnit;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final srsWords = await StorageService.getSRSWords();
+    final learnedWords = await StorageService.getLearnedWords();
+    final colName = widget.collection.name;
+
+    final srsMap = <String, double>{};
+    for (final w in srsWords.where((w) => w.collectionName == colName)) {
+      // Denominator 6: learn session = stage 0, plus 5 review intervals.
+      // reviewStage 0 → 1/6 ≈ 0.17 (red), 5 (mastered) → 1.0 (dark green).
+      srsMap[w.word] = ((w.reviewStage + 1) / 6.0).clamp(0.0, 1.0);
+    }
+    for (final lw in learnedWords.where((w) => w.collectionName == colName)) {
+      if (!srsMap.containsKey(lw.word)) srsMap[lw.word] = 1.0; // graduated
+    }
+
+    final gateMap = <String, double>{};
+    final user = currentUser;
+    if (user != null) {
+      try {
+        final rows = await supabase
+            .from('learn_session_analytics')
+            .select('per_word_data')
+            .eq('student_id', user.id)
+            .eq('collection_name', colName);
+        final raw = <String, ({int attempts, int correct})>{};
+        for (final row in rows as List) {
+          final perWord = row['per_word_data'] as List? ?? [];
+          for (final w in perWord) {
+            final word = w['word'] as String;
+            final correctFirst = w['gate_correct_first'] as bool? ?? false;
+            final prev = raw[word] ?? (attempts: 0, correct: 0);
+            raw[word] = (attempts: prev.attempts + 1, correct: prev.correct + (correctFirst ? 1 : 0)); // +1 per session, not per gate opening
+          }
+        }
+        for (final e in raw.entries) {
+          if (e.value.attempts > 0) gateMap[e.key] = e.value.correct / e.value.attempts;
+        }
+      } catch (_) {}
+    }
+
+    if (mounted) setState(() { _srsScores = srsMap; _gateScores = gateMap; _loaded = true; });
+  }
+
+  double _score(String word) {
+    final srs = _srsScores[word] ?? 0.0;
+    final gate = _gateScores[word];
+    if (srs == 0.0 && gate == null) return 0.0;
+    return (srs * 0.6 + (gate ?? 0.0) * 0.4).clamp(0.0, 1.0);
+  }
+
+  Color _color(double score) {
+    if (score == 0) return Colors.grey.shade300;
+    if (score < 0.2) return const Color(0xFFef4444);
+    if (score < 0.4) return const Color(0xFFf97316);
+    if (score < 0.6) return const Color(0xFFeab308);
+    if (score < 0.8) return const Color(0xFF84cc16);
+    return const Color(0xFF22c55e);
+  }
+
+  String _label(double score) {
+    if (score == 0) return 'Not studied';
+    if (score < 0.2) return 'Needs work';
+    if (score < 0.4) return 'Struggling';
+    if (score < 0.6) return 'Learning';
+    if (score < 0.8) return 'Good';
+    return 'Mastered';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_loaded) return const SizedBox.shrink();
+
+    final drillDay = _selectedUnit != null
+        ? widget.collection.days.firstWhere((d) => d.dayNumber == _selectedUnit, orElse: () => widget.collection.days.first)
+        : null;
+
+    final totalWords = widget.collection.days.fold(0, (s, d) => s + d.words.length);
+    final studiedWords = widget.collection.days.expand((d) => d.words).where((w) => _score(w.word) > 0).length;
+    final avgScore = totalWords > 0
+        ? widget.collection.days.expand((d) => d.words).fold(0.0, (s, w) => s + _score(w.word)) / totalWords
+        : 0.0;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('🗺 Word Mastery Heatmap',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: context.appText)),
+                    const SizedBox(height: 2),
+                    Text('$studiedWords/$totalWords studied · ${(avgScore * 100).round()}% avg mastery',
+                      style: TextStyle(fontSize: 11, color: context.textMuted)),
+                  ],
+                ),
+              ),
+              if (drillDay != null)
+                GestureDetector(
+                  onTap: () => setState(() => _selectedUnit = null),
+                  child: Text('← All units',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: context.primary)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          if (drillDay != null) ...[
+            // ── Per-word drill-down ──
+            Text('Unit ${drillDay.dayNumber} · ${drillDay.topic}',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: context.textMuted)),
+            const SizedBox(height: 10),
+            ...drillDay.words.map((w) {
+              final score = _score(w.word);
+              final c = _color(score);
+              return Container(
+                margin: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                decoration: BoxDecoration(
+                  color: context.surface2,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border(left: BorderSide(color: c, width: 3)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(w.word, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: context.appText)),
+                          Text(w.translation, style: TextStyle(fontSize: 11, color: context.textMuted)),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text('${(score * 100).round()}%',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: c)),
+                        Text(_label(score), style: TextStyle(fontSize: 9, color: context.textMuted)),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ] else ...[
+            // ── Per-unit overview ──
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: widget.collection.days.map((day) {
+                final avgUnit = day.words.isEmpty ? 0.0
+                    : day.words.fold(0.0, (s, w) => s + _score(w.word)) / day.words.length;
+                final c = _color(avgUnit);
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedUnit = day.dayNumber),
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: c.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: c, width: 2),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('${day.dayNumber}',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: c)),
+                        Text('${(avgUnit * 100).round()}%',
+                          style: TextStyle(fontSize: 8, fontWeight: FontWeight.w700, color: c)),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 12),
+            // Legend
+            Wrap(
+              spacing: 12,
+              runSpacing: 6,
+              children: [
+                (Colors.grey.shade300, 'Not studied'),
+                (const Color(0xFFef4444), 'Needs work'),
+                (const Color(0xFFeab308), 'Learning'),
+                (const Color(0xFF84cc16), 'Good'),
+                (const Color(0xFF22c55e), 'Mastered'),
+              ].map((e) => Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(width: 10, height: 10, decoration: BoxDecoration(color: e.$1, borderRadius: BorderRadius.circular(3))),
+                  const SizedBox(width: 4),
+                  Text(e.$2, style: TextStyle(fontSize: 9, color: context.textMuted)),
+                ],
+              )).toList(),
+            ),
+            const SizedBox(height: 6),
+            Text('Tap a unit to see word-by-word breakdown',
+              style: TextStyle(fontSize: 9, color: context.textMuted)),
+          ],
+        ],
+      ),
     );
   }
 }

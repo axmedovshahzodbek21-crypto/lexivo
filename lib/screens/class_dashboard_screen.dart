@@ -94,7 +94,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 3, vsync: this);
+    _tabs = TabController(length: 4, vsync: this);
     appLangNotifier.addListener(_onLang);
     _load();
   }
@@ -194,6 +194,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             Tab(text: '👥 ${tr('students')}'),
             Tab(text: '📊 ${tr('activity')}'),
             const Tab(text: '📡 Radar'),
+            const Tab(text: '🗺 Heatmap'),
           ],
         ),
       ),
@@ -205,6 +206,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
               _buildStudentsTab(),
               _buildActivityTab(),
               _buildRadarTab(),
+              _buildHeatmapTab(),
             ],
           ),
     );
@@ -560,6 +562,101 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             ]),
           );
         }),
+      ],
+    );
+  }
+
+  Widget _buildHeatmapTab() {
+    if (_students.isEmpty || _collections.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('🗺', style: TextStyle(fontSize: 48)),
+            const SizedBox(height: 14),
+            Text('No data yet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+            const SizedBox(height: 6),
+            Text('Add students and wait for them to study.', style: TextStyle(fontSize: 13, color: context.textMuted), textAlign: TextAlign.center),
+          ]),
+        ),
+      );
+    }
+
+    Color cellColor(int pct) {
+      if (pct == 0) return Colors.grey.shade300;
+      if (pct < 25) return const Color(0xFFef4444);
+      if (pct < 50) return const Color(0xFFf97316);
+      if (pct < 75) return const Color(0xFFeab308);
+      if (pct < 90) return const Color(0xFF84cc16);
+      return const Color(0xFF22c55e);
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+      children: [
+        Text('% of class that completed each unit',
+          style: TextStyle(fontSize: 11, color: context.textMuted)),
+        const SizedBox(height: 14),
+        ..._collections.map((col) {
+          final completionPcts = List.generate(col.totalUnits, (i) {
+            final unit = i + 1;
+            final done = _students.where((s) => (s.collectionProgress[col.collectionName] ?? 0) >= unit).length;
+            return _students.isEmpty ? 0 : ((done / _students.length) * 100).round();
+          });
+          final avg = completionPcts.isEmpty ? 0 : (completionPcts.reduce((a, b) => a + b) / completionPcts.length).round();
+          return Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(14), boxShadow: context.cardShadow),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Expanded(child: Text(col.label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: context.appText))),
+                  Text('$avg% avg', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: cellColor(avg))),
+                ]),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 5,
+                  runSpacing: 5,
+                  children: completionPcts.asMap().entries.map((e) {
+                    final c = cellColor(e.value);
+                    return Tooltip(
+                      message: 'Unit ${e.key + 1}: ${e.value}% of class',
+                      child: Container(
+                        width: 36, height: 36,
+                        decoration: BoxDecoration(
+                          color: c.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: c, width: 2),
+                        ),
+                        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                          Text('${e.key + 1}', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: c)),
+                          Text('${e.value}%', style: TextStyle(fontSize: 7, fontWeight: FontWeight.w700, color: c)),
+                        ]),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          );
+        }),
+        // Legend
+        Wrap(
+          spacing: 12, runSpacing: 6,
+          children: [
+            (Colors.grey.shade300, '0%'),
+            (const Color(0xFFef4444), '<25%'),
+            (const Color(0xFFeab308), '50%'),
+            (const Color(0xFF84cc16), '75%'),
+            (const Color(0xFF22c55e), '90%+'),
+          ].map((e) => Row(mainAxisSize: MainAxisSize.min, children: [
+            Container(width: 10, height: 10, decoration: BoxDecoration(color: e.$1, borderRadius: BorderRadius.circular(3))),
+            const SizedBox(width: 4),
+            Text(e.$2, style: TextStyle(fontSize: 10, color: context.textMuted)),
+          ])).toList(),
+        ),
       ],
     );
   }

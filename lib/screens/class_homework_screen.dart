@@ -8,11 +8,13 @@ class ClassHomeworkScreen extends StatefulWidget {
   final List<ClassWord> words;
   final Set<String> initialLearnedIds;
   final int startIndex;
+  final String classId;
 
   const ClassHomeworkScreen({
     super.key,
     required this.words,
     required this.initialLearnedIds,
+    required this.classId,
     this.startIndex = 0,
   });
 
@@ -25,6 +27,8 @@ class _ClassHomeworkScreenState extends State<ClassHomeworkScreen> {
   late Set<String> _learnedIds;
   bool _flipped = false;
   bool _toggling = false;
+  bool _sawBack = false;
+  final Set<String> _loggedThisSession = {};
 
   @override
   void initState() {
@@ -46,9 +50,30 @@ class _ClassHomeworkScreenState extends State<ClassHomeworkScreen> {
   bool get _isLearned => _learnedIds.contains(_word.id);
   int get _learnedCount => widget.words.where((w) => _learnedIds.contains(w.id)).length;
 
+  void _logIfNeeded() {
+    final wordId = _word.id;
+    if (!_sawBack || _loggedThisSession.contains(wordId)) return;
+    _loggedThisSession.add(wordId);
+    final isCorrect = _isLearned;
+    final classId = widget.classId;
+    () async {
+      try {
+        final user = currentUser;
+        if (user == null) return;
+        await supabase.from('study_word_times').insert({
+          'student_id': user.id,
+          'class_id': classId,
+          'word_id': wordId,
+          'is_correct': isCorrect,
+        });
+      } catch (_) {}
+    }();
+  }
+
   void _goTo(int i) {
     if (i < 0 || i >= widget.words.length) return;
-    setState(() { _index = i; _flipped = false; });
+    _logIfNeeded();
+    setState(() { _index = i; _flipped = false; _sawBack = false; });
   }
 
   Future<void> _toggleLearned() async {
@@ -97,7 +122,7 @@ class _ClassHomeworkScreenState extends State<ClassHomeworkScreen> {
                 children: [
                   IconButton(
                     icon: Icon(Icons.close, color: context.appText),
-                    onPressed: () => Navigator.pop(context, _learnedIds),
+                    onPressed: () { _logIfNeeded(); Navigator.pop(context, _learnedIds); },
                   ),
                   Expanded(
                     child: Column(
@@ -128,7 +153,7 @@ class _ClassHomeworkScreenState extends State<ClassHomeworkScreen> {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                 child: GestureDetector(
-                  onTap: () => setState(() => _flipped = !_flipped),
+                  onTap: () => setState(() { _flipped = !_flipped; if (_flipped) _sawBack = true; }),
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 200),
                     child: _flipped
@@ -190,7 +215,7 @@ class _ClassHomeworkScreenState extends State<ClassHomeworkScreen> {
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: isLast
-                        ? () => Navigator.pop(context, _learnedIds)
+                        ? () { _logIfNeeded(); Navigator.pop(context, _learnedIds); }
                         : () => _goTo(_index + 1),
                       icon: Icon(isLast ? Icons.check : Icons.arrow_forward, size: 16),
                       label: Text(isLast ? '${tr('finish')} ✓' : tr('next')),

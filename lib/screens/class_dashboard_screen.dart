@@ -86,6 +86,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   List<StudentRow> _students = [];
   List<ActivityRow> _activity = [];
   List<CollectionMeta> _collections = [];
+  List<Map<String, dynamic>> _hardWords = [];
   bool _loading = true;
   String _sort = 'xp';
   String _filter = 'all';
@@ -93,7 +94,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 2, vsync: this);
+    _tabs = TabController(length: 3, vsync: this);
     appLangNotifier.addListener(_onLang);
     _load();
   }
@@ -114,6 +115,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         supabase.rpc('get_class_dashboard', params: {'p_class_id': widget.classId}),
         supabase.rpc('get_class_activity', params: {'p_class_id': widget.classId}),
         supabase.from('collections').select().order('display_order'),
+        supabase.rpc('get_hard_words', params: {'p_class_id': widget.classId}),
       ]);
 
       final students = (results[0] as List)
@@ -125,8 +127,11 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       final collections = (results[2] as List)
         .map((e) => CollectionMeta.fromMap(Map<String, dynamic>.from(e as Map)))
         .toList();
+      final hardWords = (results[3] as List)
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
 
-      if (mounted) setState(() { _students = students; _activity = activity; _collections = collections; _loading = false; });
+      if (mounted) setState(() { _students = students; _activity = activity; _collections = collections; _hardWords = hardWords; _loading = false; });
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
@@ -188,6 +193,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
           tabs: [
             Tab(text: '👥 ${tr('students')}'),
             Tab(text: '📊 ${tr('activity')}'),
+            const Tab(text: '📡 Radar'),
           ],
         ),
       ),
@@ -198,6 +204,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             children: [
               _buildStudentsTab(),
               _buildActivityTab(),
+              _buildRadarTab(),
             ],
           ),
     );
@@ -473,6 +480,87 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
           ]),
         );
       },
+    );
+  }
+
+  // ── Hard Word Radar tab ────────────────────────────────────────────────────
+
+  Widget _buildRadarTab() {
+    if (_hardWords.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('📡', style: TextStyle(fontSize: 48)),
+            const SizedBox(height: 14),
+            Text('No data yet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+            const SizedBox(height: 6),
+            Text(
+              'Words appear here once students have studied them at least 3 times.',
+              style: TextStyle(fontSize: 13, color: context.textMuted),
+              textAlign: TextAlign.center,
+            ),
+          ]),
+        ),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(color: context.primaryBg, borderRadius: BorderRadius.circular(14), border: Border.all(color: context.primary.withValues(alpha: 0.25))),
+          child: Row(children: [
+            const Text('📡', style: TextStyle(fontSize: 20)),
+            const SizedBox(width: 10),
+            Expanded(child: Text(
+              'Words ranked by how often students struggle — lowest accuracy first.',
+              style: TextStyle(fontSize: 12, color: context.appText),
+            )),
+          ]),
+        ),
+        const SizedBox(height: 14),
+        ..._hardWords.asMap().entries.map((e) {
+          final rank = e.key;
+          final w = e.value;
+          final word = w['word'] as String;
+          final translation = w['translation'] as String;
+          final attempts = (w['attempts'] as num).toInt();
+          final correct = (w['correct_count'] as num).toInt();
+          final pct = (w['accuracy_pct'] as num).toInt();
+          final barColor = pct < 30 ? context.dangerColor : pct < 60 ? Colors.orange : context.successColor;
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(14), boxShadow: context.cardShadow),
+            child: Row(children: [
+              Container(
+                width: 32, height: 32,
+                decoration: BoxDecoration(color: barColor.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
+                child: Center(child: Text('#${rank + 1}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: barColor))),
+              ),
+              const SizedBox(width: 12),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(word, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: context.appText)),
+                Text(translation, style: TextStyle(fontSize: 12, color: context.primary)),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(3),
+                  child: LinearProgressIndicator(
+                    value: pct / 100,
+                    minHeight: 5,
+                    backgroundColor: context.border,
+                    valueColor: AlwaysStoppedAnimation(barColor),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text('$correct/$attempts correct · $pct% accuracy', style: TextStyle(fontSize: 10, color: context.textMuted)),
+              ])),
+            ]),
+          );
+        }),
+      ],
     );
   }
 

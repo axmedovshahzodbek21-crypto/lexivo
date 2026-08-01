@@ -627,6 +627,7 @@ class _ClassesScreenState extends State<ClassesScreen> {
               Navigator.push(context, MaterialPageRoute(builder: (_) => ClassHomeworkScreen(
                 words: hw,
                 initialLearnedIds: Set.from(_learnedWordIds),
+                classId: hw.first.classId,
                 startIndex: start >= 0 ? start : 0,
               ))).then((updated) {
                 if (updated is Set<String> && mounted) setState(() => _learnedWordIds = updated);

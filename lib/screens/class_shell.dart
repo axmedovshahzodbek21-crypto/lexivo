@@ -26,7 +26,12 @@ class _ClassShellState extends State<ClassShell> {
   int _tab = 0;
 
   List<Widget> get _screens => [
-    ClassHomeScreen(classId: widget.classId, className: widget.className, isTeacher: widget.isTeacher),
+    ClassHomeScreen(
+      classId: widget.classId,
+      className: widget.className,
+      isTeacher: widget.isTeacher,
+      onGoToDashboard: widget.isTeacher ? () => setState(() => _tab = 4) : null,
+    ),
     ClassWordsScreen(classId: widget.classId, className: widget.className),
     ClassLeaderboardScreen(classId: widget.classId, isVisible: _tab == 2),
     ClassHomeworkTab(classId: widget.classId, isTeacher: widget.isTeacher),

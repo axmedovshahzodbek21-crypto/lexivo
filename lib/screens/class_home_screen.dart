@@ -37,12 +37,14 @@ class ClassHomeScreen extends StatefulWidget {
   final String classId;
   final String className;
   final bool isTeacher;
+  final VoidCallback? onGoToDashboard;
 
   const ClassHomeScreen({
     super.key,
     required this.classId,
     required this.className,
     required this.isTeacher,
+    this.onGoToDashboard,
   });
 
   @override
@@ -296,26 +298,29 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
     );
   }
 
-  Widget _spotlightBanner() => Container(
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: context.dangerColor.withValues(alpha: 0.08),
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: context.dangerColor.withValues(alpha: 0.45)),
+  Widget _spotlightBanner() => GestureDetector(
+    onTap: widget.onGoToDashboard,
+    child: Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: context.dangerColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: context.dangerColor.withValues(alpha: 0.45)),
+      ),
+      child: Row(children: [
+        const Text('⚠️', style: TextStyle(fontSize: 20)),
+        const SizedBox(width: 10),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(
+            '$_needsAttentionCount student${_needsAttentionCount > 1 ? 's' : ''} need attention',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: context.dangerColor),
+          ),
+          Text("Haven't studied in 3+ days · Check Dashboard",
+            style: TextStyle(fontSize: 11, color: context.textMuted)),
+        ])),
+        Icon(Icons.arrow_forward_ios, size: 14, color: context.dangerColor),
+      ]),
     ),
-    child: Row(children: [
-      const Text('⚠️', style: TextStyle(fontSize: 20)),
-      const SizedBox(width: 10),
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(
-          '$_needsAttentionCount student${_needsAttentionCount > 1 ? 's' : ''} need attention',
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: context.dangerColor),
-        ),
-        Text("Haven't studied in 3+ days · Check Dashboard",
-          style: TextStyle(fontSize: 11, color: context.textMuted)),
-      ])),
-      Icon(Icons.arrow_forward_ios, size: 14, color: context.dangerColor),
-    ]),
   );
 
   Widget _activityBar() {

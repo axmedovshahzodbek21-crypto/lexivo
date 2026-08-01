@@ -208,6 +208,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                   onTap: () async {
+                    // Close bottom sheet first so context is used synchronously
+                    Navigator.pop(context);
                     final confirmed = await showDialog<bool>(
                       context: context,
                       builder: (ctx) => AlertDialog(
@@ -226,8 +228,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     );
                     if (confirmed != true) return;
-                    if (!mounted) return;
-                    Navigator.pop(context);
                     final prefs = await SharedPreferences.getInstance();
                     await prefs.remove('profile_image_path');
                     await prefs.remove('profile_image_url');
@@ -238,7 +238,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         await supabase.from('profiles').upsert({'id': user.id, 'avatar_url': null});
                       } catch (_) {}
                     }
-                    setState(() { _profileImagePath = null; _profileImageUrl = null; });
+                    if (mounted) setState(() { _profileImagePath = null; _profileImageUrl = null; });
                   },
                 ),
             ],

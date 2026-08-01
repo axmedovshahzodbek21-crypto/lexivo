@@ -208,6 +208,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                   onTap: () async {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        backgroundColor: ctx.surface,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        title: Text(tr('remove_photo'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                        content: Text(tr('remove_photo_confirm')),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(tr('cancel'))),
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, true),
+                            style: TextButton.styleFrom(foregroundColor: Colors.red),
+                            child: Text(tr('remove'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirmed != true) return;
                     Navigator.pop(context);
                     final prefs = await SharedPreferences.getInstance();
                     await prefs.remove('profile_image_path');
@@ -965,7 +983,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           title: Text(tr('sign_out'), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
                           trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.red),
-                          onTap: _signOut,
+                          onTap: _confirmSignOut,
                         ),
                         const Divider(height: 1),
                         ListTile(
@@ -1028,6 +1046,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
     );
+  }
+
+  Future<void> _confirmSignOut() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.logout, color: Colors.red),
+            const SizedBox(width: 8),
+            Text(tr('sign_out'), style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Text(tr('sign_out_confirm')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(tr('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text(tr('sign_out'), style: const TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) _signOut();
   }
 
   Future<void> _signOut() async {

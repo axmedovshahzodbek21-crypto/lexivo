@@ -63,3 +63,14 @@ class ClassLeaderboardRow {
     xp: (m['xp'] as num?)?.toInt() ?? 0, streak: (m['streak'] as num?)?.toInt() ?? 0,
   );
 }
+
+class ClassHomework {
+  final String id, classId, teacherId, title, createdAt;
+  final String? dueDate;
+  const ClassHomework({required this.id, required this.classId, required this.teacherId, required this.title, required this.createdAt, this.dueDate});
+  factory ClassHomework.fromMap(Map<String, dynamic> m) => ClassHomework(
+    id: m['id'] as String, classId: m['class_id'] as String,
+    teacherId: m['teacher_id'] as String, title: m['title'] as String,
+    createdAt: m['created_at'] as String, dueDate: m['due_date'] as String?,
+  );
+}

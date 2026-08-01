@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
+import '../data/word_data.dart';
 
 class _WordEntry {
   final String id, word, translation;
@@ -105,12 +106,17 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
   List<_ParsedWord> _parsed = [];
   bool _importing = false;
 
+  // Collection Import tab
+  int? _selectedCollectionIdx;
+  int? _selectedDayIdx;
+  bool _importingCollection = false;
+
   static const _langs = ['English', 'Uzbek', 'Russian', 'Turkish', 'German', 'French', 'Spanish', 'Korean', 'Japanese', 'Chinese', 'Arabic'];
 
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 2, vsync: this);
+    _tabs = TabController(length: 3, vsync: this);
     _pasteCtrl.addListener(_onPasteChange);
     _folderCtrl.addListener(_onFolderGroupChange);
     _groupCtrl.addListener(_onFolderGroupChange);
@@ -234,6 +240,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
           tabs: [
             Tab(text: '✍️ ${tr('manual')}'),
             Tab(text: '🤖 AI Import'),
+            const Tab(text: '📚 Collection'),
           ],
         ),
       ),
@@ -242,6 +249,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
         children: [
           _buildManualTab(),
           _buildAiTab(),
+          _buildImportTab(),
         ],
       ),
     );
@@ -505,6 +513,158 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
       ),
     ),
   );
+
+  // ── Collection Import tab ─────────────────────────────────────────────────
+
+  static const _collectionMeta = [
+    ('📅', '30 Days of English'),
+    ('🎯', 'Vocabulary Challenge'),
+    ('🎓', 'Word Mastery'),
+  ];
+
+  List<WordCollection> get _collections =>
+      [thirtyDaysCollection, vocabularyChallengeCollection, wordMasteryCollection];
+
+  Widget _buildImportTab() => ListView(
+    padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+    children: [
+      Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16), boxShadow: context.cardShadow),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Pick a Collection', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: context.appText)),
+          const SizedBox(height: 12),
+          ...List.generate(_collectionMeta.length, (i) {
+            final selected = _selectedCollectionIdx == i;
+            final (emoji, name) = _collectionMeta[i];
+            final col = _collections[i];
+            return GestureDetector(
+              onTap: () => setState(() { _selectedCollectionIdx = i; _selectedDayIdx = null; }),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: selected ? context.primaryBg : context.surface2,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: selected ? context.primary : context.border),
+                ),
+                child: Row(children: [
+                  Text(emoji, style: const TextStyle(fontSize: 22)),
+                  const SizedBox(width: 10),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(name, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: selected ? context.primary : context.appText)),
+                    Text('${col.days.length} units', style: TextStyle(fontSize: 11, color: context.textMuted)),
+                  ])),
+                  if (selected) Icon(Icons.check_circle, size: 18, color: context.primary),
+                ]),
+              ),
+            );
+          }),
+        ]),
+      ),
+
+      if (_selectedCollectionIdx != null) ...[
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16), boxShadow: context.cardShadow),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Pick a Unit', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: context.appText)),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 240,
+              child: ListView.builder(
+                itemCount: _collections[_selectedCollectionIdx!].days.length,
+                itemBuilder: (ctx, i) {
+                  final day = _collections[_selectedCollectionIdx!].days[i];
+                  final selected = _selectedDayIdx == i;
+                  return GestureDetector(
+                    onTap: () => setState(() => _selectedDayIdx = i),
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: selected ? context.primaryBg : context.surface2,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: selected ? context.primary : context.border),
+                      ),
+                      child: Row(children: [
+                        Container(
+                          width: 28, height: 28,
+                          decoration: BoxDecoration(color: selected ? context.primary : context.primaryBg, borderRadius: BorderRadius.circular(6)),
+                          child: Center(child: Text('${day.dayNumber}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: selected ? Colors.white : context.primary))),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(day.topic, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: selected ? context.primary : context.appText)),
+                          Text('${day.words.length} words', style: TextStyle(fontSize: 11, color: context.textMuted)),
+                        ])),
+                      ]),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ]),
+        ),
+      ],
+
+      if (_selectedCollectionIdx != null && _selectedDayIdx != null) ...[
+        const SizedBox(height: 12),
+        Builder(builder: (ctx) {
+          final day = _collections[_selectedCollectionIdx!].days[_selectedDayIdx!];
+          return SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _importingCollection ? null : () => _importCollection(day),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: context.primary, foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              child: _importingCollection
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : Text('Import ${day.words.length} words to class', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            ),
+          );
+        }),
+      ],
+
+      const SizedBox(height: 16),
+      _buildWordList(),
+    ],
+  );
+
+  Future<void> _importCollection(WordDay day) async {
+    if (mounted) setState(() => _importingCollection = true);
+    try {
+      final user = currentUser;
+      final collection = _collections[_selectedCollectionIdx!];
+      final rows = day.words.map((w) => {
+        'class_id': widget.classId,
+        'teacher_id': user?.id,
+        'word': w.word,
+        'translation': w.translation,
+        if (w.definition.isNotEmpty) 'definition': w.definition,
+        if (w.example1.isNotEmpty) 'example1': w.example1,
+        if (w.example1Translation.isNotEmpty) 'example1_translation': w.example1Translation,
+        if (w.example2.isNotEmpty) 'example2': w.example2,
+        if (w.example2Translation.isNotEmpty) 'example2_translation': w.example2Translation,
+        'folder_name': collection.name,
+        'collection_name': 'Day ${day.dayNumber}: ${day.topic}',
+      }).toList();
+      await supabase.from('class_words').insert(rows);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('${rows.length} words imported!'),
+          duration: const Duration(seconds: 2),
+        ));
+        setState(() => _selectedDayIdx = null);
+      }
+      await _loadWords();
+    } catch (_) {}
+    if (mounted) setState(() => _importingCollection = false);
+  }
 
   // ── Word list ──────────────────────────────────────────────────────────────
 

@@ -57,6 +57,8 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
   int _memberCount = 0;
   String _teacherName = '';
   int _activeToday = 0;
+  int _needsAttentionCount = 0;
+  Map<String, int> _readCounts = {};
 
   @override
   void initState() {
@@ -96,6 +98,8 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
       String teacherName = '';
       int memberCount = 0;
       int activeToday = 0;
+      int needsAttentionCount = 0;
+      Map<String, int> readCounts = {};
 
       final membersRaw = await supabase
           .from('class_members')
@@ -110,9 +114,14 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
             .select('last_study_date')
             .inFilter('id', memberIds);
         final today = DateTime.now().toIso8601String().substring(0, 10);
+        final threeDaysAgo = DateTime.now().subtract(const Duration(days: 3)).toIso8601String().substring(0, 10);
         activeToday = (profilesRaw as List)
             .where((p) => (p as Map)['last_study_date'] == today)
             .length;
+        needsAttentionCount = (profilesRaw as List).where((p) {
+          final date = (p as Map)['last_study_date'] as String?;
+          return date == null || date.compareTo(threeDaysAgo) < 0;
+        }).length;
       }
 
       if (!widget.isTeacher) {
@@ -146,6 +155,33 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
         }
       }
 
+      // Student: mark announcements as read
+      if (!widget.isTeacher && anns.isNotEmpty) {
+        final u = currentUser;
+        if (u != null) {
+          try {
+            await supabase.from('class_announcement_reads').upsert(
+              anns.map((a) => {'announcement_id': a.id, 'student_id': u.id}).toList(),
+              onConflict: 'announcement_id,student_id',
+            );
+          } catch (_) {}
+        }
+      }
+      // Teacher: fetch read counts per announcement
+      if (widget.isTeacher && anns.isNotEmpty) {
+        final annIds = anns.map((a) => a.id).toList();
+        try {
+          final readsRaw = await supabase
+              .from('class_announcement_reads')
+              .select('announcement_id')
+              .inFilter('announcement_id', annIds);
+          for (final r in (readsRaw as List)) {
+            final aid = (r as Map)['announcement_id'] as String;
+            readCounts[aid] = (readCounts[aid] ?? 0) + 1;
+          }
+        } catch (_) {}
+      }
+
       if (mounted) {
         setState(() {
           _announcements = anns;
@@ -154,6 +190,8 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
           _memberCount = memberCount;
           _teacherName = teacherName;
           _activeToday = activeToday;
+          _needsAttentionCount = needsAttentionCount;
+          _readCounts = readCounts;
           _loading = false;
         });
       }
@@ -218,6 +256,12 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
 
           const SizedBox(height: 20),
 
+          // ── Spotlight (teacher only) ───────────────────────────────────────
+          if (widget.isTeacher && _needsAttentionCount > 0) ...[
+            _spotlightBanner(),
+            const SizedBox(height: 12),
+          ],
+
           // ── Homework (student only) ────────────────────────────────────────
           if (!widget.isTeacher && _targets.isNotEmpty) ...[
             _sectionLabel('📋 ${tr('homework')}'),
@@ -251,6 +295,28 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
       ),
     );
   }
+
+  Widget _spotlightBanner() => Container(
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: context.dangerColor.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: context.dangerColor.withValues(alpha: 0.45)),
+    ),
+    child: Row(children: [
+      const Text('⚠️', style: TextStyle(fontSize: 20)),
+      const SizedBox(width: 10),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(
+          '$_needsAttentionCount student${_needsAttentionCount > 1 ? 's' : ''} need attention',
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: context.dangerColor),
+        ),
+        Text("Haven't studied in 3+ days · Check Dashboard",
+          style: TextStyle(fontSize: 11, color: context.textMuted)),
+      ])),
+      Icon(Icons.arrow_forward_ios, size: 14, color: context.dangerColor),
+    ]),
+  );
 
   Widget _activityBar() {
     final ratio = _memberCount > 0 ? _activeToday / _memberCount : 0.0;
@@ -348,7 +414,14 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
           const SizedBox(height: 2),
           Text(_timeAgo(a.createdAt), style: TextStyle(fontSize: 11, color: context.textMuted)),
         ])),
-        if (isNew)
+        if (widget.isTeacher)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(6)),
+            child: Text('${_readCounts[a.id] ?? 0}/$_memberCount read',
+              style: TextStyle(fontSize: 9, color: context.textMuted, fontWeight: FontWeight.w700)),
+          )
+        else if (isNew)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(color: context.primary, borderRadius: BorderRadius.circular(4)),

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
-import '../l10n.dart';
 import 'class_home_screen.dart';
 import 'class_words_screen.dart';
 import 'class_leaderboard_screen.dart';
+import 'class_homework_tab.dart';
 import 'class_dashboard_screen.dart';
 
 class ClassShell extends StatefulWidget {
@@ -29,7 +29,7 @@ class _ClassShellState extends State<ClassShell> {
     ClassHomeScreen(classId: widget.classId, className: widget.className, isTeacher: widget.isTeacher),
     ClassWordsScreen(classId: widget.classId, className: widget.className),
     ClassLeaderboardScreen(classId: widget.classId, isVisible: _tab == 2),
-    _PlaceholderTab(icon: '📋', label: tr('homework'), sublabel: 'Coming in Phase 3'),
+    ClassHomeworkTab(classId: widget.classId, isTeacher: widget.isTeacher),
     if (widget.isTeacher)
       ClassDashboardScreen(classId: widget.classId, className: widget.className),
   ];
@@ -97,20 +97,3 @@ class _ClassShellState extends State<ClassShell> {
   }
 }
 
-class _PlaceholderTab extends StatelessWidget {
-  final String icon;
-  final String label;
-  final String sublabel;
-  const _PlaceholderTab({required this.icon, required this.label, required this.sublabel});
-
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-      Text(icon, style: const TextStyle(fontSize: 48)),
-      const SizedBox(height: 12),
-      Text(label, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
-      const SizedBox(height: 6),
-      Text(sublabel, style: TextStyle(color: context.textMuted, fontSize: 13)),
-    ]),
-  );
-}

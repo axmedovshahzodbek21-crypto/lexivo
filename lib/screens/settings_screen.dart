@@ -226,6 +226,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     );
                     if (confirmed != true) return;
+                    if (!mounted) return;
                     Navigator.pop(context);
                     final prefs = await SharedPreferences.getInstance();
                     await prefs.remove('profile_image_path');

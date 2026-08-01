@@ -335,10 +335,11 @@ class _LearningScreenState extends State<LearningScreen> {
 
   void _selectGateAnswer(int idx) {
     if (_gateSelected != null) return;
+    final capturedIndex = _currentIndex;
     setState(() => _gateSelected = idx);
     if (idx == _gateCorrectIndex) {
       Future.delayed(const Duration(milliseconds: 700), () {
-        if (!mounted) return;
+        if (!mounted || _currentIndex != capturedIndex) return;
         _learnedSinceLastCheck++;
         if (_learnedSinceLastCheck >= 3 && _learnedIndices.isNotEmpty) {
           _learnedSinceLastCheck = 0;
@@ -350,7 +351,7 @@ class _LearningScreenState extends State<LearningScreen> {
       });
     } else {
       Future.delayed(const Duration(milliseconds: 1200), () {
-        if (!mounted) return;
+        if (!mounted || _currentIndex != capturedIndex) return;
         setState(() { _inQuizGate = false; _gateSelected = null; });
       });
     }
@@ -376,9 +377,10 @@ class _LearningScreenState extends State<LearningScreen> {
 
   void _selectSpotCheckAnswer(int idx) {
     if (_spotCheckSelected != null) return;
+    final capturedIndex = _currentIndex;
     setState(() => _spotCheckSelected = idx);
     Future.delayed(const Duration(milliseconds: 700), () {
-      if (!mounted) return;
+      if (!mounted || _currentIndex != capturedIndex) return;
       setState(() => _inSpotCheck = false);
       _markLearned();
     });

@@ -5,8 +5,8 @@ import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import 'class_models.dart';
-import 'class_dashboard_screen.dart';
 import 'class_homework_screen.dart';
+import 'class_shell.dart';
 import 'flashcard.dart';
 import 'quiz_screen.dart';
 import '../data/word_data.dart';
@@ -368,7 +368,7 @@ class _ClassesScreenState extends State<ClassesScreen> {
       const SizedBox(height: 10),
       Row(children: [
         Expanded(child: ElevatedButton(
-          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClassDashboardScreen(classId: cls.id, className: cls.name))).then((_) => _load()),
+          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClassShell(classId: cls.id, className: cls.name, isTeacher: true))).then((_) => _load()),
           style: ElevatedButton.styleFrom(backgroundColor: context.primary, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 8), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
           child: Text(tr('dashboard'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
         )),
@@ -489,6 +489,26 @@ class _ClassesScreenState extends State<ClassesScreen> {
               ),
             ),
           ]),
+        ),
+
+        // Enter class button
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.push(context, MaterialPageRoute(
+                builder: (_) => ClassShell(classId: cls.id, className: cls.name, isTeacher: false),
+              )).then((_) => _load()),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: context.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Enter Class →', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            ),
+          ),
         ),
 
         // Announcements

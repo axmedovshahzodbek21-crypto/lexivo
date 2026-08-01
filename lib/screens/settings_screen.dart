@@ -1031,6 +1031,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _signOut() async {
+    await StorageService.clearAllProgress();
     await Supabase.instance.client.auth.signOut();
     if (!mounted) return;
     Navigator.pushAndRemoveUntil(

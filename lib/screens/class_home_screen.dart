@@ -97,25 +97,25 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
       int memberCount = 0;
       int activeToday = 0;
 
-      if (widget.isTeacher) {
-        final membersRaw = await supabase
-            .from('class_members')
-            .select('student_id')
-            .eq('class_id', widget.classId);
-        final membersList = membersRaw as List;
-        memberCount = membersList.length;
-        if (membersList.isNotEmpty) {
-          final memberIds = membersList.map((m) => (m as Map)['student_id'] as String).toList();
-          final profilesRaw = await supabase
-              .from('profiles')
-              .select('last_study_date')
-              .inFilter('id', memberIds);
-          final today = DateTime.now().toIso8601String().substring(0, 10);
-          activeToday = (profilesRaw as List)
-              .where((p) => (p as Map)['last_study_date'] == today)
-              .length;
-        }
-      } else {
+      final membersRaw = await supabase
+          .from('class_members')
+          .select('student_id')
+          .eq('class_id', widget.classId);
+      final membersList = membersRaw as List;
+      memberCount = membersList.length;
+      if (membersList.isNotEmpty) {
+        final memberIds = membersList.map((m) => (m as Map)['student_id'] as String).toList();
+        final profilesRaw = await supabase
+            .from('profiles')
+            .select('last_study_date')
+            .inFilter('id', memberIds);
+        final today = DateTime.now().toIso8601String().substring(0, 10);
+        activeToday = (profilesRaw as List)
+            .where((p) => (p as Map)['last_study_date'] == today)
+            .length;
+      }
+
+      if (!widget.isTeacher) {
         final user = currentUser;
         if (user != null) {
           final targetRaw = await supabase
@@ -206,10 +206,13 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
               const SizedBox(height: 16),
               Wrap(spacing: 8, runSpacing: 6, children: [
                 _chip('📖 $_wordCount words'),
-                if (widget.isTeacher) _chip('✅ $_activeToday active today'),
+                _chip('✅ $_activeToday/$_memberCount active'),
                 if (!widget.isTeacher) _chip('📋 ${pending.length} pending'),
-                _chip('🔥 Streak — Phase 2'),
               ]),
+              if (_memberCount > 0) ...[
+                const SizedBox(height: 12),
+                _activityBar(),
+              ],
             ]),
           ),
 
@@ -247,6 +250,31 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
         ],
       ),
     );
+  }
+
+  Widget _activityBar() {
+    final ratio = _memberCount > 0 ? _activeToday / _memberCount : 0.0;
+    final isAllActive = _activeToday >= _memberCount && _memberCount > 0;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text(
+          isAllActive ? '🔥 Everyone\'s active today!' : '🔥 Class Activity',
+          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+        ),
+        Text('$_activeToday of $_memberCount',
+          style: const TextStyle(color: Colors.white70, fontSize: 11)),
+      ]),
+      const SizedBox(height: 6),
+      ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: LinearProgressIndicator(
+          value: ratio.clamp(0.0, 1.0),
+          minHeight: 6,
+          backgroundColor: Colors.white.withValues(alpha: 0.25),
+          valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+        ),
+      ),
+    ]);
   }
 
   Widget _chip(String label) => Container(

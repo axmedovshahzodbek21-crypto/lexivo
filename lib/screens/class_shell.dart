@@ -3,6 +3,7 @@ import '../app_theme.dart';
 import '../l10n.dart';
 import 'class_home_screen.dart';
 import 'class_words_screen.dart';
+import 'class_leaderboard_screen.dart';
 import 'class_dashboard_screen.dart';
 
 class ClassShell extends StatefulWidget {
@@ -27,7 +28,7 @@ class _ClassShellState extends State<ClassShell> {
   List<Widget> get _screens => [
     ClassHomeScreen(classId: widget.classId, className: widget.className, isTeacher: widget.isTeacher),
     ClassWordsScreen(classId: widget.classId, className: widget.className),
-    _PlaceholderTab(icon: '🏆', label: tr('leaderboard'), sublabel: 'Coming soon — Phase 2'),
+    ClassLeaderboardScreen(classId: widget.classId),
     _PlaceholderTab(icon: '📋', label: tr('homework'), sublabel: 'Coming soon — Phase 2'),
     if (widget.isTeacher)
       ClassDashboardScreen(classId: widget.classId, className: widget.className),

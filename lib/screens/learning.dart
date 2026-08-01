@@ -13,6 +13,7 @@ import '../data/word_data.dart';
 import 'flashcard.dart';
 import 'package:lexivo/screens/quiz_screen.dart';
 import '../data/storage_service.dart';
+import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 
@@ -79,6 +80,14 @@ class _LearningScreenState extends State<LearningScreen> {
   int? _spotCheckSelected;
   int _learnedSinceLastCheck = 0;
 
+  // Phase 5 analytics tracking
+  late DateTime _sessionStart;
+  DateTime _wordStart = DateTime.now();
+  final List<Map<String, dynamic>> _perWordData = [];
+  int _wordGateAttempts = 0;
+  bool _wordGateCorrectFirst = true;
+  Timer? _heartbeatTimer;
+
   List<WordItem> get _allWords => widget.wordDay.words;
   WordItem get _currentWord => _allWords[_currentIndex];
   int get _totalWords => _allWords.length;
@@ -87,8 +96,11 @@ class _LearningScreenState extends State<LearningScreen> {
   void initState() {
     super.initState();
     _currentIndex = widget.startIndex.clamp(0, (_allWords.length - 1).clamp(0, double.maxFinite.toInt()));
+    _sessionStart = DateTime.now();
+    _wordStart = DateTime.now();
     appLangNotifier.addListener(_onLangChange);
     _loadSavedMarks();
+    _startHeartbeat();
   }
 
   Future<void> _loadSavedMarks() async {
@@ -126,6 +138,7 @@ class _LearningScreenState extends State<LearningScreen> {
 
   @override
   void dispose() {
+    _heartbeatTimer?.cancel();
     _revealTimer?.cancel();
     appLangNotifier.removeListener(_onLangChange);
     _audioPlayer.dispose();
@@ -205,6 +218,9 @@ class _LearningScreenState extends State<LearningScreen> {
             _hardIndices.contains(_currentIndex) ||
             _skippedIndices.contains(_currentIndex);
       });
+      _wordStart = DateTime.now();
+      _wordGateAttempts = 0;
+      _wordGateCorrectFirst = true;
       _scrollToTop();
     } else {
       _showFinishDialog();
@@ -229,6 +245,9 @@ class _LearningScreenState extends State<LearningScreen> {
             _hardIndices.contains(_currentIndex) ||
             _skippedIndices.contains(_currentIndex);
       });
+      _wordStart = DateTime.now();
+      _wordGateAttempts = 0;
+      _wordGateCorrectFirst = true;
     }
   }
 
@@ -246,10 +265,18 @@ class _LearningScreenState extends State<LearningScreen> {
   }
 
   void _skipWord() {
+    final word = _currentWord;
     setState(() {
       _skippedIndices.add(_currentIndex);
       _learnedIndices.remove(_currentIndex);
       _hardIndices.remove(_currentIndex);
+    });
+    _perWordData.add({
+      'word': word.word,
+      'outcome': 'skipped',
+      'seconds_to_mark': DateTime.now().difference(_wordStart).inSeconds,
+      'gate_attempts': 0,
+      'gate_correct_first': true,
     });
     _next();
   }
@@ -260,6 +287,13 @@ class _LearningScreenState extends State<LearningScreen> {
       _learnedIndices.add(_currentIndex);
       _skippedIndices.remove(_currentIndex);
       _hardIndices.remove(_currentIndex);
+    });
+    _perWordData.add({
+      'word': word.word,
+      'outcome': 'learned',
+      'seconds_to_mark': DateTime.now().difference(_wordStart).inSeconds,
+      'gate_attempts': _wordGateAttempts,
+      'gate_correct_first': _wordGateCorrectFirst,
     });
     final existing = await StorageService.getLearnedWords();
     final isNew = !existing.any((e) => e.word == word.word && e.collectionName == widget.collectionName);
@@ -282,6 +316,13 @@ class _LearningScreenState extends State<LearningScreen> {
       _hardIndices.add(_currentIndex);
       _learnedIndices.remove(_currentIndex);
       _skippedIndices.remove(_currentIndex);
+    });
+    _perWordData.add({
+      'word': word.word,
+      'outcome': 'too-hard',
+      'seconds_to_mark': DateTime.now().difference(_wordStart).inSeconds,
+      'gate_attempts': 0,
+      'gate_correct_first': true,
     });
     await StorageService.addMarkedHardWord(word.word);
     _next();
@@ -312,8 +353,8 @@ class _LearningScreenState extends State<LearningScreen> {
     _revealTimer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) { t.cancel(); return; }
       setState(() {
-        if (_revealCountdown > 0) _revealCountdown--;
-        else t.cancel();
+        if (_revealCountdown > 0) { _revealCountdown--; }
+        else { t.cancel(); }
       });
     });
   }
@@ -322,6 +363,7 @@ class _LearningScreenState extends State<LearningScreen> {
     if (!_revealed || _revealCountdown > 0 || _inQuizGate || _inSpotCheck) return;
     if (_learnedIndices.contains(_currentIndex)) return;
     if (_allWords.length < 2) { _markLearned(); return; }
+    _wordGateAttempts++;
     final correct = _currentWord.translation;
     final pool = (_allWords.where((w) => w.word != _currentWord.word).toList()..shuffle(Random()));
     final opts = ([correct, ...pool.take(3).map((w) => w.translation)])..shuffle(Random());
@@ -350,6 +392,7 @@ class _LearningScreenState extends State<LearningScreen> {
         }
       });
     } else {
+      _wordGateCorrectFirst = false;
       Future.delayed(const Duration(milliseconds: 1200), () {
         if (!mounted || _currentIndex != capturedIndex) return;
         setState(() { _inQuizGate = false; _gateSelected = null; });
@@ -397,10 +440,58 @@ class _LearningScreenState extends State<LearningScreen> {
     return null;
   }
 
+  void _startHeartbeat() {
+    _sendHeartbeat();
+    _heartbeatTimer = Timer.periodic(const Duration(seconds: 30), (_) => _sendHeartbeat());
+  }
+
+  Future<void> _sendHeartbeat() async {
+    final user = currentUser;
+    if (user == null) return;
+    try {
+      await supabase.from('student_presence').upsert({
+        'student_id': user.id,
+        'activity': 'learn',
+        'collection_name': widget.collectionName,
+        'day_number': widget.wordDay.dayNumber,
+        'started_at': _sessionStart.toIso8601String(),
+        'last_heartbeat': DateTime.now().toIso8601String(),
+      }, onConflict: 'student_id');
+    } catch (_) {}
+  }
+
+  Future<void> _emitAnalytics() async {
+    final user = currentUser;
+    if (user == null) return;
+    try {
+      final sessionSeconds = DateTime.now().difference(_sessionStart).inSeconds;
+      final gateAttempts = _perWordData.fold(0, (s, w) => s + (w['gate_attempts'] as int));
+      final gateCorrectFirst = _perWordData.where((w) => w['outcome'] == 'learned' && w['gate_correct_first'] == true).length;
+      await supabase.from('learn_session_analytics').insert({
+        'student_id': user.id,
+        'collection_name': widget.collectionName,
+        'day_number': widget.wordDay.dayNumber,
+        'started_at': _sessionStart.toIso8601String(),
+        'completed_at': DateTime.now().toIso8601String(),
+        'total_words': _allWords.length,
+        'words_learned': _learnedIndices.length,
+        'words_skipped': _skippedIndices.length,
+        'words_hard': _hardIndices.length,
+        'session_seconds': sessionSeconds,
+        'gate_attempts': gateAttempts,
+        'gate_correct_first_try': gateCorrectFirst,
+        'per_word_data': _perWordData,
+      });
+      await supabase.from('student_presence').delete().eq('student_id', user.id);
+    } catch (_) {}
+  }
+
   Future<void> _showFinishDialog() async {
     _sessionComplete = true;
+    _heartbeatTimer?.cancel();
     await StorageService.markLearningComplete(widget.collectionName, widget.wordDay.dayNumber);
     StorageService.clearLearnProgress(widget.collectionName, widget.wordDay.dayNumber);
+    _emitAnalytics().catchError((_) {});
     if (!mounted) return;
     final nextUnit = _nextUnit;
     final nav = Navigator.of(context);

@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'break_screen.dart';
 import 'package:flutter/material.dart';
@@ -60,6 +62,23 @@ class _LearningScreenState extends State<LearningScreen> {
   double _cardDragDx = 0;
   double _cardDragDy = 0;
 
+  // Anti-cheat state
+  bool _revealed = false;
+  int _revealCountdown = 0;
+  Timer? _revealTimer;
+
+  bool _inQuizGate = false;
+  List<String> _gateOptions = [];
+  int _gateCorrectIndex = -1;
+  int? _gateSelected;
+
+  bool _inSpotCheck = false;
+  WordItem? _spotCheckWord;
+  List<String> _spotCheckOptions = [];
+  int _spotCheckCorrectIndex = -1;
+  int? _spotCheckSelected;
+  int _learnedSinceLastCheck = 0;
+
   List<WordItem> get _allWords => widget.wordDay.words;
   WordItem get _currentWord => _allWords[_currentIndex];
   int get _totalWords => _allWords.length;
@@ -88,6 +107,10 @@ class _LearningScreenState extends State<LearningScreen> {
         final i = _allWords.indexWhere((w) => w.word == word);
         if (i != -1) _hardIndices.add(i);
       }
+      // Auto-reveal the starting card if it was already marked
+      _revealed = _learnedIndices.contains(_currentIndex) ||
+          _hardIndices.contains(_currentIndex) ||
+          _skippedIndices.contains(_currentIndex);
     });
   }
 
@@ -103,6 +126,7 @@ class _LearningScreenState extends State<LearningScreen> {
 
   @override
   void dispose() {
+    _revealTimer?.cancel();
     appLangNotifier.removeListener(_onLangChange);
     _audioPlayer.dispose();
     _scrollController.dispose();
@@ -164,6 +188,7 @@ class _LearningScreenState extends State<LearningScreen> {
   }
 
   void _next() {
+    _revealTimer?.cancel();
     if (_currentIndex < _totalWords - 1) {
       setState(() {
         _currentIndex++;
@@ -171,6 +196,14 @@ class _LearningScreenState extends State<LearningScreen> {
         _showEx2Translation = false;
         _showEx3Translation = false;
         _showUzDefinition = false;
+        _revealCountdown = 0;
+        _inQuizGate = false;
+        _gateSelected = null;
+        _inSpotCheck = false;
+        _spotCheckSelected = null;
+        _revealed = _learnedIndices.contains(_currentIndex) ||
+            _hardIndices.contains(_currentIndex) ||
+            _skippedIndices.contains(_currentIndex);
       });
       _scrollToTop();
     } else {
@@ -179,6 +212,7 @@ class _LearningScreenState extends State<LearningScreen> {
   }
 
   void _previous() {
+    _revealTimer?.cancel();
     if (_currentIndex > 0) {
       setState(() {
         _currentIndex--;
@@ -186,6 +220,14 @@ class _LearningScreenState extends State<LearningScreen> {
         _showEx2Translation = false;
         _showEx3Translation = false;
         _showUzDefinition = false;
+        _revealCountdown = 0;
+        _inQuizGate = false;
+        _gateSelected = null;
+        _inSpotCheck = false;
+        _spotCheckSelected = null;
+        _revealed = _learnedIndices.contains(_currentIndex) ||
+            _hardIndices.contains(_currentIndex) ||
+            _skippedIndices.contains(_currentIndex);
       });
     }
   }
@@ -250,15 +292,99 @@ class _LearningScreenState extends State<LearningScreen> {
   }
 
   void _onHorizontalDragEnd(DragEndDetails d) {
+    if (_inQuizGate || _inSpotCheck) { setState(() => _cardDragDx = 0); return; }
     final vel = d.velocity.pixelsPerSecond.dx;
     final dx = _cardDragDx;
     setState(() => _cardDragDx = 0);
     if (vel > 400 || dx > 80) {
-      _markLearned();
+      _tryMarkLearned();
     } else if (vel < -400 || dx < -80) {
-      _markTooHard();
+      if (_revealed) _markTooHard();
     }
   }
+
+  // ── Anti-cheat methods ────────────────────────────────────────────────────
+
+  void _reveal() {
+    if (_revealed) return;
+    _revealTimer?.cancel();
+    setState(() { _revealed = true; _revealCountdown = 3; });
+    _revealTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) { t.cancel(); return; }
+      setState(() {
+        if (_revealCountdown > 0) _revealCountdown--;
+        else t.cancel();
+      });
+    });
+  }
+
+  void _tryMarkLearned() {
+    if (!_revealed || _revealCountdown > 0 || _inQuizGate || _inSpotCheck) return;
+    if (_learnedIndices.contains(_currentIndex)) return;
+    if (_allWords.length < 2) { _markLearned(); return; }
+    final correct = _currentWord.translation;
+    final pool = (_allWords.where((w) => w.word != _currentWord.word).toList()..shuffle(Random()));
+    final opts = ([correct, ...pool.take(3).map((w) => w.translation)])..shuffle(Random());
+    setState(() {
+      _inQuizGate = true;
+      _gateOptions = opts;
+      _gateCorrectIndex = opts.indexOf(correct);
+      _gateSelected = null;
+    });
+  }
+
+  void _selectGateAnswer(int idx) {
+    if (_gateSelected != null) return;
+    setState(() => _gateSelected = idx);
+    if (idx == _gateCorrectIndex) {
+      Future.delayed(const Duration(milliseconds: 700), () {
+        if (!mounted) return;
+        _learnedSinceLastCheck++;
+        if (_learnedSinceLastCheck >= 3 && _learnedIndices.isNotEmpty) {
+          _learnedSinceLastCheck = 0;
+          _showSpotCheck();
+        } else {
+          setState(() => _inQuizGate = false);
+          _markLearned();
+        }
+      });
+    } else {
+      Future.delayed(const Duration(milliseconds: 1200), () {
+        if (!mounted) return;
+        setState(() { _inQuizGate = false; _gateSelected = null; });
+      });
+    }
+  }
+
+  void _showSpotCheck() {
+    final learnedList = _learnedIndices.toList();
+    if (learnedList.isEmpty) { setState(() => _inQuizGate = false); _markLearned(); return; }
+    final checkIdx = learnedList[Random().nextInt(learnedList.length)];
+    final checkWord = _allWords[checkIdx];
+    final correct = checkWord.translation;
+    final pool = (_allWords.where((w) => w.word != checkWord.word).toList()..shuffle(Random()));
+    final opts = ([correct, ...pool.take(3).map((w) => w.translation)])..shuffle(Random());
+    setState(() {
+      _inQuizGate = false;
+      _inSpotCheck = true;
+      _spotCheckWord = checkWord;
+      _spotCheckOptions = opts;
+      _spotCheckCorrectIndex = opts.indexOf(correct);
+      _spotCheckSelected = null;
+    });
+  }
+
+  void _selectSpotCheckAnswer(int idx) {
+    if (_spotCheckSelected != null) return;
+    setState(() => _spotCheckSelected = idx);
+    Future.delayed(const Duration(milliseconds: 700), () {
+      if (!mounted) return;
+      setState(() => _inSpotCheck = false);
+      _markLearned();
+    });
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
 
   WordDay? get _nextUnit {
     if (widget.collection == null || widget.dayIndex == null) return null;
@@ -483,6 +609,7 @@ class _LearningScreenState extends State<LearningScreen> {
                         GestureDetector(
                           onVerticalDragUpdate: (d) => setState(() => _cardDragDy += d.delta.dy),
                           onVerticalDragEnd: (d) {
+                            if (_inQuizGate || _inSpotCheck) { setState(() => _cardDragDy = 0); return; }
                             final vel = d.velocity.pixelsPerSecond.dy;
                             final dy = _cardDragDy;
                             setState(() => _cardDragDy = 0);
@@ -555,36 +682,57 @@ class _LearningScreenState extends State<LearningScreen> {
                                           ],
                                         ),
                                         const SizedBox(height: 12),
-                                        Text(_currentWord.definition, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: Colors.white, height: 1.5)),
-                                        const SizedBox(height: 8),
-                                        Text(_currentWord.translation, style: const TextStyle(fontSize: 14, color: Colors.white70)),
-                                        if (_currentWord.definitionUz.isNotEmpty) ...[
-                                          const SizedBox(height: 10),
+                                        if (_revealed) ...[
+                                          Text(_currentWord.definition, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: Colors.white, height: 1.5)),
+                                          const SizedBox(height: 8),
+                                          Text(_currentWord.translation, style: const TextStyle(fontSize: 14, color: Colors.white70)),
+                                          if (_currentWord.definitionUz.isNotEmpty) ...[
+                                            const SizedBox(height: 10),
+                                            GestureDetector(
+                                              onTap: () => setState(() => _showUzDefinition = !_showUzDefinition),
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white.withValues(alpha: 0.2),
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    const Text('🇺🇿', style: TextStyle(fontSize: 14)),
+                                                    const SizedBox(width: 6),
+                                                    Text(
+                                                      _showUzDefinition ? "Yopish" : "O'zbekcha tushuntirish",
+                                                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                            if (_showUzDefinition) ...[
+                                              const SizedBox(height: 8),
+                                              Text(_currentWord.definitionUz, style: const TextStyle(fontSize: 14, color: Colors.white70, height: 1.5)),
+                                            ],
+                                          ],
+                                        ] else ...[
                                           GestureDetector(
-                                            onTap: () => setState(() => _showUzDefinition = !_showUzDefinition),
+                                            onTap: _reveal,
                                             child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                                               decoration: BoxDecoration(
                                                 color: Colors.white.withValues(alpha: 0.2),
-                                                borderRadius: BorderRadius.circular(8),
+                                                borderRadius: BorderRadius.circular(12),
                                               ),
-                                              child: Row(
+                                              child: const Row(
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
-                                                  const Text('🇺🇿', style: TextStyle(fontSize: 14)),
-                                                  const SizedBox(width: 6),
-                                                  Text(
-                                                    _showUzDefinition ? "Yopish" : "O'zbekcha tushuntirish",
-                                                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
-                                                  ),
+                                                  Icon(Icons.visibility_outlined, color: Colors.white, size: 16),
+                                                  SizedBox(width: 8),
+                                                  Text('Tap to reveal', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
                                                 ],
                                               ),
                                             ),
                                           ),
-                                          if (_showUzDefinition) ...[
-                                            const SizedBox(height: 8),
-                                            Text(_currentWord.definitionUz, style: const TextStyle(fontSize: 14, color: Colors.white70, height: 1.5)),
-                                          ],
                                         ],
                                       ],
                                     ),
@@ -614,28 +762,30 @@ class _LearningScreenState extends State<LearningScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        _buildExampleCard(context, '1', _currentWord.example1, _currentWord.example1Translation, _showEx1Translation, () => setState(() => _showEx1Translation = !_showEx1Translation)),
-                        const SizedBox(height: 12),
-                        _buildExampleCard(context, '2', _currentWord.example2, _currentWord.example2Translation, _showEx2Translation, () => setState(() => _showEx2Translation = !_showEx2Translation)),
-                        const SizedBox(height: 12),
-                        _buildExampleCard(context, '3', _currentWord.example3, _currentWord.example3Translation, _showEx3Translation, () => setState(() => _showEx3Translation = !_showEx3Translation)),
-                        if (_currentWord.extraExamples.isNotEmpty) ...[
+                        if (_revealed) ...[
+                          const SizedBox(height: 16),
+                          _buildExampleCard(context, '1', _currentWord.example1, _currentWord.example1Translation, _showEx1Translation, () => setState(() => _showEx1Translation = !_showEx1Translation)),
                           const SizedBox(height: 12),
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              onPressed: () => _showMoreExamples(context),
-                              icon: const Icon(Icons.expand_more),
-                              label: const Text('+ More examples'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: context.primary,
-                                side: BorderSide(color: context.primary),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          _buildExampleCard(context, '2', _currentWord.example2, _currentWord.example2Translation, _showEx2Translation, () => setState(() => _showEx2Translation = !_showEx2Translation)),
+                          const SizedBox(height: 12),
+                          _buildExampleCard(context, '3', _currentWord.example3, _currentWord.example3Translation, _showEx3Translation, () => setState(() => _showEx3Translation = !_showEx3Translation)),
+                          if (_currentWord.extraExamples.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () => _showMoreExamples(context),
+                                icon: const Icon(Icons.expand_more),
+                                label: const Text('+ More examples'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: context.primary,
+                                  side: BorderSide(color: context.primary),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
                               ),
                             ),
-                          ),
+                          ],
                         ],
                         const SizedBox(height: 100),
                       ],
@@ -655,69 +805,174 @@ class _LearningScreenState extends State<LearningScreen> {
               ),
             ),
 
-            // Bottom buttons: Too Hard | Skip | Learned
-            Container(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-              decoration: BoxDecoration(
-                color: context.surface,
-                boxShadow: [
-                  BoxShadow(
-                    color: context.isDark ? Colors.black.withValues(alpha: 0.3) : Colors.grey.withValues(alpha: 0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, -4),
+            // Bottom panel — state machine: reveal prompt / action buttons / quiz gate / spot check
+            _buildBottomPanel(context, isLearned, isHard),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomPanel(BuildContext context, bool isLearned, bool isHard) {
+    final shadow = BoxShadow(
+      color: context.isDark ? Colors.black.withValues(alpha: 0.3) : Colors.grey.withValues(alpha: 0.1),
+      blurRadius: 10,
+      offset: const Offset(0, -4),
+    );
+    final panelDeco = BoxDecoration(color: context.surface, boxShadow: [shadow]);
+
+    // ── Spot Check (#9) ───────────────────────────────────────────────────
+    if (_inSpotCheck && _spotCheckWord != null) {
+      return Container(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+        decoration: panelDeco,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(children: [
+              const Text('🔍', style: TextStyle(fontSize: 16)),
+              const SizedBox(width: 6),
+              Text('Spot check!', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: context.primary)),
+            ]),
+            const SizedBox(height: 4),
+            Text(
+              'What does "${_spotCheckWord!.word}" mean?',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.appText),
+            ),
+            const SizedBox(height: 10),
+            ..._spotCheckOptions.asMap().entries.map((e) {
+              final i = e.key;
+              final opt = e.value;
+              Color? bg; Color? fg; Color? border;
+              if (_spotCheckSelected != null) {
+                if (i == _spotCheckCorrectIndex) { bg = const Color(0xFF2ECC71).withValues(alpha: 0.15); fg = const Color(0xFF2ECC71); border = const Color(0xFF2ECC71); }
+                else if (i == _spotCheckSelected) { bg = const Color(0xFFE74C3C).withValues(alpha: 0.15); fg = const Color(0xFFE74C3C); border = const Color(0xFFE74C3C); }
+              }
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: GestureDetector(
+                  onTap: () => _selectSpotCheckAnswer(i),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: bg ?? context.primaryBg,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: border ?? context.primary.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(opt, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: fg ?? context.appText)),
                   ),
-                ],
+                ),
+              );
+            }),
+          ],
+        ),
+      );
+    }
+
+    // ── Quiz Gate (#8) ────────────────────────────────────────────────────
+    if (_inQuizGate) {
+      return Container(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+        decoration: panelDeco,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Quick check — what is the translation?',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: context.textMuted),
+            ),
+            const SizedBox(height: 10),
+            ..._gateOptions.asMap().entries.map((e) {
+              final i = e.key;
+              final opt = e.value;
+              Color? bg; Color? fg; Color? border;
+              if (_gateSelected != null) {
+                if (i == _gateCorrectIndex) { bg = const Color(0xFF2ECC71).withValues(alpha: 0.15); fg = const Color(0xFF2ECC71); border = const Color(0xFF2ECC71); }
+                else if (i == _gateSelected) { bg = const Color(0xFFE74C3C).withValues(alpha: 0.15); fg = const Color(0xFFE74C3C); border = const Color(0xFFE74C3C); }
+              }
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: GestureDetector(
+                  onTap: () => _selectGateAnswer(i),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: bg ?? context.primaryBg,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: border ?? context.primary.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(opt, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: fg ?? context.appText)),
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
+      );
+    }
+
+    // ── Normal action buttons ─────────────────────────────────────────────
+    final isReady = _revealed && _revealCountdown == 0;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+      decoration: panelDeco,
+      child: Row(
+        children: [
+          if (_revealed) ...[
+            Expanded(
+              flex: 3,
+              child: OutlinedButton(
+                onPressed: isHard ? null : _markTooHard,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFE74C3C),
+                  side: BorderSide(color: isHard ? const Color(0xFFE74C3C).withValues(alpha: 0.4) : const Color(0xFFE74C3C)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Text(tr('too_hard_btn'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: OutlinedButton(
-                      onPressed: isHard ? null : _markTooHard,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFE74C3C),
-                        side: BorderSide(color: isHard ? const Color(0xFFE74C3C).withValues(alpha: 0.4) : const Color(0xFFE74C3C)),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: Text(tr('too_hard_btn'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 2,
-                    child: OutlinedButton(
-                      onPressed: _skipWord,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.orange,
-                        side: const BorderSide(color: Colors.orange),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: Text(tr('skip'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 3,
-                    child: ElevatedButton(
-                      onPressed: isLearned ? null : _markLearned,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2ECC71),
-                        disabledBackgroundColor: const Color(0xFF2ECC71).withValues(alpha: 0.4),
-                        foregroundColor: Colors.white,
-                        disabledForegroundColor: Colors.white70,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: Text(tr('learned_btn'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    ),
-                  ),
-                ],
+            ),
+            const SizedBox(width: 8),
+          ],
+          Expanded(
+            flex: 2,
+            child: OutlinedButton(
+              onPressed: _skipWord,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.orange,
+                side: const BorderSide(color: Colors.orange),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text(tr('skip'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            ),
+          ),
+          if (_revealed) ...[
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 3,
+              child: ElevatedButton(
+                onPressed: (isLearned || !isReady) ? null : _tryMarkLearned,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2ECC71),
+                  disabledBackgroundColor: const Color(0xFF2ECC71).withValues(alpha: 0.45),
+                  foregroundColor: Colors.white,
+                  disabledForegroundColor: Colors.white70,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Text(
+                  isLearned ? tr('learned_btn') : (_revealCountdown > 0 ? '⏳ ${_revealCountdown}s' : tr('learned_btn')),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
               ),
             ),
           ],
-        ),
+        ],
       ),
     );
   }

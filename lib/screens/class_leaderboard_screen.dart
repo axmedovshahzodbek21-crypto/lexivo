@@ -15,7 +15,8 @@ Color _avatarColor(String id) {
 
 class ClassLeaderboardScreen extends StatefulWidget {
   final String classId;
-  const ClassLeaderboardScreen({super.key, required this.classId});
+  final bool isVisible;
+  const ClassLeaderboardScreen({super.key, required this.classId, this.isVisible = false});
 
   @override
   State<ClassLeaderboardScreen> createState() => _ClassLeaderboardScreenState();
@@ -24,7 +25,8 @@ class ClassLeaderboardScreen extends StatefulWidget {
 class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
     with SingleTickerProviderStateMixin {
   List<ClassLeaderboardRow> _rows = [];
-  bool _loading = true;
+  bool _loading = false;
+  bool _initialized = false;
   late final AnimationController _ctrl;
   late final Animation<double> _anim;
   String? _myId;
@@ -35,6 +37,25 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
     _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
     _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeOutBack);
     appLangNotifier.addListener(_onLang);
+    if (widget.isVisible) _initialize();
+  }
+
+  @override
+  void didUpdateWidget(ClassLeaderboardScreen old) {
+    super.didUpdateWidget(old);
+    // First time tab becomes visible — start loading
+    if (widget.isVisible && !_initialized) {
+      _initialize();
+    }
+    // Tab re-visited with data already loaded — replay podium animation
+    else if (widget.isVisible && !old.isVisible && _rows.isNotEmpty && !_loading) {
+      _ctrl.reset();
+      _ctrl.forward();
+    }
+  }
+
+  void _initialize() {
+    _initialized = true;
     _load();
   }
 
@@ -69,7 +90,7 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loading || !_initialized) return const Center(child: CircularProgressIndicator());
 
     if (_rows.isEmpty) {
       return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [

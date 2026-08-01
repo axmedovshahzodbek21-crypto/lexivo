@@ -180,7 +180,10 @@ class _LoginScreenState extends State<LoginScreen> {
       SyncService.pullAll();
     }
     if (!mounted) return;
-    final done = prefs.getBool('onboarding_completed') ?? false;
+    // Authenticated users always go to the app — they already have an account
+    // so onboarding_completed is irrelevant (mirrors the main.dart startup logic).
+    // Only guests without an account fall through to onboarding.
+    final done = asGuest ? (prefs.getBool('onboarding_completed') ?? false) : true;
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(

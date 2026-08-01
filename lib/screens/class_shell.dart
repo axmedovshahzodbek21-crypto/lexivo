@@ -29,7 +29,7 @@ class _ClassShellState extends State<ClassShell> {
     ClassHomeScreen(classId: widget.classId, className: widget.className, isTeacher: widget.isTeacher),
     ClassWordsScreen(classId: widget.classId, className: widget.className),
     ClassLeaderboardScreen(classId: widget.classId, isVisible: _tab == 2),
-    _PlaceholderTab(icon: '📋', label: tr('homework'), sublabel: 'Coming soon — Phase 2'),
+    _PlaceholderTab(icon: '📋', label: tr('homework'), sublabel: 'Coming in Phase 3'),
     if (widget.isTeacher)
       ClassDashboardScreen(classId: widget.classId, className: widget.className),
   ];

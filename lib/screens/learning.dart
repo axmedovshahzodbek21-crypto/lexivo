@@ -139,6 +139,15 @@ class _LearningScreenState extends State<LearningScreen> {
   @override
   void dispose() {
     _heartbeatTimer?.cancel();
+    if (!_sessionComplete) {
+      // Session was abandoned — remove the presence row so the student
+      // doesn't appear as "studying now" on the teacher dashboard forever.
+      final user = currentUser;
+      if (user != null) {
+        supabase.from('student_presence').delete().eq('student_id', user.id)
+            .then((_) {}).catchError((_) {});
+      }
+    }
     _revealTimer?.cancel();
     appLangNotifier.removeListener(_onLangChange);
     _audioPlayer.dispose();

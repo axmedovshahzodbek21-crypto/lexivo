@@ -2105,10 +2105,25 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
         k.startsWith('learn_marks_') ||
         k.startsWith('flashcard_progress_') ||
         k.startsWith('leveled_session_') ||
-        k.startsWith('ach_date_'));
+        k.startsWith('ach_date_') ||
+        k.startsWith('level_test_complete_'));
     for (final key in toRemove) { await prefs.remove(key); }
     await prefs.remove('sync_stats_ts');
     await prefs.remove('sync_settings_ts');
     await prefs.remove('sync_lists_ts');
+    // Flashcard/quiz streaks
+    await prefs.remove('flash_days');
+    await prefs.remove('flash_last_day');
+    await prefs.remove('flash_streak');
+    await prefs.remove('quiz_days');
+    await prefs.remove('quiz_last_day');
+    await prefs.remove('quiz_streak');
+    // Other missing keys
+    await prefs.remove('daily_word_goal');
+    await prefs.remove('streak_bonus_date');
+    await prefs.remove('srs_locked_days');
+    // User-created content — most important: these are personal and must not leak
+    await prefs.remove('imported_words');
+    await prefs.remove('custom_lists');
   }
 }

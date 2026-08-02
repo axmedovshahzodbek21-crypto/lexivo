@@ -43,6 +43,19 @@ bool _isDueOverdue(String? due) {
   return due.compareTo(DateTime.now().toIso8601String().substring(0, 10)) < 0;
 }
 
+// ── Cache ─────────────────────────────────────────────────────────────────────
+typedef _ClassesSnapshot = ({
+  List<ClassRow> myClasses,
+  List<ClassRow> joinedClasses,
+  Map<String, String> teacherNames,
+  Map<String, List<ClassNote>> classNotes,
+  Map<String, List<ClassTarget>> classTargets,
+  Map<String, List<ClassAnnouncement>> classAnnouncements,
+  Map<String, List<ClassWord>> classWords,
+  Set<String> learnedWordIds,
+});
+final _classesCache = <String, _ClassesSnapshot>{};
+
 // ── Screen ───────────────────────────────────────────────────────────────────
 
 class ClassesScreen extends StatefulWidget {
@@ -86,96 +99,124 @@ class _ClassesScreenState extends State<ClassesScreen> {
 
   void _onLangChange() { if (mounted) setState(() {}); }
 
+  void _applySnapshot(_ClassesSnapshot s) {
+    _myClasses = s.myClasses;
+    _joinedClasses = s.joinedClasses;
+    _teacherNames = s.teacherNames;
+    _classNotes = s.classNotes;
+    _classTargets = s.classTargets;
+    _classAnnouncements = s.classAnnouncements;
+    _classWords = s.classWords;
+    _learnedWordIds = s.learnedWordIds;
+    _loading = false;
+  }
+
   Future<void> _load() async {
     final user = currentUser;
     if (user == null) { if (mounted) setState(() => _loading = false); return; }
-    if (mounted) setState(() => _loading = true);
+
+    // Serve stale cache instantly, then refresh silently
+    final cached = _classesCache[user.id];
+    if (cached != null) {
+      if (mounted) setState(() => _applySnapshot(cached));
+    } else {
+      if (mounted) setState(() => _loading = true);
+    }
+
     try {
-      // My classes (teacher)
-      final taught = await supabase.from('classes').select('*').eq('teacher_id', user.id).order('created_at', ascending: false);
+      // Fetch taught classes and memberships in parallel
+      final results = await Future.wait([
+        supabase.from('classes').select('*').eq('teacher_id', user.id).order('created_at', ascending: false),
+        supabase.from('class_members').select('class_id').eq('student_id', user.id),
+      ]);
+      final taught = results[0] as List;
+      final memberships = results[1] as List;
+
+      // One batch query for member counts instead of N individual queries
+      final taughtIds = taught.map((c) => (c as Map)['id'] as String).toList();
       final myClasses = <ClassRow>[];
-      for (final c in (taught as List)) {
-        final m = Map<String, dynamic>.from(c as Map);
-        final cnt = await supabase.from('class_members').select('student_id').eq('class_id', m['id'] as String);
-        myClasses.add(ClassRow(id: m['id'] as String, name: m['name'] as String, joinCode: m['join_code'] as String, teacherId: m['teacher_id'] as String, memberCount: (cnt as List).length));
+      if (taughtIds.isNotEmpty) {
+        final memberRows = await supabase.from('class_members').select('class_id').inFilter('class_id', taughtIds);
+        final countMap = <String, int>{};
+        for (final m in (memberRows as List)) {
+          final id = (m as Map)['class_id'] as String;
+          countMap[id] = (countMap[id] ?? 0) + 1;
+        }
+        for (final c in taught) {
+          final m = Map<String, dynamic>.from(c as Map);
+          myClasses.add(ClassRow(id: m['id'] as String, name: m['name'] as String, joinCode: m['join_code'] as String, teacherId: m['teacher_id'] as String, memberCount: countMap[m['id'] as String] ?? 0));
+        }
       }
 
-      // Joined classes (student)
-      final memberships = await supabase.from('class_members').select('class_id').eq('student_id', user.id);
       List<ClassRow> joinedClasses = [];
-      Map<String, String> teacherNames = {};
-      Map<String, List<ClassNote>> notes = {};
-      Map<String, List<ClassTarget>> targets = {};
-      Map<String, List<ClassAnnouncement>> announcements = {};
-      Map<String, List<ClassWord>> classWords = {};
-      Set<String> learnedIds = {};
+      var teacherNames = <String, String>{};
+      var notes = <String, List<ClassNote>>{};
+      var targets = <String, List<ClassTarget>>{};
+      var announcements = <String, List<ClassAnnouncement>>{};
+      var classWords = <String, List<ClassWord>>{};
+      var learnedIds = <String>{};
 
-      if ((memberships as List).isNotEmpty) {
+      if (memberships.isNotEmpty) {
         final classIds = memberships.map((m) => (m as Map)['class_id'] as String).toList();
         final classData = await supabase.from('classes').select('*').inFilter('id', classIds);
         joinedClasses = (classData as List)
-          .map((c) => ClassRow.fromMap(Map<String, dynamic>.from(c as Map)))
-          .where((c) => c.teacherId != user.id)
-          .toList();
+            .map((c) => ClassRow.fromMap(Map<String, dynamic>.from(c as Map)))
+            .where((c) => c.teacherId != user.id)
+            .toList();
 
         if (joinedClasses.isNotEmpty) {
           final joinedIds = joinedClasses.map((c) => c.id).toList();
           final teacherIds = joinedClasses.map((c) => c.teacherId).toSet().toList();
 
-          final profiles = await supabase.from('profiles').select('id, name').inFilter('id', teacherIds);
-          for (final p in (profiles as List)) {
+          // Fetch all supplementary data in parallel
+          final parallel = await Future.wait([
+            supabase.from('profiles').select('id, name').inFilter('id', teacherIds),
+            supabase.from('class_notes').select('id, class_id, message, created_at, read_at').eq('student_id', user.id).order('created_at', ascending: false),
+            supabase.from('class_targets').select('id, class_id, title, due_date, completed_at, created_at').eq('student_id', user.id).order('created_at', ascending: false),
+            supabase.from('class_announcements').select('id, class_id, message, created_at').inFilter('class_id', joinedIds).order('created_at', ascending: false),
+            supabase.from('class_words').select('id, class_id, word, translation, definition, example1, example1_translation, example2, example2_translation').inFilter('class_id', joinedIds).order('created_at', ascending: true),
+            supabase.from('class_word_progress').select('word_id').eq('student_id', user.id),
+          ]);
+
+          for (final p in parallel[0] as List) {
             final pm = Map<String, dynamic>.from(p as Map);
             teacherNames[pm['id'] as String] = pm['name'] as String? ?? 'Teacher';
           }
 
-          final notesData = await supabase.from('class_notes').select('id, class_id, message, created_at, read_at').eq('student_id', user.id).order('created_at', ascending: false);
           final unreadIds = <String>[];
-          for (final n in (notesData as List)) {
-            final nm = Map<String, dynamic>.from(n as Map);
-            final note = ClassNote.fromMap(nm);
+          for (final n in parallel[1] as List) {
+            final note = ClassNote.fromMap(Map<String, dynamic>.from(n as Map));
             notes[note.classId] = [...(notes[note.classId] ?? []), note];
             if (note.readAt == null) unreadIds.add(note.id);
           }
           if (unreadIds.isNotEmpty) {
-            await supabase.from('class_notes').update({'read_at': DateTime.now().toIso8601String()}).inFilter('id', unreadIds);
+            supabase.from('class_notes').update({'read_at': DateTime.now().toIso8601String()}).inFilter('id', unreadIds).then((_) {}).catchError((_) {});
           }
 
-          final targetsData = await supabase.from('class_targets').select('id, class_id, title, due_date, completed_at, created_at').eq('student_id', user.id).order('created_at', ascending: false);
-          for (final t in (targetsData as List)) {
+          for (final t in parallel[2] as List) {
             final target = ClassTarget.fromMap(Map<String, dynamic>.from(t as Map));
             targets[target.classId] = [...(targets[target.classId] ?? []), target];
           }
-
-          final announcementsData = await supabase.from('class_announcements').select('id, class_id, message, created_at').inFilter('class_id', joinedIds).order('created_at', ascending: false);
-          for (final a in (announcementsData as List)) {
+          for (final a in parallel[3] as List) {
             final ann = ClassAnnouncement.fromMap(Map<String, dynamic>.from(a as Map));
             announcements[ann.classId] = [...(announcements[ann.classId] ?? []), ann];
           }
-
-          final wordsData = await supabase.from('class_words').select('id, class_id, word, translation, definition, example1, example1_translation, example2, example2_translation').inFilter('class_id', joinedIds).order('created_at', ascending: true);
-          for (final w in (wordsData as List)) {
+          for (final w in parallel[4] as List) {
             final word = ClassWord.fromMap(Map<String, dynamic>.from(w as Map));
             classWords[word.classId] = [...(classWords[word.classId] ?? []), word];
           }
-
-          final progressData = await supabase.from('class_word_progress').select('word_id').eq('student_id', user.id);
-          learnedIds = (progressData as List).map((p) => (p as Map)['word_id'] as String).toSet();
+          learnedIds = (parallel[5] as List).map((p) => (p as Map)['word_id'] as String).toSet();
         }
       }
 
-      if (mounted) {
-        setState(() {
-          _myClasses = myClasses;
-          _joinedClasses = joinedClasses;
-          _teacherNames = teacherNames;
-          _classNotes = notes;
-          _classTargets = targets;
-          _classAnnouncements = announcements;
-          _classWords = classWords;
-          _learnedWordIds = learnedIds;
-          _loading = false;
-        });
-      }
+      final snapshot = (
+        myClasses: myClasses, joinedClasses: joinedClasses,
+        teacherNames: teacherNames, classNotes: notes,
+        classTargets: targets, classAnnouncements: announcements,
+        classWords: classWords, learnedWordIds: learnedIds,
+      );
+      _classesCache[user.id] = snapshot;
+      if (mounted) setState(() => _applySnapshot(snapshot));
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
@@ -185,17 +226,22 @@ class _ClassesScreenState extends State<ClassesScreen> {
     final user = currentUser;
     if (user == null || name.trim().isEmpty) return;
     await supabase.from('classes').insert({'name': name.trim(), 'join_code': _generateCode(), 'teacher_id': user.id});
+    _classesCache.remove(user.id);
     await _load();
   }
 
   Future<void> _renameClass(String classId, String newName) async {
     if (newName.trim().isEmpty) return;
+    final user = currentUser;
     await supabase.from('classes').update({'name': newName.trim()}).eq('id', classId);
+    if (user != null) _classesCache.remove(user.id);
     await _load();
   }
 
   Future<void> _deleteClass(String classId) async {
+    final user = currentUser;
     await supabase.from('classes').delete().eq('id', classId);
+    if (user != null) _classesCache.remove(user.id);
     await _load();
   }
 
@@ -211,6 +257,7 @@ class _ClassesScreenState extends State<ClassesScreen> {
       if (m['teacher_id'] == user.id) { if (mounted) setState(() => _joinError = "Can't join your own class"); return; }
       await supabase.from('class_members').insert({'class_id': m['id'], 'student_id': user.id});
       _joinCtrl.clear();
+      _classesCache.remove(user.id);
       await _load();
     } catch (e) {
       if (mounted) setState(() => _joinError = e.toString().contains('23505') ? 'Already in this class' : 'Failed to join');
@@ -230,6 +277,7 @@ class _ClassesScreenState extends State<ClassesScreen> {
     ));
     if (ok != true) return;
     await supabase.from('class_members').delete().eq('class_id', classId).eq('student_id', user.id);
+    _classesCache.remove(user.id);
     await _load();
   }
 

@@ -20,7 +20,8 @@ class _WordEntry {
 }
 
 class _ParsedWord {
-  String word = '', translation = '', definition = '', example1 = '', example1Translation = '', example2 = '', example2Translation = '';
+  String word = '', translation = '', definition = '';
+  List<Map<String, String>> examples = [];
 }
 
 List<_ParsedWord> _parseOutput(String text) {
@@ -28,6 +29,8 @@ List<_ParsedWord> _parseOutput(String text) {
   final blocks = text.split(RegExp(r'\n---\n|\n---$|^---\n', multiLine: true)).map((b) => b.trim()).where((b) => b.isNotEmpty).toList();
   for (final block in blocks) {
     final w = _ParsedWord();
+    final sentences = <int, String>{};
+    final translations = <int, String>{};
     for (final line in block.split('\n')) {
       final colon = line.indexOf(':');
       if (colon < 0) continue;
@@ -37,12 +40,18 @@ List<_ParsedWord> _parseOutput(String text) {
         case 'word': w.word = val;
         case 'translation': w.translation = val;
         case 'definition': w.definition = val;
-        case 'example 1': w.example1 = val;
-        case 'example 1 translation': w.example1Translation = val;
-        case 'example 2': w.example2 = val;
-        case 'example 2 translation': w.example2Translation = val;
+        default:
+          final sentMatch = RegExp(r'^example (\d+)$').firstMatch(key);
+          final transMatch = RegExp(r'^example (\d+) translation$').firstMatch(key);
+          if (sentMatch != null) sentences[int.parse(sentMatch.group(1)!)] = val;
+          if (transMatch != null) translations[int.parse(transMatch.group(1)!)] = val;
       }
     }
+    final allNums = {...sentences.keys, ...translations.keys}.toList()..sort();
+    w.examples = allNums
+        .where((n) => sentences.containsKey(n))
+        .map((n) => {'sentence': sentences[n]!, 'translation': translations[n] ?? ''})
+        .toList();
     if (w.word.isNotEmpty && w.translation.isNotEmpty) results.add(w);
   }
   return results;
@@ -65,6 +74,22 @@ Example 1: [natural sentence using the word in $lang]
 Example 1 Translation: [$tl translation of example 1]
 Example 2: [another natural sentence in $lang]
 Example 2 Translation: [$tl translation of example 2]
+Example 3: [another natural sentence in $lang]
+Example 3 Translation: [$tl translation of example 3]
+Example 4: [another natural sentence in $lang]
+Example 4 Translation: [$tl translation of example 4]
+Example 5: [another natural sentence in $lang]
+Example 5 Translation: [$tl translation of example 5]
+Example 6: [another natural sentence in $lang]
+Example 6 Translation: [$tl translation of example 6]
+Example 7: [another natural sentence in $lang]
+Example 7 Translation: [$tl translation of example 7]
+Example 8: [another natural sentence in $lang]
+Example 8 Translation: [$tl translation of example 8]
+Example 9: [another natural sentence in $lang]
+Example 9 Translation: [$tl translation of example 9]
+Example 10: [another natural sentence in $lang]
+Example 10 Translation: [$tl translation of example 10]
 
 Output only the formatted blocks. No commentary.''';
 }
@@ -198,10 +223,11 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
         'word': w.word,
         'translation': w.translation,
         if (w.definition.isNotEmpty) 'definition': w.definition,
-        if (w.example1.isNotEmpty) 'example1': w.example1,
-        if (w.example1Translation.isNotEmpty) 'example1_translation': w.example1Translation,
-        if (w.example2.isNotEmpty) 'example2': w.example2,
-        if (w.example2Translation.isNotEmpty) 'example2_translation': w.example2Translation,
+        if (w.examples.isNotEmpty) 'examples': w.examples,
+        if (w.examples.isNotEmpty) 'example1': w.examples[0]['sentence'],
+        if (w.examples.isNotEmpty) 'example1_translation': w.examples[0]['translation'],
+        if (w.examples.length > 1) 'example2': w.examples[1]['sentence'],
+        if (w.examples.length > 1) 'example2_translation': w.examples[1]['translation'],
         if (folder.isNotEmpty) 'folder_name': folder,
         if (group.isNotEmpty) 'collection_name': group,
       }).toList();
@@ -640,18 +666,28 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
     try {
       final user = currentUser;
       final collection = _collections[_selectedCollectionIdx!];
-      final rows = day.words.map((w) => {
-        'class_id': widget.classId,
-        'teacher_id': user?.id,
-        'word': w.word,
-        'translation': w.translation,
-        if (w.definition.isNotEmpty) 'definition': w.definition,
-        if (w.example1.isNotEmpty) 'example1': w.example1,
-        if (w.example1Translation.isNotEmpty) 'example1_translation': w.example1Translation,
-        if (w.example2.isNotEmpty) 'example2': w.example2,
-        if (w.example2Translation.isNotEmpty) 'example2_translation': w.example2Translation,
-        'folder_name': collection.name,
-        'collection_name': 'Day ${day.dayNumber}: ${day.topic}',
+      final rows = day.words.map((w) {
+        final exPairs = [
+          if (w.example1.isNotEmpty) {'sentence': w.example1, 'translation': w.example1Translation},
+          if (w.example2.isNotEmpty) {'sentence': w.example2, 'translation': w.example2Translation},
+          if (w.example3.isNotEmpty) {'sentence': w.example3, 'translation': w.example3Translation},
+          for (var i = 0; i < w.extraExamples.length; i++)
+            {'sentence': w.extraExamples[i], 'translation': i < w.extraExampleTranslations.length ? w.extraExampleTranslations[i] : ''},
+        ];
+        return {
+          'class_id': widget.classId,
+          'teacher_id': user?.id,
+          'word': w.word,
+          'translation': w.translation,
+          if (w.definition.isNotEmpty) 'definition': w.definition,
+          if (exPairs.isNotEmpty) 'examples': exPairs,
+          if (w.example1.isNotEmpty) 'example1': w.example1,
+          if (w.example1Translation.isNotEmpty) 'example1_translation': w.example1Translation,
+          if (w.example2.isNotEmpty) 'example2': w.example2,
+          if (w.example2Translation.isNotEmpty) 'example2_translation': w.example2Translation,
+          'folder_name': collection.name,
+          'collection_name': 'Day ${day.dayNumber}: ${day.topic}',
+        };
       }).toList();
       await supabase.from('class_words').insert(rows);
       if (mounted) {

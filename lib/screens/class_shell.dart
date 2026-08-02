@@ -24,20 +24,25 @@ class ClassShell extends StatefulWidget {
 
 class _ClassShellState extends State<ClassShell> {
   int _tab = 0;
+  late final List<Widget> _screens;
 
-  List<Widget> get _screens => [
-    ClassHomeScreen(
-      classId: widget.classId,
-      className: widget.className,
-      isTeacher: widget.isTeacher,
-      onGoToDashboard: widget.isTeacher ? () => setState(() => _tab = 4) : null,
-    ),
-    ClassWordsScreen(classId: widget.classId, className: widget.className),
-    ClassLeaderboardScreen(classId: widget.classId, isVisible: _tab == 2),
-    ClassHomeworkTab(classId: widget.classId, isTeacher: widget.isTeacher),
-    if (widget.isTeacher)
-      ClassDashboardScreen(classId: widget.classId, className: widget.className),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      ClassHomeScreen(
+        classId: widget.classId,
+        className: widget.className,
+        isTeacher: widget.isTeacher,
+        onGoToDashboard: widget.isTeacher ? () => setState(() => _tab = 4) : null,
+      ),
+      ClassWordsScreen(classId: widget.classId, className: widget.className),
+      ClassLeaderboardScreen(classId: widget.classId, isVisible: true),
+      ClassHomeworkTab(classId: widget.classId, isTeacher: widget.isTeacher),
+      if (widget.isTeacher)
+        ClassDashboardScreen(classId: widget.classId, className: widget.className),
+    ];
+  }
 
   List<BottomNavigationBarItem> get _navItems => [
     const BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),

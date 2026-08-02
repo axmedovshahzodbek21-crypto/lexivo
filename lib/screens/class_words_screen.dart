@@ -4,18 +4,23 @@ import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import '../data/word_data.dart';
+import 'learning.dart';
 
 class _WordEntry {
   final String id, word, translation;
   final String? definition, example1, example1Translation, example2, example2Translation;
   final String? folderName, collectionName;
-  const _WordEntry({required this.id, required this.word, required this.translation, this.definition, this.example1, this.example1Translation, this.example2, this.example2Translation, this.folderName, this.collectionName});
+  final List<Map<String, String>> examples;
+  const _WordEntry({required this.id, required this.word, required this.translation, this.definition, this.example1, this.example1Translation, this.example2, this.example2Translation, this.folderName, this.collectionName, this.examples = const []});
   factory _WordEntry.fromMap(Map<String, dynamic> m) => _WordEntry(
     id: m['id'] as String, word: m['word'] as String, translation: m['translation'] as String,
     definition: m['definition'] as String?, example1: m['example1'] as String?,
     example1Translation: m['example1_translation'] as String?,
     example2: m['example2'] as String?, example2Translation: m['example2_translation'] as String?,
     folderName: m['folder_name'] as String?, collectionName: m['collection_name'] as String?,
+    examples: (m['examples'] as List?)
+        ?.map((e) => Map<String, String>.from((e as Map).map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''))))
+        .toList() ?? [],
   );
 }
 
@@ -171,7 +176,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
     if (mounted) setState(() => _loading = true);
     try {
       final data = await supabase.from('class_words')
-        .select('id, word, translation, definition, example1, example1_translation, example2, example2_translation, folder_name, collection_name')
+        .select('id, word, translation, definition, example1, example1_translation, example2, example2_translation, examples, folder_name, collection_name')
         .eq('class_id', widget.classId)
         .order('created_at', ascending: true);
       if (mounted) setState(() { _words = (data as List).map((e) => _WordEntry.fromMap(Map<String, dynamic>.from(e as Map))).toList(); _loading = false; });
@@ -246,6 +251,41 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
     if (mounted) setState(() => _words.removeWhere((w) => w.id == id));
   }
 
+  void _studyWords() {
+    if (_words.isEmpty) return;
+    final wordItems = _words.map((e) {
+      final exs = e.examples;
+      return WordItem(
+        word: e.word,
+        partOfSpeech: '',
+        pronunciation: '',
+        translation: e.translation,
+        definition: e.definition ?? '',
+        example1: exs.isNotEmpty ? (exs[0]['sentence'] ?? e.example1 ?? '') : (e.example1 ?? ''),
+        example1Translation: exs.isNotEmpty ? (exs[0]['translation'] ?? e.example1Translation ?? '') : (e.example1Translation ?? ''),
+        example2: exs.length > 1 ? (exs[1]['sentence'] ?? e.example2 ?? '') : (e.example2 ?? ''),
+        example2Translation: exs.length > 1 ? (exs[1]['translation'] ?? e.example2Translation ?? '') : (e.example2Translation ?? ''),
+        example3: exs.length > 2 ? (exs[2]['sentence'] ?? '') : '',
+        example3Translation: exs.length > 2 ? (exs[2]['translation'] ?? '') : '',
+        extraExamples: exs.length > 3 ? exs.sublist(3).map((x) => x['sentence'] ?? '').where((s) => s.isNotEmpty).toList() : [],
+        extraExampleTranslations: exs.length > 3 ? exs.sublist(3).map((x) => x['translation'] ?? '').toList() : [],
+      );
+    }).toList();
+    final wordDay = WordDay(
+      dayNumber: 0,
+      topic: widget.className,
+      words: wordItems,
+    );
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => LearningScreen(
+        wordDay: wordDay,
+        userProfile: '',
+        collectionName: 'class_${widget.classId}',
+        dayIndex: 0,
+      ),
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -277,6 +317,12 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
           _buildAiTab(),
           _buildImportTab(),
         ],
+      ),
+      floatingActionButton: _words.isEmpty ? null : FloatingActionButton.extended(
+        onPressed: _studyWords,
+        backgroundColor: context.primary,
+        icon: const Icon(Icons.school_rounded, color: Colors.white),
+        label: const Text('Study', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
     );
   }

@@ -61,6 +61,13 @@ String _fmtXp(int raw) {
   return d == d.truncateToDouble() ? d.truncate().toString() : d.toStringAsFixed(1);
 }
 
+typedef _LeaderboardCache = ({
+  List<LeaderboardEntry> entries,
+  Set<String> savedIds,
+  List<LeaderboardEntry> trackedEntries,
+});
+final _leaderboardCache = <String, _LeaderboardCache>{};
+
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
 
@@ -83,9 +90,23 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   }
 
   Future<void> _loadAll() async {
-    setState(() { _loading = true; _error = null; });
+    final key = currentUser?.id ?? 'anon';
+    final cached = _leaderboardCache[key];
+    if (cached != null) {
+      if (mounted) {
+        setState(() {
+          _entries = cached.entries;
+          _savedIds = cached.savedIds;
+          _trackedEntries = cached.trackedEntries;
+          _loading = false;
+        });
+      }
+    } else {
+      if (mounted) { setState(() { _loading = true; _error = null; }); }
+    }
     await Future.wait([_load(), _loadSaved()]);
     await _loadTrackedUsers();
+    _leaderboardCache[key] = (entries: _entries, savedIds: _savedIds, trackedEntries: _trackedEntries);
   }
 
   Future<void> _load() async {

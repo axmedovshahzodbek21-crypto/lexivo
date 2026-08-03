@@ -280,7 +280,8 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
       builder: (_) => LearningScreen(
         wordDay: wordDay,
         userProfile: '',
-        collectionName: 'class_${widget.classId}',
+        collectionName: widget.className,
+        classId: widget.classId,
         dayIndex: 0,
       ),
     ));

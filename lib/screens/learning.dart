@@ -14,6 +14,7 @@ import 'flashcard.dart';
 import 'package:lexivo/screens/quiz_screen.dart';
 import '../data/storage_service.dart';
 import '../services/supabase_service.dart';
+import '../services/class_srs_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 
@@ -27,6 +28,8 @@ class LearningScreen extends StatefulWidget {
   final int? dayIndex;
   final int startIndex;
   final bool noXP;
+  // When set, this is a class learning session — SRS goes to Supabase, not personal storage.
+  final String? classId;
 
   const LearningScreen({
     super.key,
@@ -37,6 +40,7 @@ class LearningScreen extends StatefulWidget {
     this.dayIndex,
     this.startIndex = 0,
     this.noXP = false,
+    this.classId,
   });
 
   @override
@@ -304,17 +308,34 @@ class _LearningScreenState extends State<LearningScreen> {
       'gate_attempts': _wordGateAttempts,
       'gate_correct_first': _wordGateCorrectFirst,
     });
-    final existing = await StorageService.getLearnedWords();
-    final isNew = !existing.any((e) => e.word == word.word && e.collectionName == widget.collectionName);
-    await StorageService.saveLearnedWords(
-      [word],
-      widget.collectionName,
-      widget.wordDay.topic,
-      widget.wordDay.dayNumber,
-    );
-    if (!widget.noXP && isNew) {
-      final learned = await StorageService.getLearnedWords();
-      await StorageService.addXP(StorageService.learnXP(learned.length), reason: 'Learn', source: 'Unit ${widget.wordDay.dayNumber} · ${widget.collectionName}');
+    if (widget.classId != null) {
+      // Class mode: SRS lives in Supabase. Skip personal learned list.
+      final user = currentUser;
+      if (user != null) {
+        await initClassSRSWord(
+          userId: user.id,
+          classId: widget.classId!,
+          word: word.word,
+          translation: word.translation,
+        );
+      }
+      if (!widget.noXP) {
+        final learned = await StorageService.getLearnedWords();
+        await StorageService.addXP(StorageService.learnXP(learned.length), reason: 'Learn', source: widget.collectionName);
+      }
+    } else {
+      final existing = await StorageService.getLearnedWords();
+      final isNew = !existing.any((e) => e.word == word.word && e.collectionName == widget.collectionName);
+      await StorageService.saveLearnedWords(
+        [word],
+        widget.collectionName,
+        widget.wordDay.topic,
+        widget.wordDay.dayNumber,
+      );
+      if (!widget.noXP && isNew) {
+        final learned = await StorageService.getLearnedWords();
+        await StorageService.addXP(StorageService.learnXP(learned.length), reason: 'Learn', source: 'Unit ${widget.wordDay.dayNumber} · ${widget.collectionName}');
+      }
     }
     _next();
   }

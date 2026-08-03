@@ -38,10 +38,13 @@ class MatchingScreen extends StatefulWidget {
   final WordDay wordDay;
   final String collectionName;
 
+  final void Function(String word)? onWrongPair;
+
   const MatchingScreen({
     super.key,
     required this.wordDay,
     required this.collectionName,
+    this.onWrongPair,
   });
 
   @override
@@ -160,6 +163,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
       }
     } else {
       // Wrong
+      widget.onWrongPair?.call(leftId);
       setState(() {
         _mistakes++;
         _selected = null;

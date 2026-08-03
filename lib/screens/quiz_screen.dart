@@ -229,6 +229,7 @@ class QuizSessionScreen extends StatefulWidget {
   final QuizType quizType;
   final int questionCount;
   final bool noXP;
+  final void Function(String word)? onWrongWord;
 
   const QuizSessionScreen({
     super.key,
@@ -238,6 +239,7 @@ class QuizSessionScreen extends StatefulWidget {
     required this.quizType,
     required this.questionCount,
     this.noXP = false,
+    this.onWrongWord,
   });
 
   @override
@@ -343,6 +345,7 @@ class _QuizSessionScreenState extends State<QuizSessionScreen>
         _correctCount++;
       } else {
         _wrongWords.add(_questions[_currentIndex]);
+        widget.onWrongWord?.call(_questions[_currentIndex].word);
       }
     });
     _feedbackController.forward(from: 0);

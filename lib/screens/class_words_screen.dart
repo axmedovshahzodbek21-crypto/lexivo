@@ -7,6 +7,9 @@ import '../l10n.dart';
 import '../data/word_data.dart';
 import 'learning.dart';
 import 'class_progress_screen.dart';
+import 'class_review_screen.dart';
+import 'quiz_screen.dart';
+import 'matching_screen.dart';
 
 class _WordEntry {
   final String id, word, translation;
@@ -301,8 +304,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
     if (mounted) setState(() => _words.removeWhere((w) => w.id == id));
   }
 
-  void _studyWords() {
-    if (_words.isEmpty) return;
+  WordDay _buildWordDay() {
     final wordItems = _words.map((e) {
       final exs = e.examples;
       return WordItem(
@@ -321,14 +323,14 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
         extraExampleTranslations: exs.length > 3 ? exs.sublist(3).map((x) => x['translation'] ?? '').toList() : [],
       );
     }).toList();
-    final wordDay = WordDay(
-      dayNumber: 0,
-      topic: widget.className,
-      words: wordItems,
-    );
+    return WordDay(dayNumber: 0, topic: widget.className, words: wordItems);
+  }
+
+  void _studyWords() {
+    if (_words.isEmpty) return;
     Navigator.push(context, MaterialPageRoute(
       builder: (_) => LearningScreen(
-        wordDay: wordDay,
+        wordDay: _buildWordDay(),
         userProfile: '',
         collectionName: widget.className,
         classId: widget.classId,
@@ -337,8 +339,57 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
     ));
   }
 
-  void _comingSoon() => ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('Coming soon — Phase 3'), duration: Duration(seconds: 2)));
+  void _startFlashcards() {
+    if (_words.isEmpty) return;
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => ClassReviewScreen(classId: widget.classId, className: widget.className, dueOnly: false),
+    ));
+  }
+
+  void _startQuiz() {
+    if (_words.length < 4) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Need at least 4 words for a quiz'), duration: Duration(seconds: 2)));
+      return;
+    }
+    final user = currentUser;
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => QuizSessionScreen(
+        wordDay: _buildWordDay(),
+        userProfile: '',
+        collectionName: widget.className,
+        quizType: QuizType.wordToTranslation,
+        questionCount: _words.length.clamp(1, 20),
+        noXP: true,
+        onWrongWord: user == null ? null : (word) =>
+            addClassHardWord(userId: user.id, classId: widget.classId, word: word),
+      ),
+    ));
+  }
+
+  void _startMatching() {
+    if (_words.length < 4) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Need at least 4 words for matching'), duration: Duration(seconds: 2)));
+      return;
+    }
+    final user = currentUser;
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => MatchingScreen(
+        wordDay: _buildWordDay(),
+        collectionName: widget.className,
+        onWrongPair: user == null ? null : (word) =>
+            addClassHardWord(userId: user.id, classId: widget.classId, word: word),
+      ),
+    ));
+  }
+
+  void _startReview() {
+    if (_dueCount == 0) return;
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => ClassReviewScreen(classId: widget.classId, className: widget.className, dueOnly: true),
+    )).then((_) => _loadWords());
+  }
 
   // ── Study Hub ────────────────────────────────────────────────────────────────
 
@@ -354,9 +405,9 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
           shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
           children: [
             _hubBtn('📖 Study', primary: true, onTap: _studyWords),
-            _hubBtn('🃏 Flashcards', onTap: _comingSoon),
-            _hubBtn('❓ Quiz', onTap: _comingSoon),
-            _hubBtn('🔗 Match', onTap: _comingSoon),
+            _hubBtn('🃏 Flashcards', onTap: _startFlashcards),
+            _hubBtn('❓ Quiz', onTap: _startQuiz),
+            _hubBtn('🔗 Match', onTap: _startMatching),
           ],
         ),
         const SizedBox(height: 12),
@@ -374,7 +425,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
             ])),
             if (_dueCount > 0)
               ElevatedButton(
-                onPressed: _comingSoon,
+                onPressed: _startReview,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFEF4444), foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

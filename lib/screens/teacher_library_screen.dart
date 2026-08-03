@@ -253,7 +253,7 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
   Widget _buildGrid() => GridView.builder(
     padding: const EdgeInsets.all(16),
     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-      crossAxisCount: 3, crossAxisSpacing: 10, mainAxisSpacing: 10, childAspectRatio: 0.95,
+      crossAxisCount: 3, crossAxisSpacing: 10, mainAxisSpacing: 10, childAspectRatio: 0.82,
     ),
     itemCount: _folders.length,
     itemBuilder: (context, i) {

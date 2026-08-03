@@ -52,29 +52,33 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
     if (user == null) return;
     if (widget.dueOnly) {
       final due = await getClassDueWords(userId: user.id, classId: widget.classId);
-      if (mounted) setState(() {
-        _cards = due.map((e) => _ReviewCard(word: e.word, translation: e.translation, isSRS: true)).toList();
-        _loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _cards = due.map((e) => _ReviewCard(word: e.word, translation: e.translation, isSRS: true)).toList();
+          _loading = false;
+        });
+      }
     } else {
       final data = await supabase
           .from('class_words')
           .select('word, translation, definition, example1, example1_translation')
           .eq('class_id', widget.classId)
           .order('created_at');
-      if (mounted) setState(() {
-        _cards = (data as List).map((e) {
-          final m = Map<String, dynamic>.from(e as Map);
-          return _ReviewCard(
-            word: m['word'] as String,
-            translation: m['translation'] as String? ?? '',
-            definition: m['definition'] as String?,
-            example: m['example1'] as String?,
-            exampleTranslation: m['example1_translation'] as String?,
-          );
-        }).toList();
-        _loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _cards = (data as List).map((e) {
+            final m = Map<String, dynamic>.from(e as Map);
+            return _ReviewCard(
+              word: m['word'] as String,
+              translation: m['translation'] as String? ?? '',
+              definition: m['definition'] as String?,
+              example: m['example1'] as String?,
+              exampleTranslation: m['example1_translation'] as String?,
+            );
+          }).toList();
+          _loading = false;
+        });
+      }
     }
   }
 
@@ -98,7 +102,9 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
             userId: user.id, classId: widget.classId, word: card.word);
       }
     }
-    setState(() { if (knew) _knew++; else _didntKnow++; });
+    setState(() {
+      if (knew) { _knew++; } else { _didntKnow++; }
+    });
 
     if (_index + 1 >= _cards.length) {
       setState(() => _done = true);

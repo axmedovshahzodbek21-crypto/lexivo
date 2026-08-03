@@ -192,14 +192,16 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
           names[m['id'] as String] = m['name'] as String? ?? 'Student';
         }
       }
-      if (mounted) setState(() {
-        _srsStates = srsStates;
-        _srsWords = srsWords;
-        _hardWordsClass = hardClass;
-        _srsNames = names;
-        _srsLoading = false;
-        _srsLoaded = true;
-      });
+      if (mounted) {
+        setState(() {
+          _srsStates = srsStates;
+          _srsWords = srsWords;
+          _hardWordsClass = hardClass;
+          _srsNames = names;
+          _srsLoading = false;
+          _srsLoaded = true;
+        });
+      }
     } catch (_) {
       if (mounted) setState(() => _srsLoading = false);
     }

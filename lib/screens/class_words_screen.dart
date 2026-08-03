@@ -6,6 +6,7 @@ import '../app_theme.dart';
 import '../l10n.dart';
 import '../data/word_data.dart';
 import 'learning.dart';
+import 'class_progress_screen.dart';
 
 class _WordEntry {
   final String id, word, translation;
@@ -120,6 +121,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
   int _learnedCount = 0;
   int _hardCount = 0;
   int _starredCount = 0;
+  Set<String> _starredIds = {};
 
   // Manual tab
   final _wordCtrl = TextEditingController();
@@ -194,16 +196,16 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
         final dueF     = getClassDueWords(userId: user.id, classId: widget.classId);
         final allF     = getClassSRSAll(userId: user.id, classId: widget.classId);
         final hardF    = supabase.from('class_hard_words').select('id').eq('user_id', user.id).eq('class_id', widget.classId);
-        final starredF = supabase.from('class_starred_words').select('id').eq('user_id', user.id).eq('class_id', widget.classId);
-        final due     = await dueF;
-        final all     = await allF;
-        final hard    = await hardF as List;
-        final starred = await starredF as List;
+        final due      = await dueF;
+        final all      = await allF;
+        final hard     = await hardF as List;
+        final starred  = await getClassStarredWordIds(userId: user.id, classId: widget.classId);
         if (mounted) {
           setState(() {
             _dueCount     = due.length;
             _learnedCount = all.length;
             _hardCount    = hard.length;
+            _starredIds   = starred;
             _starredCount = starred.length;
           });
         }
@@ -272,6 +274,26 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${rows.length} words added!'), duration: const Duration(seconds: 2)));
     } catch (_) {}
     if (mounted) setState(() => _importing = false);
+  }
+
+  Future<void> _toggleStar(String word) async {
+    final user = currentUser;
+    if (user == null) return;
+    final isStarred = _starredIds.contains(word);
+    setState(() {
+      if (isStarred) {
+        _starredIds = {..._starredIds}..remove(word);
+        _starredCount--;
+      } else {
+        _starredIds = {..._starredIds, word};
+        _starredCount++;
+      }
+    });
+    if (isStarred) {
+      await removeClassStarredWord(userId: user.id, classId: widget.classId, word: word);
+    } else {
+      await addClassStarredWord(userId: user.id, classId: widget.classId, word: word);
+    }
   }
 
   Future<void> _deleteWord(String id) async {
@@ -376,6 +398,21 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
             const SizedBox(width: 8),
             _statCard('$_starredCount', 'Starred', const Color(0xFFF59E0B)),
           ]),
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () => Navigator.push(context, MaterialPageRoute(
+              builder: (_) => ClassProgressScreen(classId: widget.classId, className: widget.className),
+            )),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(14), boxShadow: context.cardShadow),
+              child: Row(children: [
+                Text('My Progress', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+                const Spacer(),
+                Text('→', style: TextStyle(color: context.textMuted)),
+              ]),
+            ),
+          ),
         ],
         const SizedBox(height: 16),
       ]),
@@ -910,6 +947,17 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
           GestureDetector(
             onTap: () => _confirmDelete(w),
             child: Padding(padding: const EdgeInsets.only(left: 8), child: Icon(Icons.close, size: 18, color: context.textMuted)),
+          )
+        else
+          GestureDetector(
+            onTap: () => _toggleStar(w.word),
+            child: Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: Text(
+                _starredIds.contains(w.word) ? '⭐' : '☆',
+                style: const TextStyle(fontSize: 18),
+              ),
+            ),
           ),
       ]),
     );

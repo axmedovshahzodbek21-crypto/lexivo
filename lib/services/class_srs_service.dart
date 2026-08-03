@@ -145,3 +145,68 @@ String stageLabelClass(int stage) {
   const labels = ['New', '+1 done', '+3 done', '+7 done', '+14 done', 'Graduated'];
   return labels[stage.clamp(0, 5)];
 }
+
+// ── Starred words ─────────────────────────────────────────────────────────────
+
+Future<Set<String>> getClassStarredWordIds({
+  required String userId,
+  required String classId,
+}) async {
+  final data = await supabase
+      .from('class_starred_words')
+      .select('word')
+      .eq('user_id', userId)
+      .eq('class_id', classId);
+  return {for (final r in data as List) (r as Map)['word'] as String};
+}
+
+Future<void> addClassStarredWord({
+  required String userId,
+  required String classId,
+  required String word,
+}) async {
+  await supabase.from('class_starred_words').upsert(
+    {'user_id': userId, 'class_id': classId, 'word': word},
+    onConflict: 'user_id,class_id,word',
+    ignoreDuplicates: true,
+  );
+}
+
+Future<void> removeClassStarredWord({
+  required String userId,
+  required String classId,
+  required String word,
+}) async {
+  await supabase
+      .from('class_starred_words')
+      .delete()
+      .eq('user_id', userId)
+      .eq('class_id', classId)
+      .eq('word', word);
+}
+
+// ── Hard words ────────────────────────────────────────────────────────────────
+
+Future<Set<String>> getClassHardWordIds({
+  required String userId,
+  required String classId,
+}) async {
+  final data = await supabase
+      .from('class_hard_words')
+      .select('word')
+      .eq('user_id', userId)
+      .eq('class_id', classId);
+  return {for (final r in data as List) (r as Map)['word'] as String};
+}
+
+Future<void> addClassHardWord({
+  required String userId,
+  required String classId,
+  required String word,
+}) async {
+  await supabase.from('class_hard_words').upsert(
+    {'user_id': userId, 'class_id': classId, 'word': word},
+    onConflict: 'user_id,class_id,word',
+    ignoreDuplicates: true,
+  );
+}

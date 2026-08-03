@@ -101,10 +101,19 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   String _sort = 'xp';
   String _filter = 'all';
 
+  // SRS tab
+  List<Map<String, dynamic>> _srsStates = [];
+  List<Map<String, dynamic>> _srsWords = [];
+  List<Map<String, dynamic>> _hardWordsClass = [];
+  Map<String, String> _srsNames = {};
+  bool _srsLoading = false;
+  bool _srsLoaded = false;
+
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 4, vsync: this);
+    _tabs = TabController(length: 5, vsync: this);
+    _tabs.addListener(() { if (_tabs.index == 4 && !_srsLoaded && !_srsLoading) _loadSRS(); });
     appLangNotifier.addListener(_onLang);
     final cached = _dashboardCache[widget.classId];
     if (cached != null) {
@@ -162,6 +171,40 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     }
   }
 
+  Future<void> _loadSRS() async {
+    if (!mounted) return;
+    setState(() => _srsLoading = true);
+    try {
+      final results = await Future.wait<dynamic>([
+        supabase.from('class_srs_states').select('user_id, word, translation, stage, next_due').eq('class_id', widget.classId),
+        supabase.from('class_words').select('word, translation').eq('class_id', widget.classId).order('word'),
+        supabase.from('class_hard_words').select('user_id, word').eq('class_id', widget.classId),
+      ]);
+      final srsStates = (results[0] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      final srsWords  = (results[1] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      final hardClass = (results[2] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      final uids = srsStates.map((e) => e['user_id'] as String).toSet().toList();
+      final names = <String, String>{};
+      if (uids.isNotEmpty) {
+        final profiles = await supabase.from('profiles').select('id, name').inFilter('id', uids);
+        for (final p in (profiles as List)) {
+          final m = Map<String, dynamic>.from(p as Map);
+          names[m['id'] as String] = m['name'] as String? ?? 'Student';
+        }
+      }
+      if (mounted) setState(() {
+        _srsStates = srsStates;
+        _srsWords = srsWords;
+        _hardWordsClass = hardClass;
+        _srsNames = names;
+        _srsLoading = false;
+        _srsLoaded = true;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _srsLoading = false);
+    }
+  }
+
   List<StudentRow> get _sortedStudents {
     var list = _filter == 'inactive' ? _students.where((s) => s.isInactive).toList() : List<StudentRow>.from(_students);
     switch (_sort) {
@@ -196,7 +239,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         actions: [
           IconButton(
             icon: Text('📝', style: const TextStyle(fontSize: 18)),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClassWordsScreen(classId: widget.classId, className: widget.className))).then((_) => _load()),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClassWordsScreen(classId: widget.classId, className: widget.className, isTeacher: true))).then((_) => _load()),
             tooltip: tr('class_words'),
           ),
           IconButton(
@@ -220,6 +263,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             Tab(text: '📊 ${tr('activity')}'),
             const Tab(text: '📡 Radar'),
             const Tab(text: '🗺 Heatmap'),
+            const Tab(text: '📚 SRS'),
           ],
         ),
       ),
@@ -232,6 +276,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
               _buildActivityTab(),
               _buildRadarTab(),
               _buildHeatmapTab(),
+              _buildSRSTab(),
             ],
           ),
     );
@@ -682,6 +727,202 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             Text(e.$2, style: TextStyle(fontSize: 10, color: context.textMuted)),
           ])).toList(),
         ),
+      ],
+    );
+  }
+
+  // ── SRS tab ────────────────────────────────────────────────────────────────
+
+  static const _srsColors = [
+    Color(0xFF9CA3AF), Color(0xFFF59E0B), Color(0xFF3B82F6),
+    Color(0xFF8B5CF6), Color(0xFFEC4899), Color(0xFF10B981),
+  ];
+  static const _srsLabels = ['New', '+1d', '+3d', '+7d', '+14d', '✓'];
+
+  Widget _buildSRSTab() {
+    if (_srsLoading) return Center(child: CircularProgressIndicator(color: context.primary));
+
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final studentIds = _srsStates.map((e) => e['user_id'] as String).toSet().toList();
+
+    // Hard word counts
+    final hardCounts = <String, int>{};
+    for (final h in _hardWordsClass) {
+      final w = h['word'] as String;
+      hardCounts[w] = (hardCounts[w] ?? 0) + 1;
+    }
+    final hardSorted = (hardCounts.entries.toList()..sort((a, b) => b.value.compareTo(a.value))).take(10).toList();
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+      children: [
+        // Per-student overview
+        Text('STUDENT SRS OVERVIEW', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
+        const SizedBox(height: 10),
+        if (studentIds.isEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 32),
+            decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16), boxShadow: context.cardShadow),
+            child: Column(children: [
+              const Text('📚', style: TextStyle(fontSize: 40)),
+              const SizedBox(height: 8),
+              Text('No SRS data yet', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+              const SizedBox(height: 4),
+              Text('Students need to study class words first.', style: TextStyle(fontSize: 11, color: context.textMuted), textAlign: TextAlign.center),
+            ]),
+          )
+        else
+          ...studentIds.map((uid) {
+            final entries = _srsStates.where((e) => e['user_id'] == uid).toList();
+            final dueToday  = entries.where((e) => (e['next_due'] as String).compareTo(today) <= 0 && (e['stage'] as num).toInt() < 5).length;
+            final overdue   = entries.where((e) => (e['next_due'] as String).compareTo(today) <  0 && (e['stage'] as num).toInt() < 5).length;
+            final stageCounts = List.generate(6, (s) => entries.where((e) => (e['stage'] as num).toInt() == s).length);
+            final total = entries.length;
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(14), boxShadow: context.cardShadow),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Expanded(child: Text(_srsNames[uid] ?? uid.substring(0, 8), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.appText))),
+                  if (dueToday > 0) Text('$dueToday due  ', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFF59E0B))),
+                  if (overdue  > 0) Text('$overdue overdue  ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.dangerColor)),
+                  Text('$total words', style: TextStyle(fontSize: 11, color: context.textMuted)),
+                ]),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Row(
+                    children: total == 0
+                      ? [Expanded(child: Container(height: 12, color: context.surface2))]
+                      : stageCounts.asMap().entries.where((e) => e.value > 0).map((e) =>
+                          Expanded(flex: e.value, child: Container(height: 12, color: _srsColors[e.key]))
+                        ).toList(),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 10,
+                  children: stageCounts.asMap().entries.where((e) => e.value > 0).map((e) =>
+                    Text('${_srsLabels[e.key]}: ${e.value}', style: TextStyle(fontSize: 9, color: _srsColors[e.key], fontWeight: FontWeight.w700))
+                  ).toList(),
+                ),
+              ]),
+            );
+          }),
+
+        // Word Mastery Grid
+        if (_srsWords.isNotEmpty && studentIds.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Text('WORD MASTERY GRID', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
+          const SizedBox(height: 10),
+          Container(
+            decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(14), boxShadow: context.cardShadow),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                headingRowHeight: 36,
+                dataRowMinHeight: 44,
+                dataRowMaxHeight: 54,
+                columnSpacing: 6,
+                horizontalMargin: 12,
+                headingRowColor: WidgetStateProperty.all(context.surface2),
+                columns: [
+                  DataColumn(label: Text('Word', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: context.textMuted))),
+                  ...studentIds.map((uid) => DataColumn(label: SizedBox(
+                    width: 52,
+                    child: Text(_srsNames[uid] ?? uid.substring(0, 6), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: context.textMuted), overflow: TextOverflow.ellipsis),
+                  ))),
+                ],
+                rows: _srsWords.map((w) {
+                  final word = w['word'] as String;
+                  final stageByUser = <String, int>{};
+                  for (final r in _srsStates.where((e) => e['word'] == word)) {
+                    stageByUser[r['user_id'] as String] = (r['stage'] as num).toInt();
+                  }
+                  return DataRow(cells: [
+                    DataCell(Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(word, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.appText)),
+                      Text(w['translation'] as String? ?? '', style: TextStyle(fontSize: 9, color: context.textMuted)),
+                    ])),
+                    ...studentIds.map((uid) {
+                      final stage = stageByUser[uid];
+                      return DataCell(Center(child: Container(
+                        width: 38, height: 26,
+                        decoration: BoxDecoration(
+                          color: stage != null ? _srsColors[stage] : null,
+                          borderRadius: BorderRadius.circular(6),
+                          border: stage == null ? Border.all(color: context.surface2) : null,
+                        ),
+                        child: Center(child: Text(
+                          stage != null ? _srsLabels[stage] : '–',
+                          style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: stage != null ? Colors.white : context.textMuted),
+                        )),
+                      )));
+                    }),
+                  ]);
+                }).toList(),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 10, runSpacing: 4,
+            children: List.generate(6, (s) => Row(mainAxisSize: MainAxisSize.min, children: [
+              Container(width: 10, height: 10, decoration: BoxDecoration(color: _srsColors[s], borderRadius: BorderRadius.circular(3))),
+              const SizedBox(width: 4),
+              Text(_srsLabels[s], style: TextStyle(fontSize: 9, color: context.textMuted)),
+            ])),
+          ),
+        ],
+
+        // Class Hard Words
+        if (hardSorted.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Text('CLASS HARD WORDS', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
+          const SizedBox(height: 10),
+          ...hardSorted.asMap().entries.map((entry) {
+            final i = entry.key;
+            final word = entry.value.key;
+            final count = entry.value.value;
+            final maxCount = hardSorted.first.value;
+            final wordInfo = _srsWords.where((w) => w['word'] == word).firstOrNull;
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(14), boxShadow: context.cardShadow),
+              child: Row(children: [
+                Container(
+                  width: 28, height: 28,
+                  decoration: BoxDecoration(color: context.dangerColor.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
+                  child: Center(child: Text('#${i + 1}', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: context.dangerColor))),
+                ),
+                const SizedBox(width: 10),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Text(word, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+                    if (wordInfo != null) ...[
+                      const SizedBox(width: 6),
+                      Text(wordInfo['translation'] as String? ?? '', style: TextStyle(fontSize: 12, color: context.primary)),
+                    ],
+                  ]),
+                  const SizedBox(height: 4),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: count / maxCount,
+                      minHeight: 5,
+                      backgroundColor: context.surface2,
+                      color: context.dangerColor,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text('$count student${count != 1 ? 's' : ''} got this wrong', style: TextStyle(fontSize: 9, color: context.textMuted)),
+                ])),
+              ]),
+            );
+          }),
+        ],
       ],
     );
   }

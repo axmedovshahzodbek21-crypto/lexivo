@@ -10,6 +10,7 @@ import 'class_shell.dart';
 import 'flashcard.dart';
 import 'quiz_screen.dart';
 import '../data/word_data.dart';
+import 'teacher_library_screen.dart';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -355,6 +356,10 @@ class _ClassesScreenState extends State<ClassesScreen> {
                     child: ListView(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
                       children: [
+                        if (_myClasses.isNotEmpty) ...[
+                          _buildLibraryBanner(),
+                          const SizedBox(height: 20),
+                        ],
                         if (_joinedClasses.isNotEmpty) ...[
                           _buildJoinedSection(),
                           const SizedBox(height: 20),
@@ -371,6 +376,34 @@ class _ClassesScreenState extends State<ClassesScreen> {
       ),
     );
   }
+
+  // ── Teacher Library banner ──────────────────────────────────────────────────
+
+  Widget _buildLibraryBanner() => GestureDetector(
+    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherLibraryScreen())),
+    child: Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [context.primary, context.primary.withValues(alpha: 0.75)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [BoxShadow(color: context.primary.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
+      ),
+      child: Row(children: [
+        const Text('📚', style: TextStyle(fontSize: 32)),
+        const SizedBox(width: 14),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('My Library', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white)),
+          const SizedBox(height: 2),
+          Text('Folders · Units · Words', style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.8))),
+        ])),
+        Icon(Icons.arrow_forward_ios, color: Colors.white.withValues(alpha: 0.7), size: 16),
+      ]),
+    ),
+  );
 
   // ── My Classes ─────────────────────────────────────────────────────────────
 

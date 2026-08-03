@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/supabase_service.dart';
+import '../services/class_srs_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import '../data/word_data.dart';
@@ -101,7 +102,8 @@ Output only the formatted blocks. No commentary.''';
 
 class ClassWordsScreen extends StatefulWidget {
   final String classId, className;
-  const ClassWordsScreen({super.key, required this.classId, required this.className});
+  final bool isTeacher;
+  const ClassWordsScreen({super.key, required this.classId, required this.className, required this.isTeacher});
 
   @override
   State<ClassWordsScreen> createState() => _ClassWordsScreenState();
@@ -112,6 +114,12 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
   List<_WordEntry> _words = [];
   bool _loading = true;
   bool _saving = false;
+
+  // Stats (SRS hub)
+  int _dueCount = 0;
+  int _learnedCount = 0;
+  int _hardCount = 0;
+  int _starredCount = 0;
 
   // Manual tab
   final _wordCtrl = TextEditingController();
@@ -180,6 +188,26 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
         .eq('class_id', widget.classId)
         .order('created_at', ascending: true);
       if (mounted) setState(() { _words = (data as List).map((e) => _WordEntry.fromMap(Map<String, dynamic>.from(e as Map))).toList(); _loading = false; });
+
+      final user = currentUser;
+      if (user != null) {
+        final dueF     = getClassDueWords(userId: user.id, classId: widget.classId);
+        final allF     = getClassSRSAll(userId: user.id, classId: widget.classId);
+        final hardF    = supabase.from('class_hard_words').select('id').eq('user_id', user.id).eq('class_id', widget.classId);
+        final starredF = supabase.from('class_starred_words').select('id').eq('user_id', user.id).eq('class_id', widget.classId);
+        final due     = await dueF;
+        final all     = await allF;
+        final hard    = await hardF as List;
+        final starred = await starredF as List;
+        if (mounted) {
+          setState(() {
+            _dueCount     = due.length;
+            _learnedCount = all.length;
+            _hardCount    = hard.length;
+            _starredCount = starred.length;
+          });
+        }
+      }
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
@@ -287,6 +315,101 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
     ));
   }
 
+  void _comingSoon() => ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('Coming soon — Phase 3'), duration: Duration(seconds: 2)));
+
+  // ── Study Hub ────────────────────────────────────────────────────────────────
+
+  Widget _buildHubSection() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // Practice
+        Text('── Practice', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
+        const SizedBox(height: 8),
+        GridView.count(
+          crossAxisCount: 2, mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: 3.2,
+          shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+          children: [
+            _hubBtn('📖 Study', primary: true, onTap: _studyWords),
+            _hubBtn('🃏 Flashcards', onTap: _comingSoon),
+            _hubBtn('❓ Quiz', onTap: _comingSoon),
+            _hubBtn('🔗 Match', onTap: _comingSoon),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Review
+        Text('── Review', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16), boxShadow: context.cardShadow),
+          child: Row(children: [
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('SRS Review', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+              Text(_dueCount > 0 ? '$_dueCount word${_dueCount == 1 ? '' : 's'} due today' : 'All caught up ✓',
+                  style: TextStyle(fontSize: 11, color: context.textMuted)),
+            ])),
+            if (_dueCount > 0)
+              ElevatedButton(
+                onPressed: _comingSoon,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFEF4444), foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                ),
+                child: const Text('Review →', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+              )
+            else
+              const Text('✅', style: TextStyle(fontSize: 22)),
+          ]),
+        ),
+        // My Stats — students only
+        if (!widget.isTeacher) ...[
+          const SizedBox(height: 12),
+          Text('── My Stats', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
+          const SizedBox(height: 8),
+          Row(children: [
+            _statCard('$_learnedCount/${_words.length}', 'Learned', context.primary),
+            const SizedBox(width: 8),
+            _statCard('$_hardCount', 'Hard', const Color(0xFFEF4444)),
+            const SizedBox(width: 8),
+            _statCard('$_starredCount', 'Starred', const Color(0xFFF59E0B)),
+          ]),
+        ],
+        const SizedBox(height: 16),
+      ]),
+    );
+  }
+
+  Widget _hubBtn(String label, {required VoidCallback onTap, bool primary = false}) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: primary ? context.primary : context.surface,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: context.cardShadow,
+      ),
+      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: primary ? Colors.white : context.appText)),
+        Text('→', style: TextStyle(fontSize: 12, color: primary ? Colors.white70 : context.textMuted)),
+      ]),
+    ),
+  );
+
+  Widget _statCard(String value, String label, Color color) => Expanded(
+    child: Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(14), boxShadow: context.cardShadow),
+      child: Column(children: [
+        Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: color)),
+        const SizedBox(height: 2),
+        Text(label, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: context.textMuted, letterSpacing: 0.8)),
+      ]),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -299,32 +422,36 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
           Text(tr('class_words'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
           Text(widget.className, style: TextStyle(fontSize: 11, color: context.textMuted)),
         ]),
-        bottom: TabBar(
-          controller: _tabs,
-          labelColor: context.primary,
-          unselectedLabelColor: context.textMuted,
-          indicatorColor: context.primary,
-          tabs: [
-            Tab(text: '✍️ ${tr('manual')}'),
-            Tab(text: '🤖 AI Import'),
-            const Tab(text: '📚 Collection'),
-          ],
-        ),
+        bottom: widget.isTeacher
+            ? TabBar(
+                controller: _tabs,
+                labelColor: context.primary,
+                unselectedLabelColor: context.textMuted,
+                indicatorColor: context.primary,
+                tabs: [
+                  Tab(text: '✍️ ${tr('manual')}'),
+                  Tab(text: '🤖 AI Import'),
+                  const Tab(text: '📚 Collection'),
+                ],
+              )
+            : null,
       ),
-      body: TabBarView(
-        controller: _tabs,
-        children: [
-          _buildManualTab(),
-          _buildAiTab(),
-          _buildImportTab(),
-        ],
-      ),
-      floatingActionButton: _words.isEmpty ? null : FloatingActionButton.extended(
-        onPressed: _studyWords,
-        backgroundColor: context.primary,
-        icon: const Icon(Icons.school_rounded, color: Colors.white),
-        label: const Text('Study', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-      ),
+      body: widget.isTeacher
+          ? TabBarView(
+              controller: _tabs,
+              children: [
+                _buildManualTab(),
+                _buildAiTab(),
+                _buildImportTab(),
+              ],
+            )
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+              children: [
+                if (_words.isNotEmpty) _buildHubSection(),
+                _buildWordList(),
+              ],
+            ),
     );
   }
 
@@ -436,6 +563,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
         ]),
       ),
       const SizedBox(height: 16),
+      if (_words.isNotEmpty) _buildHubSection(),
       _buildWordList(),
     ],
   );
@@ -567,6 +695,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
       ],
 
       const SizedBox(height: 16),
+      if (_words.isNotEmpty) _buildHubSection(),
       _buildWordList(),
     ],
   );
@@ -704,6 +833,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
       ],
 
       const SizedBox(height: 16),
+      if (_words.isNotEmpty) _buildHubSection(),
       _buildWordList(),
     ],
   );
@@ -776,10 +906,11 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
           if (w.definition != null && w.definition!.isNotEmpty)
             Text(w.definition!, style: TextStyle(fontSize: 11, color: context.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
         ])),
-        GestureDetector(
-          onTap: () => _confirmDelete(w),
-          child: Padding(padding: const EdgeInsets.only(left: 8), child: Icon(Icons.close, size: 18, color: context.textMuted)),
-        ),
+        if (widget.isTeacher)
+          GestureDetector(
+            onTap: () => _confirmDelete(w),
+            child: Padding(padding: const EdgeInsets.only(left: 8), child: Icon(Icons.close, size: 18, color: context.textMuted)),
+          ),
       ]),
     );
 

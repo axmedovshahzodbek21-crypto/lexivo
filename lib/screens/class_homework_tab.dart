@@ -13,16 +13,13 @@ String? _hwDueText(String? due) {
   return 'Due $due';
 }
 
+// ── Library models ─────────────────────────────────────────────────────────
+
 class _AssignedFolder {
   final String id, assignmentId, name;
   final List<_FolderUnit> units;
   bool showAll = false;
-  _AssignedFolder({
-    required this.id,
-    required this.assignmentId,
-    required this.name,
-    required this.units,
-  });
+  _AssignedFolder({required this.id, required this.assignmentId, required this.name, required this.units});
 }
 
 class _FolderUnit {
@@ -31,18 +28,23 @@ class _FolderUnit {
   final String? homeworkId;
   final List<String>? hwModes;
   final String? hwDue;
-
-  const _FolderUnit({
-    required this.id,
-    required this.name,
-    required this.wordCount,
-    this.homeworkId,
-    this.hwModes,
-    this.hwDue,
-  });
-
+  const _FolderUnit({required this.id, required this.name, required this.wordCount, this.homeworkId, this.hwModes, this.hwDue});
   bool get hasHomework => homeworkId != null;
 }
+
+// ── Class word unit models ─────────────────────────────────────────────────
+
+class _CWUnit {
+  final String id, name;
+  final int wordCount;
+  final String? homeworkId;
+  final List<String>? hwModes;
+  final String? hwDue;
+  const _CWUnit({required this.id, required this.name, required this.wordCount, this.homeworkId, this.hwModes, this.hwDue});
+  bool get hasHomework => homeworkId != null;
+}
+
+// ── Widget ─────────────────────────────────────────────────────────────────
 
 class ClassHomeworkTab extends StatefulWidget {
   final String classId;
@@ -56,6 +58,7 @@ class ClassHomeworkTab extends StatefulWidget {
 class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   bool _loading = true;
   List<_AssignedFolder> _folders = [];
+  List<_CWUnit> _cwUnits = [];
   Map<String, Set<String>> _completedModes = {};
   int _totalAssigned = 0;
   int _totalDone = 0;
@@ -69,45 +72,48 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   Future<void> _load() async {
     if (mounted) setState(() => _loading = true);
     try {
-      final user = currentUser;
+      final userId = currentUser?.id;
 
-      // Load assigned folders
+      // ── 1. Library assignments ──────────────────────────────────────────
       final assignsRaw = await supabase
           .from('class_library_assignments')
           .select('id, folder_id, teacher_folders(id, name)')
           .eq('class_id', widget.classId);
 
-      if ((assignsRaw as List).isEmpty) {
-        if (mounted) setState(() { _folders = []; _loading = false; });
-        return;
-      }
-
-      final folderIds = assignsRaw
+      final folderIds = (assignsRaw as List)
           .map((a) => ((a as Map)['teacher_folders'] as Map)['id'] as String)
           .toList();
 
-      // Load units for those folders
-      final unitsRaw = await supabase
-          .from('teacher_units')
-          .select('id, folder_id, name, teacher_unit_words(count)')
-          .inFilter('folder_id', folderIds)
+      // ── 2. Library units ────────────────────────────────────────────────
+      List unitsRaw = [];
+      if (folderIds.isNotEmpty) {
+        unitsRaw = await supabase
+            .from('teacher_units')
+            .select('id, folder_id, name, teacher_unit_words(count)')
+            .inFilter('folder_id', folderIds)
+            .order('created_at');
+      }
+
+      // ── 3. Class word units ─────────────────────────────────────────────
+      final cwUnitsRaw = await supabase
+          .from('class_word_units')
+          .select('id, name, class_words(count)')
+          .eq('class_id', widget.classId)
           .order('created_at');
 
-      // Load homework for this class
+      // ── 4. All homework for this class ──────────────────────────────────
       final hwRaw = await supabase
           .from('class_homework')
-          .select('id, unit_id, modes, due_date, student_ids')
+          .select('id, unit_id, class_unit_id, modes, due_date, student_ids')
           .eq('class_id', widget.classId);
 
-      // Filter to homework that applies to this student
-      final userId = user?.id;
+      // Filter to applicable homework for this student
       final applicableHw = (hwRaw as List).where((h) {
-        final studentIds = (h as Map)['student_ids'] as List?;
-        if (studentIds == null) return true;
-        return userId != null && studentIds.contains(userId);
+        final sids = (h as Map)['student_ids'] as List?;
+        return sids == null || (userId != null && sids.contains(userId));
       }).toList();
 
-      // Load student's completed modes
+      // ── 5. Progress ─────────────────────────────────────────────────────
       final completedModes = <String, Set<String>>{};
       if (applicableHw.isNotEmpty && userId != null) {
         final hwIds = applicableHw.map((h) => h['id'] as String).toList();
@@ -123,67 +129,83 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
         }
       }
 
-      // Build homework lookup by unit_id
-      final hwByUnit = <String, dynamic>{};
+      // ── 6. Build lookup maps ────────────────────────────────────────────
+      final hwByLibUnit = <String, Map>{};
+      final hwByCWUnit = <String, Map>{};
       for (final h in applicableHw) {
-        hwByUnit[(h as Map)['unit_id'] as String] = h;
+        final uid = (h as Map)['unit_id'] as String?;
+        final cwid = h['class_unit_id'] as String?;
+        if (uid != null) hwByLibUnit[uid] = h;
+        if (cwid != null) hwByCWUnit[cwid] = h;
       }
 
-      // Build folder list
+      // ── 7. Build library folder list ────────────────────────────────────
       final folders = <_AssignedFolder>[];
       for (final a in assignsRaw) {
         final folder = ((a as Map)['teacher_folders']) as Map;
         final folderId = folder['id'] as String;
-        final units = (unitsRaw as List)
+        final units = unitsRaw
             .where((u) => (u as Map)['folder_id'] == folderId)
             .map((u) {
               final um = u as Map;
               final uid = um['id'] as String;
-              final hw = hwByUnit[uid];
+              final hw = hwByLibUnit[uid];
               final countList = um['teacher_unit_words'] as List?;
               return _FolderUnit(
-                id: uid,
-                name: um['name'] as String,
-                wordCount: countList?.isNotEmpty == true
-                    ? (countList![0] as Map)['count'] as int? ?? 0
-                    : 0,
+                id: uid, name: um['name'] as String,
+                wordCount: countList?.isNotEmpty == true ? (countList![0] as Map)['count'] as int? ?? 0 : 0,
                 homeworkId: hw?['id'] as String?,
                 hwModes: hw != null ? List<String>.from(hw['modes'] as List) : null,
                 hwDue: hw?['due_date'] as String?,
               );
-            })
-            .toList();
-        folders.add(_AssignedFolder(
-          id: folderId,
-          assignmentId: (a as Map)['id'] as String,
-          name: folder['name'] as String,
-          units: units,
-        ));
+            }).toList();
+        folders.add(_AssignedFolder(id: folderId, assignmentId: (a as Map)['id'] as String, name: folder['name'] as String, units: units));
       }
 
-      // Count totals for progress bar
-      int totalAssigned = 0;
-      int totalDone = 0;
+      // ── 8. Build class word unit list ───────────────────────────────────
+      final cwUnits = (cwUnitsRaw as List).map((u) {
+        final um = u as Map;
+        final uid = um['id'] as String;
+        final hw = hwByCWUnit[uid];
+        final countList = um['class_words'] as List?;
+        return _CWUnit(
+          id: uid, name: um['name'] as String,
+          wordCount: countList?.isNotEmpty == true ? (countList![0] as Map)['count'] as int? ?? 0 : 0,
+          homeworkId: hw?['id'] as String?,
+          hwModes: hw != null ? List<String>.from(hw['modes'] as List) : null,
+          hwDue: hw?['due_date'] as String?,
+        );
+      }).toList();
+
+      // ── 9. Totals ───────────────────────────────────────────────────────
+      int assigned = 0, done = 0;
       for (final f in folders) {
         for (final u in f.units) {
           if (u.hasHomework) {
-            totalAssigned++;
+            assigned++;
             final modes = u.hwModes ?? [];
-            final done = completedModes[u.homeworkId!] ?? {};
-            if (modes.isNotEmpty && modes.every(done.contains)) totalDone++;
+            final completed = completedModes[u.homeworkId!] ?? {};
+            if (modes.isNotEmpty && modes.every(completed.contains)) done++;
           }
         }
       }
-
-      if (mounted) {
-        setState(() {
-          _folders = folders;
-          _completedModes = completedModes;
-          _totalAssigned = totalAssigned;
-          _totalDone = totalDone;
-          _loading = false;
-        });
+      for (final u in cwUnits) {
+        if (u.hasHomework) {
+          assigned++;
+          final modes = u.hwModes ?? [];
+          final completed = completedModes[u.homeworkId!] ?? {};
+          if (modes.isNotEmpty && modes.every(completed.contains)) done++;
+        }
       }
+
+      if (mounted) { setState(() {
+        _folders = folders;
+        _cwUnits = cwUnits;
+        _completedModes = completedModes;
+        _totalAssigned = assigned;
+        _totalDone = done;
+        _loading = false;
+      }); }
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
@@ -193,7 +215,6 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
 
-    // Teacher: point to Curriculum tab
     if (widget.isTeacher) {
       return Center(
         child: Padding(
@@ -202,18 +223,17 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
             const Text('📋', style: TextStyle(fontSize: 52)),
             const SizedBox(height: 16),
             Text('Manage Homework from the Dashboard',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText),
-              textAlign: TextAlign.center),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText), textAlign: TextAlign.center),
             const SizedBox(height: 8),
-            Text('Go to Dashboard → Curriculum tab to assign library units as homework and track per-student progress.',
-              style: TextStyle(color: context.textMuted, fontSize: 13),
-              textAlign: TextAlign.center),
+            Text('Go to Dashboard → Curriculum tab to assign units as homework.',
+              style: TextStyle(color: context.textMuted, fontSize: 13), textAlign: TextAlign.center),
           ]),
         ),
       );
     }
 
-    // Student view
+    final hasAny = _folders.isNotEmpty || _cwUnits.any((u) => u.hasHomework);
+
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
@@ -253,106 +273,119 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
               ]),
             ),
 
-          if (_folders.isEmpty)
+          if (!hasAny)
             Column(mainAxisAlignment: MainAxisAlignment.center, children: [
               const SizedBox(height: 60),
               const Text('📚', style: TextStyle(fontSize: 48)),
               const SizedBox(height: 12),
-              Text('No homework yet',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+              Text('No homework yet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
               const SizedBox(height: 6),
               Text("Your teacher hasn't assigned any units yet",
                 style: TextStyle(color: context.textMuted, fontSize: 13)),
             ])
-          else
-            ..._folders.expand((f) => _buildFolderSection(f)),
+          else ...[
+            // ── Library section ─────────────────────────────────────────
+            if (_folders.isNotEmpty) ...[
+              _sectionHeader('📚 Library'),
+              ..._folders.expand((f) => _buildFolderSection(f, isClassWords: false)),
+              const SizedBox(height: 8),
+            ],
+
+            // ── Class Words section ─────────────────────────────────────
+            if (_cwUnits.any((u) => u.hasHomework)) ...[
+              _sectionHeader('📝 Class Words'),
+              ..._cwUnits.where((u) => u.hasHomework).map((u) => _buildUnitCard(
+                id: u.id, name: u.name, wordCount: u.wordCount,
+                homeworkId: u.homeworkId!, hwModes: u.hwModes ?? [],
+                hwDue: u.hwDue, isClassWords: true,
+              )),
+            ],
+          ],
         ],
       ),
     );
   }
 
-  List<Widget> _buildFolderSection(_AssignedFolder folder) {
+  Widget _sectionHeader(String label) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: context.textMuted, letterSpacing: 0.5)),
+  );
+
+  List<Widget> _buildFolderSection(_AssignedFolder folder, {required bool isClassWords}) {
     final hiddenCount = folder.units.where((u) => !u.hasHomework).length;
-    final visible = folder.showAll
-        ? folder.units
-        : folder.units.where((u) => u.hasHomework).toList();
+    final visible = folder.showAll ? folder.units : folder.units.where((u) => u.hasHomework).toList();
 
     return [
       Padding(
-        padding: const EdgeInsets.only(top: 8, bottom: 6),
+        padding: const EdgeInsets.only(bottom: 6),
         child: Row(children: [
-          const Text('📁', style: TextStyle(fontSize: 13)),
+          const Text('📁', style: TextStyle(fontSize: 12)),
           const SizedBox(width: 6),
           Expanded(child: Text(folder.name,
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: context.textMuted),
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: context.textMuted),
             overflow: TextOverflow.ellipsis)),
           if (hiddenCount > 0)
             GestureDetector(
               onTap: () => setState(() => folder.showAll = !folder.showAll),
-              child: Text(
-                folder.showAll ? 'Show less' : '$hiddenCount hidden — Show all',
-                style: TextStyle(fontSize: 11, color: context.primary, fontWeight: FontWeight.w600),
-              ),
+              child: Text(folder.showAll ? 'Show less' : '$hiddenCount hidden — Show all',
+                style: TextStyle(fontSize: 11, color: context.primary, fontWeight: FontWeight.w600)),
             ),
         ]),
       ),
       if (visible.isEmpty)
         Padding(
           padding: const EdgeInsets.only(bottom: 8),
-          child: Text('No units assigned yet',
-            style: TextStyle(fontSize: 12, color: context.textMuted)),
-        )
+          child: Text('No units assigned yet', style: TextStyle(fontSize: 12, color: context.textMuted)))
       else
-        ...visible.map((u) => _buildUnitRow(u)),
+        ...visible.map((u) => u.hasHomework
+            ? _buildUnitCard(
+                id: u.id, name: u.name, wordCount: u.wordCount,
+                homeworkId: u.homeworkId!, hwModes: u.hwModes ?? [],
+                hwDue: u.hwDue, isClassWords: isClassWords)
+            : _buildLockedUnit(u.name, u.wordCount)),
       const SizedBox(height: 8),
     ];
   }
 
-  Widget _buildUnitRow(_FolderUnit unit) {
-    // Unassigned unit (visible only in "show all" mode)
-    if (!unit.hasHomework) {
-      return Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: context.surface.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: context.border.withValues(alpha: 0.5)),
-        ),
-        child: Row(children: [
-          Container(
-            width: 40, height: 40,
-            decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(10)),
-            child: const Center(child: Text('🔒', style: TextStyle(fontSize: 18))),
-          ),
-          const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(unit.name, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: context.textMuted)),
-            Text('${unit.wordCount} words · Not yet assigned',
-              style: TextStyle(fontSize: 11, color: context.textMuted)),
-          ])),
-        ]),
-      );
-    }
+  Widget _buildLockedUnit(String name, int wordCount) => Container(
+    margin: const EdgeInsets.only(bottom: 8),
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: context.surface.withValues(alpha: 0.6),
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: context.border.withValues(alpha: 0.5)),
+    ),
+    child: Row(children: [
+      Container(
+        width: 40, height: 40,
+        decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(10)),
+        child: const Center(child: Text('🔒', style: TextStyle(fontSize: 18))),
+      ),
+      const SizedBox(width: 12),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(name, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: context.textMuted)),
+        Text('$wordCount words · Not yet assigned', style: TextStyle(fontSize: 11, color: context.textMuted)),
+      ])),
+    ]),
+  );
 
-    // Assigned unit with homework
-    final modes = unit.hwModes ?? [];
-    final completed = _completedModes[unit.homeworkId!] ?? {};
-    final allDone = modes.isNotEmpty && modes.every(completed.contains);
-    final due = _hwDueText(unit.hwDue);
+  Widget _buildUnitCard({
+    required String id, required String name, required int wordCount,
+    required String homeworkId, required List<String> hwModes,
+    required String? hwDue, required bool isClassWords,
+  }) {
+    final completed = _completedModes[homeworkId] ?? {};
+    final allDone = hwModes.isNotEmpty && hwModes.every(completed.contains);
+    final due = _hwDueText(hwDue);
     final isOverdue = due?.startsWith('Overdue') == true;
-
     const modeIcons = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯'};
 
     return GestureDetector(
       onTap: () async {
         await Navigator.push(context, MaterialPageRoute(
           builder: (_) => LibraryUnitStudyScreen(
-            classId: widget.classId,
-            unitId: unit.id,
-            unitName: unit.name,
-            homeworkId: unit.homeworkId!,
-            modes: modes,
+            classId: widget.classId, unitId: id, unitName: name,
+            homeworkId: homeworkId, modes: hwModes, isClassWords: isClassWords,
           ),
         ));
         _load();
@@ -376,33 +409,27 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
             child: Center(
               child: allDone
                   ? const Icon(Icons.check_circle_rounded, color: Colors.green, size: 26)
-                  : Text('${completed.length}/${modes.length}',
+                  : Text('${completed.length}/${hwModes.length}',
                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: context.primary)),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(unit.name,
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14,
-                color: allDone ? Colors.green.shade700 : context.appText)),
+            Text(name, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14,
+              color: allDone ? Colors.green.shade700 : context.appText)),
             const SizedBox(height: 4),
             Row(children: [
-              ...modes.map((m) {
-                final done = completed.contains(m);
-                return Padding(
-                  padding: const EdgeInsets.only(right: 4),
-                  child: Text(modeIcons[m] ?? m,
-                    style: TextStyle(fontSize: 15,
-                      color: done ? null : context.textMuted.withValues(alpha: 0.35))),
-                );
-              }),
+              ...hwModes.map((m) => Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: Text(modeIcons[m] ?? m,
+                  style: TextStyle(fontSize: 15,
+                    color: completed.contains(m) ? null : context.textMuted.withValues(alpha: 0.35))),
+              )),
               if (due != null) ...[
                 const SizedBox(width: 6),
-                Text(due, style: TextStyle(
-                  fontSize: 10,
+                Text(due, style: TextStyle(fontSize: 10,
                   color: isOverdue ? Colors.red : context.textMuted,
-                  fontWeight: isOverdue ? FontWeight.w700 : FontWeight.normal,
-                )),
+                  fontWeight: isOverdue ? FontWeight.w700 : FontWeight.normal)),
               ],
             ]),
           ])),

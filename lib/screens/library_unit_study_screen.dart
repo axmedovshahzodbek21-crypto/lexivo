@@ -13,6 +13,7 @@ class LibraryUnitStudyScreen extends StatefulWidget {
   final String unitName;
   final String homeworkId;
   final List<String> modes;
+  final bool isClassWords;
 
   const LibraryUnitStudyScreen({
     super.key,
@@ -21,6 +22,7 @@ class LibraryUnitStudyScreen extends StatefulWidget {
     required this.unitName,
     required this.homeworkId,
     required this.modes,
+    this.isClassWords = false,
   });
 
   @override
@@ -49,11 +51,9 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
     }
 
     final results = await Future.wait([
-      supabase
-          .from('teacher_unit_words')
-          .select('word, translation, definition, examples')
-          .eq('unit_id', widget.unitId)
-          .order('created_at'),
+      (widget.isClassWords
+          ? supabase.from('class_words').select('word, translation, definition, examples').eq('unit_id', widget.unitId).order('created_at')
+          : supabase.from('teacher_unit_words').select('word, translation, definition, examples').eq('unit_id', widget.unitId).order('created_at')),
       supabase
           .from('class_homework_progress')
           .select('mode')

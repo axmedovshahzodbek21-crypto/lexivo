@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import 'teacher_library_screen.dart';
+import '../data/word_data.dart';
+import '../data/a1_collection.dart';
+import '../data/a2_collection.dart';
+import '../data/b1_collection.dart';
 
 // ── Models ────────────────────────────────────────────────────────────────────
 
@@ -31,8 +35,10 @@ class _ClassWord {
 
 class _Homework {
   final String id;
-  final String? unitId;       // library (teacher_units)
-  final String? classUnitId;  // class words (class_word_units)
+  final String? unitId;           // library (teacher_units)
+  final String? classUnitId;      // class words (class_word_units)
+  final String? collectionName;   // pre-built collection
+  final int? dayNumber;           // day within collection
   final String unitName, source;
   final List<String> modes;
   final String? dueDate;
@@ -42,6 +48,7 @@ class _Homework {
   final Map<String, int> completionCounts;
   const _Homework({
     required this.id, this.unitId, this.classUnitId,
+    this.collectionName, this.dayNumber,
     required this.unitName, required this.source,
     required this.modes, this.dueDate, required this.assignedTo,
     required this.studentIds, required this.totalStudents,
@@ -52,6 +59,16 @@ class _Homework {
     return dueDate!.compareTo(DateTime.now().toIso8601String().substring(0, 10)) < 0;
   }
 }
+
+// Pre-built collection registry for the picker
+const _kCollectionMeta = [
+  (name: '30 Days of Powerful Words', emoji: '🔥', days: 30),
+  (name: '24 Vocabulary Challenge',   emoji: '⚡', days: 24),
+  (name: 'Word Mastery',              emoji: '🏆', days: 32),
+  (name: 'A1',                        emoji: '🟢', days: 23),
+  (name: 'A2',                        emoji: '🔵', days: 30),
+  (name: 'B1',                        emoji: '🟡', days: 26),
+];
 
 class _StudentProgress {
   final String studentId, name;
@@ -97,7 +114,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
             .select('id, name, class_words(count)')
             .eq('class_id', widget.classId).order('created_at'),
         supabase.from('class_homework')
-            .select('id, unit_id, class_unit_id, modes, due_date, assigned_to, student_ids, teacher_units(name), class_word_units(name)')
+            .select('id, unit_id, class_unit_id, collection_name, day_number, modes, due_date, assigned_to, student_ids, teacher_units(name), class_word_units(name)')
             .eq('class_id', widget.classId).order('created_at', ascending: false),
       ]);
 
@@ -151,18 +168,23 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
         final m = Map<String, dynamic>.from(e as Map);
         final unitId = m['unit_id'] as String?;
         final classUnitId = m['class_unit_id'] as String?;
-        final source = unitId != null ? 'library' : 'class';
+        final collName = m['collection_name'] as String?;
+        final dayNum = m['day_number'] as int?;
+        final source = collName != null ? 'collection' : unitId != null ? 'library' : 'class';
         final tuMap = m['teacher_units'] as Map?;
         final cwMap = m['class_word_units'] as Map?;
-        final unitName = unitId != null
-            ? (tuMap?['name'] as String?) ?? 'Unit'
-            : (cwMap?['name'] as String?) ?? 'Unit';
+        final unitName = collName != null
+            ? '$collName · Day $dayNum'
+            : unitId != null
+                ? (tuMap?['name'] as String?) ?? 'Unit'
+                : (cwMap?['name'] as String?) ?? 'Unit';
         final rawModes = (m['modes'] as List?)?.map((x) => x as String).toList() ?? ['learn', 'flashcard', 'quiz'];
         final rawStudentIds = (m['student_ids'] as List?)?.map((x) => x as String).toList() ?? [];
         final assignedTo = m['assigned_to'] as String? ?? 'class';
         final totalStudents = assignedTo == 'class' ? widget.students.length : rawStudentIds.length;
         return _Homework(
           id: m['id'] as String, unitId: unitId, classUnitId: classUnitId,
+          collectionName: collName, dayNumber: dayNum,
           unitName: unitName, source: source,
           modes: rawModes, dueDate: m['due_date'] as String?,
           assignedTo: assignedTo, studentIds: rawStudentIds,
@@ -376,6 +398,214 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
     );
   }
 
+  // ── Collection helpers ─────────────────────────────────────────────────────
+
+  WordCollection? _getCollectionByName(String name) {
+    switch (name) {
+      case '30 Days of Powerful Words': return thirtyDaysCollection;
+      case '24 Vocabulary Challenge':   return vocabularyChallengeCollection;
+      case 'Word Mastery':              return wordMasteryCollection;
+      case 'A1':                        return a1Collection;
+      case 'A2':                        return a2Collection;
+      case 'B1':                        return b1Collection;
+      default: return null;
+    }
+  }
+
+  Future<void> _pickCollectionDay() async {
+    final user = currentUser;
+    if (user == null) return;
+
+    // Step 1: Pick collection
+    final pickedMeta = await showModalBottomSheet<({String name, String emoji, int days})>(
+      context: context,
+      backgroundColor: context.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Container(width: 36, height: 4, margin: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(2))),
+        Padding(padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: Text('Pick a Collection', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText))),
+        Flexible(child: ListView(shrinkWrap: true, children: _kCollectionMeta.map((c) => ListTile(
+          leading: Text(c.emoji, style: const TextStyle(fontSize: 24)),
+          title: Text(c.name, style: TextStyle(color: context.appText, fontWeight: FontWeight.w600)),
+          subtitle: Text('${c.days} days', style: TextStyle(color: context.textMuted, fontSize: 11)),
+          onTap: () => Navigator.pop(ctx, c),
+        )).toList())),
+        const SizedBox(height: 8),
+      ])),
+    );
+    if (pickedMeta == null || !mounted) return;
+
+    final col = _getCollectionByName(pickedMeta.name);
+    if (col == null || !mounted) return;
+
+    // Step 2: Pick day
+    final assignedDays = _homework
+        .where((h) => h.collectionName == pickedMeta.name)
+        .map((h) => h.dayNumber)
+        .toSet();
+
+    final pickedDay = await showModalBottomSheet<WordDay>(
+      context: context, isScrollControlled: true,
+      backgroundColor: context.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.65, minChildSize: 0.4, maxChildSize: 0.9, expand: false,
+        builder: (_, ctrl) => Column(children: [
+          Padding(padding: const EdgeInsets.fromLTRB(20, 12, 20, 8), child: Row(children: [
+            Text(pickedMeta.emoji, style: const TextStyle(fontSize: 20)),
+            const SizedBox(width: 8),
+            Expanded(child: Text(pickedMeta.name,
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: context.appText))),
+          ])),
+          Divider(height: 1, color: context.border),
+          Expanded(child: ListView.builder(
+            controller: ctrl, itemCount: col.days.length,
+            itemBuilder: (_, i) {
+              final day = col.days[i];
+              final alreadyAssigned = assignedDays.contains(day.dayNumber);
+              return ListTile(
+                dense: true,
+                leading: Container(
+                  width: 34, height: 34,
+                  decoration: BoxDecoration(
+                    color: alreadyAssigned ? const Color(0xFF22C55E).withValues(alpha: 0.12) : context.primaryBg,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Center(child: Text('${day.dayNumber}',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800,
+                          color: alreadyAssigned ? const Color(0xFF16A34A) : context.primary))),
+                ),
+                title: Text(day.topic, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                    color: alreadyAssigned ? context.textMuted : context.appText)),
+                subtitle: Text('${day.words.length} words${alreadyAssigned ? ' · Assigned ✓' : ''}',
+                    style: TextStyle(fontSize: 11, color: context.textMuted)),
+                enabled: !alreadyAssigned,
+                onTap: alreadyAssigned ? null : () => Navigator.pop(ctx, day),
+              );
+            },
+          )),
+        ]),
+      ),
+    );
+    if (pickedDay == null || !mounted) return;
+
+    // Show homework assignment modal with collection info
+    await _showAssignCollectionHomework(user.id, pickedMeta.name, pickedDay);
+  }
+
+  Future<void> _showAssignCollectionHomework(String userId, String collName, WordDay day) async {
+    final selectedModes = {'learn': true, 'flashcard': true, 'quiz': true, 'match': false};
+    String assignedTo = 'class';
+    final selectedStudents = <String>{};
+    DateTime? dueDate;
+
+    await showModalBottomSheet(
+      context: context, isScrollControlled: true,
+      backgroundColor: context.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => Padding(
+          padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+          child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Center(child: Container(width: 36, height: 4, margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(2)))),
+            Text('Assign as Homework', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: context.appText)),
+            const SizedBox(height: 4),
+            Text('📗 $collName · Day ${day.dayNumber}: ${day.topic}  ·  ${day.words.length} words',
+                style: TextStyle(fontSize: 13, color: context.textMuted)),
+            const SizedBox(height: 20),
+            Text('Modes', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.8)),
+            const SizedBox(height: 8),
+            Wrap(spacing: 8, children: ['learn', 'flashcard', 'quiz', 'match'].map((mode) {
+              final emoji = {'learn': '📖', 'flashcard': '🃏', 'quiz': '❓', 'match': '🔗'}[mode]!;
+              final label = {'learn': 'Learn', 'flashcard': 'Flashcard', 'quiz': 'Quiz', 'match': 'Match'}[mode]!;
+              final required = mode != 'match';
+              final on = selectedModes[mode]!;
+              return FilterChip(
+                label: Text('$emoji $label${required ? '' : ' (optional)'}',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: on ? Colors.white : context.textMuted)),
+                selected: on,
+                onSelected: required ? null : (v) => setSheet(() => selectedModes[mode] = v),
+                selectedColor: context.primary, backgroundColor: context.surface2,
+                disabledColor: context.primary.withValues(alpha: 0.8), checkmarkColor: Colors.white, side: BorderSide.none,
+              );
+            }).toList()),
+            const SizedBox(height: 16),
+            Text('Due Date', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.8)),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () async {
+                final picked = await showDatePicker(context: ctx,
+                    initialDate: DateTime.now().add(const Duration(days: 7)),
+                    firstDate: DateTime.now(), lastDate: DateTime.now().add(const Duration(days: 365)));
+                if (picked != null) setSheet(() => dueDate = picked);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(12)),
+                child: Row(children: [
+                  const Text('📅', style: TextStyle(fontSize: 16)), const SizedBox(width: 8),
+                  Text(dueDate == null ? 'No due date (optional)' : dueDate!.toIso8601String().substring(0, 10),
+                      style: TextStyle(fontSize: 13, color: dueDate == null ? context.textMuted : context.appText, fontWeight: FontWeight.w500)),
+                  if (dueDate != null) ...[
+                    const Spacer(),
+                    GestureDetector(onTap: () => setSheet(() => dueDate = null), child: Text('✕', style: TextStyle(color: context.textMuted))),
+                  ],
+                ]),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text('Assign to', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.8)),
+            const SizedBox(height: 8),
+            Row(children: [
+              Expanded(child: _choiceBtn('Whole Class', assignedTo == 'class', () => setSheet(() { assignedTo = 'class'; selectedStudents.clear(); }))),
+              const SizedBox(width: 8),
+              Expanded(child: _choiceBtn('Specific Students', assignedTo == 'specific', () => setSheet(() => assignedTo = 'specific'))),
+            ]),
+            if (assignedTo == 'specific') ...[
+              const SizedBox(height: 10),
+              Container(
+                constraints: const BoxConstraints(maxHeight: 180),
+                decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(12)),
+                child: ListView(shrinkWrap: true, children: widget.students.map((s) {
+                  final on = selectedStudents.contains(s.studentId);
+                  return CheckboxListTile(
+                    dense: true, value: on,
+                    onChanged: (v) => setSheet(() { v == true ? selectedStudents.add(s.studentId) : selectedStudents.remove(s.studentId); }),
+                    title: Text(s.name, style: TextStyle(fontSize: 13, color: context.appText)),
+                    activeColor: context.primary,
+                  );
+                }).toList()),
+              ),
+            ],
+            const SizedBox(height: 20),
+            SizedBox(width: double.infinity, child: ElevatedButton(
+              onPressed: () async {
+                final modes = selectedModes.entries.where((e) => e.value).map((e) => e.key).toList();
+                await supabase.from('class_homework').insert({
+                  'class_id': widget.classId, 'teacher_id': userId,
+                  'collection_name': collName, 'day_number': day.dayNumber,
+                  'modes': modes,
+                  if (dueDate != null) 'due_date': dueDate!.toIso8601String().substring(0, 10),
+                  'assigned_to': assignedTo,
+                  if (assignedTo == 'specific') 'student_ids': selectedStudents.toList(),
+                });
+                if (ctx.mounted) Navigator.pop(ctx);
+                _load();
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF22C55E), foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  padding: const EdgeInsets.symmetric(vertical: 14)),
+              child: const Text('Assign Homework', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            )),
+          ])),
+        ),
+      ),
+    );
+  }
+
   // ── Shared homework assignment modal ───────────────────────────────────────
 
   Future<void> _showAssignHomework(_UnitRef unit) async {
@@ -540,9 +770,21 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                   const SizedBox(width: 6),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(color: hw.source == 'library' ? context.primaryBg : const Color(0xFFF59E0B).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
-                    child: Text(hw.source == 'library' ? 'Library' : 'Class Words',
-                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: hw.source == 'library' ? context.primary : const Color(0xFFF59E0B))),
+                    decoration: BoxDecoration(
+                      color: hw.source == 'library'
+                          ? context.primaryBg
+                          : hw.source == 'class'
+                              ? const Color(0xFFF59E0B).withValues(alpha: 0.15)
+                              : const Color(0xFF22C55E).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      hw.source == 'library' ? 'Library' : hw.source == 'class' ? 'Class Words' : '📗 Collection',
+                      style: TextStyle(
+                        fontSize: 9, fontWeight: FontWeight.bold,
+                        color: hw.source == 'library' ? context.primary : hw.source == 'class' ? const Color(0xFFF59E0B) : const Color(0xFF16A34A),
+                      ),
+                    ),
                   ),
                 ]),
                 const SizedBox(height: 2),
@@ -800,6 +1042,44 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
 
           const SizedBox(height: 20),
 
+          // ── 📗 Collections section ────────────────────────────────────────
+          Row(children: [
+            Text('📗 Collections', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+            const Spacer(),
+            GestureDetector(onTap: _pickCollectionDay,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(color: const Color(0xFF22C55E).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
+                child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.add, size: 14, color: Color(0xFF16A34A)), SizedBox(width: 4),
+                  Text('Assign Day', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF16A34A))),
+                ]),
+              )),
+          ]),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16)),
+            child: Column(children: [
+              const Text('📗', style: TextStyle(fontSize: 30)),
+              const SizedBox(height: 8),
+              Text('Pre-built Collection Days', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+              const SizedBox(height: 4),
+              Text('Assign a day from 30 Days, A1, A2, B1 and more directly as homework.',
+                  textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: context.textMuted)),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: _pickCollectionDay,
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Assign a Day', style: TextStyle(fontSize: 13)),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF22C55E), foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              ),
+            ]),
+          ),
+
+          const SizedBox(height: 20),
+
           // ── 📋 Homework section ───────────────────────────────────────────
           Text('📋 Homework', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
           const SizedBox(height: 10),
@@ -830,14 +1110,23 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                   ),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Row(children: [
-                      Expanded(child: Text('${hw.source == 'library' ? '📖' : '📝'} ${hw.unitName}',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: context.appText))),
+                      Expanded(child: Text(
+                        '${hw.source == 'collection' ? '📗' : hw.source == 'library' ? '📖' : '📝'} ${hw.unitName}',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: context.appText),
+                      )),
                       if (hw.source == 'class')
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           margin: const EdgeInsets.only(right: 6),
                           decoration: BoxDecoration(color: const Color(0xFFF59E0B).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
                           child: const Text('Class Words', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFFF59E0B))),
+                        ),
+                      if (hw.source == 'collection')
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          margin: const EdgeInsets.only(right: 6),
+                          decoration: BoxDecoration(color: const Color(0xFF22C55E).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
+                          child: const Text('Collection', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF16A34A))),
                         ),
                       Text(hw.dueDate == null ? '' : (hw.isOverdue ? '⚠️ Overdue' : 'Due ${hw.dueDate}'),
                           style: TextStyle(fontSize: 11, color: hw.isOverdue ? const Color(0xFFEF4444) : context.textMuted, fontWeight: FontWeight.w600)),

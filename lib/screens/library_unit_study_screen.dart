@@ -2,10 +2,25 @@ import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import '../data/word_data.dart';
+import '../data/a1_collection.dart';
+import '../data/a2_collection.dart';
+import '../data/b1_collection.dart';
 import 'learning.dart';
 import 'flashcard.dart';
 import 'quiz_screen.dart';
 import 'matching_screen.dart';
+
+WordCollection? _collectionByName(String name) {
+  switch (name) {
+    case '30 Days of Powerful Words': return thirtyDaysCollection;
+    case '24 Vocabulary Challenge':   return vocabularyChallengeCollection;
+    case 'Word Mastery':              return wordMasteryCollection;
+    case 'A1':                        return a1Collection;
+    case 'A2':                        return a2Collection;
+    case 'B1':                        return b1Collection;
+    default: return null;
+  }
+}
 
 class LibraryUnitStudyScreen extends StatefulWidget {
   final String classId;
@@ -14,6 +29,8 @@ class LibraryUnitStudyScreen extends StatefulWidget {
   final String homeworkId;
   final List<String> modes;
   final bool isClassWords;
+  final String? collectionName;
+  final int? dayNumber;
 
   const LibraryUnitStudyScreen({
     super.key,
@@ -23,6 +40,8 @@ class LibraryUnitStudyScreen extends StatefulWidget {
     required this.homeworkId,
     required this.modes,
     this.isClassWords = false,
+    this.collectionName,
+    this.dayNumber,
   });
 
   @override
@@ -50,53 +69,60 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
       return;
     }
 
-    final results = await Future.wait([
-      (widget.isClassWords
-          ? supabase.from('class_words').select('word, translation, definition, examples').eq('unit_id', widget.unitId).order('created_at')
-          : supabase.from('teacher_unit_words').select('word, translation, definition, part_of_speech, pronunciation, definition_uz, examples').eq('unit_id', widget.unitId).order('created_at')),
-      supabase
-          .from('class_homework_progress')
-          .select('mode')
-          .eq('homework_id', widget.homeworkId)
-          .eq('student_id', user.id),
-    ]);
+    final progRaw = await supabase
+        .from('class_homework_progress')
+        .select('mode')
+        .eq('homework_id', widget.homeworkId)
+        .eq('student_id', user.id);
+    final completed = (progRaw as List).map((e) => (e as Map)['mode'] as String).toSet();
 
-    final wordsRaw = results[0] as List;
-    final progRaw = results[1] as List;
+    List<WordItem> wordItems;
 
-    final wordItems = wordsRaw.map((e) {
-      final m = e as Map<String, dynamic>;
-      final exs = (m['examples'] as List?)
-          ?.map((ex) => Map<String, String>.from(
-              (ex as Map).map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''))))
-          .toList() ?? [];
-      return WordItem(
-        word: m['word'] as String,
-        partOfSpeech: m['part_of_speech'] as String? ?? '',
-        pronunciation: m['pronunciation'] as String? ?? '',
-        translation: m['translation'] as String? ?? '',
-        definition: m['definition'] as String? ?? '',
-        definitionUz: m['definition_uz'] as String? ?? '',
-        example1: exs.isNotEmpty ? exs[0]['sentence'] ?? '' : '',
-        example1Translation: exs.isNotEmpty ? exs[0]['translation'] ?? '' : '',
-        example2: exs.length > 1 ? exs[1]['sentence'] ?? '' : '',
-        example2Translation: exs.length > 1 ? exs[1]['translation'] ?? '' : '',
-        example3: exs.length > 2 ? exs[2]['sentence'] ?? '' : '',
-        example3Translation: exs.length > 2 ? exs[2]['translation'] ?? '' : '',
-        extraExamples: exs.length > 3
-            ? exs.sublist(3).map((x) => x['sentence'] ?? '').where((s) => s.isNotEmpty).toList()
-            : [],
-        extraExampleTranslations: exs.length > 3
-            ? exs.sublist(3).map((x) => x['translation'] ?? '').toList()
-            : [],
+    if (widget.collectionName != null) {
+      // Load from local pre-built collection data
+      final col = _collectionByName(widget.collectionName!);
+      final day = col?.days.firstWhere(
+        (d) => d.dayNumber == widget.dayNumber,
+        orElse: () => WordDay(dayNumber: widget.dayNumber ?? 0, topic: widget.unitName, words: []),
       );
-    }).toList();
+      wordItems = day?.words ?? [];
+    } else {
+      final wordsRaw = await (widget.isClassWords
+          ? supabase.from('class_words').select('word, translation, definition, examples').eq('unit_id', widget.unitId).order('created_at')
+          : supabase.from('teacher_unit_words').select('word, translation, definition, part_of_speech, pronunciation, definition_uz, examples').eq('unit_id', widget.unitId).order('created_at'));
 
-    final completed = progRaw.map((e) => (e as Map)['mode'] as String).toSet();
+      wordItems = (wordsRaw as List).map((e) {
+        final m = e as Map<String, dynamic>;
+        final exs = (m['examples'] as List?)
+            ?.map((ex) => Map<String, String>.from(
+                (ex as Map).map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''))))
+            .toList() ?? [];
+        return WordItem(
+          word: m['word'] as String,
+          partOfSpeech: m['part_of_speech'] as String? ?? '',
+          pronunciation: m['pronunciation'] as String? ?? '',
+          translation: m['translation'] as String? ?? '',
+          definition: m['definition'] as String? ?? '',
+          definitionUz: m['definition_uz'] as String? ?? '',
+          example1: exs.isNotEmpty ? exs[0]['sentence'] ?? '' : '',
+          example1Translation: exs.isNotEmpty ? exs[0]['translation'] ?? '' : '',
+          example2: exs.length > 1 ? exs[1]['sentence'] ?? '' : '',
+          example2Translation: exs.length > 1 ? exs[1]['translation'] ?? '' : '',
+          example3: exs.length > 2 ? exs[2]['sentence'] ?? '' : '',
+          example3Translation: exs.length > 2 ? exs[2]['translation'] ?? '' : '',
+          extraExamples: exs.length > 3
+              ? exs.sublist(3).map((x) => x['sentence'] ?? '').where((s) => s.isNotEmpty).toList()
+              : [],
+          extraExampleTranslations: exs.length > 3
+              ? exs.sublist(3).map((x) => x['translation'] ?? '').toList()
+              : [],
+        );
+      }).toList();
+    }
 
     if (mounted) {
       setState(() {
-        _wordDay = WordDay(dayNumber: 0, topic: widget.unitName, words: wordItems);
+        _wordDay = WordDay(dayNumber: widget.dayNumber ?? 0, topic: widget.unitName, words: wordItems);
         _completedModes = completed;
         _loading = false;
       });

@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import 'library_unit_study_screen.dart';
+import '../data/word_data.dart';
+import '../data/a1_collection.dart';
+import '../data/a2_collection.dart';
+import '../data/b1_collection.dart';
 
 String? _hwDueText(String? due) {
   if (due == null) return null;
@@ -44,6 +48,28 @@ class _CWUnit {
   bool get hasHomework => homeworkId != null;
 }
 
+// ── Collection homework models ─────────────────────────────────────────────
+
+class _CollHW {
+  final String homeworkId, collectionName, topic;
+  final int dayNumber, wordCount;
+  final List<String> hwModes;
+  final String? hwDue;
+  const _CollHW({required this.homeworkId, required this.collectionName, required this.dayNumber, required this.topic, required this.wordCount, required this.hwModes, this.hwDue});
+}
+
+WordCollection? _collectionByName(String name) {
+  switch (name) {
+    case '30 Days of Powerful Words': return thirtyDaysCollection;
+    case '24 Vocabulary Challenge':   return vocabularyChallengeCollection;
+    case 'Word Mastery':              return wordMasteryCollection;
+    case 'A1':                        return a1Collection;
+    case 'A2':                        return a2Collection;
+    case 'B1':                        return b1Collection;
+    default: return null;
+  }
+}
+
 // ── Widget ─────────────────────────────────────────────────────────────────
 
 class ClassHomeworkTab extends StatefulWidget {
@@ -59,6 +85,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   bool _loading = true;
   List<_AssignedFolder> _folders = [];
   List<_CWUnit> _cwUnits = [];
+  List<_CollHW> _collHwItems = [];
   Map<String, Set<String>> _completedModes = {};
   int _totalAssigned = 0;
   int _totalDone = 0;
@@ -104,7 +131,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
       // ── 4. All homework for this class ──────────────────────────────────
       final hwRaw = await supabase
           .from('class_homework')
-          .select('id, unit_id, class_unit_id, modes, due_date, student_ids')
+          .select('id, unit_id, class_unit_id, collection_name, day_number, modes, due_date, student_ids')
           .eq('class_id', widget.classId);
 
       // Filter to applicable homework for this student
@@ -132,11 +159,14 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
       // ── 6. Build lookup maps ────────────────────────────────────────────
       final hwByLibUnit = <String, Map>{};
       final hwByCWUnit = <String, Map>{};
+      final collHwRows = <Map>[];
       for (final h in applicableHw) {
         final uid = (h as Map)['unit_id'] as String?;
         final cwid = h['class_unit_id'] as String?;
-        if (uid != null) hwByLibUnit[uid] = h;
-        if (cwid != null) hwByCWUnit[cwid] = h;
+        final collName = h['collection_name'] as String?;
+        if (uid != null) { hwByLibUnit[uid] = h; }
+        else if (cwid != null) { hwByCWUnit[cwid] = h; }
+        else if (collName != null) { collHwRows.add(h); }
       }
 
       // ── 7. Build library folder list ────────────────────────────────────
@@ -177,7 +207,25 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
         );
       }).toList();
 
-      // ── 9. Totals ───────────────────────────────────────────────────────
+      // ── 9. Build collection HW items ────────────────────────────────────
+      final collHwItems = <_CollHW>[];
+      for (final h in collHwRows) {
+        final name = h['collection_name'] as String;
+        final dayNum = (h['day_number'] as num).toInt();
+        final col = _collectionByName(name);
+        final day = col?.days.firstWhere((d) => d.dayNumber == dayNum, orElse: () => WordDay(dayNumber: dayNum, topic: 'Day $dayNum', words: []));
+        collHwItems.add(_CollHW(
+          homeworkId: h['id'] as String,
+          collectionName: name,
+          dayNumber: dayNum,
+          topic: day?.topic ?? 'Day $dayNum',
+          wordCount: day?.words.length ?? 0,
+          hwModes: List<String>.from(h['modes'] as List? ?? []),
+          hwDue: h['due_date'] as String?,
+        ));
+      }
+
+      // ── 10. Totals ──────────────────────────────────────────────────────
       int assigned = 0, done = 0;
       for (final f in folders) {
         for (final u in f.units) {
@@ -197,10 +245,16 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
           if (modes.isNotEmpty && modes.every(completed.contains)) done++;
         }
       }
+      for (final h in collHwItems) {
+        assigned++;
+        final completed = completedModes[h.homeworkId] ?? {};
+        if (h.hwModes.isNotEmpty && h.hwModes.every(completed.contains)) done++;
+      }
 
       if (mounted) { setState(() {
         _folders = folders;
         _cwUnits = cwUnits;
+        _collHwItems = collHwItems;
         _completedModes = completedModes;
         _totalAssigned = assigned;
         _totalDone = done;
@@ -232,7 +286,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
       );
     }
 
-    final hasAny = _folders.isNotEmpty || _cwUnits.any((u) => u.hasHomework);
+    final hasAny = _folders.isNotEmpty || _cwUnits.any((u) => u.hasHomework) || _collHwItems.isNotEmpty;
 
     return RefreshIndicator(
       onRefresh: _load,
@@ -299,6 +353,12 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
                 homeworkId: u.homeworkId!, hwModes: u.hwModes ?? [],
                 hwDue: u.hwDue, isClassWords: true,
               )),
+            ],
+
+            // ── Collections section ─────────────────────────────────────
+            if (_collHwItems.isNotEmpty) ...[
+              _sectionHeader('📗 Collections'),
+              ..._collHwItems.map((h) => _buildCollectionCard(h)),
             ],
           ],
         ],
@@ -420,6 +480,77 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
             const SizedBox(height: 4),
             Row(children: [
               ...hwModes.map((m) => Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: Text(modeIcons[m] ?? m,
+                  style: TextStyle(fontSize: 15,
+                    color: completed.contains(m) ? null : context.textMuted.withValues(alpha: 0.35))),
+              )),
+              if (due != null) ...[
+                const SizedBox(width: 6),
+                Text(due, style: TextStyle(fontSize: 10,
+                  color: isOverdue ? Colors.red : context.textMuted,
+                  fontWeight: isOverdue ? FontWeight.w700 : FontWeight.normal)),
+              ],
+            ]),
+          ])),
+          Icon(Icons.arrow_forward_ios_rounded, size: 14, color: context.textMuted),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildCollectionCard(_CollHW h) {
+    final completed = _completedModes[h.homeworkId] ?? {};
+    final allDone = h.hwModes.isNotEmpty && h.hwModes.every(completed.contains);
+    final due = _hwDueText(h.hwDue);
+    final isOverdue = due?.startsWith('Overdue') == true;
+    const modeIcons = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯'};
+
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.push(context, MaterialPageRoute(
+          builder: (_) => LibraryUnitStudyScreen(
+            classId: widget.classId, unitId: '', unitName: '${h.collectionName} · Day ${h.dayNumber}',
+            homeworkId: h.homeworkId, modes: h.hwModes,
+            collectionName: h.collectionName, dayNumber: h.dayNumber,
+          ),
+        ));
+        _load();
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: allDone ? context.successBg : context.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: allDone ? Colors.green.shade300 : context.border),
+          boxShadow: context.cardShadow,
+        ),
+        child: Row(children: [
+          Container(
+            width: 44, height: 44,
+            decoration: BoxDecoration(
+              color: allDone ? Colors.green.shade100 : const Color(0xFF22C55E).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Center(
+              child: allDone
+                  ? const Icon(Icons.check_circle_rounded, color: Colors.green, size: 26)
+                  : Text('${completed.length}/${h.hwModes.length}',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Color(0xFF16A34A))),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('${h.collectionName} · Day ${h.dayNumber}',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13,
+                color: allDone ? Colors.green.shade700 : context.appText),
+              overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 2),
+            Text(h.topic, style: TextStyle(fontSize: 11, color: context.textMuted), overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 4),
+            Row(children: [
+              ...h.hwModes.map((m) => Padding(
                 padding: const EdgeInsets.only(right: 4),
                 child: Text(modeIcons[m] ?? m,
                   style: TextStyle(fontSize: 15,

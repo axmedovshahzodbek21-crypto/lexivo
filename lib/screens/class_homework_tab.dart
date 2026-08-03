@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
 import '../app_theme.dart';
-import '../l10n.dart';
-import 'class_models.dart';
+import 'library_unit_study_screen.dart';
 
 String? _hwDueText(String? due) {
   if (due == null) return null;
@@ -12,6 +11,37 @@ String? _hwDueText(String? due) {
   if (due == today) return 'Due today';
   if (due == tomorrow) return 'Due tomorrow';
   return 'Due $due';
+}
+
+class _AssignedFolder {
+  final String id, assignmentId, name;
+  final List<_FolderUnit> units;
+  bool showAll = false;
+  _AssignedFolder({
+    required this.id,
+    required this.assignmentId,
+    required this.name,
+    required this.units,
+  });
+}
+
+class _FolderUnit {
+  final String id, name;
+  final int wordCount;
+  final String? homeworkId;
+  final List<String>? hwModes;
+  final String? hwDue;
+
+  const _FolderUnit({
+    required this.id,
+    required this.name,
+    required this.wordCount,
+    this.homeworkId,
+    this.hwModes,
+    this.hwDue,
+  });
+
+  bool get hasHomework => homeworkId != null;
 }
 
 class ClassHomeworkTab extends StatefulWidget {
@@ -25,85 +55,132 @@ class ClassHomeworkTab extends StatefulWidget {
 
 class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   bool _loading = true;
-  List<ClassHomework> _hw = [];
-  Set<String> _completedIds = {};
-  Map<String, int> _completionCounts = {};
-  int _memberCount = 0;
-
-  bool _showForm = false;
-  final _titleCtrl = TextEditingController();
-  DateTime? _dueDate;
-  bool _adding = false;
+  List<_AssignedFolder> _folders = [];
+  Map<String, Set<String>> _completedModes = {};
+  int _totalAssigned = 0;
+  int _totalDone = 0;
 
   @override
   void initState() {
     super.initState();
-    appLangNotifier.addListener(_onLang);
     _load();
   }
-
-  @override
-  void dispose() {
-    _titleCtrl.dispose();
-    appLangNotifier.removeListener(_onLang);
-    super.dispose();
-  }
-
-  void _onLang() { if (mounted) setState(() {}); }
 
   Future<void> _load() async {
     if (mounted) setState(() => _loading = true);
     try {
-      final hwRaw = await supabase
-          .from('class_homework')
-          .select('id, class_id, teacher_id, title, due_date, created_at')
-          .eq('class_id', widget.classId)
-          .order('created_at', ascending: false);
-      final hw = (hwRaw as List)
-          .map((e) => ClassHomework.fromMap(Map<String, dynamic>.from(e as Map)))
+      final user = currentUser;
+
+      // Load assigned folders
+      final assignsRaw = await supabase
+          .from('class_library_assignments')
+          .select('id, folder_id, teacher_folders(id, name)')
+          .eq('class_id', widget.classId);
+
+      if ((assignsRaw as List).isEmpty) {
+        if (mounted) setState(() { _folders = []; _loading = false; });
+        return;
+      }
+
+      final folderIds = assignsRaw
+          .map((a) => ((a as Map)['teacher_folders'] as Map)['id'] as String)
           .toList();
 
-      Set<String> completedIds = {};
-      Map<String, int> completionCounts = {};
-      int memberCount = 0;
+      // Load units for those folders
+      final unitsRaw = await supabase
+          .from('teacher_units')
+          .select('id, folder_id, name, teacher_unit_words(count)')
+          .inFilter('folder_id', folderIds)
+          .order('created_at');
 
-      if (widget.isTeacher) {
-        final membersRaw = await supabase
-            .from('class_members').select('student_id').eq('class_id', widget.classId);
-        memberCount = (membersRaw as List).length;
+      // Load homework for this class
+      final hwRaw = await supabase
+          .from('class_homework')
+          .select('id, unit_id, modes, due_date, student_ids')
+          .eq('class_id', widget.classId);
 
-        if (hw.isNotEmpty) {
-          final hwIds = hw.map((h) => h.id).toList();
-          final compsRaw = await supabase
-              .from('class_homework_completions')
-              .select('homework_id')
-              .inFilter('homework_id', hwIds);
-          for (final r in (compsRaw as List)) {
-            final hwId = (r as Map)['homework_id'] as String;
-            completionCounts[hwId] = (completionCounts[hwId] ?? 0) + 1;
-          }
+      // Filter to homework that applies to this student
+      final userId = user?.id;
+      final applicableHw = (hwRaw as List).where((h) {
+        final studentIds = (h as Map)['student_ids'] as List?;
+        if (studentIds == null) return true;
+        return userId != null && studentIds.contains(userId);
+      }).toList();
+
+      // Load student's completed modes
+      final completedModes = <String, Set<String>>{};
+      if (applicableHw.isNotEmpty && userId != null) {
+        final hwIds = applicableHw.map((h) => h['id'] as String).toList();
+        final progRaw = await supabase
+            .from('class_homework_progress')
+            .select('homework_id, mode')
+            .eq('student_id', userId)
+            .inFilter('homework_id', hwIds);
+        for (final p in (progRaw as List)) {
+          final hwId = p['homework_id'] as String;
+          final mode = p['mode'] as String;
+          completedModes.putIfAbsent(hwId, () => {}).add(mode);
         }
-      } else {
-        final user = currentUser;
-        if (user != null && hw.isNotEmpty) {
-          final hwIds = hw.map((h) => h.id).toList();
-          final compsRaw = await supabase
-              .from('class_homework_completions')
-              .select('homework_id')
-              .eq('student_id', user.id)
-              .inFilter('homework_id', hwIds);
-          completedIds = (compsRaw as List)
-              .map((e) => (e as Map)['homework_id'] as String)
-              .toSet();
+      }
+
+      // Build homework lookup by unit_id
+      final hwByUnit = <String, dynamic>{};
+      for (final h in applicableHw) {
+        hwByUnit[(h as Map)['unit_id'] as String] = h;
+      }
+
+      // Build folder list
+      final folders = <_AssignedFolder>[];
+      for (final a in assignsRaw) {
+        final folder = ((a as Map)['teacher_folders']) as Map;
+        final folderId = folder['id'] as String;
+        final units = (unitsRaw as List)
+            .where((u) => (u as Map)['folder_id'] == folderId)
+            .map((u) {
+              final um = u as Map;
+              final uid = um['id'] as String;
+              final hw = hwByUnit[uid];
+              final countList = um['teacher_unit_words'] as List?;
+              return _FolderUnit(
+                id: uid,
+                name: um['name'] as String,
+                wordCount: countList?.isNotEmpty == true
+                    ? (countList![0] as Map)['count'] as int? ?? 0
+                    : 0,
+                homeworkId: hw?['id'] as String?,
+                hwModes: hw != null ? List<String>.from(hw['modes'] as List) : null,
+                hwDue: hw?['due_date'] as String?,
+              );
+            })
+            .toList();
+        folders.add(_AssignedFolder(
+          id: folderId,
+          assignmentId: (a as Map)['id'] as String,
+          name: folder['name'] as String,
+          units: units,
+        ));
+      }
+
+      // Count totals for progress bar
+      int totalAssigned = 0;
+      int totalDone = 0;
+      for (final f in folders) {
+        for (final u in f.units) {
+          if (u.hasHomework) {
+            totalAssigned++;
+            final modes = u.hwModes ?? [];
+            final done = completedModes[u.homeworkId!] ?? {};
+            if (modes.isNotEmpty && modes.every(done.contains)) totalDone++;
+          }
         }
       }
 
       if (mounted) {
         setState(() {
-          _hw = hw;
-          _completedIds = completedIds;
-          _completionCounts = completionCounts;
-          _memberCount = memberCount;
+          _folders = folders;
+          _completedModes = completedModes;
+          _totalAssigned = totalAssigned;
+          _totalDone = totalDone;
           _loading = false;
         });
       }
@@ -112,300 +189,226 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
     }
   }
 
-  Future<void> _addHomework() async {
-    final title = _titleCtrl.text.trim();
-    if (title.isEmpty) return;
-    setState(() => _adding = true);
-    try {
-      final user = currentUser;
-      await supabase.from('class_homework').insert({
-        'class_id': widget.classId,
-        'teacher_id': user?.id,
-        'title': title,
-        if (_dueDate != null) 'due_date': _dueDate!.toIso8601String().substring(0, 10),
-      });
-      _titleCtrl.clear();
-      if (mounted) setState(() { _dueDate = null; _showForm = false; });
-      await _load();
-    } catch (_) {}
-    if (mounted) setState(() => _adding = false);
-  }
-
-  Future<void> _toggleComplete(ClassHomework hw) async {
-    final user = currentUser;
-    if (user == null) return;
-    final isDone = _completedIds.contains(hw.id);
-    setState(() {
-      if (isDone) { _completedIds.remove(hw.id); } else { _completedIds.add(hw.id); }
-    });
-    try {
-      if (isDone) {
-        await supabase.from('class_homework_completions')
-            .delete().eq('homework_id', hw.id).eq('student_id', user.id);
-      } else {
-        await supabase.from('class_homework_completions').upsert(
-          {'homework_id': hw.id, 'student_id': user.id},
-          onConflict: 'homework_id,student_id',
-        );
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          if (isDone) { _completedIds.add(hw.id); } else { _completedIds.remove(hw.id); }
-        });
-      }
-    }
-  }
-
-  Future<void> _deleteHomework(ClassHomework hw) async {
-    try {
-      await supabase.from('class_homework').delete().eq('id', hw.id);
-      if (mounted) setState(() => _hw.removeWhere((h) => h.id == hw.id));
-    } catch (_) {}
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
 
+    // Teacher: point to Curriculum tab
+    if (widget.isTeacher) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            const Text('📋', style: TextStyle(fontSize: 52)),
+            const SizedBox(height: 16),
+            Text('Manage Homework from the Dashboard',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText),
+              textAlign: TextAlign.center),
+            const SizedBox(height: 8),
+            Text('Go to Dashboard → Curriculum tab to assign library units as homework and track per-student progress.',
+              style: TextStyle(color: context.textMuted, fontSize: 13),
+              textAlign: TextAlign.center),
+          ]),
+        ),
+      );
+    }
+
+    // Student view
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
         children: [
-          if (widget.isTeacher) ...[
-            if (!_showForm)
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () => setState(() => _showForm = true),
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('New Assignment', style: TextStyle(fontWeight: FontWeight.w700)),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: context.primary,
-                    side: BorderSide(color: context.primary.withValues(alpha: 0.5)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+          // Progress summary
+          if (_totalAssigned > 0)
+            Container(
+              padding: const EdgeInsets.all(14),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: context.primaryBg,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: context.primary.withValues(alpha: 0.3)),
+              ),
+              child: Column(children: [
+                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                  Text('My Progress', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: context.appText)),
+                  Text('$_totalDone / $_totalAssigned done',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.primary)),
+                ]),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: _totalAssigned > 0 ? (_totalDone / _totalAssigned).clamp(0.0, 1.0) : 0.0,
+                    minHeight: 6,
+                    backgroundColor: context.primary.withValues(alpha: 0.15),
+                    valueColor: AlwaysStoppedAnimation<Color>(context.primary),
                   ),
                 ),
-              )
-            else
-              _buildAddForm(),
-            const SizedBox(height: 16),
-          ],
+                if (_totalDone == _totalAssigned && _totalAssigned > 0) ...[
+                  const SizedBox(height: 8),
+                  Text('🎉 All done! Great work!',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.primary)),
+                ],
+              ]),
+            ),
 
-          if (_hw.isEmpty)
-            Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          if (_folders.isEmpty)
+            Column(mainAxisAlignment: MainAxisAlignment.center, children: [
               const SizedBox(height: 60),
-              const Text('📋', style: TextStyle(fontSize: 48)),
+              const Text('📚', style: TextStyle(fontSize: 48)),
               const SizedBox(height: 12),
-              Text(
-                widget.isTeacher ? 'No assignments yet' : 'No homework yet',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText),
-              ),
+              Text('No homework yet',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
               const SizedBox(height: 6),
-              Text(
-                widget.isTeacher ? 'Create an assignment above' : "Your teacher hasn't assigned anything yet",
-                style: TextStyle(color: context.textMuted, fontSize: 13),
+              Text("Your teacher hasn't assigned any units yet",
+                style: TextStyle(color: context.textMuted, fontSize: 13)),
+            ])
+          else
+            ..._folders.expand((f) => _buildFolderSection(f)),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildFolderSection(_AssignedFolder folder) {
+    final hiddenCount = folder.units.where((u) => !u.hasHomework).length;
+    final visible = folder.showAll
+        ? folder.units
+        : folder.units.where((u) => u.hasHomework).toList();
+
+    return [
+      Padding(
+        padding: const EdgeInsets.only(top: 8, bottom: 6),
+        child: Row(children: [
+          const Text('📁', style: TextStyle(fontSize: 13)),
+          const SizedBox(width: 6),
+          Expanded(child: Text(folder.name,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: context.textMuted),
+            overflow: TextOverflow.ellipsis)),
+          if (hiddenCount > 0)
+            GestureDetector(
+              onTap: () => setState(() => folder.showAll = !folder.showAll),
+              child: Text(
+                folder.showAll ? 'Show less' : '$hiddenCount hidden — Show all',
+                style: TextStyle(fontSize: 11, color: context.primary, fontWeight: FontWeight.w600),
               ),
-            ]))
-          else ...[
-            if (!widget.isTeacher) _studentProgress(),
-            ..._hw.map(_buildHwRow),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _studentProgress() {
-    final done = _completedIds.length;
-    final total = _hw.length;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: context.primaryBg,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: context.primary.withValues(alpha: 0.3)),
-      ),
-      child: Column(children: [
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text('My Progress', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: context.appText)),
-          Text('$done / $total done', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.primary)),
+            ),
         ]),
-        const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: total > 0 ? (done / total).clamp(0.0, 1.0) : 0.0,
-            minHeight: 6,
-            backgroundColor: context.primary.withValues(alpha: 0.15),
-            valueColor: AlwaysStoppedAnimation<Color>(context.primary),
-          ),
-        ),
-        if (done == total && total > 0) ...[
-          const SizedBox(height: 8),
-          Text('🎉 All done! Great work!', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.primary)),
-        ],
-      ]),
-    );
+      ),
+      if (visible.isEmpty)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Text('No units assigned yet',
+            style: TextStyle(fontSize: 12, color: context.textMuted)),
+        )
+      else
+        ...visible.map((u) => _buildUnitRow(u)),
+      const SizedBox(height: 8),
+    ];
   }
 
-  Widget _buildHwRow(ClassHomework hw) {
-    final isDone = _completedIds.contains(hw.id);
-    final count = _completionCounts[hw.id] ?? 0;
-    final due = _hwDueText(hw.dueDate);
+  Widget _buildUnitRow(_FolderUnit unit) {
+    // Unassigned unit (visible only in "show all" mode)
+    if (!unit.hasHomework) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: context.surface.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: context.border.withValues(alpha: 0.5)),
+        ),
+        child: Row(children: [
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(10)),
+            child: const Center(child: Text('🔒', style: TextStyle(fontSize: 18))),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(unit.name, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: context.textMuted)),
+            Text('${unit.wordCount} words · Not yet assigned',
+              style: TextStyle(fontSize: 11, color: context.textMuted)),
+          ])),
+        ]),
+      );
+    }
+
+    // Assigned unit with homework
+    final modes = unit.hwModes ?? [];
+    final completed = _completedModes[unit.homeworkId!] ?? {};
+    final allDone = modes.isNotEmpty && modes.every(completed.contains);
+    final due = _hwDueText(unit.hwDue);
     final isOverdue = due?.startsWith('Overdue') == true;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isDone && !widget.isTeacher ? context.successBg : context.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: isDone && !widget.isTeacher ? Colors.green.shade300 : context.border),
-        boxShadow: context.cardShadow,
-      ),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        if (!widget.isTeacher)
-          GestureDetector(
-            onTap: () => _toggleComplete(hw),
-            child: Container(
-              width: 24, height: 24,
-              margin: const EdgeInsets.only(right: 12, top: 1),
-              decoration: BoxDecoration(
-                color: isDone ? Colors.green : Colors.transparent,
-                border: Border.all(color: isDone ? Colors.green : context.border, width: 2),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: isDone ? const Icon(Icons.check, color: Colors.white, size: 16) : null,
-            ),
-          )
-        else
+    const modeIcons = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯'};
+
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.push(context, MaterialPageRoute(
+          builder: (_) => LibraryUnitStudyScreen(
+            classId: widget.classId,
+            unitId: unit.id,
+            unitName: unit.name,
+            homeworkId: unit.homeworkId!,
+            modes: modes,
+          ),
+        ));
+        _load();
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: allDone ? context.successBg : context.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: allDone ? Colors.green.shade300 : context.border),
+          boxShadow: context.cardShadow,
+        ),
+        child: Row(children: [
           Container(
-            width: 36, height: 36,
-            margin: const EdgeInsets.only(right: 12),
-            decoration: BoxDecoration(color: context.primaryBg, borderRadius: BorderRadius.circular(10)),
-            child: Center(child: Text('$count',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: context.primary))),
-          ),
-
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(hw.title, style: TextStyle(
-            fontSize: 14, fontWeight: FontWeight.w700,
-            color: isDone && !widget.isTeacher ? Colors.green.shade700 : context.appText,
-            decoration: isDone && !widget.isTeacher ? TextDecoration.lineThrough : null,
-          )),
-          if (due != null) ...[
-            const SizedBox(height: 3),
-            Text(due, style: TextStyle(
-              fontSize: 11,
-              color: isOverdue ? Colors.red : context.textMuted,
-              fontWeight: isOverdue ? FontWeight.w700 : FontWeight.normal,
-            )),
-          ],
-          if (widget.isTeacher) ...[
-            const SizedBox(height: 4),
-            Text(
-              _memberCount > 0 ? '$count / $_memberCount completed' : '$count completed',
-              style: TextStyle(fontSize: 11, color: context.textMuted),
+            width: 44, height: 44,
+            decoration: BoxDecoration(
+              color: allDone ? Colors.green.shade100 : context.primaryBg,
+              borderRadius: BorderRadius.circular(12),
             ),
-          ],
-        ])),
-
-        if (widget.isTeacher)
-          GestureDetector(
-            onTap: () => _confirmDelete(hw),
-            child: Padding(padding: const EdgeInsets.only(left: 8), child: Icon(Icons.close, size: 18, color: context.textMuted)),
+            child: Center(
+              child: allDone
+                  ? const Icon(Icons.check_circle_rounded, color: Colors.green, size: 26)
+                  : Text('${completed.length}/${modes.length}',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: context.primary)),
+            ),
           ),
-      ]),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(unit.name,
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14,
+                color: allDone ? Colors.green.shade700 : context.appText)),
+            const SizedBox(height: 4),
+            Row(children: [
+              ...modes.map((m) {
+                final done = completed.contains(m);
+                return Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: Text(modeIcons[m] ?? m,
+                    style: TextStyle(fontSize: 15,
+                      color: done ? null : context.textMuted.withValues(alpha: 0.35))),
+                );
+              }),
+              if (due != null) ...[
+                const SizedBox(width: 6),
+                Text(due, style: TextStyle(
+                  fontSize: 10,
+                  color: isOverdue ? Colors.red : context.textMuted,
+                  fontWeight: isOverdue ? FontWeight.w700 : FontWeight.normal,
+                )),
+              ],
+            ]),
+          ])),
+          Icon(Icons.arrow_forward_ios_rounded, size: 14, color: context.textMuted),
+        ]),
+      ),
     );
   }
-
-  Widget _buildAddForm() => Container(
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: context.border), boxShadow: context.cardShadow),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('New Assignment', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: context.appText)),
-      const SizedBox(height: 10),
-      TextField(
-        controller: _titleCtrl,
-        autofocus: true,
-        style: TextStyle(color: context.appText, fontSize: 14),
-        decoration: InputDecoration(
-          hintText: 'e.g. Study Unit 5 vocabulary',
-          hintStyle: TextStyle(color: context.textMuted, fontSize: 14),
-          filled: true, fillColor: context.surface2,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        ),
-      ),
-      const SizedBox(height: 8),
-      GestureDetector(
-        onTap: () async {
-          final picked = await showDatePicker(
-            context: context,
-            initialDate: DateTime.now().add(const Duration(days: 7)),
-            firstDate: DateTime.now(),
-            lastDate: DateTime.now().add(const Duration(days: 365)),
-          );
-          if (picked != null && mounted) setState(() => _dueDate = picked);
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(10)),
-          child: Row(children: [
-            Icon(Icons.calendar_today, size: 16, color: context.textMuted),
-            const SizedBox(width: 8),
-            Text(
-              _dueDate != null ? 'Due ${_dueDate!.toIso8601String().substring(0, 10)}' : 'Set due date (optional)',
-              style: TextStyle(fontSize: 14, color: _dueDate != null ? context.appText : context.textMuted),
-            ),
-            if (_dueDate != null) ...[
-              const Spacer(),
-              GestureDetector(
-                onTap: () => setState(() => _dueDate = null),
-                child: Icon(Icons.close, size: 16, color: context.textMuted),
-              ),
-            ],
-          ]),
-        ),
-      ),
-      const SizedBox(height: 12),
-      Row(children: [
-        Expanded(child: TextButton(
-          onPressed: () => setState(() { _showForm = false; _titleCtrl.clear(); _dueDate = null; }),
-          child: Text(tr('cancel'), style: TextStyle(color: context.textMuted)),
-        )),
-        const SizedBox(width: 8),
-        Expanded(child: ElevatedButton(
-          onPressed: _adding ? null : _addHomework,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: context.primary, foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-          child: _adding
-            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-            : const Text('Add', style: TextStyle(fontWeight: FontWeight.bold)),
-        )),
-      ]),
-    ]),
-  );
-
-  void _confirmDelete(ClassHomework hw) => showDialog(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      backgroundColor: context.surface,
-      title: Text('Delete assignment?', style: TextStyle(color: context.appText)),
-      content: Text('"${hw.title}"', style: TextStyle(color: context.textMuted)),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: Text(tr('cancel'), style: TextStyle(color: context.textMuted))),
-        TextButton(
-          onPressed: () { Navigator.pop(ctx); _deleteHomework(hw); },
-          child: Text(tr('delete_word'), style: TextStyle(color: context.dangerColor, fontWeight: FontWeight.bold)),
-        ),
-      ],
-    ),
-  );
 }

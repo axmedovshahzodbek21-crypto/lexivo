@@ -4,6 +4,7 @@ import '../data/storage_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import 'class_words_screen.dart';
+import 'class_curriculum_tab.dart';
 
 // ── Models ───────────────────────────────────────────────────────────────────
 
@@ -112,7 +113,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 5, vsync: this);
+    _tabs = TabController(length: 6, vsync: this);
     _tabs.addListener(() { if (_tabs.index == 4 && !_srsLoaded && !_srsLoading) _loadSRS(); });
     appLangNotifier.addListener(_onLang);
     final cached = _dashboardCache[widget.classId];
@@ -266,6 +267,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             const Tab(text: '📡 Radar'),
             const Tab(text: '🗺 Heatmap'),
             const Tab(text: '📚 SRS'),
+            const Tab(text: '📋 Curriculum'),
           ],
         ),
       ),
@@ -279,6 +281,11 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
               _buildRadarTab(),
               _buildHeatmapTab(),
               _buildSRSTab(),
+              ClassCurriculumTab(
+                classId: widget.classId,
+                className: widget.className,
+                students: _students.map((s) => (studentId: s.studentId, name: s.name)).toList(),
+              ),
             ],
           ),
     );

@@ -53,7 +53,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
     final results = await Future.wait([
       (widget.isClassWords
           ? supabase.from('class_words').select('word, translation, definition, examples').eq('unit_id', widget.unitId).order('created_at')
-          : supabase.from('teacher_unit_words').select('word, translation, definition, examples').eq('unit_id', widget.unitId).order('created_at')),
+          : supabase.from('teacher_unit_words').select('word, translation, definition, part_of_speech, pronunciation, definition_uz, examples').eq('unit_id', widget.unitId).order('created_at')),
       supabase
           .from('class_homework_progress')
           .select('mode')
@@ -72,10 +72,11 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
           .toList() ?? [];
       return WordItem(
         word: m['word'] as String,
-        partOfSpeech: '',
-        pronunciation: '',
+        partOfSpeech: m['part_of_speech'] as String? ?? '',
+        pronunciation: m['pronunciation'] as String? ?? '',
         translation: m['translation'] as String? ?? '',
         definition: m['definition'] as String? ?? '',
+        definitionUz: m['definition_uz'] as String? ?? '',
         example1: exs.isNotEmpty ? exs[0]['sentence'] ?? '' : '',
         example1Translation: exs.isNotEmpty ? exs[0]['translation'] ?? '' : '',
         example2: exs.length > 1 ? exs[1]['sentence'] ?? '' : '',

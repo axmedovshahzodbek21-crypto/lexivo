@@ -97,63 +97,70 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   }
 
   Future<void> _load() async {
-    if (mounted) setState(() => _loading = true);
+    // Only block the UI with a spinner on the very first load
+    final isFirstLoad = _folders.isEmpty && _cwUnits.isEmpty && _collHwItems.isEmpty;
+    if (isFirstLoad && mounted) setState(() => _loading = true);
     try {
       final userId = currentUser?.id;
 
-      // ── 1. Library assignments ──────────────────────────────────────────
-      final assignsRaw = await supabase
-          .from('class_library_assignments')
-          .select('id, folder_id, teacher_folders(id, name)')
-          .eq('class_id', widget.classId);
+      // ── Phase 1: fire independent queries in parallel ───────────────────
+      final phase1 = await Future.wait([
+        supabase
+            .from('class_library_assignments')
+            .select('id, folder_id, teacher_folders(id, name)')
+            .eq('class_id', widget.classId),
+        supabase
+            .from('class_word_units')
+            .select('id, name, class_words(count)')
+            .eq('class_id', widget.classId)
+            .order('created_at'),
+        supabase
+            .from('class_homework')
+            .select('id, unit_id, class_unit_id, collection_name, day_number, modes, due_date, student_ids')
+            .eq('class_id', widget.classId),
+      ]);
 
-      final folderIds = (assignsRaw as List)
+      final assignsRaw = phase1[0] as List;
+      final cwUnitsRaw = phase1[1] as List;
+      final hwRaw = phase1[2] as List;
+
+      final folderIds = assignsRaw
           .map((a) => ((a as Map)['teacher_folders'] as Map)['id'] as String)
           .toList();
 
-      // ── 2. Library units ────────────────────────────────────────────────
-      List unitsRaw = [];
-      if (folderIds.isNotEmpty) {
-        unitsRaw = await supabase
-            .from('teacher_units')
-            .select('id, folder_id, name, teacher_unit_words(count)')
-            .inFilter('folder_id', folderIds)
-            .order('created_at');
-      }
-
-      // ── 3. Class word units ─────────────────────────────────────────────
-      final cwUnitsRaw = await supabase
-          .from('class_word_units')
-          .select('id, name, class_words(count)')
-          .eq('class_id', widget.classId)
-          .order('created_at');
-
-      // ── 4. All homework for this class ──────────────────────────────────
-      final hwRaw = await supabase
-          .from('class_homework')
-          .select('id, unit_id, class_unit_id, collection_name, day_number, modes, due_date, student_ids')
-          .eq('class_id', widget.classId);
-
-      // Filter to applicable homework for this student
-      final applicableHw = (hwRaw as List).where((h) {
+      final applicableHw = hwRaw.where((h) {
         final sids = (h as Map)['student_ids'] as List?;
         return sids == null || (userId != null && sids.contains(userId));
       }).toList();
 
-      // ── 5. Progress ─────────────────────────────────────────────────────
+      // ── Phase 2: fire dependent queries in parallel ─────────────────────
+      final hwIds = applicableHw.map((h) => (h as Map)['id'] as String).toList();
+      final phase2 = await Future.wait([
+        folderIds.isNotEmpty
+            ? supabase
+                .from('teacher_units')
+                .select('id, folder_id, name, teacher_unit_words(count)')
+                .inFilter('folder_id', folderIds)
+                .order('created_at')
+            : Future.value(<dynamic>[]),
+        applicableHw.isNotEmpty && userId != null
+            ? supabase
+                .from('class_homework_progress')
+                .select('homework_id, mode')
+                .eq('student_id', userId)
+                .inFilter('homework_id', hwIds)
+            : Future.value(<dynamic>[]),
+      ]);
+
+      final unitsRaw = phase2[0];
+      final progRaw = phase2[1];
+
+      // ── Build progress map ──────────────────────────────────────────────
       final completedModes = <String, Set<String>>{};
-      if (applicableHw.isNotEmpty && userId != null) {
-        final hwIds = applicableHw.map((h) => h['id'] as String).toList();
-        final progRaw = await supabase
-            .from('class_homework_progress')
-            .select('homework_id, mode')
-            .eq('student_id', userId)
-            .inFilter('homework_id', hwIds);
-        for (final p in (progRaw as List)) {
-          final hwId = p['homework_id'] as String;
-          final mode = p['mode'] as String;
-          completedModes.putIfAbsent(hwId, () => {}).add(mode);
-        }
+      for (final p in progRaw) {
+        final hwId = (p as Map)['homework_id'] as String;
+        final mode = p['mode'] as String;
+        completedModes.putIfAbsent(hwId, () => {}).add(mode);
       }
 
       // ── 6. Build lookup maps ────────────────────────────────────────────
@@ -189,11 +196,11 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
                 hwDue: hw?['due_date'] as String?,
               );
             }).toList();
-        folders.add(_AssignedFolder(id: folderId, assignmentId: (a as Map)['id'] as String, name: folder['name'] as String, units: units));
+        folders.add(_AssignedFolder(id: folderId, assignmentId: a['id'] as String, name: folder['name'] as String, units: units));
       }
 
       // ── 8. Build class word unit list ───────────────────────────────────
-      final cwUnits = (cwUnitsRaw as List).map((u) {
+      final cwUnits = cwUnitsRaw.map((u) {
         final um = u as Map;
         final uid = um['id'] as String;
         final hw = hwByCWUnit[uid];

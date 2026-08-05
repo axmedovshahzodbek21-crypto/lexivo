@@ -69,7 +69,7 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
   void _onLang() { if (mounted) setState(() {}); }
 
   Future<void> _load() async {
-    if (mounted) setState(() => _loading = true);
+    if (_rows.isEmpty && mounted) setState(() => _loading = true);
     _ctrl.reset();
     try {
       _myId = currentUser?.id;

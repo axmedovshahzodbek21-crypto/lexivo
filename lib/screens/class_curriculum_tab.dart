@@ -104,7 +104,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
   // ── Data loading ───────────────────────────────────────────────────────────
 
   Future<void> _load() async {
-    if (mounted) setState(() => _loading = true);
+    if (_folders.isEmpty && _classUnits.isEmpty && _homework.isEmpty && mounted) setState(() => _loading = true);
     try {
       final results = await Future.wait<dynamic>([
         supabase.from('class_library_assignments')

@@ -78,7 +78,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
   void _onLang() { if (mounted) setState(() {}); }
 
   Future<void> _load() async {
-    if (mounted) setState(() => _loading = true);
+    if (_announcements.isEmpty && _targets.isEmpty && mounted) setState(() => _loading = true);
     try {
       final annRaw = await supabase
           .from('class_announcements')

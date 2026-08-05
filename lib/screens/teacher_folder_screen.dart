@@ -34,7 +34,7 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
   }
 
   Future<void> _load() async {
-    if (mounted) setState(() => _loading = true);
+    if (_units.isEmpty && mounted) setState(() => _loading = true);
     try {
       final data = await supabase
           .from('teacher_units')

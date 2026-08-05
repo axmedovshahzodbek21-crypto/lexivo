@@ -186,7 +186,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
   void _onFolderGroupChange() { if (mounted) setState(() {}); }
 
   Future<void> _loadWords() async {
-    if (mounted) setState(() => _loading = true);
+    if (_words.isEmpty && mounted) setState(() => _loading = true);
     try {
       final data = await supabase.from('class_words')
         .select('id, word, translation, definition, example1, example1_translation, example2, example2_translation, examples, folder_name, collection_name')

@@ -142,7 +142,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
   }
 
   Future<void> _load() async {
-    if (mounted) setState(() => _loading = true);
+    if (_words.isEmpty && mounted) setState(() => _loading = true);
     try {
       final data = await supabase
           .from('teacher_unit_words')

@@ -7,11 +7,6 @@ class _Folder {
   final String id, name;
   final int unitCount;
   const _Folder({required this.id, required this.name, required this.unitCount});
-  factory _Folder.fromMap(Map<String, dynamic> m) => _Folder(
-    id: m['id'] as String,
-    name: m['name'] as String,
-    unitCount: (m['unit_count'] as num?)?.toInt() ?? 0,
-  );
 }
 
 class TeacherLibraryScreen extends StatefulWidget {
@@ -40,7 +35,7 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
   Future<void> _load() async {
     final user = currentUser;
     if (user == null) return;
-    if (mounted) setState(() => _loading = true);
+    if (_folders.isEmpty && mounted) setState(() => _loading = true);
     try {
       final data = await supabase
           .from('teacher_folders')

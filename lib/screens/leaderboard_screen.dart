@@ -8,6 +8,7 @@ class LeaderboardEntry {
   final String userId;
   final String name;
   final String? avatarUrl;
+  final String? bio;
   final int xp;
   final int streak;
   final String? lastStudyDate;
@@ -21,6 +22,7 @@ class LeaderboardEntry {
     required this.userId,
     required this.name,
     this.avatarUrl,
+    this.bio,
     required this.xp,
     required this.streak,
     this.lastStudyDate,
@@ -44,6 +46,7 @@ class LeaderboardEntry {
       userId: m['user_id'] as String,
       name: (m['name'] as String?) ?? 'Learner',
       avatarUrl: m['avatar_url'] as String?,
+      bio: m['bio'] as String?,
       xp: (m['xp'] as num?)?.toInt() ?? 0,
       streak: (m['streak'] as num?)?.toInt() ?? 0,
       lastStudyDate: m['last_study_date'] as String?,
@@ -54,6 +57,15 @@ class LeaderboardEntry {
       wordGoalDays: _parseList(m['word_goal_days']),
     );
   }
+}
+
+Color _userColor(String userId) {
+  const colors = [
+    Color(0xFF6366F1), Color(0xFF8B5CF6), Color(0xFF06B6D4), Color(0xFF10B981),
+    Color(0xFFF59E0B), Color(0xFFEF4444), Color(0xFFEC4899), Color(0xFF3B82F6),
+  ];
+  final hash = userId.codeUnits.fold(0, (a, b) => a + b);
+  return colors[hash % colors.length];
 }
 
 String _fmtXp(int raw) {
@@ -406,7 +418,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             const SizedBox(width: 4),
             const Text('⭐', style: TextStyle(fontSize: 14)),
             const SizedBox(width: 8),
-            _Avatar(name: entry.name, size: 36, avatarUrl: entry.avatarUrl),
+            _Avatar(name: entry.name, size: 36, avatarUrl: entry.avatarUrl, avatarColor: _userColor(entry.userId)),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -485,7 +497,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               children: [
                 Container(width: 36, height: 4, decoration: BoxDecoration(color: context.border, borderRadius: BorderRadius.circular(2))),
                 const SizedBox(height: 16),
-                _Avatar(name: entry.name, size: 60, avatarUrl: entry.avatarUrl),
+                _Avatar(name: entry.name, size: 60, avatarUrl: entry.avatarUrl, avatarColor: _userColor(entry.userId)),
                 const SizedBox(height: 10),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -500,6 +512,19 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                     ],
                   ],
                 ),
+                if (entry.bio != null && entry.bio!.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(12)),
+                    child: Text(
+                      entry.bio!,
+                      style: TextStyle(fontSize: 13, color: context.textMuted, fontStyle: FontStyle.italic),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 20),
                 Row(
                   children: [
@@ -673,7 +698,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   children: [
                     Text(cfg.medal, style: TextStyle(fontSize: cfg.idx == 0 ? 30 : 22)),
                     const SizedBox(height: 8),
-                    _Avatar(name: entry.name, size: cfg.avatarSize, avatarUrl: entry.avatarUrl),
+                    _Avatar(name: entry.name, size: cfg.avatarSize, avatarUrl: entry.avatarUrl, avatarColor: _userColor(entry.userId)),
                     const SizedBox(height: 6),
                     if (_savedIds.contains(entry.userId)) const Text('⭐', style: TextStyle(fontSize: 10)),
                     Text(entry.name,
@@ -739,7 +764,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               child: Text('$rank', style: TextStyle(fontWeight: FontWeight.w900, color: rankColor, fontSize: 13)),
             ),
             const SizedBox(width: 10),
-            _Avatar(name: entry.name, size: 38, avatarUrl: entry.avatarUrl),
+            _Avatar(name: entry.name, size: 38, avatarUrl: entry.avatarUrl, avatarColor: _userColor(entry.userId)),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -784,23 +809,25 @@ class _Avatar extends StatelessWidget {
   final String name;
   final double size;
   final String? avatarUrl;
-  const _Avatar({required this.name, required this.size, this.avatarUrl});
+  final Color? avatarColor;
+  const _Avatar({required this.name, required this.size, this.avatarUrl, this.avatarColor});
 
   @override
   Widget build(BuildContext context) {
+    final bg = avatarColor ?? context.primary;
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
     if (avatarUrl != null && avatarUrl!.isNotEmpty) {
       return CircleAvatar(
         radius: size / 2,
-        backgroundColor: context.primary,
+        backgroundColor: bg,
         backgroundImage: NetworkImage(avatarUrl!),
-        onBackgroundImageError: (_, _) {},
+        onBackgroundImageError: (e, s) {},
         child: null,
       );
     }
     return CircleAvatar(
       radius: size / 2,
-      backgroundColor: context.primary,
+      backgroundColor: bg,
       child: Text(initial, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: size * 0.4)),
     );
   }

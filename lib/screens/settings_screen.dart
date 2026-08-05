@@ -34,11 +34,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _loading = true;
 
   final _nameController = TextEditingController();
+  final _bioController = TextEditingController();
+  String _bio = '';
+  bool _bioSaving = false;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _loadBio();
     appLangNotifier.addListener(_onLangChange);
   }
 
@@ -46,6 +50,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void dispose() {
     appLangNotifier.removeListener(_onLangChange);
     _nameController.dispose();
+    _bioController.dispose();
     super.dispose();
   }
 
@@ -83,6 +88,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (user != null && name.trim().isNotEmpty) {
       supabase.from('profiles').upsert({'id': user.id, 'name': name.trim()});
     }
+  }
+
+  Future<void> _loadBio() async {
+    final user = currentUser;
+    if (user == null) return;
+    try {
+      final res = await supabase.from('profiles').select('bio').eq('id', user.id).maybeSingle();
+      if (res != null && mounted) {
+        final fetched = (res['bio'] as String?) ?? '';
+        setState(() => _bio = fetched);
+        _bioController.text = fetched;
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _saveBio() async {
+    final user = currentUser;
+    if (user == null) return;
+    setState(() => _bioSaving = true);
+    try {
+      await supabase.from('profiles').upsert({'id': user.id, 'bio': _bioController.text.trim()});
+      if (mounted) setState(() => _bio = _bioController.text.trim());
+    } catch (_) {}
+    if (mounted) setState(() => _bioSaving = false);
   }
 
   Future<void> _pickProfileImage(ImageSource source) async {
@@ -510,6 +539,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         onPressed: _showEditNameDialog,
                       ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+                _buildCard(
+                  context,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text('Bio', style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
+                          const Spacer(),
+                          TextButton(
+                            onPressed: _bioSaving ? null : _saveBio,
+                            style: TextButton.styleFrom(
+                              foregroundColor: context.primary,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: _bioSaving
+                                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                                : const Text('Save', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _bioController,
+                        maxLines: 3,
+                        maxLength: 200,
+                        decoration: InputDecoration(
+                          hintText: 'Tell others about yourself…',
+                          counterStyle: TextStyle(fontSize: 10, color: context.textMuted),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: context.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: context.primary, width: 2),
+                          ),
+                          contentPadding: const EdgeInsets.all(12),
+                        ),
+                      ),
+                      Text('Shared on leaderboard and in classes',
+                          style: TextStyle(fontSize: 11, color: context.textMuted)),
                     ],
                   ),
                 ),

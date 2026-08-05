@@ -58,6 +58,8 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
   int _wordCount = 0;
   int _memberCount = 0;
   String _teacherName = '';
+  String _teacherId = '';
+  String _teacherBio = '';
   int _activeToday = 0;
   int _needsAttentionCount = 0;
   Map<String, int> _readCounts = {};
@@ -98,6 +100,8 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
 
       List<ClassTarget> targets = [];
       String teacherName = '';
+      String fetchedTeacherId = '';
+      String teacherBio = '';
       int memberCount = 0;
       int activeToday = 0;
       int needsAttentionCount = 0;
@@ -145,14 +149,15 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
             .eq('id', widget.classId)
             .maybeSingle();
         if (classRaw != null) {
-          final teacherId = (classRaw as Map)['teacher_id'] as String;
+          fetchedTeacherId = (classRaw as Map)['teacher_id'] as String;
           final profileRaw = await supabase
               .from('profiles')
-              .select('name')
-              .eq('id', teacherId)
+              .select('name, bio')
+              .eq('id', fetchedTeacherId)
               .maybeSingle();
           if (profileRaw != null) {
             teacherName = (profileRaw as Map)['name'] as String? ?? 'Teacher';
+            teacherBio = (profileRaw as Map)['bio'] as String? ?? '';
           }
         }
       }
@@ -191,6 +196,8 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
           _wordCount = wordCount;
           _memberCount = memberCount;
           _teacherName = teacherName;
+          _teacherId = fetchedTeacherId;
+          _teacherBio = teacherBio;
           _activeToday = activeToday;
           _needsAttentionCount = needsAttentionCount;
           _readCounts = readCounts;
@@ -232,14 +239,26 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                const Text('🏫', style: TextStyle(fontSize: 28)),
+                widget.isTeacher
+                    ? const Text('🏫', style: TextStyle(fontSize: 28))
+                    : GestureDetector(
+                        onTap: _showTeacherBioSheet,
+                        child: CircleAvatar(
+                          radius: 22,
+                          backgroundColor: _classColor(_teacherId.isNotEmpty ? _teacherId : widget.classId),
+                          child: Text(
+                            _teacherName.isNotEmpty ? _teacherName[0].toUpperCase() : 'T',
+                            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
                 const SizedBox(width: 10),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(widget.className,
                     style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
                     overflow: TextOverflow.ellipsis),
                   Text(
-                    widget.isTeacher ? '$_memberCount students' : '👩‍🏫 $_teacherName',
+                    widget.isTeacher ? '$_memberCount students' : _teacherName,
                     style: const TextStyle(color: Colors.white70, fontSize: 13)),
                 ])),
               ]),
@@ -294,6 +313,58 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
           else
             ..._announcements.map(_buildAnnouncementRow),
         ],
+      ),
+    );
+  }
+
+  void _showTeacherBioSheet() {
+    final color = _classColor(_teacherId.isNotEmpty ? _teacherId : widget.classId);
+    final initial = _teacherName.isNotEmpty ? _teacherName[0].toUpperCase() : 'T';
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: context.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 36, height: 4, decoration: BoxDecoration(color: context.border, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 16),
+            CircleAvatar(radius: 32, backgroundColor: color,
+              child: Text(initial, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold))),
+            const SizedBox(height: 10),
+            Text(_teacherName, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              decoration: BoxDecoration(color: context.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+              child: Text('Teacher', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.primary)),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(12)),
+              child: Text(
+                _teacherBio.isEmpty ? 'No bio yet' : _teacherBio,
+                style: TextStyle(fontSize: 13, color: _teacherBio.isEmpty ? context.textMuted : context.appText,
+                    fontStyle: _teacherBio.isEmpty ? FontStyle.italic : FontStyle.normal),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(context),
+                style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                child: const Text('Close'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

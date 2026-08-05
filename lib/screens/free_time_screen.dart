@@ -440,6 +440,7 @@ class _FreeTimeScreenState extends State<FreeTimeScreen> {
           builder: (context) => CollectionsScreen(
             userProfile: widget.userProfile,
             collection: collection,
+            showOnlyCompleted: true,
           ),
         ),
       ),

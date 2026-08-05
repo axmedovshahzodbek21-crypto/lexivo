@@ -16,11 +16,13 @@ import '../services/supabase_service.dart';
 class CollectionsScreen extends StatefulWidget {
   final String userProfile;
   final WordCollection collection;
+  final bool showOnlyCompleted;
 
   const CollectionsScreen({
     super.key,
     required this.userProfile,
     required this.collection,
+    this.showOnlyCompleted = false,
   });
 
   @override
@@ -227,28 +229,46 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
                   );
                 }),
 
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: crossAxisCount,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: childAspectRatio,
-                  ),
-                  itemCount: widget.collection.days.length,
-                  itemBuilder: (context, index) {
-                    final day = widget.collection.days[index];
-                    final progress =
-                        _progressMap[day.dayNumber] ?? const UnitProgress();
-                    final storyInfo =
-                        _storyUnlockMap[day.dayNumber] ?? const StoryUnlockInfo();
-                    return GestureDetector(
-                      onTap: () => _onUnitTap(context, day, index, progress),
-                      child: _buildUnitCard(context, day, progress, storyInfo),
+                Builder(builder: (context) {
+                  final visibleDays = widget.showOnlyCompleted
+                      ? widget.collection.days.where((d) {
+                          final p = _progressMap[d.dayNumber] ?? const UnitProgress();
+                          return p.isComplete;
+                        }).toList()
+                      : widget.collection.days;
+                  if (visibleDays.isEmpty && widget.showOnlyCompleted) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 32),
+                      child: Center(
+                        child: Text(
+                          'No completed units yet.\nFinish Learn → Flashcards → Quiz to unlock free time for a unit.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 13, color: context.textMuted, height: 1.5),
+                        ),
+                      ),
                     );
-                  },
-                ),
+                  }
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: childAspectRatio,
+                    ),
+                    itemCount: visibleDays.length,
+                    itemBuilder: (context, index) {
+                      final day = visibleDays[index];
+                      final progress = _progressMap[day.dayNumber] ?? const UnitProgress();
+                      final storyInfo = _storyUnlockMap[day.dayNumber] ?? const StoryUnlockInfo();
+                      return GestureDetector(
+                        onTap: () => _onUnitTap(context, day, index, progress),
+                        child: _buildUnitCard(context, day, progress, storyInfo),
+                      );
+                    },
+                  );
+                }),
 
                 const SizedBox(height: 24),
                 _MasteryHeatmapSection(collection: widget.collection),

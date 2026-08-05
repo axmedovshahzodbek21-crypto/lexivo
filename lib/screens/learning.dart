@@ -684,7 +684,7 @@ class _LearningScreenState extends State<LearningScreen> {
             const SizedBox(width: 8),
           ],
         ),
-        body: Column(
+        body: Stack(children: [Column(
           children: [
             // Segmented progress bar
             Padding(
@@ -928,10 +928,13 @@ class _LearningScreenState extends State<LearningScreen> {
               ),
             ),
 
-            // Bottom panel — state machine: reveal prompt / action buttons / quiz gate / spot check
+            // Bottom panel — state machine: reveal prompt / action buttons
             _buildBottomPanel(context, isLearned, isHard),
           ],
         ),
+        if (_inSpotCheck || _inQuizGate)
+          _buildFullScreenQuiz(context),
+        ]),
       ),
     );
   }
@@ -943,100 +946,6 @@ class _LearningScreenState extends State<LearningScreen> {
       offset: const Offset(0, -4),
     );
     final panelDeco = BoxDecoration(color: context.surface, boxShadow: [shadow]);
-
-    // ── Spot Check (#9) ───────────────────────────────────────────────────
-    if (_inSpotCheck && _spotCheckWord != null) {
-      return Container(
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-        decoration: panelDeco,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(children: [
-              const Text('🔍', style: TextStyle(fontSize: 16)),
-              const SizedBox(width: 6),
-              Text('Spot check!', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: context.primary)),
-            ]),
-            const SizedBox(height: 4),
-            Text(
-              'What does "${_spotCheckWord!.word}" mean?',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.appText),
-            ),
-            const SizedBox(height: 10),
-            ..._spotCheckOptions.asMap().entries.map((e) {
-              final i = e.key;
-              final opt = e.value;
-              Color? bg; Color? fg; Color? border;
-              if (_spotCheckSelected != null) {
-                if (i == _spotCheckCorrectIndex) { bg = const Color(0xFF2ECC71).withValues(alpha: 0.15); fg = const Color(0xFF2ECC71); border = const Color(0xFF2ECC71); }
-                else if (i == _spotCheckSelected) { bg = const Color(0xFFE74C3C).withValues(alpha: 0.15); fg = const Color(0xFFE74C3C); border = const Color(0xFFE74C3C); }
-              }
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: GestureDetector(
-                  onTap: () => _selectSpotCheckAnswer(i),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: bg ?? context.primaryBg,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: border ?? context.primary.withValues(alpha: 0.3)),
-                    ),
-                    child: Text(opt, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: fg ?? context.appText)),
-                  ),
-                ),
-              );
-            }),
-          ],
-        ),
-      );
-    }
-
-    // ── Quiz Gate (#8) ────────────────────────────────────────────────────
-    if (_inQuizGate) {
-      return Container(
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-        decoration: panelDeco,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Quick check — what is the translation?',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: context.textMuted),
-            ),
-            const SizedBox(height: 10),
-            ..._gateOptions.asMap().entries.map((e) {
-              final i = e.key;
-              final opt = e.value;
-              Color? bg; Color? fg; Color? border;
-              if (_gateSelected != null) {
-                if (i == _gateCorrectIndex) { bg = const Color(0xFF2ECC71).withValues(alpha: 0.15); fg = const Color(0xFF2ECC71); border = const Color(0xFF2ECC71); }
-                else if (i == _gateSelected) { bg = const Color(0xFFE74C3C).withValues(alpha: 0.15); fg = const Color(0xFFE74C3C); border = const Color(0xFFE74C3C); }
-              }
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: GestureDetector(
-                  onTap: () => _selectGateAnswer(i),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: bg ?? context.primaryBg,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: border ?? context.primary.withValues(alpha: 0.3)),
-                    ),
-                    child: Text(opt, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: fg ?? context.appText)),
-                  ),
-                ),
-              );
-            }),
-          ],
-        ),
-      );
-    }
 
     // ── Normal action buttons ─────────────────────────────────────────────
     final isReady = _revealed && _revealCountdown == 0;
@@ -1096,6 +1005,77 @@ class _LearningScreenState extends State<LearningScreen> {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildFullScreenQuiz(BuildContext context) {
+    final isSpot = _inSpotCheck;
+    final word = isSpot ? (_spotCheckWord?.word ?? '') : _currentWord.word;
+    final options = isSpot ? _spotCheckOptions : _gateOptions;
+    final correctIndex = isSpot ? _spotCheckCorrectIndex : _gateCorrectIndex;
+    final selected = isSpot ? _spotCheckSelected : _gateSelected;
+
+    return Positioned.fill(
+      child: Container(
+        color: context.bg,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isSpot ? '🔍  Spot Check' : '🎯  Quick Check',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: context.primary, letterSpacing: 0.5),
+                ),
+                const SizedBox(height: 28),
+                Text(
+                  word,
+                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: context.appText),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  isSpot ? 'What does this word mean?' : 'What is the translation?',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: context.textMuted),
+                ),
+                const Spacer(),
+                ...options.asMap().entries.map((e) {
+                  final i = e.key;
+                  final opt = e.value;
+                  Color? bg; Color? fg; Color? border;
+                  if (selected != null) {
+                    if (i == correctIndex) {
+                      bg = const Color(0xFF2ECC71).withValues(alpha: 0.15);
+                      fg = const Color(0xFF2ECC71);
+                      border = const Color(0xFF2ECC71);
+                    } else if (i == selected) {
+                      bg = const Color(0xFFE74C3C).withValues(alpha: 0.15);
+                      fg = const Color(0xFFE74C3C);
+                      border = const Color(0xFFE74C3C);
+                    }
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: GestureDetector(
+                      onTap: () => isSpot ? _selectSpotCheckAnswer(i) : _selectGateAnswer(i),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                        decoration: BoxDecoration(
+                          color: bg ?? context.primaryBg,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: border ?? context.primary.withValues(alpha: 0.25), width: 1.5),
+                        ),
+                        child: Text(opt, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: fg ?? context.appText)),
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

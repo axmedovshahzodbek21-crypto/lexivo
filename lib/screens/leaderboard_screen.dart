@@ -467,6 +467,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     final avgPerDay = entry.studyDays.isEmpty ? 0 : (entry.totalLearned / entry.studyDays.length).round();
     var calYear = now.year;
     var calMonth = now.month; // 1-based
+    String? fetchedBio; // null = loading, '' = no bio
+    bool bioFetchStarted = false;
 
     showModalBottomSheet(
       context: context,
@@ -475,6 +477,12 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => StatefulBuilder(
         builder: (ctx, setSheetState) {
+          if (!bioFetchStarted) {
+            bioFetchStarted = true;
+            supabase.from('profiles').select('bio').eq('id', entry.userId).maybeSingle().then((res) {
+              setSheetState(() => fetchedBio = (res?['bio'] as String?) ?? '');
+            });
+          }
           final isSaved = _savedIds.contains(entry.userId);
           final isMe = entry.userId == _myId;
 
@@ -512,19 +520,19 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                     ],
                   ],
                 ),
-                if (entry.bio != null && entry.bio!.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(12)),
-                    child: Text(
-                      entry.bio!,
-                      style: TextStyle(fontSize: 13, color: context.textMuted, fontStyle: FontStyle.italic),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ],
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(12)),
+                  child: fetchedBio == null
+                      ? Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: context.primary)))
+                      : Text(
+                          fetchedBio!.isEmpty ? 'No bio yet' : fetchedBio!,
+                          style: TextStyle(fontSize: 13, color: fetchedBio!.isEmpty ? context.textMuted : context.appText, fontStyle: fetchedBio!.isEmpty ? FontStyle.italic : FontStyle.normal),
+                          textAlign: TextAlign.center,
+                        ),
+                ),
                 const SizedBox(height: 20),
                 Row(
                   children: [

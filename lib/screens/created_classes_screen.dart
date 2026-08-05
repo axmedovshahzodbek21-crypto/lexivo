@@ -14,6 +14,20 @@ String _generateCode() {
   return 'LEXI-${List.generate(4, (_) => chars[rand.nextInt(chars.length)]).join()}';
 }
 
+const _kGradients = [
+  [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+  [Color(0xFFEC4899), Color(0xFFF43F5E)],
+  [Color(0xFF10B981), Color(0xFF14B8A6)],
+  [Color(0xFF3B82F6), Color(0xFF06B6D4)],
+  [Color(0xFFF59E0B), Color(0xFFF97316)],
+  [Color(0xFF8B5CF6), Color(0xFFA855F7)],
+  [Color(0xFFEF4444), Color(0xFFEC4899)],
+  [Color(0xFF06B6D4), Color(0xFF3B82F6)],
+];
+
+List<Color> _cardColors(String id) =>
+    _kGradients[id.codeUnits.fold(0, (a, b) => a + b) % _kGradients.length];
+
 final _cache = <String, List<ClassRow>>{};
 
 class CreatedClassesScreen extends StatefulWidget {
@@ -138,7 +152,18 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> {
                   if (_myClasses.isEmpty)
                     _emptyCard('📋', tr('no_classes_yet'))
                   else
-                    ..._myClasses.map(_buildMyClassCard),
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: 0.82,
+                      ),
+                      itemCount: _myClasses.length,
+                      itemBuilder: (_, i) => _buildMyClassCard(_myClasses[i]),
+                    ),
                 ],
               ),
             ),
@@ -170,49 +195,79 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> {
     ),
   );
 
-  Widget _buildMyClassCard(ClassRow cls) => Container(
-    margin: const EdgeInsets.only(bottom: 12),
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16), boxShadow: context.cardShadow),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [
-        Expanded(child: Text(cls.name, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: context.appText))),
-        GestureDetector(onTap: () => _showRenameDialog(cls), child: const Padding(padding: EdgeInsets.all(4), child: Text('✏️', style: TextStyle(fontSize: 14)))),
-      ]),
-      const SizedBox(height: 6),
-      Row(children: [
-        Text('${tr('class_code')}: ', style: TextStyle(fontSize: 12, color: context.textMuted)),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(color: context.primaryBg, borderRadius: BorderRadius.circular(6)),
-          child: Text(cls.joinCode, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.primary, fontFamily: 'monospace')),
+  Widget _buildMyClassCard(ClassRow cls) {
+    final colors = _cardColors(cls.id);
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(
+        builder: (_) => ClassShell(classId: cls.id, className: cls.name, isTeacher: true),
+      )).then((_) => _load()),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: colors, begin: Alignment.topLeft, end: Alignment.bottomRight),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [BoxShadow(color: colors[0].withValues(alpha: 0.4), blurRadius: 14, offset: const Offset(0, 6))],
         ),
-        const SizedBox(width: 6),
-        GestureDetector(onTap: () => _copyToClipboard(cls.joinCode, '${cls.id}_code'), child: Text(_copiedId == '${cls.id}_code' ? '✅' : '📋', style: const TextStyle(fontSize: 14))),
-      ]),
-      const SizedBox(height: 4),
-      GestureDetector(
-        onTap: () => _copyToClipboard('https://lexivo.app/join/${cls.joinCode}', '${cls.id}_link'),
-        child: Text(_copiedId == '${cls.id}_link' ? '✅ Link copied!' : '🔗 ${tr('copy_invite_link')}', style: TextStyle(fontSize: 12, color: context.primary, fontWeight: FontWeight.w500)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 8, 8),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Expanded(child: Text(cls.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white, height: 1.2), maxLines: 2, overflow: TextOverflow.ellipsis)),
+                  GestureDetector(
+                    onTap: () => _showRenameDialog(cls),
+                    child: const Padding(padding: EdgeInsets.all(4), child: Text('✏️', style: TextStyle(fontSize: 12))),
+                  ),
+                ]),
+                const SizedBox(height: 6),
+                Text('👥 ${cls.memberCount} ${cls.memberCount != 1 ? tr('students') : tr('student')}',
+                    style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.7))),
+                const Spacer(),
+                Row(children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(8)),
+                      child: Text(cls.joinCode, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'monospace'), textAlign: TextAlign.center),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  GestureDetector(
+                    onTap: () => _copyToClipboard(cls.joinCode, '${cls.id}_code'),
+                    child: Text(_copiedId == '${cls.id}_code' ? '✅' : '📋', style: const TextStyle(fontSize: 14)),
+                  ),
+                  const SizedBox(width: 2),
+                  GestureDetector(
+                    onTap: () => _copyToClipboard('https://lexivo.app/join/${cls.joinCode}', '${cls.id}_link'),
+                    child: Text(_copiedId == '${cls.id}_link' ? '✅' : '🔗', style: const TextStyle(fontSize: 14)),
+                  ),
+                ]),
+              ]),
+            ),
+          ),
+          Container(
+            decoration: const BoxDecoration(
+              color: Colors.black26,
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(18)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            child: Row(children: [
+              GestureDetector(
+                onTap: () => _confirmDeleteClass(cls),
+                child: Text(tr('delete_class'), style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.5), fontWeight: FontWeight.w500)),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(10)),
+                child: const Text('Enter →', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white)),
+              ),
+            ]),
+          ),
+        ]),
       ),
-      const SizedBox(height: 4),
-      Text('👥 ${cls.memberCount} ${cls.memberCount != 1 ? tr('students') : tr('student')}', style: TextStyle(fontSize: 12, color: context.textMuted)),
-      const SizedBox(height: 10),
-      Row(children: [
-        Expanded(child: ElevatedButton(
-          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClassShell(classId: cls.id, className: cls.name, isTeacher: true))).then((_) => _load()),
-          style: ElevatedButton.styleFrom(backgroundColor: context.primary, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 8), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-          child: Text(tr('dashboard'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-        )),
-        const SizedBox(width: 8),
-        OutlinedButton(
-          onPressed: () => _confirmDeleteClass(cls),
-          style: OutlinedButton.styleFrom(foregroundColor: context.dangerColor, side: BorderSide(color: context.dangerColor.withValues(alpha: 0.3)), padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-          child: Text(tr('delete_class'), style: const TextStyle(fontSize: 12)),
-        ),
-      ]),
-    ]),
-  );
+    );
+  }
 
   Widget _emptyCard(String emoji, String msg) => Container(
     padding: const EdgeInsets.all(20),

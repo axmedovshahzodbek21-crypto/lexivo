@@ -79,6 +79,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await prefs.setString('name_updated_at', DateTime.now().toUtc().toIso8601String());
     setState(() => _userName = name);
     SyncService.pushSettings();
+    final user = currentUser;
+    if (user != null && name.trim().isNotEmpty) {
+      supabase.from('profiles').upsert({'id': user.id, 'name': name.trim()});
+    }
   }
 
   Future<void> _pickProfileImage(ImageSource source) async {

@@ -498,11 +498,12 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             cells.add('$calYear-${calMonth.toString().padLeft(2, '0')}-${d.toString().padLeft(2, '0')}');
           }
 
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
+          return SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                 Container(width: 36, height: 4, decoration: BoxDecoration(color: context.border, borderRadius: BorderRadius.circular(2))),
                 const SizedBox(height: 16),
                 _Avatar(name: entry.name, size: 60, avatarUrl: entry.avatarUrl, avatarColor: _userColor(entry.userId)),
@@ -659,6 +660,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   ],
                 ),
               ],
+              ),
             ),
           );
         },

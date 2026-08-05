@@ -35,7 +35,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   final _nameController = TextEditingController();
   final _bioController = TextEditingController();
-  String _bio = '';
   bool _bioSaving = false;
 
   @override
@@ -97,7 +96,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final res = await supabase.from('profiles').select('bio').eq('id', user.id).maybeSingle();
       if (res != null && mounted) {
         final fetched = (res['bio'] as String?) ?? '';
-        setState(() => _bio = fetched);
         _bioController.text = fetched;
       }
     } catch (_) {}
@@ -109,7 +107,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _bioSaving = true);
     try {
       await supabase.from('profiles').upsert({'id': user.id, 'bio': _bioController.text.trim()});
-      if (mounted) setState(() => _bio = _bioController.text.trim());
     } catch (_) {}
     if (mounted) setState(() => _bioSaving = false);
   }

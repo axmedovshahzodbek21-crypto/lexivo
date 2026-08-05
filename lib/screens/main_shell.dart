@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'home.dart';
 import 'progress_screens.dart';
 import 'search_screen.dart';
@@ -12,6 +13,7 @@ import 'pomodoro_service.dart';
 import 'break_screen.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
+import '../services/supabase_service.dart';
 
 class MainShell extends StatefulWidget {
   final String wordSource;
@@ -33,9 +35,14 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
+typedef _HwNotif = ({String title, String? dueDate, String className});
+
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
   int _reviewsDue = 0;
+  _HwNotif? _hwToast;
+  final Map<String, String> _classNames = {};
+  RealtimeChannel? _hwChannel;
 
   @override
   void initState() {
@@ -44,13 +51,117 @@ class _MainShellState extends State<MainShell> {
     PomodoroService().initialize();
     PomodoroService().addListener(_onPomodoroChanged);
     appLangNotifier.addListener(_onLangChange);
+    _subscribeHomework();
   }
 
   @override
   void dispose() {
+    _hwChannel?.unsubscribe();
     PomodoroService().removeListener(_onPomodoroChanged);
     appLangNotifier.removeListener(_onLangChange);
     super.dispose();
+  }
+
+  Future<void> _subscribeHomework() async {
+    final user = currentUser;
+    if (user == null) return;
+
+    // Pre-fetch joined class names (exclude own classes)
+    final memberships = await supabase.from('class_members').select('class_id').eq('student_id', user.id);
+    final ids = (memberships as List).map((m) => (m as Map)['class_id'] as String).toList();
+    if (ids.isEmpty) return;
+    final classes = await supabase.from('classes').select('id, name, teacher_id').inFilter('id', ids);
+    for (final c in (classes as List)) {
+      final m = Map<String, dynamic>.from(c as Map);
+      if (m['teacher_id'] != user.id) _classNames[m['id'] as String] = m['name'] as String;
+    }
+
+    _hwChannel = supabase.channel('hw-notify-${user.id}')
+      .onPostgresChanges(
+        event: PostgresChangeEvent.insert,
+        schema: 'public',
+        table: 'class_targets',
+        filter: PostgresChangeFilter(type: PostgresChangeFilterType.eq, column: 'student_id', value: user.id),
+        callback: (payload) {
+          if (!mounted) return;
+          final row = Map<String, dynamic>.from(payload.newRecord);
+          final classId = row['class_id'] as String? ?? '';
+          final className = _classNames[classId] ?? 'Class';
+          setState(() => _hwToast = (
+            title: row['title'] as String? ?? 'New homework',
+            dueDate: row['due_date'] as String?,
+            className: className,
+          ));
+          Future.delayed(const Duration(seconds: 8), () {
+            if (mounted) setState(() => _hwToast = null);
+          });
+        },
+      )
+      .subscribe();
+  }
+
+  void _dismissHwToast() => setState(() => _hwToast = null);
+
+  Widget _buildHwToastBanner(_HwNotif notif) {
+    final due = notif.dueDate;
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final tomorrow = DateTime.now().add(const Duration(days: 1)).toIso8601String().substring(0, 10);
+    String dueLabel;
+    bool urgent;
+    if (due == null) {
+      dueLabel = 'No deadline set';
+      urgent = false;
+    } else if (due.compareTo(today) < 0) {
+      dueLabel = 'Overdue · $due';
+      urgent = true;
+    } else if (due == today) {
+      dueLabel = 'Due today';
+      urgent = true;
+    } else if (due == tomorrow) {
+      dueLabel = 'Due tomorrow';
+      urgent = false;
+    } else {
+      dueLabel = 'Due $due';
+      urgent = false;
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        decoration: BoxDecoration(
+          color: context.surface,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 24, offset: const Offset(0, 6))],
+          border: Border.all(color: context.border),
+        ),
+        padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+        child: Row(children: [
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(color: context.primaryBg, borderRadius: BorderRadius.circular(12)),
+            alignment: Alignment.center,
+            child: const Text('📋', style: TextStyle(fontSize: 20)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(notif.className, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: context.primary, letterSpacing: 0.4)),
+            const SizedBox(height: 1),
+            Text('New homework assigned', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+            const SizedBox(height: 1),
+            Text(notif.title, style: TextStyle(fontSize: 11, color: context.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 2),
+            Text(dueLabel, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: urgent ? context.dangerColor : context.textMuted)),
+          ])),
+          GestureDetector(
+            onTap: _dismissHwToast,
+            child: Padding(
+              padding: const EdgeInsets.all(6),
+              child: Icon(Icons.close, size: 18, color: context.textMuted),
+            ),
+          ),
+        ]),
+      ),
+    );
   }
 
   void _onLangChange() { if (mounted) setState(() {}); }
@@ -100,6 +211,13 @@ class _MainShellState extends State<MainShell> {
                 top: MediaQuery.of(context).padding.top + 56,
                 right: 16,
                 child: const PomodoroTimerPill(),
+              ),
+            if (_hwToast != null)
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 12,
+                left: 16,
+                right: 16,
+                child: _buildHwToastBanner(_hwToast!),
               ),
           ],
         ),

@@ -4,10 +4,6 @@ import '../app_theme.dart';
 import '../l10n.dart';
 import 'class_models.dart';
 import 'class_shell.dart';
-import 'class_homework_screen.dart';
-import 'flashcard.dart';
-import 'quiz_screen.dart';
-import '../data/word_data.dart';
 
 String _timeAgo(String iso) {
   final diff = DateTime.now().difference(DateTime.parse(iso));
@@ -39,8 +35,6 @@ typedef _Snapshot = ({
   Map<String, List<ClassNote>> classNotes,
   Map<String, List<ClassTarget>> classTargets,
   Map<String, List<ClassAnnouncement>> classAnnouncements,
-  Map<String, List<ClassWord>> classWords,
-  Set<String> learnedWordIds,
 });
 final _cache = <String, _Snapshot>{};
 
@@ -54,12 +48,10 @@ class JoinedClassesScreen extends StatefulWidget {
 class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
   List<ClassRow> _joinedClasses = [];
   Map<String, String> _teacherNames = {};
-  Map<String, List<ClassWord>> _classWords = {};
   Map<String, List<ClassNote>> _classNotes = {};
   Map<String, List<ClassTarget>> _classTargets = {};
   Map<String, List<ClassAnnouncement>> _classAnnouncements = {};
   final Map<String, List<ClassLeaderboardRow>> _classLeaderboards = {};
-  Set<String> _learnedWordIds = {};
   String? _expandedLeaderboard;
   String? _leaderboardLoading;
   bool _loading = true;
@@ -76,8 +68,6 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
     _classNotes = s.classNotes;
     _classTargets = s.classTargets;
     _classAnnouncements = s.classAnnouncements;
-    _classWords = s.classWords;
-    _learnedWordIds = s.learnedWordIds;
     _loading = false;
   }
 
@@ -99,9 +89,6 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
       var notes = <String, List<ClassNote>>{};
       var targets = <String, List<ClassTarget>>{};
       var announcements = <String, List<ClassAnnouncement>>{};
-      var classWords = <String, List<ClassWord>>{};
-      var learnedIds = <String>{};
-
       if ((memberships as List).isNotEmpty) {
         final classIds = memberships.map((m) => (m as Map)['class_id'] as String).toList();
         final classData = await supabase.from('classes').select('*').inFilter('id', classIds);
@@ -119,8 +106,6 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
             supabase.from('class_notes').select('id, class_id, message, created_at, read_at').eq('student_id', user.id).order('created_at', ascending: false),
             supabase.from('class_targets').select('id, class_id, title, due_date, completed_at, created_at').eq('student_id', user.id).order('created_at', ascending: false),
             supabase.from('class_announcements').select('id, class_id, message, created_at').inFilter('class_id', joinedIds).order('created_at', ascending: false),
-            supabase.from('class_words').select('id, class_id, word, translation, definition, example1, example1_translation, example2, example2_translation').inFilter('class_id', joinedIds).order('created_at', ascending: true),
-            supabase.from('class_word_progress').select('word_id').eq('student_id', user.id),
           ]);
 
           for (final p in parallel[0] as List) {
@@ -146,19 +131,13 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
             final ann = ClassAnnouncement.fromMap(Map<String, dynamic>.from(a as Map));
             announcements[ann.classId] = [...(announcements[ann.classId] ?? []), ann];
           }
-          for (final w in parallel[4] as List) {
-            final word = ClassWord.fromMap(Map<String, dynamic>.from(w as Map));
-            classWords[word.classId] = [...(classWords[word.classId] ?? []), word];
-          }
-          learnedIds = (parallel[5] as List).map((p) => (p as Map)['word_id'] as String).toSet();
         }
       }
 
       final snapshot = (
         joinedClasses: joinedClasses, teacherNames: teacherNames,
         classNotes: notes, classTargets: targets,
-        classAnnouncements: announcements, classWords: classWords,
-        learnedWordIds: learnedIds,
+        classAnnouncements: announcements,
       );
       _cache[user.id] = snapshot;
       if (mounted) setState(() => _applySnapshot(snapshot));
@@ -256,9 +235,6 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
     final active = targets.where((t) => t.completedAt == null).toList();
     final done = targets.where((t) => t.completedAt != null).toList();
     final announcements = _classAnnouncements[cls.id] ?? [];
-    final hw = _classWords[cls.id] ?? [];
-    final learnedCount = hw.where((w) => _learnedWordIds.contains(w.id)).length;
-    final hwAllDone = hw.isNotEmpty && learnedCount == hw.length;
     final teacherName = _teacherNames[cls.teacherId] ?? 'Teacher';
     final isLbExpanded = _expandedLeaderboard == cls.id;
     final leaderboard = _classLeaderboards[cls.id] ?? [];
@@ -402,84 +378,10 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
           ]),
         )).toList())),
 
-        if (hw.isNotEmpty) _section('📝 ${tr('homework')}', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('$learnedCount/${hw.length} ${tr('words_learned')}', style: TextStyle(fontSize: 12, color: context.textMuted)),
-          const SizedBox(height: 4),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: hw.isEmpty ? 0 : learnedCount / hw.length,
-              backgroundColor: context.border,
-              valueColor: AlwaysStoppedAnimation(hwAllDone ? context.successColor : context.primary),
-              minHeight: 6,
-            ),
-          ),
-          if (hwAllDone) ...[
-            const SizedBox(height: 4),
-            Text('${tr('all_done')} 🎉', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.successColor)),
-          ],
-          const SizedBox(height: 10),
-          Row(children: [
-            Expanded(child: _studyBtn('📖', tr('study'), context.primary, () {
-              final start = hw.indexWhere((w) => !_learnedWordIds.contains(w.id));
-              Navigator.push(context, MaterialPageRoute(builder: (_) => ClassHomeworkScreen(
-                words: hw,
-                initialLearnedIds: Set.from(_learnedWordIds),
-                classId: hw.first.classId,
-                startIndex: start >= 0 ? start : 0,
-              ))).then((updated) {
-                if (updated is Set<String> && mounted) setState(() => _learnedWordIds = updated);
-              });
-            })),
-            const SizedBox(width: 8),
-            Expanded(child: _studyBtn('🃏', tr('flashcards'), const Color(0xFFFF6B35), () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => FlashcardSettingsScreen(
-                wordDay: _hwToWordDay(hw, cls.name),
-                userProfile: 'worker',
-                collectionName: cls.name,
-                noXP: true,
-              )));
-            })),
-            const SizedBox(width: 8),
-            Expanded(child: _studyBtn('❓', tr('quiz'), const Color(0xFFF59E0B), () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => QuizSettingsScreen(
-                wordDay: _hwToWordDay(hw, cls.name),
-                userProfile: 'worker',
-                collectionName: cls.name,
-                noXP: true,
-              )));
-            })),
-          ]),
-        ])),
-
         const SizedBox(height: 4),
       ]),
     );
   }
-
-  WordDay _hwToWordDay(List<ClassWord> hw, String className) => WordDay(
-    dayNumber: 0, topic: className,
-    words: hw.map((w) => WordItem(
-      word: w.word, partOfSpeech: '', pronunciation: '',
-      translation: w.translation, definition: w.definition ?? '',
-      example1: w.example1 ?? '', example1Translation: w.example1Translation ?? '',
-      example2: w.example2 ?? '', example2Translation: w.example2Translation ?? '',
-      example3: '',
-    )).toList(),
-  );
-
-  Widget _studyBtn(String emoji, String label, Color color, VoidCallback onTap) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Text(emoji, style: const TextStyle(fontSize: 16)),
-        const SizedBox(height: 2),
-        Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color)),
-      ]),
-    ),
-  );
 
   Widget _section(String label, Widget content) => Padding(
     padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),

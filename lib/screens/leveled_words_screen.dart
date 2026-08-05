@@ -486,9 +486,11 @@ class WordsLibraryScreen extends StatefulWidget {
 
 class _WordsLibraryScreenState extends State<WordsLibraryScreen>
     with SingleTickerProviderStateMixin {
+  static List<Map<String, String>>? _cache;
+
   late TabController _tabController;
-  List<Map<String, String>> _learnedWords = [];
-  bool _loading = true;
+  List<Map<String, String>> _learnedWords = _cache ?? [];
+  bool _loading = _cache == null;
 
   @override
   void initState() {
@@ -521,6 +523,7 @@ class _WordsLibraryScreenState extends State<WordsLibraryScreen>
         )
         .toList();
 
+    _cache = leveledLearned;
     setState(() {
       _learnedWords = leveledLearned;
       _loading = false;

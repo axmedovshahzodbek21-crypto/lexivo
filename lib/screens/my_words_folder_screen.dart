@@ -40,18 +40,31 @@ class MyWordsFolderScreen extends StatefulWidget {
 }
 
 class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
+  static final Map<String, List<ImportedCollection>> _cache = {};
+
   List<ImportedCollection> _collections = [];
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
+    final cached = _cache[widget.folderName];
+    if (cached != null) {
+      _collections = cached;
+      _loading = false;
+    }
     _load();
   }
 
   Future<void> _load() async {
     final cols = await StorageService.getCollectionsByFolder(widget.folderName);
-    if (mounted) setState(() { _collections = cols; _loading = false; });
+    if (mounted) {
+      setState(() {
+        _collections = cols;
+        _cache[widget.folderName] = cols;
+        _loading = false;
+      });
+    }
   }
 
   Future<void> _openImport() async {

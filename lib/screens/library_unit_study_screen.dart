@@ -139,6 +139,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
         'mode': mode,
       }, onConflict: 'homework_id,student_id,mode', ignoreDuplicates: true);
       if (mounted) setState(() => _completedModes.add(mode));
+      await recordClassActivity(user.id, widget.classId, xp: 5);
     } catch (_) {}
   }
 

@@ -101,6 +101,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
         await addClassHardWord(
             userId: user.id, classId: widget.classId, word: card.word);
       }
+      await recordClassActivity(user.id, widget.classId, xp: knew ? 5 : 2);
     }
     setState(() {
       if (knew) { _knew++; } else { _didntKnow++; }

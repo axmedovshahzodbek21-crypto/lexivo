@@ -11,6 +11,186 @@ SupabaseClient get supabase => Supabase.instance.client;
 
 User? get currentUser => supabase.auth.currentUser;
 
+// ── Class activity tracking ───────────────────────────────────────────────────
+
+class HomeClassCard {
+  final String classId;
+  final String className;
+  final bool isTeacher;
+  final int classXP;
+  final int classStreak;
+  final int pendingHomework;
+  final int studentCount;
+  final int activeToday;
+
+  const HomeClassCard({
+    required this.classId,
+    required this.className,
+    required this.isTeacher,
+    this.classXP = 0,
+    this.classStreak = 0,
+    this.pendingHomework = 0,
+    this.studentCount = 0,
+    this.activeToday = 0,
+  });
+}
+
+String _dateStr(DateTime d) =>
+    '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+int _computeClassStreak(List<String> dates) {
+  if (dates.isEmpty) return 0;
+  final set = dates.toSet();
+  final now = DateTime.now().subtract(const Duration(hours: 2));
+  final today = _dateStr(now);
+  final yesterday = _dateStr(now.subtract(const Duration(days: 1)));
+  if (!set.contains(today) && !set.contains(yesterday)) return 0;
+  int streak = 0;
+  DateTime cur = set.contains(today) ? now : now.subtract(const Duration(days: 1));
+  while (set.contains(_dateStr(cur))) {
+    streak++;
+    cur = cur.subtract(const Duration(days: 1));
+  }
+  return streak;
+}
+
+/// Records a study day and increments class XP for the given class.
+Future<void> recordClassActivity(
+  String userId,
+  String classId, {
+  int xp = 0,
+}) async {
+  try {
+    final today = _dateStr(DateTime.now());
+    await supabase.from('class_study_days').upsert(
+      {'student_id': userId, 'class_id': classId, 'study_date': today},
+      onConflict: 'student_id,class_id,study_date',
+      ignoreDuplicates: true,
+    );
+    if (xp > 0) {
+      final row = await supabase
+          .from('class_members')
+          .select('class_xp')
+          .eq('student_id', userId)
+          .eq('class_id', classId)
+          .maybeSingle();
+      final current = (row?['class_xp'] as int?) ?? 0;
+      await supabase
+          .from('class_members')
+          .update({'class_xp': current + xp})
+          .eq('student_id', userId)
+          .eq('class_id', classId);
+    }
+  } catch (_) {}
+}
+
+/// Returns class cards for the homescreen (teacher + student classes).
+Future<List<HomeClassCard>> getHomeClassCards(String userId) async {
+  try {
+    final results = await Future.wait([
+      supabase.from('classes').select('id, name').eq('teacher_id', userId),
+      supabase.from('class_members').select('class_id, class_xp').eq('student_id', userId),
+    ]);
+
+    final taught = results[0] as List;
+    final memberships = results[1] as List;
+    final taughtIds = taught.map((c) => (c as Map)['id'] as String).toSet();
+    final cards = <HomeClassCard>[];
+
+    // Teacher cards
+    if (taught.isNotEmpty) {
+      final taughtList = taughtIds.toList();
+      final today = _dateStr(DateTime.now());
+      final batch = await Future.wait([
+        supabase.from('class_members').select('class_id').inFilter('class_id', taughtList),
+        supabase.from('class_study_days').select('class_id').inFilter('class_id', taughtList).eq('study_date', today),
+      ]);
+      final memberCount = <String, int>{};
+      for (final r in (batch[0] as List)) {
+        final id = (r as Map)['class_id'] as String;
+        memberCount[id] = (memberCount[id] ?? 0) + 1;
+      }
+      final activeCount = <String, int>{};
+      for (final r in (batch[1] as List)) {
+        final id = (r as Map)['class_id'] as String;
+        activeCount[id] = (activeCount[id] ?? 0) + 1;
+      }
+      for (final c in taught) {
+        final m = c as Map;
+        final id = m['id'] as String;
+        cards.add(HomeClassCard(
+          classId: id,
+          className: m['name'] as String,
+          isTeacher: true,
+          studentCount: memberCount[id] ?? 0,
+          activeToday: activeCount[id] ?? 0,
+        ));
+      }
+    }
+
+    // Student cards (classes where user is a member, not teacher)
+    final studentMemberships = memberships
+        .where((m) => !taughtIds.contains((m as Map)['class_id'] as String))
+        .toList();
+    if (studentMemberships.isNotEmpty) {
+      final studentClassIds = studentMemberships
+          .map((m) => (m as Map)['class_id'] as String)
+          .toList();
+      final xpMap = <String, int>{};
+      for (final m in studentMemberships) {
+        final mm = m as Map;
+        xpMap[mm['class_id'] as String] = (mm['class_xp'] as int?) ?? 0;
+      }
+
+      final batch = await Future.wait([
+        supabase.from('classes').select('id, name').inFilter('id', studentClassIds),
+        supabase.from('class_study_days')
+            .select('class_id, study_date')
+            .eq('student_id', userId)
+            .inFilter('class_id', studentClassIds)
+            .order('study_date', ascending: false)
+            .limit(60),
+        supabase.from('class_homework').select('id, class_id').inFilter('class_id', studentClassIds),
+        supabase.from('class_homework_progress').select('homework_id').eq('student_id', userId),
+      ]);
+
+      final daysByClass = <String, List<String>>{};
+      for (final r in (batch[1] as List)) {
+        final rm = r as Map;
+        daysByClass.putIfAbsent(rm['class_id'] as String, () => []).add(rm['study_date'] as String);
+      }
+
+      final hwByClass = <String, List<String>>{};
+      for (final r in (batch[2] as List)) {
+        final rm = r as Map;
+        hwByClass.putIfAbsent(rm['class_id'] as String, () => []).add(rm['id'] as String);
+      }
+      final doneHwIds = (batch[3] as List)
+          .map((r) => (r as Map)['homework_id'] as String)
+          .toSet();
+
+      for (final c in (batch[0] as List)) {
+        final cm = c as Map;
+        final classId = cm['id'] as String;
+        final hwIds = hwByClass[classId] ?? [];
+        final pending = hwIds.where((id) => !doneHwIds.contains(id)).length;
+        cards.add(HomeClassCard(
+          classId: classId,
+          className: cm['name'] as String,
+          isTeacher: false,
+          classXP: xpMap[classId] ?? 0,
+          classStreak: _computeClassStreak(daysByClass[classId] ?? []),
+          pendingHomework: pending,
+        ));
+      }
+    }
+
+    return cards;
+  } catch (_) {
+    return [];
+  }
+}
+
 Future<Map<String, String>?> fetchUnitStory(
   String collectionName,
   int unitNumber,

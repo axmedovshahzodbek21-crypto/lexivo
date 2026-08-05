@@ -19,6 +19,8 @@ import 'custom_lists_screen.dart';
 import '../data/word_data.dart';
 import '../data/storage_service.dart';
 import '../services/sync_service.dart';
+import '../services/supabase_service.dart';
+import 'classes_screen.dart';
 import 'xp_level_sheet.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
@@ -65,7 +67,10 @@ class _HomeScreenState extends State<HomeScreen>
   bool _hideWordOfDay = false;
   bool _hideSession = false;
   bool _hideStats = false;
-  List<String> _sectionOrder = ['goal', 'wod', 'session', 'stats'];
+  List<String> _sectionOrder = ['goal', 'wod', 'session', 'stats', 'classes'];
+
+  // Class cards
+  List<HomeClassCard> _homeClasses = [];
 
   bool get _isDesktop =>
       defaultTargetPlatform == TargetPlatform.windows ||
@@ -90,7 +95,8 @@ class _HomeScreenState extends State<HomeScreen>
     WidgetsBinding.instance.addObserver(this);
     _pickWordOfDay();
     _loadStats();
-    SyncService.pullAll().then((_) { if (mounted) _loadStats(); });
+    _loadClasses();
+    SyncService.pullAll().then((_) { if (mounted) { _loadStats(); _loadClasses(); } });
     appLangNotifier.addListener(_onLangChange);
   }
 
@@ -106,7 +112,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      SyncService.pullAll().then((_) { if (mounted) _loadStats(); });
+      SyncService.pullAll().then((_) { if (mounted) { _loadStats(); _loadClasses(); } });
     }
   }
 
@@ -175,10 +181,19 @@ class _HomeScreenState extends State<HomeScreen>
       _hideSession = prefs.getBool('home_hide_session') ?? false;
       _hideStats = prefs.getBool('home_hide_stats') ?? false;
       final orderStr = prefs.getString('home_section_order');
-      _sectionOrder = orderStr != null
+      var order = orderStr != null
           ? orderStr.split(',')
-          : ['goal', 'wod', 'session', 'stats'];
+          : ['goal', 'wod', 'session', 'stats', 'classes'];
+      if (!order.contains('classes')) order = [...order, 'classes'];
+      _sectionOrder = order;
     });
+  }
+
+  Future<void> _loadClasses() async {
+    final user = currentUser;
+    if (user == null) return;
+    final cards = await getHomeClassCards(user.id);
+    if (mounted) setState(() => _homeClasses = cards);
   }
 
   Future<void> _saveLayout() async {
@@ -1672,6 +1687,25 @@ class _HomeScreenState extends State<HomeScreen>
               )),
                 const SizedBox(height: 14),
               ], // stats
+
+              if (sid == 'classes' && _homeClasses.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'My Classes',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: context.appText,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                for (final card in _homeClasses) ...[
+                  _buildClassCard(context, card),
+                  const SizedBox(height: 10),
+                ],
+                const SizedBox(height: 4),
+              ],
+
               ], // end for loop
             ],
           ),
@@ -1681,6 +1715,103 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   // ─── SHARED WIDGETS ───────────────────────────────────────────────────────────
+
+  Widget _buildClassCard(BuildContext context, HomeClassCard card) {
+    final isTeacher = card.isTeacher;
+    final colors = isTeacher
+        ? [const Color(0xFF0E7490), const Color(0xFF22D3EE)]
+        : [const Color(0xFF5B21B6), const Color(0xFF8B5CF6)];
+    final edge = isTeacher ? const Color(0xFF164E63) : const Color(0xFF3B0764);
+    final glow = isTeacher ? const Color(0xFF0E7490) : const Color(0xFF5B21B6);
+
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ClassesScreen()),
+      ).then((_) => _loadClasses()),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: colors,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(color: edge, offset: const Offset(0, 6), blurRadius: 0),
+            BoxShadow(color: glow.withValues(alpha: 0.35), blurRadius: 16, offset: const Offset(0, 10)),
+          ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${isTeacher ? '🏫' : '🎓'} ${card.className}',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  if (isTeacher) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text('Teacher', style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w700)),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '👨‍🎓 ${card.studentCount} students  🟢 ${card.activeToday} active today',
+                      style: const TextStyle(fontSize: 12, color: Colors.white70),
+                    ),
+                  ] else ...[
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 5,
+                      children: [
+                        _classChip('⚡ ${card.classXP} XP'),
+                        _classChip('🔥 ${card.classStreak} day streak'),
+                        if (card.pendingHomework > 0)
+                          _classChipWarning('📚 ${card.pendingHomework} pending'),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 14),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _classChip(String label) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.18),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Text(label, style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.w600)),
+  );
+
+  Widget _classChipWarning(String label) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+    decoration: BoxDecoration(
+      color: const Color(0xFFFBBF24).withValues(alpha: 0.25),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFFFBBF24), fontWeight: FontWeight.w700)),
+  );
 
   Widget _buildDrawer(BuildContext context) {
     final levelName = StorageService.getLevelName(_xp);

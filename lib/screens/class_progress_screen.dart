@@ -12,7 +12,11 @@ class ClassProgressScreen extends StatefulWidget {
   State<ClassProgressScreen> createState() => _ClassProgressScreenState();
 }
 
+typedef _ProgressCache = ({List<ClassSRSEntry> entries, int starredCount, int hardCount, int totalWords});
+
 class _ClassProgressScreenState extends State<ClassProgressScreen> {
+  static final Map<String, _ProgressCache> _cache = {};
+
   bool _loading = true;
   List<ClassSRSEntry> _entries = [];
   int _starredCount = 0;
@@ -28,22 +32,37 @@ class _ClassProgressScreenState extends State<ClassProgressScreen> {
   @override
   void initState() {
     super.initState();
+    final cached = _cache[widget.classId];
+    if (cached != null) {
+      _entries      = cached.entries;
+      _starredCount = cached.starredCount;
+      _hardCount    = cached.hardCount;
+      _totalWords   = cached.totalWords;
+      _loading      = false;
+    }
     _load();
   }
 
   Future<void> _load() async {
     final user = currentUser;
     if (user == null) return;
-    final all      = await getClassSRSAll(userId: user.id, classId: widget.classId);
-    final starred  = await getClassStarredWordIds(userId: user.id, classId: widget.classId);
-    final hard     = await getClassHardWordIds(userId: user.id, classId: widget.classId);
-    final countRes = await supabase.from('class_words').select('id').eq('class_id', widget.classId);
+    final results = await Future.wait([
+      getClassSRSAll(userId: user.id, classId: widget.classId),
+      getClassStarredWordIds(userId: user.id, classId: widget.classId),
+      getClassHardWordIds(userId: user.id, classId: widget.classId),
+      supabase.from('class_words').select('id').eq('class_id', widget.classId),
+    ]);
+    final all      = results[0] as List<ClassSRSEntry>;
+    final starred  = results[1] as List;
+    final hard     = results[2] as List;
+    final countRes = results[3] as List;
+    _cache[widget.classId] = (entries: all, starredCount: starred.length, hardCount: hard.length, totalWords: countRes.length);
     if (mounted) {
       setState(() {
         _entries      = all;
         _starredCount = starred.length;
         _hardCount    = hard.length;
-        _totalWords   = (countRes as List).length;
+        _totalWords   = countRes.length;
         _loading      = false;
       });
     }

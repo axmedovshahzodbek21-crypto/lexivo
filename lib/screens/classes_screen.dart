@@ -1,6 +1,5 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
@@ -52,11 +51,13 @@ class _ClassesScreenState extends State<ClassesScreen> {
         supabase.from('classes').select('id').eq('teacher_id', user.id),
         supabase.from('class_members').select('class_id').eq('student_id', user.id),
       ]);
-      if (mounted) setState(() {
-        _createdCount = (results[0] as List).length;
-        _joinedCount = (results[1] as List).length;
-        _loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _createdCount = (results[0] as List).length;
+          _joinedCount = (results[1] as List).length;
+          _loading = false;
+        });
+      }
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }

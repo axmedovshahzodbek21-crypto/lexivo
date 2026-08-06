@@ -862,28 +862,30 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     return list.map((e) => SRSWord.fromJson(e)).toList();
   }
 
-  // Unlearns any SRS word whose nextReviewDate is 3+ days in the past.
+  // Unlearns any SRS word whose next review (learnedAt + interval, from the
+  // review log) is 3+ days in the past. Uses the same basis as getDueWords()
+  // below — previously this used word.nextReviewDate (a separate field
+  // advanced independently by advanceStage/hardStage/dropStage), which could
+  // disagree with getDueWords()'s learnedAt-based due date and cause words to
+  // be unlearned or kept inconsistently with what the due-count showed.
   static Future<void> checkAndUnlearn() async {
     const intervals = [1, 3, 7, 14, 30];
-    final today = DateTime.now();
+    final today = DateTime.parse(SRSWord._todayStr());
     final words = await getSRSWords();
     final log = await getReviewLog();
 
     final toUnlearn = <SRSWord>[];
     for (final word in words) {
-      if (word.nextReviewDate == '9999-12-31') continue; // graduated
-      final dueDate = DateTime.tryParse(word.nextReviewDate);
-      if (dueDate == null) continue;
-      final daysOverdue = DateTime(today.year, today.month, today.day)
-          .difference(DateTime(dueDate.year, dueDate.month, dueDate.day))
-          .inDays;
-      if (daysOverdue < 3) continue;
-
-      // Double-check it's not graduated via review log
       final wordKey = '${word.collectionName}::${word.word}';
       final completed = log[wordKey] ?? [];
-      final hasNext = intervals.any((i) => !completed.contains(i));
-      if (hasNext) toUnlearn.add(word);
+      final nextInterval = intervals.firstWhere((i) => !completed.contains(i), orElse: () => -1);
+      if (nextInterval == -1) continue; // graduated
+
+      final dueDate = DateTime.parse(word.learnedAt).add(Duration(days: nextInterval));
+      final daysOverdue = today.difference(dueDate).inDays;
+      if (daysOverdue < 3) continue;
+
+      toUnlearn.add(word);
     }
 
     if (toUnlearn.isEmpty) return;

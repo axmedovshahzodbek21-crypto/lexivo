@@ -686,21 +686,21 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
                   child: _smallActionBtn(sheetContext, '🃏 Cards', Colors.purple, () {
                     Navigator.pop(sheetContext);
                     _startFlashcards(context, day);
-                  }),
+                  }, locked: !progress.learnDone),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: _smallActionBtn(sheetContext, '🧠 Quiz', Colors.orange, () {
                     Navigator.pop(sheetContext);
                     _startQuiz(context, day);
-                  }),
+                  }, locked: !progress.learnDone),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: _smallActionBtn(sheetContext, tr('match_btn'), const Color(0xFFEC4899), () {
                     Navigator.pop(sheetContext);
                     _startMatching(context, day);
-                  }),
+                  }, locked: !progress.learnDone),
                 ),
               ],
             ),
@@ -886,8 +886,30 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
     BuildContext context,
     String label,
     Color color,
-    VoidCallback onTap,
-  ) {
+    VoidCallback onTap, {
+    bool locked = false,
+  }) {
+    if (locked) {
+      return ElevatedButton(
+        onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Complete Learn first')),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: context.surface2,
+          foregroundColor: context.textMuted,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+            side: BorderSide(color: context.border),
+          ),
+        ),
+        child: Text(
+          '🔒 $label',
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+        ),
+      );
+    }
     return ElevatedButton(
       onPressed: onTap,
       style: ElevatedButton.styleFrom(

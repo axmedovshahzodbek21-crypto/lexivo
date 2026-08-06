@@ -209,6 +209,9 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
   @override
   Widget build(BuildContext context) {
     final allDone = widget.modes.isNotEmpty && widget.modes.every(_completedModes.contains);
+    final learnAssigned = widget.modes.contains('learn');
+    final learnDone = _completedModes.contains('learn');
+    bool isLocked(String mode) => mode != 'learn' && learnAssigned && !learnDone;
 
     return Scaffold(
       backgroundColor: context.bg,
@@ -276,35 +279,40 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
                     const SizedBox(height: 12),
                     ...widget.modes.map((mode) {
                       final done = _completedModes.contains(mode);
+                      final locked = isLocked(mode);
                       return GestureDetector(
-                        onTap: () => _studyMode(mode),
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(18),
-                          decoration: BoxDecoration(
-                            color: done ? context.successBg : context.surface,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: done ? Colors.green.shade300 : context.border),
-                            boxShadow: context.cardShadow,
-                          ),
-                          child: Row(children: [
-                            Text(_modeIcon[mode] ?? '📖', style: const TextStyle(fontSize: 28)),
-                            const SizedBox(width: 16),
-                            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text(_modeLabel[mode] ?? mode,
-                                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15,
-                                  color: done ? Colors.green.shade700 : context.appText)),
-                              const SizedBox(height: 2),
-                              Text(done ? 'Completed ✓' : 'Tap to start',
-                                style: TextStyle(fontSize: 12,
-                                  color: done ? Colors.green.shade500 : context.textMuted)),
-                            ])),
-                            Icon(
-                              done ? Icons.check_circle_rounded : Icons.play_circle_outline_rounded,
-                              color: done ? Colors.green : context.primary,
-                              size: 28,
+                        onTap: locked ? null : () => _studyMode(mode),
+                        child: Opacity(
+                          opacity: locked ? 0.45 : 1,
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(18),
+                            decoration: BoxDecoration(
+                              color: locked ? context.surface : (done ? context.successBg : context.surface),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: done ? Colors.green.shade300 : context.border),
+                              boxShadow: locked ? null : context.cardShadow,
                             ),
-                          ]),
+                            child: Row(children: [
+                              Text(locked ? '🔒' : (_modeIcon[mode] ?? '📖'), style: const TextStyle(fontSize: 28)),
+                              const SizedBox(width: 16),
+                              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                Text(_modeLabel[mode] ?? mode,
+                                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15,
+                                    color: done ? Colors.green.shade700 : context.appText)),
+                                const SizedBox(height: 2),
+                                Text(locked ? 'Complete Learn first' : (done ? 'Completed ✓' : 'Tap to start'),
+                                  style: TextStyle(fontSize: 12,
+                                    color: done ? Colors.green.shade500 : context.textMuted)),
+                              ])),
+                              if (!locked)
+                                Icon(
+                                  done ? Icons.check_circle_rounded : Icons.play_circle_outline_rounded,
+                                  color: done ? Colors.green : context.primary,
+                                  size: 28,
+                                ),
+                            ]),
+                          ),
                         ),
                       );
                     }),

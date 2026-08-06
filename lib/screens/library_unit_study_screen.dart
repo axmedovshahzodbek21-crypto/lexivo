@@ -133,14 +133,31 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
     final user = currentUser;
     if (user == null) return;
     try {
-      await supabase.from('class_homework_progress').upsert({
-        'homework_id': widget.homeworkId,
-        'student_id': user.id,
-        'mode': mode,
-      }, onConflict: 'homework_id,student_id,mode', ignoreDuplicates: true);
+      // Avoid upsert(onConflict) since there's no confirmed unique constraint
+      // on (homework_id, student_id, mode) — do a manual check-then-insert instead.
+      final existing = await supabase
+          .from('class_homework_progress')
+          .select('mode')
+          .eq('homework_id', widget.homeworkId)
+          .eq('student_id', user.id)
+          .eq('mode', mode)
+          .maybeSingle();
+      if (existing == null) {
+        await supabase.from('class_homework_progress').insert({
+          'homework_id': widget.homeworkId,
+          'student_id': user.id,
+          'mode': mode,
+        });
+      }
       if (mounted) setState(() => _completedModes.add(mode));
       await recordClassActivity(user.id, widget.classId, xp: 5);
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not save progress: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _studyMode(String mode) async {

@@ -318,7 +318,7 @@ class _LearningScreenState extends State<LearningScreen> {
           word: word.word,
           translation: word.translation,
         );
-        await recordClassActivity(user.id, widget.classId!, xp: widget.noXP ? 0 : 10);
+        await recordClassActivity(user.id, widget.classId!, xp: widget.noXP ? 0 : 10, reason: 'Learn');
       }
       if (!widget.noXP) {
         final learned = await StorageService.getLearnedWords();

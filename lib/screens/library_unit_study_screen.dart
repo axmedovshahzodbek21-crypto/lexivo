@@ -151,9 +151,10 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
         // learn XP already awarded per-word inside LearningScreen
         if (mode != 'learn') {
           const modeXP = {'flashcard': 3, 'quiz': 5, 'match': 4};
+          const modeReason = {'flashcard': 'Cards', 'quiz': 'Quiz', 'match': 'Match'};
           final xpPerWord = modeXP[mode] ?? 3;
           final wordCount = _wordDay?.words.length ?? 0;
-          await recordClassActivity(user.id, widget.classId, xp: wordCount * xpPerWord);
+          await recordClassActivity(user.id, widget.classId, xp: wordCount * xpPerWord, reason: modeReason[mode] ?? mode);
         }
       }
       if (mounted) setState(() => _completedModes.add(mode));

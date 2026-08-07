@@ -59,6 +59,7 @@ Future<void> recordClassActivity(
   String userId,
   String classId, {
   int xp = 0,
+  String reason = '',
 }) async {
   try {
     final today = _dateStr(DateTime.now());
@@ -75,11 +76,19 @@ Future<void> recordClassActivity(
           .eq('class_id', classId)
           .maybeSingle();
       final current = (row?['class_xp'] as int?) ?? 0;
-      await supabase
-          .from('class_members')
-          .update({'class_xp': current + xp})
-          .eq('student_id', userId)
-          .eq('class_id', classId);
+      await Future.wait([
+        supabase
+            .from('class_members')
+            .update({'class_xp': current + xp})
+            .eq('student_id', userId)
+            .eq('class_id', classId),
+        supabase.from('class_xp_history').insert({
+          'user_id': userId,
+          'class_id': classId,
+          'amount': xp,
+          'reason': reason.isNotEmpty ? reason : 'Study',
+        }),
+      ]);
     }
   } catch (_) {}
 }

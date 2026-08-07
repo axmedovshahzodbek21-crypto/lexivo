@@ -148,9 +148,15 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
           'student_id': user.id,
           'mode': mode,
         });
+        // learn XP already awarded per-word inside LearningScreen
+        if (mode != 'learn') {
+          const modeXP = {'flashcard': 3, 'quiz': 5, 'match': 4};
+          final xpPerWord = modeXP[mode] ?? 3;
+          final wordCount = _wordDay?.words.length ?? 0;
+          await recordClassActivity(user.id, widget.classId, xp: wordCount * xpPerWord);
+        }
       }
       if (mounted) setState(() => _completedModes.add(mode));
-      await recordClassActivity(user.id, widget.classId, xp: 5);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -181,7 +187,6 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
             wordDay: wd,
             userProfile: '',
             collectionName: widget.unitName,
-            noXP: true,
           ),
         ));
       case 'quiz':
@@ -192,7 +197,6 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
             collectionName: widget.unitName,
             quizType: QuizType.wordToTranslation,
             questionCount: wd.words.length.clamp(5, 20),
-            noXP: true,
           ),
         ));
       case 'match':

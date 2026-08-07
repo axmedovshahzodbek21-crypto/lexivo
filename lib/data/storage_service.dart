@@ -469,12 +469,14 @@ class UnitProgress {
   final bool learnDone;
   final bool flashcardDone;
   final bool quizDone;
+  final bool matchDone;
   final String? completedAt;
 
   const UnitProgress({
     this.learnDone = false,
     this.flashcardDone = false,
     this.quizDone = false,
+    this.matchDone = false,
     this.completedAt,
   });
 
@@ -487,6 +489,7 @@ class UnitProgress {
     'learnDone': learnDone,
     'flashcardDone': flashcardDone,
     'quizDone': quizDone,
+    'matchDone': matchDone,
     if (completedAt != null) 'completedAt': completedAt,
   };
 
@@ -494,6 +497,7 @@ class UnitProgress {
     learnDone: json['learnDone'] ?? false,
     flashcardDone: json['flashcardDone'] ?? false,
     quizDone: json['quizDone'] ?? false,
+    matchDone: json['matchDone'] ?? false,
     completedAt: json['completedAt'] as String?,
   );
 }
@@ -767,9 +771,29 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
         learnDone: current.learnDone,
         flashcardDone: current.flashcardDone,
         quizDone: true,
+        matchDone: current.matchDone,
         completedAt: allDone
             ? (current.completedAt ?? DateTime.now().toUtc().toIso8601String())
             : null,
+      ),
+    );
+    SyncService.pushLists();
+  }
+
+  static Future<void> markMatchComplete(
+    String collectionName,
+    int dayNumber,
+  ) async {
+    final current = await getUnitProgress(collectionName, dayNumber);
+    await _saveUnitProgress(
+      collectionName,
+      dayNumber,
+      UnitProgress(
+        learnDone: current.learnDone,
+        flashcardDone: current.flashcardDone,
+        quizDone: current.quizDone,
+        matchDone: true,
+        completedAt: current.completedAt,
       ),
     );
     SyncService.pushLists();

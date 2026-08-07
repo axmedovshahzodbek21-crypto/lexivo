@@ -157,6 +157,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
         _stopTimer();
         final isLast = _roundIndex + 1 >= _totalRounds;
         if (isLast) {
+          StorageService.markMatchComplete(widget.collectionName, widget.wordDay.dayNumber);
           StorageService.hasMatchXPAwarded(widget.collectionName, widget.wordDay.dayNumber).then((awarded) {
             if (!awarded) {
               StorageService.addXP(

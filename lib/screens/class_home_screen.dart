@@ -38,6 +38,7 @@ class ClassHomeScreen extends StatefulWidget {
   final String className;
   final bool isTeacher;
   final VoidCallback? onGoToDashboard;
+  final VoidCallback? onGoToHomework;
 
   const ClassHomeScreen({
     super.key,
@@ -45,6 +46,7 @@ class ClassHomeScreen extends StatefulWidget {
     required this.className,
     required this.isTeacher,
     this.onGoToDashboard,
+    this.onGoToHomework,
   });
 
   @override
@@ -57,6 +59,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
   List<ClassTarget> _targets = [];
   int _wordCount = 0;
   int _memberCount = 0;
+  int _pendingHwCount = 0;
   String _teacherName = '';
   String _teacherId = '';
   String _teacherBio = '';
@@ -204,9 +207,54 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
           _loading = false;
         });
       }
+
+      // Student: async homework pending count (doesn't block main render)
+      if (!widget.isTeacher) {
+        final u = currentUser;
+        if (u != null) {
+          _loadPendingHwCount(u.id);
+        }
+      }
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _loadPendingHwCount(String userId) async {
+    try {
+      final hwRaw = await supabase
+          .from('class_homework')
+          .select('id, modes, student_ids')
+          .eq('class_id', widget.classId);
+      final allHw = hwRaw as List;
+      final myHw = allHw.where((h) {
+        final ids = (h as Map)['student_ids'] as List?;
+        return ids == null || ids.contains(userId);
+      }).toList();
+      if (myHw.isEmpty) {
+        if (mounted) setState(() => _pendingHwCount = 0);
+        return;
+      }
+      final hwIds = myHw.map((h) => (h as Map)['id'] as String).toList();
+      final progRaw = await supabase
+          .from('class_homework_progress')
+          .select('homework_id, mode')
+          .eq('student_id', userId)
+          .inFilter('homework_id', hwIds);
+      final doneMap = <String, Set<String>>{};
+      for (final p in progRaw as List) {
+        final m = p as Map;
+        final hwId = m['homework_id'] as String;
+        doneMap.putIfAbsent(hwId, () => {}).add(m['mode'] as String);
+      }
+      final pending = myHw.where((h) {
+        final m = h as Map;
+        final modes = (m['modes'] as List).cast<String>();
+        final done = doneMap[m['id'] as String] ?? {};
+        return !modes.every(done.contains);
+      }).length;
+      if (mounted) setState(() => _pendingHwCount = pending);
+    } catch (_) {}
   }
 
   @override
@@ -281,6 +329,39 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
           if (widget.isTeacher && _needsAttentionCount > 0) ...[
             _spotlightBanner(),
             const SizedBox(height: 12),
+          ],
+
+          // ── Pending homework banner (student only) ────────────────────────
+          if (!widget.isTeacher && _pendingHwCount > 0) ...[
+            GestureDetector(
+              onTap: widget.onGoToHomework,
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [context.primary, context.primary.withValues(alpha: 0.75)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [BoxShadow(color: context.primary.withValues(alpha: 0.35), blurRadius: 14, offset: const Offset(0, 6))],
+                ),
+                child: Row(children: [
+                  const Text('📋', style: TextStyle(fontSize: 24)),
+                  const SizedBox(width: 12),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(
+                      _pendingHwCount == 1 ? 'You have new homework!' : 'You have $_pendingHwCount homework assignments',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14),
+                    ),
+                    const Text('Tap to view and complete →',
+                      style: TextStyle(color: Colors.white70, fontSize: 11)),
+                  ])),
+                  const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
+                ]),
+              ),
+            ),
+            const SizedBox(height: 16),
           ],
 
           // ── Homework (student only) ────────────────────────────────────────

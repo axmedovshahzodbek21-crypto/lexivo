@@ -35,6 +35,7 @@ class _ClassShellState extends State<ClassShell> {
         className: widget.className,
         isTeacher: widget.isTeacher,
         onGoToDashboard: widget.isTeacher ? () => setState(() => _tab = 4) : null,
+        onGoToHomework: widget.isTeacher ? null : () => setState(() => _tab = 3),
       ),
       ClassWordsScreen(classId: widget.classId, className: widget.className, isTeacher: widget.isTeacher),
       ClassLeaderboardScreen(classId: widget.classId, isVisible: true),

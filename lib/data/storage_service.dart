@@ -1350,6 +1350,24 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     }
   }
 
+  static Future<bool> hasMatchXPAwarded(String collectionName, int dayNumber) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('match_xp_units');
+    if (raw == null) return false;
+    return (jsonDecode(raw) as List).contains(_unitKey(collectionName, dayNumber));
+  }
+
+  static Future<void> markMatchXPAwarded(String collectionName, int dayNumber) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('match_xp_units');
+    final list = raw != null ? List<String>.from(jsonDecode(raw)) : <String>[];
+    final k = _unitKey(collectionName, dayNumber);
+    if (!list.contains(k)) {
+      list.add(k);
+      await prefs.setString('match_xp_units', jsonEncode(list));
+    }
+  }
+
   // ── Activity flags (for achievements) ─────────────────────────────────────
 
   static Future<void> markQuizCompleted({required bool perfect}) async {

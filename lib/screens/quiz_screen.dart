@@ -638,10 +638,8 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
       widget.collectionName, widget.wordDay.dayNumber);
     if (!alreadyAwarded) {
       final wordCount = widget.wordDay.words.length;
-      final baseXp = (wordCount * 5).round(); // 0.5 XP per word
-      final bonus  = isPerfect ? 30 : 0;      // +3.0 XP perfect bonus
       await StorageService.addXP(
-        baseXp + bonus,
+        wordCount * 5,
         reason: 'Quiz',
         source: 'Unit ${widget.wordDay.dayNumber} · ${widget.collectionName}',
       );

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
+import '../data/storage_service.dart';
 import '../data/word_data.dart';
 import '../l10n.dart';
 
@@ -155,6 +156,18 @@ class _MatchingScreenState extends State<MatchingScreen> {
       if (_matched.length == _roundWords.length) {
         _stopTimer();
         final isLast = _roundIndex + 1 >= _totalRounds;
+        if (isLast) {
+          StorageService.hasMatchXPAwarded(widget.collectionName, widget.wordDay.dayNumber).then((awarded) {
+            if (!awarded) {
+              StorageService.addXP(
+                widget.wordDay.words.length * 4,
+                reason: 'Match',
+                source: 'Unit ${widget.wordDay.dayNumber} · ${widget.collectionName}',
+              );
+              StorageService.markMatchXPAwarded(widget.collectionName, widget.wordDay.dayNumber);
+            }
+          });
+        }
         setState(() {
           _totalMistakes += _mistakes;
           _totalTime += _elapsed;

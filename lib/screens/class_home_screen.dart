@@ -4,6 +4,7 @@ import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import 'class_models.dart';
+import 'class_streak_screen.dart';
 
 Color _classColor(String classId) {
   const colors = [
@@ -68,6 +69,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
   int _needsAttentionCount = 0;
   Map<String, int> _readCounts = {};
   int _myClassXp = 0;
+  int _classStreak = 0;
 
   @override
   void initState() {
@@ -243,12 +245,44 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
         });
       }
 
-      if (!widget.isTeacher && user != null) _loadPendingHwCount(user.id);
+      if (!widget.isTeacher && user != null) {
+        _loadPendingHwCount(user.id);
+        _loadClassStreak(user.id);
+      }
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     } finally {
       safetyNet.cancel();
     }
+  }
+
+  Future<void> _loadClassStreak(String userId) async {
+    try {
+      final rows = await supabase
+          .from('class_study_days')
+          .select('study_date')
+          .eq('student_id', userId)
+          .eq('class_id', widget.classId);
+      final days = (rows as List)
+          .map((r) => (r as Map)['study_date'] as String)
+          .toList()
+        ..sort();
+      if (days.isEmpty) return;
+      final set = days.toSet();
+      final now = DateTime.now().subtract(const Duration(hours: 2));
+      String dateStr(DateTime d) =>
+          '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+      final today = dateStr(now);
+      final yesterday = dateStr(now.subtract(const Duration(days: 1)));
+      if (!set.contains(today) && !set.contains(yesterday)) return;
+      var cursor = set.contains(today) ? now : now.subtract(const Duration(days: 1));
+      int streak = 0;
+      while (set.contains(dateStr(cursor))) {
+        streak++;
+        cursor = cursor.subtract(const Duration(days: 1));
+      }
+      if (mounted) setState(() => _classStreak = streak);
+    } catch (_) {}
   }
 
   Future<void> _loadPendingHwCount(String userId) async {
@@ -352,6 +386,16 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
                 _chip('✅ $_activeToday/$_memberCount active'),
                 if (!widget.isTeacher) _chip('📋 ${pending.length} pending'),
                 if (!widget.isTeacher) _chip('⚡ ${(_myClassXp / 10).toStringAsFixed(1)} XP'),
+                if (!widget.isTeacher) GestureDetector(
+                  onTap: () => Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => ClassStreakScreen(
+                      classId: widget.classId,
+                      className: widget.className,
+                      classColor: color,
+                    ),
+                  )),
+                  child: _chip('🔥 $_classStreak day streak'),
+                ),
               ]),
               if (_memberCount > 0) ...[
                 const SizedBox(height: 12),

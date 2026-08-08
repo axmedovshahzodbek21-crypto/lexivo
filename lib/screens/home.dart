@@ -2959,7 +2959,9 @@ class _CollectionPickerOverlayState extends State<_CollectionPickerOverlay>
                 offset: Offset(0, 100 * (1 - widget.animation.value)),
                 child: Opacity(
                   opacity: widget.animation.value,
-                  child: ConstrainedBox(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: ConstrainedBox(
                     constraints: BoxConstraints(
                       maxHeight: MediaQuery.of(context).size.height * 0.85,
                     ),
@@ -3034,6 +3036,7 @@ class _CollectionPickerOverlayState extends State<_CollectionPickerOverlay>
                 ),
               ),
             ),
+          ),
           ],
         );
       },

@@ -112,6 +112,8 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
 
       final membersRaw = await supabase
           .rpc('get_class_member_ids', params: {'p_class_id': widget.classId});
+      // ignore: avoid_print
+      print('[ClassHome] classId=${widget.classId} membersRaw=$membersRaw');
       final membersList = membersRaw as List;
       memberCount = membersList.length;
       if (membersList.isNotEmpty) {

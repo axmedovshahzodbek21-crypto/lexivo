@@ -40,12 +40,14 @@ class MatchingScreen extends StatefulWidget {
   final String collectionName;
 
   final void Function(String word)? onWrongPair;
+  final VoidCallback? onHomeworkCompleted;
 
   const MatchingScreen({
     super.key,
     required this.wordDay,
     required this.collectionName,
     this.onWrongPair,
+    this.onHomeworkCompleted,
   });
 
   @override
@@ -174,6 +176,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
           _totalTime += _elapsed;
           _phase = isLast ? 'done' : 'round_done';
         });
+        if (isLast) widget.onHomeworkCompleted?.call();
       }
     } else {
       // Wrong

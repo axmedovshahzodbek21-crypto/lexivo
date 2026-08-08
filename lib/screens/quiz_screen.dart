@@ -230,6 +230,7 @@ class QuizSessionScreen extends StatefulWidget {
   final int questionCount;
   final bool noXP;
   final void Function(String word)? onWrongWord;
+  final VoidCallback? onHomeworkCompleted;
 
   const QuizSessionScreen({
     super.key,
@@ -240,6 +241,7 @@ class QuizSessionScreen extends StatefulWidget {
     required this.questionCount,
     this.noXP = false,
     this.onWrongWord,
+    this.onHomeworkCompleted,
   });
 
   @override
@@ -368,6 +370,7 @@ class _QuizSessionScreenState extends State<QuizSessionScreen>
   }
 
   void _showFinishScreen() {
+    widget.onHomeworkCompleted?.call();
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(

@@ -30,6 +30,7 @@ class LearningScreen extends StatefulWidget {
   final bool noXP;
   // When set, this is a class learning session — SRS goes to Supabase, not personal storage.
   final String? classId;
+  final VoidCallback? onHomeworkCompleted;
 
   const LearningScreen({
     super.key,
@@ -41,6 +42,7 @@ class LearningScreen extends StatefulWidget {
     this.startIndex = 0,
     this.noXP = false,
     this.classId,
+    this.onHomeworkCompleted,
   });
 
   @override
@@ -519,6 +521,7 @@ class _LearningScreenState extends State<LearningScreen> {
 
   Future<void> _showFinishDialog() async {
     _sessionComplete = true;
+    widget.onHomeworkCompleted?.call();
     _heartbeatTimer?.cancel();
     await StorageService.markLearningComplete(widget.collectionName, widget.wordDay.dayNumber);
     StorageService.clearLearnProgress(widget.collectionName, widget.wordDay.dayNumber);

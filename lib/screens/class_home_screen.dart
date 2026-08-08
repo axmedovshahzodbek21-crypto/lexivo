@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
 import '../app_theme.dart';
@@ -66,6 +67,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
   int _activeToday = 0;
   int _needsAttentionCount = 0;
   Map<String, int> _readCounts = {};
+  int _myClassXp = 0;
 
   @override
   void initState() {
@@ -84,112 +86,144 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
 
   Future<void> _load() async {
     if (_announcements.isEmpty && _targets.isEmpty && mounted) setState(() => _loading = true);
+
+    // Safety net: if any query hangs longer than 20s, release the spinner.
+    final safetyNet = Timer(const Duration(seconds: 20), () {
+      if (mounted && _loading) setState(() => _loading = false);
+    });
+
     try {
-      final annRaw = await supabase
-          .from('class_announcements')
-          .select('id, class_id, message, created_at')
-          .eq('class_id', widget.classId)
-          .order('created_at', ascending: false)
-          .limit(5);
-      final anns = (annRaw as List)
+      // ── Group 1: parallel independent fetches ─────────────────────────────
+      final results = await Future.wait<dynamic>([
+        supabase
+            .from('class_announcements')
+            .select('id, class_id, message, created_at')
+            .eq('class_id', widget.classId)
+            .order('created_at', ascending: false)
+            .limit(5),
+        supabase
+            .from('class_words')
+            .select('id')
+            .eq('class_id', widget.classId),
+        supabase
+            .rpc('get_class_member_ids', params: {'p_class_id': widget.classId}),
+      ]);
+
+      final anns = (results[0] as List)
           .map((a) => ClassAnnouncement.fromMap(Map<String, dynamic>.from(a as Map)))
           .toList();
+      final wordCount = (results[1] as List).length;
+      final membersList = results[2] as List;
+      final memberCount = membersList.length;
+      final memberIds = membersList
+          .map((m) => (m as Map)['student_id'] as String)
+          .toList();
 
-      final wordRaw = await supabase
-          .from('class_words')
-          .select('id')
-          .eq('class_id', widget.classId);
-      final wordCount = (wordRaw as List).length;
-
+      // ── Group 2: parallel dependent fetches ───────────────────────────────
       List<ClassTarget> targets = [];
       String teacherName = '';
       String fetchedTeacherId = '';
       String teacherBio = '';
-      int memberCount = 0;
       int activeToday = 0;
       int needsAttentionCount = 0;
       Map<String, int> readCounts = {};
+      int myClassXp = 0;
 
-      final membersRaw = await supabase
-          .rpc('get_class_member_ids', params: {'p_class_id': widget.classId});
-      // ignore: avoid_print
-      print('[ClassHome] classId=${widget.classId} membersRaw=$membersRaw');
-      final membersList = membersRaw as List;
-      memberCount = membersList.length;
-      if (membersList.isNotEmpty) {
-        final memberIds = membersList.map((m) => (m as Map)['student_id'] as String).toList();
-        final profilesRaw = await supabase
-            .from('profiles')
-            .select('last_study_date')
-            .inFilter('id', memberIds);
-        final today = DateTime.now().toIso8601String().substring(0, 10);
-        final threeDaysAgo = DateTime.now().subtract(const Duration(days: 3)).toIso8601String().substring(0, 10);
-        activeToday = (profilesRaw as List)
-            .where((p) => (p as Map)['last_study_date'] == today)
-            .length;
-        needsAttentionCount = (profilesRaw as List).where((p) {
-          final date = (p as Map)['last_study_date'] as String?;
-          return date == null || date.compareTo(threeDaysAgo) < 0;
-        }).length;
-      }
-
-      if (!widget.isTeacher) {
-        final user = currentUser;
-        if (user != null) {
-          final targetRaw = await supabase
-              .from('class_targets')
-              .select('id, class_id, title, due_date, completed_at, created_at')
-              .eq('class_id', widget.classId)
-              .eq('student_id', user.id)
-              .order('created_at', ascending: false);
-          targets = (targetRaw as List)
-              .map((t) => ClassTarget.fromMap(Map<String, dynamic>.from(t as Map)))
-              .toList();
-        }
-        final classRaw = await supabase
-            .from('classes')
-            .select('teacher_id')
-            .eq('id', widget.classId)
-            .maybeSingle();
-        if (classRaw != null) {
-          fetchedTeacherId = (classRaw as Map)['teacher_id'] as String;
-          final profileRaw = await supabase
-              .from('profiles')
-              .select('name, bio')
-              .eq('id', fetchedTeacherId)
-              .maybeSingle();
-          if (profileRaw != null) {
-            teacherName = (profileRaw as Map)['name'] as String? ?? 'Teacher';
-            teacherBio = (profileRaw as Map)['bio'] as String? ?? '';
-          }
-        }
-      }
-
-      // Student: mark announcements as read
-      if (!widget.isTeacher && anns.isNotEmpty) {
-        final u = currentUser;
-        if (u != null) {
+      final user = currentUser;
+      await Future.wait<void>([
+        // Activity stats (non-critical)
+        () async {
+          if (memberIds.isEmpty) return;
           try {
-            await supabase.from('class_announcement_reads').upsert(
-              anns.map((a) => {'announcement_id': a.id, 'student_id': u.id}).toList(),
-              onConflict: 'announcement_id,student_id',
-            );
+            final today = DateTime.now().toIso8601String().substring(0, 10);
+            final threeDaysAgo = DateTime.now().subtract(const Duration(days: 3)).toIso8601String().substring(0, 10);
+            final profilesRaw = await supabase
+                .from('user_data')
+                .select('id, last_study_date')
+                .inFilter('id', memberIds);
+            activeToday = (profilesRaw as List)
+                .where((p) => (p as Map)['last_study_date'] == today)
+                .length;
+            needsAttentionCount = (profilesRaw as List).where((p) {
+              final date = (p as Map)['last_study_date'] as String?;
+              return date == null || date.compareTo(threeDaysAgo) < 0;
+            }).length;
           } catch (_) {}
-        }
-      }
-      // Teacher: fetch read counts per announcement
-      if (widget.isTeacher && anns.isNotEmpty) {
-        final annIds = anns.map((a) => a.id).toList();
-        try {
-          final readsRaw = await supabase
-              .from('class_announcement_reads')
-              .select('announcement_id')
-              .inFilter('announcement_id', annIds);
-          for (final r in (readsRaw as List)) {
-            final aid = (r as Map)['announcement_id'] as String;
-            readCounts[aid] = (readCounts[aid] ?? 0) + 1;
-          }
-        } catch (_) {}
+        }(),
+
+        // Student targets
+        if (!widget.isTeacher && user != null) () async {
+          try {
+            final targetRaw = await supabase
+                .from('class_targets')
+                .select('id, class_id, title, due_date, completed_at, created_at')
+                .eq('class_id', widget.classId)
+                .eq('student_id', user.id)
+                .order('created_at', ascending: false);
+            targets = (targetRaw as List)
+                .map((t) => ClassTarget.fromMap(Map<String, dynamic>.from(t as Map)))
+                .toList();
+          } catch (_) {}
+        }(),
+
+        // Student class XP
+        if (!widget.isTeacher && user != null) () async {
+          try {
+            final xpRaw = await supabase
+                .from('class_members')
+                .select('class_xp')
+                .eq('class_id', widget.classId)
+                .eq('student_id', user.id)
+                .maybeSingle();
+            myClassXp = (xpRaw as Map?)?['class_xp'] as int? ?? 0;
+          } catch (_) {}
+        }(),
+
+        // Student: teacher profile
+        if (!widget.isTeacher) () async {
+          try {
+            final classRaw = await supabase
+                .from('classes')
+                .select('teacher_id')
+                .eq('id', widget.classId)
+                .maybeSingle();
+            if (classRaw != null) {
+              fetchedTeacherId = (classRaw as Map)['teacher_id'] as String;
+              final profileRaw = await supabase
+                  .from('profiles')
+                  .select('name, bio')
+                  .eq('id', fetchedTeacherId)
+                  .maybeSingle();
+              if (profileRaw != null) {
+                teacherName = (profileRaw as Map)['name'] as String? ?? 'Teacher';
+                teacherBio = (profileRaw as Map)['bio'] as String? ?? '';
+              }
+            }
+          } catch (_) {}
+        }(),
+
+        // Teacher: announcement read counts
+        if (widget.isTeacher && anns.isNotEmpty) () async {
+          try {
+            final annIds = anns.map((a) => a.id).toList();
+            final readsRaw = await supabase
+                .from('class_announcement_reads')
+                .select('announcement_id')
+                .inFilter('announcement_id', annIds);
+            for (final r in (readsRaw as List)) {
+              final aid = (r as Map)['announcement_id'] as String;
+              readCounts[aid] = (readCounts[aid] ?? 0) + 1;
+            }
+          } catch (_) {}
+        }(),
+      ]);
+
+      // Student: mark announcements as read (fire-and-forget)
+      if (!widget.isTeacher && anns.isNotEmpty && user != null) {
+        supabase.from('class_announcement_reads').upsert(
+          anns.map((a) => {'announcement_id': a.id, 'student_id': user.id}).toList(),
+          onConflict: 'announcement_id,student_id',
+        ).catchError((_) {});
       }
 
       if (mounted) {
@@ -204,19 +238,16 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
           _activeToday = activeToday;
           _needsAttentionCount = needsAttentionCount;
           _readCounts = readCounts;
+          _myClassXp = myClassXp;
           _loading = false;
         });
       }
 
-      // Student: async homework pending count (doesn't block main render)
-      if (!widget.isTeacher) {
-        final u = currentUser;
-        if (u != null) {
-          _loadPendingHwCount(u.id);
-        }
-      }
+      if (!widget.isTeacher && user != null) _loadPendingHwCount(user.id);
     } catch (_) {
       if (mounted) setState(() => _loading = false);
+    } finally {
+      safetyNet.cancel();
     }
   }
 
@@ -305,9 +336,14 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
                   Text(widget.className,
                     style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
                     overflow: TextOverflow.ellipsis),
-                  Text(
-                    widget.isTeacher ? '$_memberCount students' : _teacherName,
-                    style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                  widget.isTeacher
+                    ? GestureDetector(
+                        onTap: _showStudentsSheet,
+                        child: Text('$_memberCount students',
+                          style: const TextStyle(color: Colors.white70, fontSize: 13,
+                            decoration: TextDecoration.underline, decorationColor: Colors.white54)),
+                      )
+                    : Text(_teacherName, style: const TextStyle(color: Colors.white70, fontSize: 13)),
                 ])),
               ]),
               const SizedBox(height: 16),
@@ -315,6 +351,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
                 _chip('📖 $_wordCount words'),
                 _chip('✅ $_activeToday/$_memberCount active'),
                 if (!widget.isTeacher) _chip('📋 ${pending.length} pending'),
+                if (!widget.isTeacher) _chip('⚡ ${(_myClassXp / 10).toStringAsFixed(1)} XP'),
               ]),
               if (_memberCount > 0) ...[
                 const SizedBox(height: 12),
@@ -377,7 +414,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
             _sectionLabel('📊 Quick Stats'),
             const SizedBox(height: 8),
             Row(children: [
-              _statCard(context, '👥', '$_memberCount', 'Students'),
+              _statCard(context, '👥', '$_memberCount', 'Students', onTap: _showStudentsSheet),
               const SizedBox(width: 10),
               _statCard(context, '✅', '$_activeToday', 'Active today'),
               const SizedBox(width: 10),
@@ -395,6 +432,16 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
             ..._announcements.map(_buildAnnouncementRow),
         ],
       ),
+    );
+  }
+
+  Future<void> _showStudentsSheet() async {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: context.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) => _StudentsSheet(classId: widget.classId, memberCount: _memberCount),
     );
   }
 
@@ -509,16 +556,19 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
   Widget _sectionLabel(String label) => Text(label,
     style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: context.appText));
 
-  Widget _statCard(BuildContext ctx, String icon, String value, String label) => Expanded(
-    child: Container(
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      decoration: BoxDecoration(color: ctx.surface, borderRadius: BorderRadius.circular(14), boxShadow: ctx.cardShadow),
-      child: Column(children: [
-        Text(icon, style: const TextStyle(fontSize: 20)),
-        const SizedBox(height: 4),
-        Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: ctx.appText)),
-        Text(label, style: TextStyle(fontSize: 10, color: ctx.textMuted)),
-      ]),
+  Widget _statCard(BuildContext ctx, String icon, String value, String label, {VoidCallback? onTap}) => Expanded(
+    child: GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(color: ctx.surface, borderRadius: BorderRadius.circular(14), boxShadow: ctx.cardShadow),
+        child: Column(children: [
+          Text(icon, style: const TextStyle(fontSize: 20)),
+          const SizedBox(height: 4),
+          Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: ctx.appText)),
+          Text(label, style: TextStyle(fontSize: 10, color: ctx.textMuted)),
+        ]),
+      ),
     ),
   );
 
@@ -592,4 +642,138 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
     padding: const EdgeInsets.symmetric(vertical: 20),
     child: Center(child: Text(label, style: TextStyle(color: context.textMuted, fontSize: 13))),
   );
+}
+
+Color _studentAvatarColor(String id) {
+  const cols = [
+    Color(0xFF6366F1), Color(0xFF8B5CF6), Color(0xFF06B6D4),
+    Color(0xFF10B981), Color(0xFFF59E0B), Color(0xFFEF4444),
+    Color(0xFFEC4899), Color(0xFF3B82F6),
+  ];
+  return cols[id.codeUnits.fold(0, (a, b) => a + b) % cols.length];
+}
+
+class _StudentsSheet extends StatefulWidget {
+  final String classId;
+  final int memberCount;
+  const _StudentsSheet({required this.classId, required this.memberCount});
+
+  @override
+  State<_StudentsSheet> createState() => _StudentsSheetState();
+}
+
+class _StudentsSheetState extends State<_StudentsSheet> {
+  List<dynamic> _students = [];
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final data = await supabase.rpc('get_class_dashboard', params: {'p_class_id': widget.classId});
+      final list = (data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      list.sort((a, b) => ((b['xp'] as num?) ?? 0).compareTo((a['xp'] as num?) ?? 0));
+      if (mounted) setState(() { _students = list; _loading = false; });
+    } catch (e) {
+      if (mounted) setState(() { _error = e.toString(); _loading = false; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.4,
+      maxChildSize: 0.92,
+      expand: false,
+      builder: (_, scrollCtrl) => Column(children: [
+        const SizedBox(height: 12),
+        Container(width: 36, height: 4, decoration: BoxDecoration(color: context.border, borderRadius: BorderRadius.circular(2))),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
+          child: Row(children: [
+            Text('👥 Students', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(20)),
+              child: Text('${widget.memberCount}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: context.textMuted)),
+            ),
+          ]),
+        ),
+        Divider(height: 1, color: context.border),
+        Expanded(
+          child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+              ? Center(child: Text(_error!, style: TextStyle(color: context.textMuted, fontSize: 12)))
+              : _students.isEmpty
+                ? Center(child: Text('No students yet', style: TextStyle(color: context.textMuted)))
+                : ListView.separated(
+                    controller: scrollCtrl,
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                    itemCount: _students.length,
+                    separatorBuilder: (ctx2, i2) => const SizedBox(height: 8),
+                    itemBuilder: (ctx, i) {
+                      final s = _students[i];
+                      final sid = s['student_id'] as String;
+                      final name = s['name'] as String? ?? '?';
+                      final xp = (s['xp'] as num?)?.toInt() ?? 0;
+                      final streak = (s['streak'] as num?)?.toInt() ?? 0;
+                      final lastStudy = s['last_study_date'] as String?;
+                      final isActive = lastStudy == today;
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: ctx.surface2,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: ctx.border),
+                        ),
+                        child: Row(children: [
+                          Container(
+                            width: 28, height: 28,
+                            decoration: BoxDecoration(color: ctx.surface, borderRadius: BorderRadius.circular(8)),
+                            child: Center(child: Text('${i + 1}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: ctx.textMuted))),
+                          ),
+                          const SizedBox(width: 10),
+                          Container(
+                            width: 36, height: 36,
+                            decoration: BoxDecoration(color: _studentAvatarColor(sid), shape: BoxShape.circle),
+                            child: Center(child: Text(name[0].toUpperCase(),
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14))),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Row(children: [
+                              Flexible(child: Text(name, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: ctx.appText), overflow: TextOverflow.ellipsis)),
+                              if (isActive) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                  decoration: BoxDecoration(color: const Color(0xFF10B981).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4)),
+                                  child: const Text('TODAY', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: Color(0xFF10B981))),
+                                ),
+                              ],
+                            ]),
+                            if (streak > 0)
+                              Text('🔥 $streak day streak', style: TextStyle(fontSize: 11, color: ctx.textMuted)),
+                          ])),
+                          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                            Text('${(xp / 10).toStringAsFixed(1)} XP',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: ctx.primary)),
+                          ]),
+                        ]),
+                      );
+                    },
+                  ),
+        ),
+      ]),
+    );
+  }
 }

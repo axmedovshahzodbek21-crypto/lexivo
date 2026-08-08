@@ -171,6 +171,10 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
     final wd = _wordDay;
     if (wd == null || wd.words.isEmpty) return;
 
+    // Only record progress when the session is genuinely completed,
+    // not on every back-navigation.
+    void onCompleted() => _recordProgress(mode);
+
     switch (mode) {
       case 'learn':
         await Navigator.push(context, MaterialPageRoute(
@@ -180,6 +184,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
             collectionName: widget.unitName,
             classId: widget.classId,
             dayIndex: 0,
+            onHomeworkCompleted: onCompleted,
           ),
         ));
       case 'flashcard':
@@ -188,6 +193,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
             wordDay: wd,
             userProfile: '',
             collectionName: widget.unitName,
+            onHomeworkCompleted: onCompleted,
           ),
         ));
       case 'quiz':
@@ -198,6 +204,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
             collectionName: widget.unitName,
             quizType: QuizType.wordToTranslation,
             questionCount: wd.words.length.clamp(5, 20),
+            onHomeworkCompleted: onCompleted,
           ),
         ));
       case 'match':
@@ -205,10 +212,10 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
           builder: (_) => MatchingScreen(
             wordDay: wd,
             collectionName: widget.unitName,
+            onHomeworkCompleted: onCompleted,
           ),
         ));
     }
-    await _recordProgress(mode);
   }
 
   @override

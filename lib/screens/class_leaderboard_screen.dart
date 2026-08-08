@@ -138,21 +138,24 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
 
     return AnimatedBuilder(
       animation: _anim,
-      builder: (ctx, _) => SizedBox(
-        height: 290,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            _podiumSlot(ctx, second, 2, 120 * _anim.value, const Color(0xFF94A3B8), '🥈'),
-            const SizedBox(width: 6),
-            _podiumSlot(ctx, first,  1, 170 * _anim.value, const Color(0xFFF59E0B), '🥇'),
-            const SizedBox(width: 6),
-            if (third != null)
-              _podiumSlot(ctx, third, 3, 90 * _anim.value, const Color(0xFFCD7F32), '🥉'),
-          ],
-        ),
-      ),
+      builder: (ctx, _) {
+        final v = _anim.value.clamp(0.0, 1.0);
+        return SizedBox(
+          height: 290,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _podiumSlot(ctx, second, 2, 120 * v, const Color(0xFF94A3B8), '🥈'),
+              const SizedBox(width: 6),
+              _podiumSlot(ctx, first,  1, 170 * v, const Color(0xFFF59E0B), '🥇'),
+              const SizedBox(width: 6),
+              if (third != null)
+                _podiumSlot(ctx, third, 3, 90 * v, const Color(0xFFCD7F32), '🥉'),
+            ],
+          ),
+        );
+      },
     );
   }
 

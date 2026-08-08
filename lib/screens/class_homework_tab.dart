@@ -355,17 +355,35 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
             // ── Class Words section ─────────────────────────────────────
             if (_cwUnits.any((u) => u.hasHomework)) ...[
               _sectionHeader('📝 Class Words'),
-              ..._cwUnits.where((u) => u.hasHomework).map((u) => _buildUnitCard(
-                id: u.id, name: u.name, wordCount: u.wordCount,
-                homeworkId: u.homeworkId!, hwModes: u.hwModes ?? [],
-                hwDue: u.hwDue, isClassWords: true,
-              )),
+              GridView.count(
+                crossAxisCount: 3,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: 0.86,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                children: _cwUnits.where((u) => u.hasHomework).map((u) => _buildGridUnitCard(
+                  id: u.id, name: u.name,
+                  homeworkId: u.homeworkId!, hwModes: u.hwModes ?? [],
+                  hwDue: u.hwDue, isClassWords: true,
+                )).toList(),
+              ),
+              const SizedBox(height: 16),
             ],
 
             // ── Collections section ─────────────────────────────────────
             if (_collHwItems.isNotEmpty) ...[
               _sectionHeader('📗 Collections'),
-              ..._collHwItems.map((h) => _buildCollectionCard(h)),
+              GridView.count(
+                crossAxisCount: 3,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: 0.86,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                children: _collHwItems.map((h) => _buildCollectionCard(h)).toList(),
+              ),
+              const SizedBox(height: 16),
             ],
           ],
         ],
@@ -384,7 +402,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
 
     return [
       Padding(
-        padding: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.only(bottom: 8),
         child: Row(children: [
           const Text('📁', style: TextStyle(fontSize: 12)),
           const SizedBox(width: 6),
@@ -404,40 +422,55 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
           padding: const EdgeInsets.only(bottom: 8),
           child: Text('No units assigned yet', style: TextStyle(fontSize: 12, color: context.textMuted)))
       else
-        ...visible.map((u) => u.hasHomework
-            ? _buildUnitCard(
-                id: u.id, name: u.name, wordCount: u.wordCount,
-                homeworkId: u.homeworkId!, hwModes: u.hwModes ?? [],
-                hwDue: u.hwDue, isClassWords: isClassWords)
-            : _buildLockedUnit(u.name, u.wordCount)),
-      const SizedBox(height: 8),
+        GridView.count(
+          crossAxisCount: 3,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          childAspectRatio: 0.86,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          children: visible.map((u) => u.hasHomework
+              ? _buildGridUnitCard(
+                  id: u.id, name: u.name,
+                  homeworkId: u.homeworkId!, hwModes: u.hwModes ?? [],
+                  hwDue: u.hwDue, isClassWords: isClassWords)
+              : _buildLockedGridCard(u.name)).toList(),
+        ),
+      const SizedBox(height: 16),
     ];
   }
 
-  Widget _buildLockedUnit(String name, int wordCount) => Container(
-    margin: const EdgeInsets.only(bottom: 8),
-    padding: const EdgeInsets.all(14),
+  Widget _buildLockedGridCard(String name) => DecoratedBox(
     decoration: BoxDecoration(
-      color: context.surface.withValues(alpha: 0.6),
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: context.border.withValues(alpha: 0.5)),
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.07), offset: const Offset(0, 4), blurRadius: 12)],
     ),
-    child: Row(children: [
-      Container(
-        width: 40, height: 40,
-        decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(10)),
-        child: const Center(child: Text('🔒', style: TextStyle(fontSize: 18))),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: context.surface,
+          border: Border.all(color: context.border.withValues(alpha: 0.5), width: 1.5),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(height: 3, color: context.border),
+          Expanded(child: Padding(
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('🔒', style: TextStyle(fontSize: 12)),
+              const SizedBox(height: 5),
+              Expanded(child: Text(name,
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.textMuted, height: 1.3),
+                maxLines: 3, overflow: TextOverflow.ellipsis)),
+            ]),
+          )),
+        ]),
       ),
-      const SizedBox(width: 12),
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(name, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: context.textMuted)),
-        Text('$wordCount words · Not yet assigned', style: TextStyle(fontSize: 11, color: context.textMuted)),
-      ])),
-    ]),
+    ),
   );
 
-  Widget _buildUnitCard({
-    required String id, required String name, required int wordCount,
+  Widget _buildGridUnitCard({
+    required String id, required String name,
     required String homeworkId, required List<String> hwModes,
     required String? hwDue, required bool isClassWords,
   }) {
@@ -446,6 +479,9 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
     final due = _hwDueText(hwDue);
     final isOverdue = due?.startsWith('Overdue') == true;
     const modeIcons = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯'};
+    final accent = allDone
+        ? const LinearGradient(colors: [Color(0xFF22c55e), Color(0xFF4ade80)])
+        : LinearGradient(colors: [context.primary, context.primary.withValues(alpha: 0.7)]);
 
     return GestureDetector(
       onTap: () async {
@@ -457,51 +493,66 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
         ));
         _load();
       },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
+      child: DecoratedBox(
         decoration: BoxDecoration(
-          color: allDone ? context.successBg : context.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: allDone ? Colors.green.shade300 : context.border),
-          boxShadow: context.cardShadow,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(
+            color: allDone ? Colors.green.withValues(alpha: 0.18) : Colors.black.withValues(alpha: 0.07),
+            offset: const Offset(0, 4), blurRadius: 12,
+          )],
         ),
-        child: Row(children: [
-          Container(
-            width: 44, height: 44,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
             decoration: BoxDecoration(
-              color: allDone ? Colors.green.shade100 : context.primaryBg,
-              borderRadius: BorderRadius.circular(12),
+              color: context.surface,
+              border: Border.all(color: allDone ? Colors.green.shade300 : context.border, width: 1.5),
             ),
-            child: Center(
-              child: allDone
-                  ? const Icon(Icons.check_circle_rounded, color: Colors.green, size: 26)
-                  : Text('${completed.length}/${hwModes.length}',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: context.primary)),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(name, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14,
-              color: allDone ? Colors.green.shade700 : context.appText)),
-            const SizedBox(height: 4),
-            Row(children: [
-              ...hwModes.map((m) => Padding(
-                padding: const EdgeInsets.only(right: 4),
-                child: Text(modeIcons[m] ?? m,
-                  style: TextStyle(fontSize: 15,
-                    color: completed.contains(m) ? null : context.textMuted.withValues(alpha: 0.35))),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Container(height: 3, decoration: BoxDecoration(gradient: accent)),
+              Expanded(child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: allDone ? Colors.green : context.primary,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text('${completed.length}/${hwModes.length}',
+                        style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900)),
+                    ),
+                    const Spacer(),
+                    if (allDone) const Icon(Icons.check_circle_rounded, color: Colors.green, size: 14)
+                    else if (isOverdue) const Text('⚠️', style: TextStyle(fontSize: 10)),
+                  ]),
+                  const SizedBox(height: 5),
+                  Expanded(child: Text(name,
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold,
+                      color: allDone ? Colors.green.shade700 : context.appText, height: 1.3),
+                    maxLines: 3, overflow: TextOverflow.ellipsis)),
+                  const SizedBox(height: 6),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(3),
+                    child: LinearProgressIndicator(
+                      value: hwModes.isEmpty ? 0 : completed.length / hwModes.length,
+                      minHeight: 4,
+                      backgroundColor: context.border,
+                      valueColor: AlwaysStoppedAnimation<Color>(allDone ? Colors.green : context.primary),
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Row(children: hwModes.map((m) => Padding(
+                    padding: const EdgeInsets.only(right: 3),
+                    child: Text(modeIcons[m] ?? m, style: TextStyle(fontSize: 12,
+                      color: completed.contains(m) ? null : context.textMuted.withValues(alpha: 0.3))),
+                  )).toList()),
+                ]),
               )),
-              if (due != null) ...[
-                const SizedBox(width: 6),
-                Text(due, style: TextStyle(fontSize: 10,
-                  color: isOverdue ? Colors.red : context.textMuted,
-                  fontWeight: isOverdue ? FontWeight.w700 : FontWeight.normal)),
-              ],
             ]),
-          ])),
-          Icon(Icons.arrow_forward_ios_rounded, size: 14, color: context.textMuted),
-        ]),
+          ),
+        ),
       ),
     );
   }
@@ -512,6 +563,10 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
     final due = _hwDueText(h.hwDue);
     final isOverdue = due?.startsWith('Overdue') == true;
     const modeIcons = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯'};
+    const collColor = Color(0xFF16A34A);
+    final accent = allDone
+        ? const LinearGradient(colors: [Color(0xFF22c55e), Color(0xFF4ade80)])
+        : const LinearGradient(colors: [Color(0xFF22C55E), Color(0xFF16A34A)]);
 
     return GestureDetector(
       onTap: () async {
@@ -524,55 +579,72 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
         ));
         _load();
       },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
+      child: DecoratedBox(
         decoration: BoxDecoration(
-          color: allDone ? context.successBg : context.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: allDone ? Colors.green.shade300 : context.border),
-          boxShadow: context.cardShadow,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(
+            color: allDone ? Colors.green.withValues(alpha: 0.18) : Colors.black.withValues(alpha: 0.07),
+            offset: const Offset(0, 4), blurRadius: 12,
+          )],
         ),
-        child: Row(children: [
-          Container(
-            width: 44, height: 44,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
             decoration: BoxDecoration(
-              color: allDone ? Colors.green.shade100 : const Color(0xFF22C55E).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+              color: context.surface,
+              border: Border.all(color: allDone ? Colors.green.shade300 : context.border, width: 1.5),
             ),
-            child: Center(
-              child: allDone
-                  ? const Icon(Icons.check_circle_rounded, color: Colors.green, size: 26)
-                  : Text('${completed.length}/${h.hwModes.length}',
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Color(0xFF16A34A))),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('${h.collectionName} · Day ${h.dayNumber}',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13,
-                color: allDone ? Colors.green.shade700 : context.appText),
-              overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 2),
-            Text(h.topic, style: TextStyle(fontSize: 11, color: context.textMuted), overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 4),
-            Row(children: [
-              ...h.hwModes.map((m) => Padding(
-                padding: const EdgeInsets.only(right: 4),
-                child: Text(modeIcons[m] ?? m,
-                  style: TextStyle(fontSize: 15,
-                    color: completed.contains(m) ? null : context.textMuted.withValues(alpha: 0.35))),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Container(height: 3, decoration: BoxDecoration(gradient: accent)),
+              Expanded(child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: allDone ? Colors.green : collColor,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text('${completed.length}/${h.hwModes.length}',
+                        style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900)),
+                    ),
+                    const Spacer(),
+                    if (allDone) const Icon(Icons.check_circle_rounded, color: Colors.green, size: 14)
+                    else if (isOverdue) const Text('⚠️', style: TextStyle(fontSize: 10)),
+                  ]),
+                  const SizedBox(height: 5),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('Day ${h.dayNumber}',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700,
+                        color: allDone ? Colors.green : collColor)),
+                    const SizedBox(height: 2),
+                    Expanded(child: Text(h.topic,
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold,
+                        color: allDone ? Colors.green.shade700 : context.appText, height: 1.3),
+                      maxLines: 2, overflow: TextOverflow.ellipsis)),
+                  ])),
+                  const SizedBox(height: 6),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(3),
+                    child: LinearProgressIndicator(
+                      value: h.hwModes.isEmpty ? 0 : completed.length / h.hwModes.length,
+                      minHeight: 4,
+                      backgroundColor: context.border,
+                      valueColor: AlwaysStoppedAnimation<Color>(allDone ? Colors.green : collColor),
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Row(children: h.hwModes.map((m) => Padding(
+                    padding: const EdgeInsets.only(right: 3),
+                    child: Text(modeIcons[m] ?? m, style: TextStyle(fontSize: 12,
+                      color: completed.contains(m) ? null : context.textMuted.withValues(alpha: 0.3))),
+                  )).toList()),
+                ]),
               )),
-              if (due != null) ...[
-                const SizedBox(width: 6),
-                Text(due, style: TextStyle(fontSize: 10,
-                  color: isOverdue ? Colors.red : context.textMuted,
-                  fontWeight: isOverdue ? FontWeight.w700 : FontWeight.normal)),
-              ],
             ]),
-          ])),
-          Icon(Icons.arrow_forward_ios_rounded, size: 14, color: context.textMuted),
-        ]),
+          ),
+        ),
       ),
     );
   }

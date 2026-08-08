@@ -54,6 +54,41 @@ class _ClassShellState extends State<ClassShell> {
       const BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: 'Dashboard'),
   ];
 
+  Future<void> _confirmExit() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(children: [
+          const Text('📦', style: TextStyle(fontSize: 22)),
+          const SizedBox(width: 8),
+          Text('Exit this class?',
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: context.appText)),
+        ]),
+        content: Text(
+          "You'll return to your classes list — you'll stay enrolled in this class.",
+          style: TextStyle(fontSize: 13, color: context.textMuted),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel', style: TextStyle(color: context.textMuted)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: context.primary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Exit', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) Navigator.pop(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -63,7 +98,7 @@ class _ClassShellState extends State<ClassShell> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_rounded, color: context.primary),
-          onPressed: () => Navigator.pop(context),
+          onPressed: _confirmExit,
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -91,7 +126,17 @@ class _ClassShellState extends State<ClassShell> {
           ),
         ],
       ),
-      body: IndexedStack(index: _tab, children: _screens),
+      body: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (_, result) async {
+          if (_tab != 0) {
+            setState(() => _tab = 0);
+            return;
+          }
+          await _confirmExit();
+        },
+        child: IndexedStack(index: _tab, children: _screens),
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _tab,
         onTap: (i) => setState(() => _tab = i),

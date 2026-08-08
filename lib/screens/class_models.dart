@@ -64,6 +64,21 @@ class ClassLeaderboardRow {
   );
 }
 
+class ClassDashboardStudent {
+  final String id, name;
+  final String? avatarUrl, lastStudyDate;
+  final int xp, streak, totalWords;
+  const ClassDashboardStudent({required this.id, required this.name, this.avatarUrl, this.lastStudyDate, required this.xp, required this.streak, required this.totalWords});
+  factory ClassDashboardStudent.fromMap(Map<String, dynamic> m) => ClassDashboardStudent(
+    id: m['student_id'] as String, name: m['name'] as String? ?? '?',
+    avatarUrl: m['avatar_url'] as String?,
+    lastStudyDate: m['last_study_date'] as String?,
+    xp: (m['xp'] as num?)?.toInt() ?? 0,
+    streak: (m['streak'] as num?)?.toInt() ?? 0,
+    totalWords: (m['total_words'] as num?)?.toInt() ?? 0,
+  );
+}
+
 class ClassHomework {
   final String id, classId, teacherId, title, createdAt;
   final String? dueDate;

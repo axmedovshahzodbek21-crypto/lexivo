@@ -15,6 +15,7 @@ class FlashcardSettingsScreen extends StatefulWidget {
   final String userProfile;
   final String collectionName;
   final bool noXP;
+  final VoidCallback? onHomeworkCompleted;
 
   const FlashcardSettingsScreen({
     super.key,
@@ -22,6 +23,7 @@ class FlashcardSettingsScreen extends StatefulWidget {
     required this.userProfile,
     required this.collectionName,
     this.noXP = false,
+    this.onHomeworkCompleted,
   });
 
   @override
@@ -123,6 +125,7 @@ class _FlashcardSettingsScreenState extends State<FlashcardSettingsScreen> {
                 cardMode: _cardMode,
                 shuffle: _shuffle,
                 noXP: widget.noXP,
+                onHomeworkCompleted: widget.onHomeworkCompleted,
               ),
             ),
           ),
@@ -357,6 +360,7 @@ class FlashcardSessionScreen extends StatefulWidget {
   final WordDay? originalWordDay;
   final List<String>? startFromWords;
   final bool noXP;
+  final VoidCallback? onHomeworkCompleted;
 
   const FlashcardSessionScreen({
     super.key,
@@ -368,6 +372,7 @@ class FlashcardSessionScreen extends StatefulWidget {
     this.originalWordDay,
     this.startFromWords,
     this.noXP = false,
+    this.onHomeworkCompleted,
   });
 
   @override
@@ -583,6 +588,7 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
 
   void _showFinishScreen() {
     if (!mounted) return;
+    widget.onHomeworkCompleted?.call();
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(

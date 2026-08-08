@@ -142,7 +142,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
       );
       _cache[user.id] = snapshot;
       if (mounted) setState(() => _applySnapshot(snapshot));
-      WidgetService.pushClasses(joinedClasses, targets);
+      WidgetService.pushClasses(joinedClasses, {});
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }

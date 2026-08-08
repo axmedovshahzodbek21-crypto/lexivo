@@ -14,13 +14,13 @@ class WidgetService {
     await HomeWidget.setAppGroupId(_appGroupId);
   }
 
-  /// Fetches classes from Supabase and pushes to widget storage.
-  /// Call at startup so widget has data before the user opens the Classes tab.
+  /// Fetches classes and pending homework counts from Supabase and pushes to
+  /// widget storage. Uses class_homework + class_homework_progress, matching
+  /// what the class home screen shows.
   static Future<void> refreshFromSupabase() async {
     final user = currentUser;
     if (user == null) return;
     try {
-      // Teacher classes (no HW targets — teachers assign, don't complete)
       final taught = await supabase
           .from('classes')
           .select('*')
@@ -29,13 +29,13 @@ class WidgetService {
           .map((c) => ClassRow.fromMap(Map<String, dynamic>.from(c as Map)))
           .toList();
 
-      // Joined classes + their homework targets
       final memberships = await supabase
           .from('class_members')
           .select('class_id')
           .eq('student_id', user.id);
       List<ClassRow> joinedClasses = [];
-      var targets = <String, List<ClassTarget>>{};
+      final pendingHwCounts = <String, int>{};
+
       if ((memberships as List).isNotEmpty) {
         final classIds = memberships
             .map((m) => (m as Map)['class_id'] as String)
@@ -48,54 +48,65 @@ class WidgetService {
             .map((c) => ClassRow.fromMap(Map<String, dynamic>.from(c as Map)))
             .where((c) => c.teacherId != user.id)
             .toList();
+
         if (joinedClasses.isNotEmpty) {
-          final rows = await supabase
-              .from('class_targets')
-              .select('id, class_id, title, due_date, completed_at, created_at')
-              .eq('student_id', user.id);
-          for (final t in rows as List) {
-            final target = ClassTarget.fromMap(Map<String, dynamic>.from(t as Map));
-            targets[target.classId] = [...(targets[target.classId] ?? []), target];
+          final joinedIds = joinedClasses.map((c) => c.id).toList();
+
+          // Fetch homework assignments and completion progress in parallel
+          final results = await Future.wait([
+            supabase
+                .from('class_homework')
+                .select('id, class_id, modes, student_ids')
+                .inFilter('class_id', joinedIds),
+            supabase
+                .from('class_homework_progress')
+                .select('homework_id, mode')
+                .eq('student_id', user.id),
+          ]);
+
+          final allHw = results[0] as List;
+          final progList = results[1] as List;
+
+          final doneMap = <String, Set<String>>{};
+          for (final p in progList) {
+            final m = p as Map;
+            final hwId = m['homework_id'] as String;
+            doneMap.putIfAbsent(hwId, () => {}).add(m['mode'] as String);
+          }
+
+          for (final h in allHw) {
+            final m = h as Map;
+            final studentIds = m['student_ids'] as List?;
+            if (studentIds != null && !studentIds.contains(user.id)) continue;
+            final modes = (m['modes'] as List).cast<String>();
+            final done = doneMap[m['id'] as String] ?? {};
+            if (!modes.every(done.contains)) {
+              final classId = m['class_id'] as String;
+              pendingHwCounts[classId] = (pendingHwCounts[classId] ?? 0) + 1;
+            }
           }
         }
       }
 
       final allClasses = [...teacherClasses, ...joinedClasses];
       if (allClasses.isNotEmpty) {
-        await pushClasses(allClasses, targets);
+        await pushClasses(allClasses, pendingHwCounts);
       }
     } catch (_) {
-      // Non-fatal — widget just keeps stale data
+      // Non-fatal — widget keeps stale data
     }
   }
 
-  /// [targets] maps class_id → list of that class's homework targets.
+  /// [pendingHwCounts] maps class_id → number of incomplete homework assignments.
   static Future<void> pushClasses(
     List<ClassRow> classes,
-    Map<String, List<ClassTarget>> targets,
+    Map<String, int> pendingHwCounts,
   ) async {
-    final today = DateTime.now().toIso8601String().substring(0, 10);
-
-    final payload = classes.map((c) {
-      final hw = targets[c.id] ?? [];
-      final pending = hw.where((t) => t.completedAt == null).toList();
-
-      // Find the nearest upcoming due date among pending homework
-      String? nextDue;
-      for (final t in pending) {
-        final d = t.dueDate;
-        if (d == null) continue;
-        if (nextDue == null || d.compareTo(nextDue) < 0) nextDue = d;
-      }
-
-      return {
-        'id': c.id,
-        'name': c.name,
-        'isTeacher': c.teacherId == currentUser?.id,
-        'pendingHW': pending.length,
-        'nextDue': nextDue,
-        'overdue': nextDue != null && nextDue.compareTo(today) < 0,
-      };
+    final payload = classes.map((c) => {
+      'id': c.id,
+      'name': c.name,
+      'isTeacher': c.teacherId == currentUser?.id,
+      'pendingHW': pendingHwCounts[c.id] ?? 0,
     }).toList();
 
     await HomeWidget.saveWidgetData<String>(_dataKey, jsonEncode(payload));

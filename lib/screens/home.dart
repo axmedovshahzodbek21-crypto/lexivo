@@ -25,6 +25,20 @@ import 'xp_level_sheet.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 
+const _kClassGradients = [
+  [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+  [Color(0xFF0E7490), Color(0xFF22D3EE)],
+  [Color(0xFFB45309), Color(0xFFFBBF24)],
+  [Color(0xFFBE123C), Color(0xFFFB7185)],
+  [Color(0xFF1A9A50), Color(0xFF2ECC71)],
+  [Color(0xFFEC4899), Color(0xFFF472B6)],
+  [Color(0xFFD97706), Color(0xFFFCD34D)],
+  [Color(0xFF0284C7), Color(0xFF38BDF8)],
+];
+
+List<Color> _classCardColors(String id) =>
+    _kClassGradients[id.codeUnits.fold(0, (a, b) => a + b) % _kClassGradients.length];
+
 class HomeScreen extends StatefulWidget {
   final String wordSource;
   final String exampleStyle;
@@ -1718,11 +1732,9 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildClassCard(BuildContext context, HomeClassCard card) {
     final isTeacher = card.isTeacher;
-    final colors = isTeacher
-        ? [const Color(0xFF0E7490), const Color(0xFF22D3EE)]
-        : [const Color(0xFF5B21B6), const Color(0xFF8B5CF6)];
-    final edge = isTeacher ? const Color(0xFF164E63) : const Color(0xFF3B0764);
-    final glow = isTeacher ? const Color(0xFF0E7490) : const Color(0xFF5B21B6);
+    final colors = _classCardColors(card.classId);
+    final edge = colors[0].withValues(alpha: 0.8);
+    final glow = colors[0];
 
     return GestureDetector(
       onTap: () => Navigator.push(

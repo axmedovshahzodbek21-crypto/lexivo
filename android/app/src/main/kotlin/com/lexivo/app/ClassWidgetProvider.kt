@@ -105,6 +105,7 @@ class ClassWidgetProvider : AppWidgetProvider() {
                     ?.apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP }
             }
 
+            // Main body tap: open the class (or app if no class selected)
             if (tapIntent != null) {
                 val pendingIntent = PendingIntent.getActivity(
                     context, widgetId, tapIntent,
@@ -112,6 +113,17 @@ class ClassWidgetProvider : AppWidgetProvider() {
                 )
                 views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
             }
+
+            // "LEXIVO" label tap: re-open class picker to switch class
+            val configIntent = Intent(context, ClassWidgetConfigActivity::class.java).apply {
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            val configPendingIntent = PendingIntent.getActivity(
+                context, widgetId + 100_000, configIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+            views.setOnClickPendingIntent(R.id.widget_app_label, configPendingIntent)
 
             appWidgetManager.updateAppWidget(widgetId, views)
         }

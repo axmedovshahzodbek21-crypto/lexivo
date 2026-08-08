@@ -228,6 +228,9 @@ class _HomeScreenState extends State<HomeScreen>
       'session': 'Start Learning', 'stats': 'Stats Row',
     };
 
+    // Only the 4 known toggleable sections — exclude 'classes' and any unknown IDs
+    final reorderIds = _sectionOrder.where((id) => sectionIcons.containsKey(id)).toList();
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -287,21 +290,26 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
                 const SizedBox(height: 8),
                 SizedBox(
-                  height: _sectionOrder.length * 60.0,
+                  height: reorderIds.length * 60.0,
                   child: ReorderableListView(
                     physics: const NeverScrollableScrollPhysics(),
                     onReorderItem: (oldIdx, newIdx) {
                       setState(() {
-                        final item = _sectionOrder.removeAt(oldIdx);
-                        _sectionOrder.insert(newIdx, item);
+                        final item = reorderIds.removeAt(oldIdx);
+                        reorderIds.insert(newIdx, item);
+                        // Rebuild full order, keeping unknown IDs (like 'classes') at the end
+                        _sectionOrder = [
+                          ...reorderIds,
+                          ..._sectionOrder.where((id) => !sectionIcons.containsKey(id)),
+                        ];
                       });
                       setSheet(() {});
                       _saveLayout();
                     },
                     children: [
-                      for (int i = 0; i < _sectionOrder.length; i++)
+                      for (int i = 0; i < reorderIds.length; i++)
                         ListTile(
-                          key: ValueKey(_sectionOrder[i]),
+                          key: ValueKey(reorderIds[i]),
                           contentPadding: EdgeInsets.zero,
                           leading: ReorderableDragStartListener(
                             index: i,
@@ -309,17 +317,17 @@ class _HomeScreenState extends State<HomeScreen>
                           ),
                           title: Row(
                             children: [
-                              Text(sectionIcons[_sectionOrder[i]]!, style: const TextStyle(fontSize: 18)),
+                              Text(sectionIcons[reorderIds[i]]!, style: const TextStyle(fontSize: 18)),
                               const SizedBox(width: 8),
                               Text(
-                                sectionLabels[_sectionOrder[i]]!,
+                                sectionLabels[reorderIds[i]]!,
                                 style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: context.appText),
                               ),
                             ],
                           ),
                           trailing: Switch(
-                            value: !isHidden(_sectionOrder[i]),
-                            onChanged: (v) => setHidden(_sectionOrder[i], !v),
+                            value: !isHidden(reorderIds[i]),
+                            onChanged: (v) => setHidden(reorderIds[i], !v),
                             activeThumbColor: const Color(0xFF6C63FF),
                             activeTrackColor: const Color(0xFF6C63FF).withValues(alpha: 0.35),
                           ),
@@ -333,7 +341,7 @@ class _HomeScreenState extends State<HomeScreen>
                     TextButton(
                       onPressed: () {
                         setState(() {
-                          _sectionOrder = ['goal', 'wod', 'session', 'stats'];
+                          _sectionOrder = ['goal', 'wod', 'session', 'stats', 'classes'];
                           _hideGoalLevel = false;
                           _hideWordOfDay = false;
                           _hideSession   = false;

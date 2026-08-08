@@ -8,6 +8,7 @@ import 'services/supabase_service.dart';
 import 'services/content_service.dart';
 import 'services/sync_service.dart';
 import 'services/widget_service.dart';
+import 'services/deep_link_service.dart';
 import 'data/storage_service.dart';
 import 'app_observers.dart';
 import 'l10n.dart';
@@ -15,11 +16,13 @@ import 'screens/break_screen.dart';
 
 final ValueNotifier<double> textScaleNotifier = ValueNotifier(1.0);
 final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(ThemeMode.system);
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initSupabase();
   await WidgetService.init();
+  await DeepLinkService.init();
   await ContentService.initialize();
   await NotificationService.initialize();
   final prefs = await SharedPreferences.getInstance();
@@ -62,6 +65,7 @@ class LexivoApp extends StatelessWidget {
                 return MaterialApp(
                   title: 'Lexivo',
                   debugShowCheckedModeBanner: false,
+                  navigatorKey: navigatorKey,
                   theme: ThemeData(
                     colorScheme: ColorScheme.fromSeed(
                       seedColor: const Color(0xFF6C63FF),

@@ -139,7 +139,7 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
     return AnimatedBuilder(
       animation: _anim,
       builder: (ctx, _) => SizedBox(
-        height: 260,
+        height: 290,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,

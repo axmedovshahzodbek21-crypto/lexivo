@@ -2,16 +2,32 @@ import 'package:flutter/material.dart';
 import '../app_theme.dart';
 import '../services/supabase_service.dart';
 
+/// Computes a deterministic color for a class from its ID — mirrors the
+/// formula used in class_home_screen.dart so colors stay consistent.
+Color classColorFromId(String classId) {
+  const colors = [
+    Color(0xFF6366F1), Color(0xFFEC4899), Color(0xFF22C55E),
+    Color(0xFF3B82F6), Color(0xFFF59E0B), Color(0xFF8B5CF6),
+    Color(0xFFEF4444), Color(0xFF06B6D4),
+  ];
+  return colors[classId.codeUnits.fold(0, (a, b) => a + b) % colors.length];
+}
+
 class ClassStreakScreen extends StatefulWidget {
   final String classId;
   final String className;
   final Color classColor;
+  /// When set, shows this student's streak instead of the current user's.
+  final String? viewUserId;
+  final String? viewUserName;
 
   const ClassStreakScreen({
     super.key,
     required this.classId,
     required this.className,
     required this.classColor,
+    this.viewUserId,
+    this.viewUserName,
   });
 
   @override
@@ -35,13 +51,13 @@ class _ClassStreakScreenState extends State<ClassStreakScreen> {
   }
 
   Future<void> _load() async {
-    final user = currentUser;
-    if (user == null) return;
+    final uid = widget.viewUserId ?? currentUser?.id;
+    if (uid == null) return;
     try {
       final rows = await supabase
           .from('class_study_days')
           .select('study_date')
-          .eq('student_id', user.id)
+          .eq('student_id', uid)
           .eq('class_id', widget.classId);
       final days = (rows as List)
           .map((r) => (r as Map)['study_date'] as String)
@@ -60,6 +76,10 @@ class _ClassStreakScreenState extends State<ClassStreakScreen> {
       if (mounted) setState(() => _loading = false);
     }
   }
+
+  String get _title => widget.viewUserName != null
+      ? '${widget.viewUserName} · ${widget.className}'
+      : '${widget.className} Streak';
 
   String _dateStr(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
@@ -124,7 +144,7 @@ class _ClassStreakScreenState extends State<ClassStreakScreen> {
             icon: Icon(Icons.arrow_back, color: context.primary),
             onPressed: () => Navigator.pop(context),
           ),
-          title: Text('${widget.className} Streak',
+          title: Text(_title,
               style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
         ),
         body: const Center(child: CircularProgressIndicator()),
@@ -324,8 +344,12 @@ class _ClassStreakScreenState extends State<ClassStreakScreen> {
                     color: context.appText)),
             Text(
               studiedToday
-                  ? 'You studied ${widget.className} today'
-                  : 'Study anything in ${widget.className} to keep your streak',
+                  ? (widget.viewUserName != null
+                      ? '${widget.viewUserName} studied ${widget.className} today'
+                      : 'You studied ${widget.className} today')
+                  : (widget.viewUserName != null
+                      ? '${widget.viewUserName} hasn\'t studied today'
+                      : 'Study anything in ${widget.className} to keep your streak'),
               style: TextStyle(fontSize: 11, color: context.textMuted),
             ),
           ]),

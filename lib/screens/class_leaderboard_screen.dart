@@ -3,6 +3,7 @@ import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import 'class_models.dart';
+import 'class_streak_screen.dart';
 
 Color _avatarColor(String id) {
   const cols = [
@@ -15,8 +16,9 @@ Color _avatarColor(String id) {
 
 class ClassLeaderboardScreen extends StatefulWidget {
   final String classId;
+  final String className;
   final bool isVisible;
-  const ClassLeaderboardScreen({super.key, required this.classId, this.isVisible = false});
+  const ClassLeaderboardScreen({super.key, required this.classId, required this.className, this.isVisible = false});
 
   @override
   State<ClassLeaderboardScreen> createState() => _ClassLeaderboardScreenState();
@@ -259,8 +261,20 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
           Text(row.name,
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700,
               color: isMe ? context.primary : context.appText)),
-          Text('🔥 ${row.streak} day streak',
-            style: TextStyle(fontSize: 11, color: context.textMuted)),
+          GestureDetector(
+            onTap: () => Navigator.push(context, MaterialPageRoute(
+              builder: (_) => ClassStreakScreen(
+                classId: widget.classId,
+                className: widget.className,
+                classColor: classColorFromId(widget.classId),
+                viewUserId: row.studentId,
+                viewUserName: row.name,
+              ),
+            )),
+            child: Text('🔥 ${row.streak} day streak',
+              style: TextStyle(fontSize: 11, color: context.textMuted,
+                decoration: TextDecoration.underline, decorationColor: context.textMuted)),
+          ),
         ])),
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
           Text('${(row.xp / 10).toStringAsFixed(1)} XP',

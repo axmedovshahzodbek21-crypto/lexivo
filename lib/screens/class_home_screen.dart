@@ -5,6 +5,7 @@ import '../app_theme.dart';
 import '../l10n.dart';
 import 'class_models.dart';
 import 'class_streak_screen.dart';
+import 'class_xp_calendar_screen.dart';
 
 Color _classColor(String classId) {
   const colors = [
@@ -385,7 +386,16 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
                 _chip('📖 $_wordCount words'),
                 _chip('✅ $_activeToday/$_memberCount active'),
                 if (!widget.isTeacher) _chip('📋 ${pending.length} pending'),
-                if (!widget.isTeacher) _chip('⚡ ${(_myClassXp / 10).toStringAsFixed(1)} XP'),
+                if (!widget.isTeacher) GestureDetector(
+                  onTap: () => Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => ClassXpCalendarScreen(
+                      classId: widget.classId,
+                      className: widget.className,
+                      totalXpRaw: _myClassXp,
+                    ),
+                  )),
+                  child: _chip('⚡ ${(_myClassXp / 10).toStringAsFixed(1)} XP'),
+                ),
                 if (!widget.isTeacher) GestureDetector(
                   onTap: () => Navigator.push(context, MaterialPageRoute(
                     builder: (_) => ClassStreakScreen(

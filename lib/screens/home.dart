@@ -20,7 +20,7 @@ import '../data/word_data.dart';
 import '../data/storage_service.dart';
 import '../services/sync_service.dart';
 import '../services/supabase_service.dart';
-import 'class_home_screen.dart';
+import 'class_shell.dart';
 import 'xp_level_sheet.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
@@ -1747,7 +1747,7 @@ class _HomeScreenState extends State<HomeScreen>
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => ClassHomeScreen(
+        MaterialPageRoute(builder: (_) => ClassShell(
           classId: card.classId,
           className: card.className,
           isTeacher: card.isTeacher,

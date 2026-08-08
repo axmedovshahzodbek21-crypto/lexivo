@@ -319,21 +319,13 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return Scaffold(
-        body: const Center(child: CircularProgressIndicator()),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     final color = _classColor(widget.classId);
     final pending = _targets.where((t) => t.completedAt == null).toList();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.className),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: RefreshIndicator(
+    return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
@@ -486,7 +478,6 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
           else
             ..._announcements.map(_buildAnnouncementRow),
         ],
-      ),
       ),
     );
   }

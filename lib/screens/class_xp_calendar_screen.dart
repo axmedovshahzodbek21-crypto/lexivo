@@ -34,8 +34,6 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
   bool _loading = true;
   List<Map<String, dynamic>> _entries = [];
   late DateTime _month;
-  String? _selectedDay;
-
   @override
   void initState() {
     super.initState();
@@ -76,11 +74,11 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
   int _dayTotal(List<Map<String, dynamic>> entries) =>
       entries.fold(0, (s, e) => s + ((e['amount'] as num?)?.toInt() ?? 0));
 
-  void _prevMonth() => setState(() { _month = DateTime(_month.year, _month.month - 1); _selectedDay = null; });
+  void _prevMonth() => setState(() { _month = DateTime(_month.year, _month.month - 1); });
   void _nextMonth() {
     final now = DateTime.now();
     if (_month.year == now.year && _month.month == now.month) return;
-    setState(() { _month = DateTime(_month.year, _month.month + 1); _selectedDay = null; });
+    setState(() { _month = DateTime(_month.year, _month.month + 1); });
   }
 
   @override
@@ -95,7 +93,6 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
     final firstWeekday = DateTime(_month.year, _month.month, 1).weekday; // 1=Mon
     final offset = firstWeekday - 1;
     final byDate = _byDate;
-    final selectedEntries = _selectedDay != null ? (byDate[_selectedDay] ?? []) : <Map<String, dynamic>>[];
 
     return Scaffold(
       backgroundColor: context.bg,
@@ -185,15 +182,12 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
                         final dateStr = '${_month.year}-$mm-${day.toString().padLeft(2, '0')}';
                         final isToday = dateStr == todayStr;
                         final isFuture = DateTime.parse(dateStr).isAfter(now);
-                        final isSelected = dateStr == _selectedDay;
                         final entries = byDate[dateStr] ?? [];
                         final hasXp = entries.isNotEmpty;
                         final dayXp = _dayTotal(entries);
 
                         return GestureDetector(
-                          onTap: isFuture || !hasXp ? null : () => setState(() {
-                            _selectedDay = _selectedDay == dateStr ? null : dateStr;
-                          }),
+                          onTap: isFuture || !hasXp ? null : () => _showDaySheet(context, dateStr, entries, color),
                           child: Opacity(
                             opacity: isFuture ? 0.22 : 1.0,
                             child: Center(
@@ -205,7 +199,7 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
                                     Positioned.fill(child: ClipOval(child: Container(
                                       color: hasXp ? color : Colors.transparent,
                                     ))),
-                                    if (isToday || isSelected)
+                                    if (isToday)
                                       Positioned.fill(child: Container(
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
@@ -246,45 +240,81 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
                   ]),
                 ),
 
-                // ── Selected day breakdown ────────────────────────────────────
-                if (_selectedDay != null && selectedEntries.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  Text(_selectedDay!,
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800,
-                          color: context.textMuted, letterSpacing: 1.2)),
-                  const SizedBox(height: 8),
-                  ...selectedEntries.map((e) {
-                    final xp = ((e['amount'] as num?)?.toInt() ?? 0);
-                    final reason = e['reason'] as String? ?? '';
-                    final icon = _reasonIcons[reason] ?? '⚡';
-                    final diff = DateTime.now().difference(DateTime.parse(e['created_at'] as String));
-                    final ago = diff.inMinutes < 1 ? 'just now'
-                        : diff.inMinutes < 60 ? '${diff.inMinutes}m ago'
-                        : diff.inHours < 24 ? '${diff.inHours}h ago'
-                        : '${diff.inDays}d ago';
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: context.surface,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: context.border),
-                      ),
-                      child: Row(children: [
-                        Text(icon, style: const TextStyle(fontSize: 20)),
-                        const SizedBox(width: 12),
-                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(reason, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: context.appText)),
-                          Text(ago, style: TextStyle(fontSize: 11, color: context.textMuted)),
-                        ])),
-                        Text('+${(xp / 10).toStringAsFixed(1)} XP',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: color)),
-                      ]),
-                    );
-                  }),
-                ],
               ]),
             ),
+    );
+  }
+
+  void _showDaySheet(BuildContext context, String dateStr, List<Map<String, dynamic>> entries, Color color) {
+    final totalXp = _dayTotal(entries);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => Container(
+        margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF1E1E2E)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          // Handle
+          Container(
+            margin: const EdgeInsets.only(top: 12, bottom: 4),
+            width: 36, height: 4,
+            decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(2)),
+          ),
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+            child: Row(children: [
+              Expanded(child: Text(dateStr,
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800,
+                      color: color, letterSpacing: 1))),
+              Text('+${(totalXp / 10).toStringAsFixed(1)} XP',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: color)),
+            ]),
+          ),
+          const Divider(height: 16),
+          // Activity list
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              child: Column(children: entries.map((e) {
+                final xp = ((e['amount'] as num?)?.toInt() ?? 0);
+                final reason = e['reason'] as String? ?? '';
+                final icon = _reasonIcons[reason] ?? '⚡';
+                final diff = DateTime.now().difference(DateTime.parse(e['created_at'] as String));
+                final ago = diff.inMinutes < 1 ? 'just now'
+                    : diff.inMinutes < 60 ? '${diff.inMinutes}m ago'
+                    : diff.inHours < 24 ? '${diff.inHours}h ago'
+                    : '${diff.inDays}d ago';
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.07),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(children: [
+                    Text(icon, style: const TextStyle(fontSize: 20)),
+                    const SizedBox(width: 12),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(reason, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
+                          color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87)),
+                      Text(ago, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                    ])),
+                    Text('+${(xp / 10).toStringAsFixed(1)} XP',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: color)),
+                  ]),
+                );
+              }).toList()),
+            ),
+          ),
+        ]),
+      ),
     );
   }
 }

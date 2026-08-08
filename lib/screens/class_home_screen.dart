@@ -111,7 +111,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
       Map<String, int> readCounts = {};
 
       final membersRaw = await supabase
-          .rpc('get_class_leaderboard', params: {'p_class_id': widget.classId});
+          .rpc('get_class_member_ids', params: {'p_class_id': widget.classId});
       final membersList = membersRaw as List;
       memberCount = membersList.length;
       if (membersList.isNotEmpty) {

@@ -5,8 +5,8 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
 import android.net.Uri
+import android.view.View
 import android.widget.RemoteViews
 import org.json.JSONArray
 import org.json.JSONException
@@ -28,8 +28,6 @@ class ClassWidgetProvider : AppWidgetProvider() {
         val edit = prefs.edit()
         for (id in appWidgetIds) {
             edit.remove("widget_class_$id")
-            edit.remove("widget_class_name_$id")
-            edit.remove("widget_class_teacher_$id")
         }
         edit.apply()
     }
@@ -52,8 +50,8 @@ class ClassWidgetProvider : AppWidgetProvider() {
 
             if (classesJson == null) {
                 views.setTextViewText(R.id.widget_class_name, "Open Lexivo")
+                views.setViewVisibility(R.id.widget_badge, View.GONE)
                 views.setTextViewText(R.id.widget_pending, "to load your classes")
-                views.setTextViewText(R.id.widget_due, "")
             } else {
                 try {
                     val arr = JSONArray(classesJson)
@@ -68,43 +66,33 @@ class ClassWidgetProvider : AppWidgetProvider() {
 
                     if (obj == null) {
                         views.setTextViewText(R.id.widget_class_name, "No classes")
+                        views.setViewVisibility(R.id.widget_badge, View.GONE)
                         views.setTextViewText(R.id.widget_pending, "Open Lexivo to get started")
-                        views.setTextViewText(R.id.widget_due, "")
                     } else {
                         tapClassId = obj.getString("id")
                         tapClassName = obj.getString("name")
                         tapIsTeacher = obj.optBoolean("isTeacher", false)
-
                         val pendingHW = obj.getInt("pendingHW")
-                        val nextDue = if (obj.isNull("nextDue")) null else obj.getString("nextDue")
-                        val overdue = obj.optBoolean("overdue", false)
 
                         views.setTextViewText(R.id.widget_class_name, tapClassName)
 
                         if (pendingHW == 0) {
-                            views.setTextViewText(R.id.widget_pending, "No pending homework")
-                            views.setTextViewText(R.id.widget_due, "")
+                            views.setViewVisibility(R.id.widget_badge, View.GONE)
+                            views.setTextViewText(R.id.widget_pending, "No homework")
                         } else {
-                            val hwText = if (pendingHW == 1) "1 homework pending" else "$pendingHW homework pending"
-                            views.setTextViewText(R.id.widget_pending, hwText)
-                            if (nextDue != null) {
-                                val dueText = if (overdue) "Overdue since $nextDue" else "Due $nextDue"
-                                views.setTextViewText(R.id.widget_due, dueText)
-                                val dueColor = if (overdue) Color.parseColor("#E53E3E") else Color.parseColor("#6B7280")
-                                views.setInt(R.id.widget_due, "setTextColor", dueColor)
-                            } else {
-                                views.setTextViewText(R.id.widget_due, "")
-                            }
+                            views.setViewVisibility(R.id.widget_badge, View.VISIBLE)
+                            views.setTextViewText(R.id.widget_badge, "$pendingHW")
+                            views.setTextViewText(R.id.widget_pending, "homework pending")
                         }
                     }
                 } catch (e: JSONException) {
-                    views.setTextViewText(R.id.widget_class_name, "Error loading data")
+                    views.setTextViewText(R.id.widget_class_name, "Error loading")
+                    views.setViewVisibility(R.id.widget_badge, View.GONE)
                     views.setTextViewText(R.id.widget_pending, "Open Lexivo to refresh")
-                    views.setTextViewText(R.id.widget_due, "")
                 }
             }
 
-            // Tap: deep link into the class if we have one, otherwise just open app
+            // Tap: deep link into the class if we have one, otherwise open app
             val tapIntent = if (tapClassId != null) {
                 val encodedName = Uri.encode(tapClassName ?: "")
                 val uri = Uri.parse("lexivo://class/$tapClassId?name=$encodedName&isTeacher=$tapIsTeacher")

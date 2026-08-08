@@ -1,46 +1,82 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@drawable/widget_background"
-    android:padding="16dp">
+    android:padding="14dp">
 
     <TextView
         android:id="@+id/widget_app_label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Lexivo"
-        android:textSize="10sp"
-        android:textColor="#6C63FF"
-        android:letterSpacing="0.08" />
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:text="LEXIVO"
+        android:textSize="9sp"
+        android:textColor="#8B83FF"
+        android:letterSpacing="0.15"
+        android:textAllCaps="true" />
+
+    <ImageView
+        android:id="@+id/widget_mascot"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentTop="true"
+        android:src="@mipmap/ic_launcher"
+        android:scaleType="fitCenter" />
 
     <TextView
         android:id="@+id/widget_class_name"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
         android:text="—"
-        android:textSize="18sp"
+        android:textSize="22sp"
         android:textStyle="bold"
-        android:textColor="#1A1A2E"
-        android:gravity="center_vertical" />
+        android:textColor="#FFFFFF"
+        android:maxLines="2"
+        android:ellipsize="end" />
 
-    <TextView
-        android:id="@+id/widget_pending"
+    <LinearLayout
+        android:id="@+id/widget_bottom_row"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text=""
-        android:textSize="11sp"
-        android:textColor="#6B7280" />
+        android:layout_alignParentStart="true"
+        android:layout_alignParentBottom="true"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/widget_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/widget_badge_bg"
+            android:text="0"
+            android:textSize="11sp"
+            android:textColor="#FFFFFF"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/widget_pending"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:text=""
+            android:textSize="11sp"
+            android:textColor="#9D97CC" />
+
+    </LinearLayout>
 
     <TextView
         android:id="@+id/widget_due"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text=""
-        android:textSize="11sp"
-        android:textColor="#6B7280" />
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone" />
 
-</LinearLayout>
+</RelativeLayout>

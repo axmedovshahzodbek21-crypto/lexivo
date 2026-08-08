@@ -55,8 +55,31 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
   WordDay? _wordDay;
   Set<String> _completedModes = {};
 
-  static const _modeIcon = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯'};
-  static const _modeLabel = {'learn': 'Learn', 'flashcard': 'Flashcard', 'quiz': 'Quiz', 'match': 'Match'};
+  static const _modeIcon  = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯'};
+  static const _modeLabel = {'learn': 'Learn', 'flashcard': 'Flashcards', 'quiz': 'Quiz', 'match': 'Match'};
+  static const _modeColor = {
+    'learn':     Color(0xFF6C63FF),
+    'flashcard': Color(0xFFA855F7),
+    'quiz':      Color(0xFFEA580C),
+    'match':     Color(0xFFEC4899),
+  };
+
+  String? get _nextMode {
+    for (final m in widget.modes) {
+      if (!_completedModes.contains(m)) return m;
+    }
+    return null;
+  }
+
+  String? get _skipMode {
+    final next = _nextMode;
+    if (next == null) return null;
+    final idx = widget.modes.indexOf(next);
+    for (int i = idx + 1; i < widget.modes.length; i++) {
+      if (!_completedModes.contains(widget.modes[i])) return widget.modes[i];
+    }
+    return null;
+  }
 
   @override
   void initState() {
@@ -81,7 +104,6 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
     List<WordItem> wordItems;
 
     if (widget.collectionName != null) {
-      // Load from local pre-built collection data
       final col = _collectionByName(widget.collectionName!);
       final day = col?.days.firstWhere(
         (d) => d.dayNumber == widget.dayNumber,
@@ -128,6 +150,11 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
         _completedModes = completed;
         _loading = false;
       });
+
+      // First time: go straight to Learn without showing the selection screen
+      if (completed.isEmpty && widget.modes.contains('learn') && wordItems.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _studyMode('learn'));
+      }
     }
   }
 
@@ -135,8 +162,6 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
     final user = currentUser;
     if (user == null) return;
     try {
-      // Avoid upsert(onConflict) since there's no confirmed unique constraint
-      // on (homework_id, student_id, mode) — do a manual check-then-insert instead.
       final existing = await supabase
           .from('class_homework_progress')
           .select('mode')
@@ -150,9 +175,8 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
           'student_id': user.id,
           'mode': mode,
         });
-        // learn XP already awarded per-word inside LearningScreen
         if (mode != 'learn') {
-          const modeXP = {'flashcard': 3, 'quiz': 5, 'match': 4};
+          const modeXP     = {'flashcard': 3, 'quiz': 5, 'match': 4};
           const modeReason = {'flashcard': 'Cards', 'quiz': 'Quiz', 'match': 'Match'};
           final xpPerWord = modeXP[mode] ?? 3;
           final wordCount = _wordDay?.words.length ?? 0;
@@ -172,52 +196,36 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
   Future<void> _studyMode(String mode) async {
     final wd = _wordDay;
     if (wd == null || wd.words.isEmpty) return;
-
-    // Only record progress when the session is genuinely completed,
-    // not on every back-navigation.
     void onCompleted() => _recordProgress(mode);
-
     switch (mode) {
       case 'learn':
         await Navigator.push(context, MaterialPageRoute(
           builder: (_) => LearningScreen(
-            wordDay: wd,
-            userProfile: '',
-            collectionName: widget.unitName,
-            classId: widget.classId,
-            dayIndex: 0,
-            onHomeworkCompleted: onCompleted,
+            wordDay: wd, userProfile: '', collectionName: widget.unitName,
+            classId: widget.classId, dayIndex: 0, onHomeworkCompleted: onCompleted,
           ),
         ));
       case 'flashcard':
         await Navigator.push(context, MaterialPageRoute(
           builder: (_) => FlashcardSettingsScreen(
-            wordDay: wd,
-            userProfile: '',
-            collectionName: widget.unitName,
-            noXP: true,
-            onHomeworkCompleted: onCompleted,
+            wordDay: wd, userProfile: '', collectionName: widget.unitName,
+            noXP: true, onHomeworkCompleted: onCompleted,
           ),
         ));
       case 'quiz':
         await Navigator.push(context, MaterialPageRoute(
           builder: (_) => QuizSessionScreen(
-            wordDay: wd,
-            userProfile: '',
-            collectionName: widget.unitName,
+            wordDay: wd, userProfile: '', collectionName: widget.unitName,
             quizType: QuizType.wordToTranslation,
             questionCount: wd.words.length.clamp(5, 20),
-            noXP: true,
-            onHomeworkCompleted: onCompleted,
+            noXP: true, onHomeworkCompleted: onCompleted,
           ),
         ));
       case 'match':
         await Navigator.push(context, MaterialPageRoute(
           builder: (_) => MatchingScreen(
-            wordDay: wd,
-            collectionName: widget.unitName,
-            noXP: true,
-            onHomeworkCompleted: onCompleted,
+            wordDay: wd, collectionName: widget.unitName,
+            noXP: true, onHomeworkCompleted: onCompleted,
           ),
         ));
     }
@@ -225,10 +233,27 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return Scaffold(
+        backgroundColor: context.bg,
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_wordDay == null || _wordDay!.words.isEmpty) {
+      return Scaffold(
+        backgroundColor: context.bg,
+        appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0,
+          leading: IconButton(icon: Icon(Icons.arrow_back_rounded, color: context.primary),
+            onPressed: () => Navigator.pop(context))),
+        body: Center(child: Text('No words in this unit yet.',
+          style: TextStyle(color: context.textMuted, fontSize: 14))),
+      );
+    }
+
     final allDone = widget.modes.isNotEmpty && widget.modes.every(_completedModes.contains);
-    final learnAssigned = widget.modes.contains('learn');
-    final learnDone = _completedModes.contains('learn');
-    bool isLocked(String mode) => mode != 'learn' && learnAssigned && !learnDone;
+    final next = _nextMode;
+    final skip = _skipMode;
 
     return Scaffold(
       backgroundColor: context.bg,
@@ -248,112 +273,229 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
             overflow: TextOverflow.ellipsis),
         ]),
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _wordDay == null || _wordDay!.words.isEmpty
-              ? Center(child: Text('No words in this unit yet.',
-                  style: TextStyle(color: context.textMuted, fontSize: 14)))
-              : ListView(
-                  padding: const EdgeInsets.all(20),
-                  children: [
-                    // Header card
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [context.primary, context.primary.withValues(alpha: 0.75)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: [
-                          BoxShadow(color: context.primary.withValues(alpha: 0.35), blurRadius: 14, offset: const Offset(0, 6)),
-                        ],
-                      ),
-                      child: Row(children: [
-                        const Text('📚', style: TextStyle(fontSize: 32)),
-                        const SizedBox(width: 14),
-                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text('${_wordDay!.words.length} words',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18)),
-                          Text('${_completedModes.where(widget.modes.contains).length} of ${widget.modes.length} modes done',
-                            style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                        ])),
-                        if (allDone)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.25),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Text('✓ Done',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12)),
-                          ),
-                      ]),
+      body: allDone ? _buildDoneScreen() : _buildContinueScreen(next!, skip),
+      bottomNavigationBar: allDone ? null : _buildBottomBar(),
+    );
+  }
+
+  // ── All done ─────────────────────────────────────────────────────────────────
+
+  Widget _buildDoneScreen() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text('🎉', style: TextStyle(fontSize: 64)),
+          const SizedBox(height: 16),
+          Text('Unit Complete!',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: context.appText)),
+          const SizedBox(height: 8),
+          Text('You finished all ${widget.modes.length} modes for this unit.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: context.textMuted)),
+          const SizedBox(height: 32),
+          // Mode summary chips
+          Wrap(
+            spacing: 8, runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: widget.modes.map((m) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              decoration: BoxDecoration(
+                color: (_modeColor[m] ?? context.primary).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: (_modeColor[m] ?? context.primary).withValues(alpha: 0.3)),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Text(_modeIcon[m] ?? '✓', style: const TextStyle(fontSize: 14)),
+                const SizedBox(width: 5),
+                Text(_modeLabel[m] ?? m,
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
+                    color: _modeColor[m] ?? context.primary)),
+                const SizedBox(width: 5),
+                const Icon(Icons.check_circle_rounded, color: Colors.green, size: 14),
+              ]),
+            )).toList(),
+          ),
+          const SizedBox(height: 32),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: context.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: const Text('Back to Homework', style: TextStyle(fontWeight: FontWeight.w700)),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  // ── Continue screen ───────────────────────────────────────────────────────────
+
+  Widget _buildContinueScreen(String nextMode, String? skipMode) {
+    final nextColor = _modeColor[nextMode] ?? context.primary;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
+      children: [
+        // Progress row
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Row(
+            children: widget.modes.map((m) {
+              final done = _completedModes.contains(m);
+              final isCurrent = m == nextMode;
+              final color = _modeColor[m] ?? context.primary;
+              return Expanded(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: done
+                        ? color.withValues(alpha: 0.15)
+                        : isCurrent
+                            ? color.withValues(alpha: 0.1)
+                            : context.surface,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: done ? color : isCurrent ? color.withValues(alpha: 0.5) : context.border,
+                      width: isCurrent ? 1.5 : 1,
                     ),
-                    const SizedBox(height: 28),
-                    Text('STUDY MODES',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1)),
-                    const SizedBox(height: 12),
-                    ...widget.modes.map((mode) {
-                      final done = _completedModes.contains(mode);
-                      final locked = isLocked(mode);
-                      return GestureDetector(
-                        onTap: locked ? null : () => _studyMode(mode),
-                        child: Opacity(
-                          opacity: locked ? 0.45 : 1,
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            padding: const EdgeInsets.all(18),
-                            decoration: BoxDecoration(
-                              color: locked ? context.surface : (done ? context.successBg : context.surface),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: done ? Colors.green.shade300 : context.border),
-                              boxShadow: locked ? null : context.cardShadow,
-                            ),
-                            child: Row(children: [
-                              Text(locked ? '🔒' : (_modeIcon[mode] ?? '📖'), style: const TextStyle(fontSize: 28)),
-                              const SizedBox(width: 16),
-                              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                Text(_modeLabel[mode] ?? mode,
-                                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15,
-                                    color: done ? Colors.green.shade700 : context.appText)),
-                                const SizedBox(height: 2),
-                                Text(locked ? 'Complete Learn first' : (done ? 'Completed ✓' : 'Tap to start'),
-                                  style: TextStyle(fontSize: 12,
-                                    color: done ? Colors.green.shade500 : context.textMuted)),
-                              ])),
-                              if (!locked)
-                                Icon(
-                                  done ? Icons.check_circle_rounded : Icons.play_circle_outline_rounded,
-                                  color: done ? Colors.green : context.primary,
-                                  size: 28,
-                                ),
-                            ]),
-                          ),
-                        ),
-                      );
-                    }),
-                    if (allDone) ...[
-                      const SizedBox(height: 20),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: context.successBg,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.green.shade300),
-                        ),
-                        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                          const Text('🎉', style: TextStyle(fontSize: 24)),
-                          const SizedBox(width: 10),
-                          Text('All modes complete!',
-                            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Colors.green.shade700)),
-                        ]),
-                      ),
-                    ],
-                    const SizedBox(height: 40),
-                  ],
+                  ),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Text(_modeIcon[m] ?? '📖', style: const TextStyle(fontSize: 16)),
+                    const SizedBox(height: 3),
+                    Text(_modeLabel[m] ?? m,
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        color: done ? color : isCurrent ? color : context.textMuted,
+                      )),
+                    if (done)
+                      Icon(Icons.check_circle_rounded, color: color, size: 12)
+                    else if (isCurrent)
+                      Container(width: 8, height: 8,
+                        decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+                  ]),
                 ),
+              );
+            }).toList(),
+          ),
+        ),
+
+        // Recommended next step card
+        GestureDetector(
+          onTap: () => _studyMode(nextMode),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: nextColor.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: nextColor.withValues(alpha: 0.4), width: 1.5),
+            ),
+            child: Row(children: [
+              Text(_modeIcon[nextMode] ?? '📖', style: const TextStyle(fontSize: 28)),
+              const SizedBox(width: 16),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Do ${_modeLabel[nextMode] ?? nextMode}',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: nextColor)),
+                const SizedBox(height: 2),
+                Text('Recommended next step',
+                  style: TextStyle(fontSize: 12, color: context.textMuted)),
+              ])),
+              Icon(Icons.arrow_forward_ios_rounded, color: nextColor, size: 16),
+            ]),
+          ),
+        ),
+
+        if (skipMode != null) ...[
+          const SizedBox(height: 12),
+          // Skip option card
+          GestureDetector(
+            onTap: () => _studyMode(skipMode),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: context.surface,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: context.border),
+              ),
+              child: Row(children: [
+                Text(_modeIcon[skipMode] ?? '📖', style: const TextStyle(fontSize: 24)),
+                const SizedBox(width: 14),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Skip to ${_modeLabel[skipMode] ?? skipMode}',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: context.appText)),
+                  const SizedBox(height: 2),
+                  Text('${_modeLabel[nextMode]} won\'t be marked until completed',
+                    style: TextStyle(fontSize: 11, color: context.textMuted)),
+                ])),
+                Icon(Icons.arrow_forward_ios_rounded, color: context.textMuted, size: 14),
+              ]),
+            ),
+          ),
+        ],
+
+        const SizedBox(height: 24),
+        Divider(color: context.border),
+        const SizedBox(height: 16),
+
+        // Word count info
+        Row(children: [
+          Text('📚', style: const TextStyle(fontSize: 16)),
+          const SizedBox(width: 8),
+          Text('${_wordDay!.words.length} words  ·  ${_completedModes.where(widget.modes.contains).length}/${widget.modes.length} modes done',
+            style: TextStyle(fontSize: 13, color: context.textMuted)),
+        ]),
+      ],
+    );
+  }
+
+  // ── Bottom action bar ─────────────────────────────────────────────────────────
+
+  Widget _buildBottomBar() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+      decoration: BoxDecoration(
+        color: context.surface,
+        border: Border(top: BorderSide(color: context.border)),
+      ),
+      child: Row(
+        children: widget.modes.map((m) {
+          final done = _completedModes.contains(m);
+          final color = _modeColor[m] ?? context.primary;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => _studyMode(m),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: done ? color.withValues(alpha: 0.15) : color,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Text(_modeIcon[m] ?? '📖', style: const TextStyle(fontSize: 16)),
+                  const SizedBox(height: 3),
+                  Text(_modeLabel[m] ?? m,
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: done ? color : Colors.white,
+                    )),
+                  if (done)
+                    Icon(Icons.check_rounded, color: color, size: 10),
+                ]),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 }

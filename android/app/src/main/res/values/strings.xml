@@ -2,4 +2,5 @@
 <resources>
     <string name="app_name">Lexivo</string>
     <string name="widget_description">Shows homework status for a Lexivo class</string>
+    <string name="stats_widget_description">Shows your day streak and total XP</string>
 </resources>

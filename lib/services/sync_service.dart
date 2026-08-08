@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'widget_service.dart';
 
 /// Push-on-change + pull-on-login sync against the single `user_data` table.
 /// All push methods are fire-and-forget (they swallow errors silently).
@@ -98,6 +99,7 @@ class SyncService {
       ]);
       await prefs.setString('sync_stats_ts', ts);
     } catch (_) {}
+    WidgetService.pushStats();
   }
 
   static Future<void> pushSettings() async {

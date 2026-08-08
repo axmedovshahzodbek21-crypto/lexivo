@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:home_widget/home_widget.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../screens/class_models.dart';
 import 'supabase_service.dart';
 
@@ -94,6 +95,23 @@ class WidgetService {
       }
     } catch (_) {
       // Non-fatal — widget keeps stale data
+    }
+  }
+
+  /// Reads streak + XP from app SharedPreferences and pushes to the stats widget.
+  static Future<void> pushStats() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final streak = prefs.getInt('streak') ?? 0;
+      final xp = prefs.getInt('total_xp') ?? 0;
+      await HomeWidget.saveWidgetData<int>('lexivo_widget_streak', streak);
+      await HomeWidget.saveWidgetData<int>('lexivo_widget_xp', xp);
+      await HomeWidget.updateWidget(
+        androidName: 'com.lexivo.app.StatsWidgetProvider',
+        iOSName: 'StatsWidget',
+      );
+    } catch (_) {
+      // Non-fatal
     }
   }
 

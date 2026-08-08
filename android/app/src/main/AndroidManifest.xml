@@ -64,6 +64,19 @@
                 android:resource="@xml/class_widget_info" />
         </receiver>
 
+        <!-- Lexivo Stats Widget -->
+        <receiver
+            android:name="com.lexivo.app.StatsWidgetProvider"
+            android:exported="true"
+            android:label="Lexivo Stats">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/stats_widget_info" />
+        </receiver>
+
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"/>
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
             <intent-filter>

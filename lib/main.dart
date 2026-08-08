@@ -139,6 +139,7 @@ class _SplashRouterState extends State<SplashRouter> {
       // they already have an account so onboarding is irrelevant on a new device.
       SyncService.pullAll();
       WidgetService.refreshFromSupabase();
+      WidgetService.pushStats();
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(

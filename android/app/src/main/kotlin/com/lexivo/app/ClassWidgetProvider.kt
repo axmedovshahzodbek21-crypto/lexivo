@@ -76,13 +76,19 @@ class ClassWidgetProvider : AppWidgetProvider() {
 
                         views.setTextViewText(R.id.widget_class_name, tapClassName)
 
+                        val isTeacher = obj.optBoolean("isTeacher", false)
+                        views.setTextViewText(
+                            R.id.widget_role_badge,
+                            if (isTeacher) "Teacher" else "Student"
+                        )
+
                         if (pendingHW == 0) {
                             views.setViewVisibility(R.id.widget_badge, View.GONE)
-                            views.setTextViewText(R.id.widget_pending, "No homework")
+                            views.setTextViewText(R.id.widget_pending, "✓  All done!")
                         } else {
                             views.setViewVisibility(R.id.widget_badge, View.VISIBLE)
                             views.setTextViewText(R.id.widget_badge, "$pendingHW")
-                            views.setTextViewText(R.id.widget_pending, "homework pending")
+                            views.setTextViewText(R.id.widget_pending, if (pendingHW == 1) "homework due" else "homework due")
                         }
                     }
                 } catch (e: JSONException) {

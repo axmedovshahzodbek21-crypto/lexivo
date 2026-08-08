@@ -322,10 +322,6 @@ class _LearningScreenState extends State<LearningScreen> {
         );
         await recordClassActivity(user.id, widget.classId!, xp: widget.noXP ? 0 : 10, reason: 'Learn');
       }
-      if (!widget.noXP) {
-        final learned = await StorageService.getLearnedWords();
-        await StorageService.addXP(StorageService.learnXP(learned.length), reason: 'Learn', source: widget.collectionName);
-      }
     } else {
       final existing = await StorageService.getLearnedWords();
       final isNew = !existing.any((e) => e.word == word.word && e.collectionName == widget.collectionName);

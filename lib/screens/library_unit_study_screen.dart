@@ -195,6 +195,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
             wordDay: wd,
             userProfile: '',
             collectionName: widget.unitName,
+            noXP: true,
             onHomeworkCompleted: onCompleted,
           ),
         ));
@@ -206,6 +207,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
             collectionName: widget.unitName,
             quizType: QuizType.wordToTranslation,
             questionCount: wd.words.length.clamp(5, 20),
+            noXP: true,
             onHomeworkCompleted: onCompleted,
           ),
         ));
@@ -214,6 +216,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
           builder: (_) => MatchingScreen(
             wordDay: wd,
             collectionName: widget.unitName,
+            noXP: true,
             onHomeworkCompleted: onCompleted,
           ),
         ));

@@ -38,6 +38,7 @@ String _fmt(int s) =>
 class MatchingScreen extends StatefulWidget {
   final WordDay wordDay;
   final String collectionName;
+  final bool noXP;
 
   final void Function(String word)? onWrongPair;
   final VoidCallback? onHomeworkCompleted;
@@ -46,6 +47,7 @@ class MatchingScreen extends StatefulWidget {
     super.key,
     required this.wordDay,
     required this.collectionName,
+    this.noXP = false,
     this.onWrongPair,
     this.onHomeworkCompleted,
   });
@@ -160,16 +162,18 @@ class _MatchingScreenState extends State<MatchingScreen> {
         final isLast = _roundIndex + 1 >= _totalRounds;
         if (isLast) {
           StorageService.markMatchComplete(widget.collectionName, widget.wordDay.dayNumber);
-          StorageService.hasMatchXPAwarded(widget.collectionName, widget.wordDay.dayNumber).then((awarded) {
-            if (!awarded) {
-              StorageService.addXP(
-                widget.wordDay.words.length * 4,
-                reason: 'Match',
-                source: 'Unit ${widget.wordDay.dayNumber} · ${widget.collectionName}',
-              );
-              StorageService.markMatchXPAwarded(widget.collectionName, widget.wordDay.dayNumber);
-            }
-          });
+          if (!widget.noXP) {
+            StorageService.hasMatchXPAwarded(widget.collectionName, widget.wordDay.dayNumber).then((awarded) {
+              if (!awarded) {
+                StorageService.addXP(
+                  widget.wordDay.words.length * 4,
+                  reason: 'Match',
+                  source: 'Unit ${widget.wordDay.dayNumber} · ${widget.collectionName}',
+                );
+                StorageService.markMatchXPAwarded(widget.collectionName, widget.wordDay.dayNumber);
+              }
+            });
+          }
         }
         setState(() {
           _totalMistakes += _mistakes;

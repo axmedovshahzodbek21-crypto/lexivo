@@ -344,12 +344,15 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [color, color.withValues(alpha: 0.72)],
+                colors: [
+                  Color.lerp(const Color(0xFF0d0d1a), color, 0.72)!,
+                  Color.lerp(const Color(0xFF0d0d1a), color, 0.50)!,
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(20),
-              boxShadow: [BoxShadow(color: color.withValues(alpha: 0.4), offset: const Offset(0, 8), blurRadius: 24)],
+              boxShadow: [BoxShadow(color: color.withValues(alpha: 0.3), offset: const Offset(0, 8), blurRadius: 24)],
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [

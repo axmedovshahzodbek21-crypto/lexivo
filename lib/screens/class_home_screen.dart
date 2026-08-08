@@ -60,7 +60,6 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
   bool _loading = true;
   List<ClassAnnouncement> _announcements = [];
   List<ClassTarget> _targets = [];
-  int _wordCount = 0;
   int _memberCount = 0;
   int _pendingHwCount = 0;
   String _teacherName = '';
@@ -105,18 +104,13 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
             .order('created_at', ascending: false)
             .limit(5),
         supabase
-            .from('class_words')
-            .select('id')
-            .eq('class_id', widget.classId),
-        supabase
             .rpc('get_class_member_ids', params: {'p_class_id': widget.classId}),
       ]);
 
       final anns = (results[0] as List)
           .map((a) => ClassAnnouncement.fromMap(Map<String, dynamic>.from(a as Map)))
           .toList();
-      final wordCount = (results[1] as List).length;
-      final membersList = results[2] as List;
+      final membersList = results[1] as List;
       final memberCount = membersList.length;
       final memberIds = membersList
           .map((m) => (m as Map)['student_id'] as String)
@@ -233,7 +227,6 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
         setState(() {
           _announcements = anns;
           _targets = targets;
-          _wordCount = wordCount;
           _memberCount = memberCount;
           _teacherName = teacherName;
           _teacherId = fetchedTeacherId;
@@ -386,7 +379,6 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
               ]),
               const SizedBox(height: 16),
               Wrap(spacing: 8, runSpacing: 6, children: [
-                _chip('📖 $_wordCount words'),
                 _chip('✅ $_activeToday/$_memberCount active'),
                 if (!widget.isTeacher) _chip('📋 ${pending.length} pending'),
                 if (!widget.isTeacher) GestureDetector(
@@ -474,8 +466,6 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
               _statCard(context, '👥', '$_memberCount', 'Students', onTap: _showStudentsSheet),
               const SizedBox(width: 10),
               _statCard(context, '✅', '$_activeToday', 'Active today'),
-              const SizedBox(width: 10),
-              _statCard(context, '📖', '$_wordCount', 'Words'),
             ]),
             const SizedBox(height: 20),
           ],

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="#FFFFFF"
+    android:padding="16dp"
+    android:layout_marginBottom="10dp"
+    android:elevation="1dp">
+
+    <!-- Left accent bar -->
+    <View
+        android:layout_width="4dp"
+        android:layout_height="40dp"
+        android:background="#6C63FF"
+        android:layout_marginEnd="14dp" />
+
+    <!-- Class info -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/item_class_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Class Name"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="#1A1A2E"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/item_class_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📖 0 pending"
+            android:textSize="12sp"
+            android:textColor="#6B7280"
+            android:paddingTop="2dp" />
+
+    </LinearLayout>
+
+    <!-- Chevron -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="›"
+        android:textSize="22sp"
+        android:textColor="#6C63FF"
+        android:paddingStart="8dp" />
+
+</LinearLayout>

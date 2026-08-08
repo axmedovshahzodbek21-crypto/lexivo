@@ -34,6 +34,16 @@
         <meta-data
  android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Widget config screen (class picker) -->
+        <activity
+            android:name="com.lexivo.app.ClassWidgetConfigActivity"
+            android:exported="true"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
         <!-- Lexivo Class Widget -->
         <receiver
             android:name="com.lexivo.app.ClassWidgetProvider"

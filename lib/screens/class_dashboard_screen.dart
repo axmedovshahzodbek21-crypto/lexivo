@@ -229,38 +229,42 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.bg,
-      appBar: AppBar(
-        backgroundColor: context.bg,
-        elevation: 0,
-        leading: IconButton(icon: Icon(Icons.arrow_back, color: context.appText), onPressed: () => Navigator.pop(context)),
-        title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(widget.className, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
-          Text('${_students.length} ${tr('students')} · ${tr('dashboard')}', style: TextStyle(fontSize: 11, color: context.textMuted)),
-        ]),
-        actions: [
-          IconButton(
-            icon: Text('📝', style: const TextStyle(fontSize: 18)),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClassWordsScreen(classId: widget.classId, className: widget.className, isTeacher: true))).then((_) => _load()),
-            tooltip: tr('class_words'),
+    return Column(
+      children: [
+        // Action row
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 4, 4, 0),
+          child: Row(
+            children: [
+              Text(
+                '${_students.length} ${tr('students')} · ${tr('dashboard')}',
+                style: TextStyle(fontSize: 12, color: context.textMuted),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: Text('📝', style: const TextStyle(fontSize: 18)),
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClassWordsScreen(classId: widget.classId, className: widget.className, isTeacher: true))).then((_) => _load()),
+                tooltip: tr('class_words'),
+              ),
+              IconButton(
+                icon: Text('📢', style: const TextStyle(fontSize: 18)),
+                onPressed: _showAnnounceSheet,
+                tooltip: tr('announce'),
+              ),
+              IconButton(
+                icon: Icon(Icons.refresh, size: 20, color: context.textMuted),
+                onPressed: _load,
+              ),
+            ],
           ),
-          IconButton(
-            icon: Text('📢', style: const TextStyle(fontSize: 18)),
-            onPressed: _showAnnounceSheet,
-            tooltip: tr('announce'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh, size: 20),
-            color: context.textMuted,
-            onPressed: _load,
-          ),
-        ],
-        bottom: TabBar(
+        ),
+        TabBar(
           controller: _tabs,
           labelColor: context.primary,
           unselectedLabelColor: context.textMuted,
           indicatorColor: context.primary,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
           tabs: [
             Tab(text: '👥 ${tr('students')}'),
             Tab(text: '📊 ${tr('activity')}'),
@@ -270,24 +274,26 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             const Tab(text: '📋 Curriculum'),
           ],
         ),
-      ),
-      body: _loading
-        ? Center(child: CircularProgressIndicator(color: context.primary))
-        : TabBarView(
-            controller: _tabs,
-            children: [
-              _buildStudentsTab(),
-              _buildActivityTab(),
-              _buildRadarTab(),
-              _buildHeatmapTab(),
-              _buildSRSTab(),
-              ClassCurriculumTab(
-                classId: widget.classId,
-                className: widget.className,
-                students: _students.map((s) => (studentId: s.studentId, name: s.name)).toList(),
+        Expanded(
+          child: _loading
+            ? Center(child: CircularProgressIndicator(color: context.primary))
+            : TabBarView(
+                controller: _tabs,
+                children: [
+                  _buildStudentsTab(),
+                  _buildActivityTab(),
+                  _buildRadarTab(),
+                  _buildHeatmapTab(),
+                  _buildSRSTab(),
+                  ClassCurriculumTab(
+                    classId: widget.classId,
+                    className: widget.className,
+                    students: _students.map((s) => (studentId: s.studentId, name: s.name)).toList(),
+                  ),
+                ],
               ),
-            ],
-          ),
+        ),
+      ],
     );
   }
 

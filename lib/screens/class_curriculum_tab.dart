@@ -84,7 +84,7 @@ typedef _UnitRef = ({String id, String name, int wordCount, bool isClassWords});
 class ClassCurriculumTab extends StatefulWidget {
   final String classId, className;
   final List<({String studentId, String name})> students;
-  const ClassCurriculumTab({super.key, required this.classId, required this.className, required this.students});
+  const ClassCurriculumTab({super.key, required this.classId, required this.className, this.students = const []});
 
   @override
   State<ClassCurriculumTab> createState() => _ClassCurriculumTabState();
@@ -94,18 +94,26 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
   List<_AssignedFolder> _folders = [];
   List<_ClassWordUnit> _classUnits = [];
   List<_Homework> _homework = [];
+  List<({String studentId, String name})> _students = [];
   bool _loading = true;
   final Set<String> _expandedFolders = {};
   final Set<String> _expandedCWUnits = {};
 
   @override
-  void initState() { super.initState(); _load(); }
+  void initState() { super.initState(); _students = List.of(_students); _load(); }
 
   // ── Data loading ───────────────────────────────────────────────────────────
 
   Future<void> _load() async {
     if (_folders.isEmpty && _classUnits.isEmpty && _homework.isEmpty && mounted) setState(() => _loading = true);
     try {
+      if (_students.isEmpty) {
+        final raw = await supabase.rpc('get_class_member_ids', params: {'p_class_id': widget.classId});
+        _students = (raw as List).map((m) {
+          final mp = m as Map;
+          return (studentId: mp['student_id'] as String, name: mp['name'] as String? ?? '');
+        }).toList();
+      }
       final results = await Future.wait<dynamic>([
         supabase.from('class_library_assignments')
             .select('id, folder_id, teacher_folders(name, teacher_units(id, name, teacher_unit_words(count)))')
@@ -181,7 +189,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
         final rawModes = (m['modes'] as List?)?.map((x) => x as String).toList() ?? ['learn', 'flashcard', 'quiz'];
         final rawStudentIds = (m['student_ids'] as List?)?.map((x) => x as String).toList() ?? [];
         final assignedTo = m['assigned_to'] as String? ?? 'class';
-        final totalStudents = assignedTo == 'class' ? widget.students.length : rawStudentIds.length;
+        final totalStudents = assignedTo == 'class' ? _students.length : rawStudentIds.length;
         return _Homework(
           id: m['id'] as String, unitId: unitId, classUnitId: classUnitId,
           collectionName: collName, dayNumber: dayNum,
@@ -569,7 +577,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
               Container(
                 constraints: const BoxConstraints(maxHeight: 180),
                 decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(12)),
-                child: ListView(shrinkWrap: true, children: widget.students.map((s) {
+                child: ListView(shrinkWrap: true, children: _students.map((s) {
                   final on = selectedStudents.contains(s.studentId);
                   return CheckboxListTile(
                     dense: true, value: on,
@@ -688,7 +696,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
               Container(
                 constraints: const BoxConstraints(maxHeight: 180),
                 decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(12)),
-                child: ListView(shrinkWrap: true, children: widget.students.map((s) {
+                child: ListView(shrinkWrap: true, children: _students.map((s) {
                   final on = selectedStudents.contains(s.studentId);
                   return CheckboxListTile(
                     dense: true, value: on,
@@ -745,9 +753,9 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
       completions.putIfAbsent(m['student_id'] as String, () => {}).add(m['mode'] as String);
     }
     final studentIds = hw.assignedTo == 'class'
-        ? widget.students.map((s) => s.studentId).toSet()
+        ? _students.map((s) => s.studentId).toSet()
         : hw.studentIds.toSet();
-    final progress = widget.students.where((s) => studentIds.contains(s.studentId))
+    final progress = _students.where((s) => studentIds.contains(s.studentId))
         .map((s) => _StudentProgress(studentId: s.studentId, name: s.name, completedModes: completions[s.studentId] ?? {})).toList();
     if (!mounted) return;
 

@@ -4,6 +4,7 @@ import 'class_home_screen.dart';
 import 'class_words_screen.dart';
 import 'class_leaderboard_screen.dart';
 import 'class_homework_tab.dart';
+import 'class_curriculum_tab.dart';
 import 'class_dashboard_screen.dart';
 
 class ClassShell extends StatefulWidget {
@@ -39,7 +40,10 @@ class _ClassShellState extends State<ClassShell> {
       ),
       ClassWordsScreen(classId: widget.classId, className: widget.className, isTeacher: widget.isTeacher),
       ClassLeaderboardScreen(classId: widget.classId, className: widget.className, isVisible: true),
-      ClassHomeworkTab(classId: widget.classId, className: widget.className, isTeacher: widget.isTeacher),
+      if (widget.isTeacher)
+        ClassCurriculumTab(classId: widget.classId, className: widget.className)
+      else
+        ClassHomeworkTab(classId: widget.classId, className: widget.className, isTeacher: false),
       if (widget.isTeacher)
         ClassDashboardScreen(classId: widget.classId, className: widget.className),
     ];
@@ -49,7 +53,10 @@ class _ClassShellState extends State<ClassShell> {
     const BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
     const BottomNavigationBarItem(icon: Icon(Icons.auto_stories_rounded), label: 'Words'),
     const BottomNavigationBarItem(icon: Icon(Icons.emoji_events_rounded), label: 'Ranks'),
-    const BottomNavigationBarItem(icon: Icon(Icons.assignment_rounded), label: 'Homework'),
+    BottomNavigationBarItem(
+      icon: Icon(widget.isTeacher ? Icons.menu_book_rounded : Icons.assignment_rounded),
+      label: widget.isTeacher ? 'Curriculum' : 'Homework',
+    ),
     if (widget.isTeacher)
       const BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: 'Dashboard'),
   ];

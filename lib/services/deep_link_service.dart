@@ -34,11 +34,12 @@ class DeepLinkService {
 
     // Pop back to root first so we don't stack duplicate class screens
     nav.popUntil((route) => route.isFirst);
+    final isTeacher = uri.queryParameters['isTeacher'] == 'true';
     nav.push(MaterialPageRoute(
       builder: (_) => ClassShell(
         classId: classId,
         className: className,
-        isTeacher: false,
+        isTeacher: isTeacher,
       ),
     ));
   }

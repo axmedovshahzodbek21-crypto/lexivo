@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.net.Uri
 import android.widget.RemoteViews
 import org.json.JSONArray
 import org.json.JSONException
@@ -25,7 +26,11 @@ class ClassWidgetProvider : AppWidgetProvider() {
     override fun onDeleted(context: Context, appWidgetIds: IntArray) {
         val prefs = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
         val edit = prefs.edit()
-        for (id in appWidgetIds) edit.remove("widget_class_$id")
+        for (id in appWidgetIds) {
+            edit.remove("widget_class_$id")
+            edit.remove("widget_class_name_$id")
+            edit.remove("widget_class_teacher_$id")
+        }
         edit.apply()
     }
 
@@ -40,6 +45,10 @@ class ClassWidgetProvider : AppWidgetProvider() {
             val selectedId = prefs.getString("widget_class_$widgetId", null)
 
             val views = RemoteViews(context.packageName, R.layout.widget_class)
+
+            var tapClassId: String? = null
+            var tapClassName: String? = null
+            var tapIsTeacher = false
 
             if (classesJson == null) {
                 views.setTextViewText(R.id.widget_class_name, "Open Lexivo")
@@ -62,12 +71,15 @@ class ClassWidgetProvider : AppWidgetProvider() {
                         views.setTextViewText(R.id.widget_pending, "Open Lexivo to get started")
                         views.setTextViewText(R.id.widget_due, "")
                     } else {
-                        val name = obj.getString("name")
+                        tapClassId = obj.getString("id")
+                        tapClassName = obj.getString("name")
+                        tapIsTeacher = obj.optBoolean("isTeacher", false)
+
                         val pendingHW = obj.getInt("pendingHW")
                         val nextDue = if (obj.isNull("nextDue")) null else obj.getString("nextDue")
                         val overdue = obj.optBoolean("overdue", false)
 
-                        views.setTextViewText(R.id.widget_class_name, name)
+                        views.setTextViewText(R.id.widget_class_name, tapClassName)
 
                         if (pendingHW == 0) {
                             views.setTextViewText(R.id.widget_pending, "No pending homework")
@@ -92,13 +104,22 @@ class ClassWidgetProvider : AppWidgetProvider() {
                 }
             }
 
-            // Tap opens the app
-            val launchIntent = context.packageManager
-                .getLaunchIntentForPackage(context.packageName)
-                ?.apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP }
-            if (launchIntent != null) {
+            // Tap: deep link into the class if we have one, otherwise just open app
+            val tapIntent = if (tapClassId != null) {
+                val encodedName = Uri.encode(tapClassName ?: "")
+                val uri = Uri.parse("lexivo://class/$tapClassId?name=$encodedName&isTeacher=$tapIsTeacher")
+                Intent(Intent.ACTION_VIEW, uri).apply {
+                    setPackage(context.packageName)
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                }
+            } else {
+                context.packageManager.getLaunchIntentForPackage(context.packageName)
+                    ?.apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP }
+            }
+
+            if (tapIntent != null) {
                 val pendingIntent = PendingIntent.getActivity(
-                    context, widgetId, launchIntent,
+                    context, widgetId, tapIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                 )
                 views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)

@@ -91,6 +91,7 @@ class WidgetService {
       return {
         'id': c.id,
         'name': c.name,
+        'isTeacher': c.teacherId == currentUser?.id,
         'pendingHW': pending.length,
         'nextDue': nextDue,
         'overdue': nextDue != null && nextDue.compareTo(today) < 0,

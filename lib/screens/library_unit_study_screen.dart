@@ -24,6 +24,7 @@ WordCollection? _collectionByName(String name) {
 
 class LibraryUnitStudyScreen extends StatefulWidget {
   final String classId;
+  final String className;
   final String unitId;
   final String unitName;
   final String homeworkId;
@@ -35,6 +36,7 @@ class LibraryUnitStudyScreen extends StatefulWidget {
   const LibraryUnitStudyScreen({
     super.key,
     required this.classId,
+    required this.className,
     required this.unitId,
     required this.unitName,
     required this.homeworkId,
@@ -238,8 +240,9 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
           Text(widget.unitName,
             style: TextStyle(color: context.appText, fontWeight: FontWeight.w900, fontSize: 15),
             overflow: TextOverflow.ellipsis),
-          Text('${widget.modes.length} mode${widget.modes.length != 1 ? 's' : ''}',
-            style: TextStyle(color: context.textMuted, fontSize: 11)),
+          Text(widget.className,
+            style: TextStyle(color: context.textMuted, fontSize: 11),
+            overflow: TextOverflow.ellipsis),
         ]),
       ),
       body: _loading

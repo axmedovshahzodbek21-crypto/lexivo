@@ -74,8 +74,9 @@ WordCollection? _collectionByName(String name) {
 
 class ClassHomeworkTab extends StatefulWidget {
   final String classId;
+  final String className;
   final bool isTeacher;
-  const ClassHomeworkTab({super.key, required this.classId, required this.isTeacher});
+  const ClassHomeworkTab({super.key, required this.classId, required this.className, required this.isTeacher});
 
   @override
   State<ClassHomeworkTab> createState() => _ClassHomeworkTabState();
@@ -487,7 +488,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
       onTap: () async {
         await Navigator.push(context, MaterialPageRoute(
           builder: (_) => LibraryUnitStudyScreen(
-            classId: widget.classId, unitId: id, unitName: name,
+            classId: widget.classId, className: widget.className, unitId: id, unitName: name,
             homeworkId: homeworkId, modes: hwModes, isClassWords: isClassWords,
           ),
         ));
@@ -572,7 +573,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
       onTap: () async {
         await Navigator.push(context, MaterialPageRoute(
           builder: (_) => LibraryUnitStudyScreen(
-            classId: widget.classId, unitId: '', unitName: '${h.collectionName} · Day ${h.dayNumber}',
+            classId: widget.classId, className: widget.className, unitId: '', unitName: '${h.collectionName} · Day ${h.dayNumber}',
             homeworkId: h.homeworkId, modes: h.hwModes,
             collectionName: h.collectionName, dayNumber: h.dayNumber,
           ),

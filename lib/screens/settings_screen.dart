@@ -1265,6 +1265,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ElevatedButton(
                 onPressed: loading ? null : () async {
                   setS(() => loading = true);
+                  // Best-effort Supabase reset — failures don't block local clear
                   try {
                     final user = Supabase.instance.client.auth.currentUser;
                     if (user != null) {
@@ -1293,23 +1294,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         db.from('unit_progress').delete().eq('user_id', user.id),
                       ]);
                     }
-                    await StorageService.clearAllProgress();
-                    final prefs = await SharedPreferences.getInstance();
-                    outerNavigator.pushAndRemoveUntil(
-                      MaterialPageRoute(
-                        builder: (_) => MainShell(
-                          wordSource: prefs.getString('word_source') ?? 'prebuilt',
-                          exampleStyle: prefs.getString('example_style') ?? 'reallife',
-                          userProfile: prefs.getString('user_profile') ?? 'worker',
-                          languageLevel: prefs.getString('language_level') ?? 'intermediate',
-                          dailyWordGoal: prefs.getInt('daily_word_goal') ?? 15,
-                        ),
+                  } catch (_) {}
+                  // Always clear local storage and navigate
+                  await StorageService.clearAllProgress();
+                  final prefs = await SharedPreferences.getInstance();
+                  outerNavigator.pushAndRemoveUntil(
+                    MaterialPageRoute(
+                      builder: (_) => MainShell(
+                        wordSource: prefs.getString('word_source') ?? 'prebuilt',
+                        exampleStyle: prefs.getString('example_style') ?? 'reallife',
+                        userProfile: prefs.getString('user_profile') ?? 'worker',
+                        languageLevel: prefs.getString('language_level') ?? 'intermediate',
+                        dailyWordGoal: prefs.getInt('daily_word_goal') ?? 15,
                       ),
-                      (_) => false,
-                    );
-                  } catch (_) {
-                    setS(() => loading = false);
-                  }
+                    ),
+                    (_) => false,
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,

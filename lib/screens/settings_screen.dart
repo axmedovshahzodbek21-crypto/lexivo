@@ -1240,78 +1240,90 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showResetDialog() {
+    final outerNavigator = Navigator.of(context);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          tr('reset_progress_title'),
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        content: Text(
-          tr('reset_progress_body'),
-          style: const TextStyle(color: Colors.grey),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(tr('cancel'), style: const TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final navigator = Navigator.of(context);
-              final user = Supabase.instance.client.auth.currentUser;
-              if (user != null) {
-                final db = Supabase.instance.client;
-                final ts = DateTime.now().toUtc().toIso8601String();
-                await db.from('user_data').upsert({
-                  'id': user.id,
-                  'total_xp': 0, 'streak': 0, 'streak_freezes': 0,
-                  'last_study_date': null, 'last_freeze_week': null,
-                  'today_xp': 0, 'today_xp_date': null,
-                  'daily_words_learned': 0, 'daily_words_date': null,
-                  'stats_updated_at': ts,
-                  'learned_words': [], 'srs_words': [], 'starred_words': [],
-                  'hard_words': [], 'study_days': [], 'review_days': [],
-                  'word_goal_days': [], 'unit_done_days': [], 'xp_history': [],
-                  'unit_progress': {}, 'review_log': {}, 'imported_words': [],
-                  'achievements': [], 'lists_updated_at': ts,
-                  'reset_at': ts,
-                });
-                await db.from('srs_words').delete().eq('user_id', user.id);
-                await db.from('learned_words').delete().eq('user_id', user.id);
-                await db.from('starred_words').delete().eq('user_id', user.id);
-                await db.from('xp_history').delete().eq('user_id', user.id);
-                await db.from('user_stats').delete().eq('id', user.id);
-                await db.from('unit_progress').delete().eq('user_id', user.id);
-              }
-              await StorageService.clearAllProgress();
-              final prefs = await SharedPreferences.getInstance();
-              if (!mounted) return;
-              navigator.pushAndRemoveUntil(
-                MaterialPageRoute(
-                  builder: (_) => MainShell(
-                    wordSource: prefs.getString('word_source') ?? 'prebuilt',
-                    exampleStyle: prefs.getString('example_style') ?? 'reallife',
-                    userProfile: prefs.getString('user_profile') ?? 'worker',
-                    languageLevel: prefs.getString('language_level') ?? 'intermediate',
-                    dailyWordGoal: prefs.getInt('daily_word_goal') ?? 15,
-                  ),
-                ),
-                (_) => false,
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+      barrierDismissible: false,
+      builder: (ctx) {
+        bool loading = false;
+        return StatefulBuilder(
+          builder: (ctx, setS) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Text(
+              tr('reset_progress_title'),
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            child: Text(tr('reset')),
+            content: Text(
+              tr('reset_progress_body'),
+              style: const TextStyle(color: Colors.grey),
+            ),
+            actions: [
+              TextButton(
+                onPressed: loading ? null : () => Navigator.pop(ctx),
+                child: Text(tr('cancel'), style: const TextStyle(color: Colors.grey)),
+              ),
+              ElevatedButton(
+                onPressed: loading ? null : () async {
+                  setS(() => loading = true);
+                  try {
+                    final user = Supabase.instance.client.auth.currentUser;
+                    if (user != null) {
+                      final db = Supabase.instance.client;
+                      final ts = DateTime.now().toUtc().toIso8601String();
+                      await db.from('user_data').upsert({
+                        'id': user.id,
+                        'total_xp': 0, 'streak': 0, 'streak_freezes': 0,
+                        'last_study_date': null, 'last_freeze_week': null,
+                        'today_xp': 0, 'today_xp_date': null,
+                        'daily_words_learned': 0, 'daily_words_date': null,
+                        'stats_updated_at': ts,
+                        'learned_words': [], 'srs_words': [], 'starred_words': [],
+                        'hard_words': [], 'study_days': [], 'review_days': [],
+                        'word_goal_days': [], 'unit_done_days': [], 'xp_history': [],
+                        'unit_progress': {}, 'review_log': {}, 'imported_words': [],
+                        'achievements': [], 'lists_updated_at': ts,
+                        'reset_at': ts,
+                      });
+                      await Future.wait([
+                        db.from('srs_words').delete().eq('user_id', user.id),
+                        db.from('learned_words').delete().eq('user_id', user.id),
+                        db.from('starred_words').delete().eq('user_id', user.id),
+                        db.from('xp_history').delete().eq('user_id', user.id),
+                        db.from('user_stats').delete().eq('id', user.id),
+                        db.from('unit_progress').delete().eq('user_id', user.id),
+                      ]);
+                    }
+                    await StorageService.clearAllProgress();
+                    final prefs = await SharedPreferences.getInstance();
+                    outerNavigator.pushAndRemoveUntil(
+                      MaterialPageRoute(
+                        builder: (_) => MainShell(
+                          wordSource: prefs.getString('word_source') ?? 'prebuilt',
+                          exampleStyle: prefs.getString('example_style') ?? 'reallife',
+                          userProfile: prefs.getString('user_profile') ?? 'worker',
+                          languageLevel: prefs.getString('language_level') ?? 'intermediate',
+                          dailyWordGoal: prefs.getInt('daily_word_goal') ?? 15,
+                        ),
+                      ),
+                      (_) => false,
+                    );
+                  } catch (_) {
+                    setS(() => loading = false);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: loading
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : Text(tr('reset')),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 

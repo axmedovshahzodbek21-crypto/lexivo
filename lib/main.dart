@@ -7,6 +7,7 @@ import 'services/notification_service.dart';
 import 'services/supabase_service.dart';
 import 'services/content_service.dart';
 import 'services/sync_service.dart';
+import 'services/widget_service.dart';
 import 'data/storage_service.dart';
 import 'app_observers.dart';
 import 'l10n.dart';
@@ -18,6 +19,7 @@ final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(ThemeMode.syste
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initSupabase();
+  await WidgetService.init();
   await ContentService.initialize();
   await NotificationService.initialize();
   final prefs = await SharedPreferences.getInstance();

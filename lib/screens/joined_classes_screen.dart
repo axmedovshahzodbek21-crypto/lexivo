@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
+import '../services/widget_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import 'class_models.dart';
@@ -141,6 +142,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
       );
       _cache[user.id] = snapshot;
       if (mounted) setState(() => _applySnapshot(snapshot));
+      WidgetService.pushClasses(joinedClasses, targets);
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }

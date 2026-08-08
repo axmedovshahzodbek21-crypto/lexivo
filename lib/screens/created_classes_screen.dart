@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/supabase_service.dart';
+import '../services/widget_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import 'class_models.dart';
@@ -82,6 +83,7 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> {
       }
       _cache[user.id] = myClasses;
       if (mounted) setState(() { _myClasses = myClasses; _loading = false; });
+      WidgetService.pushClasses(myClasses, {});
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }

@@ -138,6 +138,7 @@ class _SplashRouterState extends State<SplashRouter> {
       // Signed-in users go straight to the app regardless of local onboarding flag —
       // they already have an account so onboarding is irrelevant on a new device.
       SyncService.pullAll();
+      WidgetService.refreshFromSupabase();
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(

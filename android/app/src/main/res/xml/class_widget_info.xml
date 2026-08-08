@@ -6,7 +6,7 @@
     android:targetCellHeight="2"
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/widget_class"
-    android:configure="com.lexivo.app.ClassWidgetConfigActivity"
     android:widgetCategory="home_screen"
     android:resizeMode="horizontal|vertical"
-    android:description="@string/widget_description" />
+    android:description="@string/widget_description"
+    android:configure="com.lexivo.app.ClassWidgetConfigActivity" />

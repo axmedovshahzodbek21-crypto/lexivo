@@ -1,13 +1,14 @@
 package com.lexivo.app
 
+import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
+import android.graphics.Color
 import android.widget.RemoteViews
-import es.antonborri.home_widget.HomeWidgetPlugin
 import org.json.JSONArray
+import org.json.JSONException
 
 class ClassWidgetProvider : AppWidgetProvider() {
 
@@ -21,70 +22,87 @@ class ClassWidgetProvider : AppWidgetProvider() {
         }
     }
 
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+        val prefs = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
+        val edit = prefs.edit()
+        for (id in appWidgetIds) edit.remove("widget_class_$id")
+        edit.apply()
+    }
+
     companion object {
         fun updateWidget(
             context: Context,
             appWidgetManager: AppWidgetManager,
             widgetId: Int,
         ) {
-            val prefs       = HomeWidgetPlugin.getData(context)
+            val prefs = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
             val classesJson = prefs.getString("lexivo_widget_classes", null)
-
-            val widgetPrefs = context.getSharedPreferences("lexivo_widget_cfg", Context.MODE_PRIVATE)
-            val pinnedId    = widgetPrefs.getString("class_id_$widgetId", null)
+            val selectedId = prefs.getString("widget_class_$widgetId", null)
 
             val views = RemoteViews(context.packageName, R.layout.widget_class)
 
-            var resolvedName = ""
-
-            if (classesJson == null || pinnedId == null) {
-                views.setTextViewText(R.id.widget_class_name, "Tap to set up")
-                views.setTextViewText(R.id.widget_pending, "No class selected")
+            if (classesJson == null) {
+                views.setTextViewText(R.id.widget_class_name, "Open Lexivo")
+                views.setTextViewText(R.id.widget_pending, "to load your classes")
                 views.setTextViewText(R.id.widget_due, "")
             } else {
-                val array = JSONArray(classesJson)
-                var found = false
-                for (i in 0 until array.length()) {
-                    val obj = array.getJSONObject(i)
-                    if (obj.getString("id") == pinnedId) {
-                        resolvedName  = obj.getString("name")
-                        val pendingHW = obj.getInt("pendingHW")
-                        val nextDue   = if (obj.isNull("nextDue")) null else obj.getString("nextDue")
-                        val overdue   = obj.optBoolean("overdue", false)
+                try {
+                    val arr = JSONArray(classesJson)
 
-                        views.setTextViewText(R.id.widget_class_name, resolvedName)
-                        views.setTextViewText(R.id.widget_pending, when {
-                            pendingHW == 0 -> "✅ All done"
-                            pendingHW == 1 -> "📖 1 pending"
-                            else           -> "📖 $pendingHW pending"
-                        })
-                        views.setTextViewText(R.id.widget_due, when {
-                            nextDue == null -> ""
-                            overdue        -> "⚠️ Overdue"
-                            else           -> "📅 $nextDue"
-                        })
-                        found = true
-                        break
+                    var obj = if (arr.length() > 0) arr.getJSONObject(0) else null
+                    if (selectedId != null) {
+                        for (i in 0 until arr.length()) {
+                            val c = arr.getJSONObject(i)
+                            if (c.getString("id") == selectedId) { obj = c; break }
+                        }
                     }
-                }
-                if (!found) {
-                    views.setTextViewText(R.id.widget_class_name, "Class not found")
-                    views.setTextViewText(R.id.widget_pending, "")
+
+                    if (obj == null) {
+                        views.setTextViewText(R.id.widget_class_name, "No classes")
+                        views.setTextViewText(R.id.widget_pending, "Open Lexivo to get started")
+                        views.setTextViewText(R.id.widget_due, "")
+                    } else {
+                        val name = obj.getString("name")
+                        val pendingHW = obj.getInt("pendingHW")
+                        val nextDue = if (obj.isNull("nextDue")) null else obj.getString("nextDue")
+                        val overdue = obj.optBoolean("overdue", false)
+
+                        views.setTextViewText(R.id.widget_class_name, name)
+
+                        if (pendingHW == 0) {
+                            views.setTextViewText(R.id.widget_pending, "No pending homework")
+                            views.setTextViewText(R.id.widget_due, "")
+                        } else {
+                            val hwText = if (pendingHW == 1) "1 homework pending" else "$pendingHW homework pending"
+                            views.setTextViewText(R.id.widget_pending, hwText)
+                            if (nextDue != null) {
+                                val dueText = if (overdue) "Overdue since $nextDue" else "Due $nextDue"
+                                views.setTextViewText(R.id.widget_due, dueText)
+                                val dueColor = if (overdue) Color.parseColor("#E53E3E") else Color.parseColor("#6B7280")
+                                views.setInt(R.id.widget_due, "setTextColor", dueColor)
+                            } else {
+                                views.setTextViewText(R.id.widget_due, "")
+                            }
+                        }
+                    }
+                } catch (e: JSONException) {
+                    views.setTextViewText(R.id.widget_class_name, "Error loading data")
+                    views.setTextViewText(R.id.widget_pending, "Open Lexivo to refresh")
                     views.setTextViewText(R.id.widget_due, "")
                 }
             }
 
-            // Tap → deep link into the app carrying classId + className
-            val encodedName = Uri.encode(resolvedName)
-            val launchIntent = Intent(context, MainActivity::class.java).apply {
-                data  = Uri.parse("lexivo://class/$pinnedId?name=$encodedName")
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            // Tap opens the app
+            val launchIntent = context.packageManager
+                .getLaunchIntentForPackage(context.packageName)
+                ?.apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP }
+            if (launchIntent != null) {
+                val pendingIntent = PendingIntent.getActivity(
+                    context, widgetId, launchIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                )
+                views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
             }
-            val pendingIntent = android.app.PendingIntent.getActivity(
-                context, widgetId, launchIntent,
-                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE,
-            )
-            views.setOnClickPendingIntent(R.id.widget_class_name, pendingIntent)
 
             appWidgetManager.updateAppWidget(widgetId, views)
         }

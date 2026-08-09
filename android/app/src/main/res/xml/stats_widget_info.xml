@@ -8,4 +8,6 @@
     android:initialLayout="@layout/widget_stats"
     android:widgetCategory="home_screen"
     android:resizeMode="horizontal|vertical"
-    android:description="@string/stats_widget_description" />
+    android:description="@string/stats_widget_description"
+    android:configure="com.lexivo.app.StatsWidgetConfigActivity"
+    android:widgetFeatures="reconfigurable" />

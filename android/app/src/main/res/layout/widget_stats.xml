@@ -10,14 +10,14 @@
     android:paddingTop="8dp"
     android:paddingBottom="8dp">
 
-    <!-- Brand label -->
+    <!-- Source label: "PERSONAL" or class name -->
     <TextView
+        android:id="@+id/widget_source_label"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="LEXIVO"
+        android:text="PERSONAL"
         android:textSize="7sp"
         android:textColor="#4A3FA0"
-        android:letterSpacing="0.2"
         android:textAllCaps="true"
         android:gravity="center" />
 

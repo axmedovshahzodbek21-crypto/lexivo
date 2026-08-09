@@ -32,10 +32,19 @@ class WidgetService {
 
       final memberships = await supabase
           .from('class_members')
-          .select('class_id')
+          .select('class_id, class_xp, class_streak')
           .eq('student_id', user.id);
       List<ClassRow> joinedClasses = [];
       final pendingHwCounts = <String, int>{};
+      final classMemberStats = <String, Map<String, int>>{}; // classId → {xp, streak}
+
+      for (final m in memberships as List) {
+        final mp = m as Map;
+        classMemberStats[mp['class_id'] as String] = {
+          'xp': mp['class_xp'] as int? ?? 0,
+          'streak': mp['class_streak'] as int? ?? 0,
+        };
+      }
 
       if ((memberships as List).isNotEmpty) {
         final classIds = memberships
@@ -92,6 +101,20 @@ class WidgetService {
       final allClasses = [...teacherClasses, ...joinedClasses];
       if (allClasses.isNotEmpty) {
         await pushClasses(allClasses, pendingHwCounts);
+
+        // Push per-class XP + streak for stats widgets
+        final classStatsPayload = allClasses.map((c) => {
+          'id': c.id,
+          'name': c.name,
+          'xp': classMemberStats[c.id]?['xp'] ?? 0,
+          'streak': classMemberStats[c.id]?['streak'] ?? 0,
+        }).toList();
+        await HomeWidget.saveWidgetData<String>(
+          'lexivo_class_stats', jsonEncode(classStatsPayload));
+        await HomeWidget.updateWidget(
+          androidName: 'com.lexivo.app.StatsWidgetProvider',
+          iOSName: 'StatsWidget',
+        );
       }
     } catch (_) {
       // Non-fatal — widget keeps stale data

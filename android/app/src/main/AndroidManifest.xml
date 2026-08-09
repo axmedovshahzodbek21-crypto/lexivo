@@ -64,6 +64,16 @@
                 android:resource="@xml/class_widget_info" />
         </receiver>
 
+        <!-- Stats widget config screen (source picker) -->
+        <activity
+            android:name="com.lexivo.app.StatsWidgetConfigActivity"
+            android:exported="true"
+            android:theme="@style/Theme.AppCompat.NoActionBar">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
         <!-- Lexivo Stats Widget -->
         <receiver
             android:name="com.lexivo.app.StatsWidgetProvider"

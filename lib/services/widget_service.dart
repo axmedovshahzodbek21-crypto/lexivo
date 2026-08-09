@@ -4,8 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../screens/class_models.dart';
 import 'supabase_service.dart';
 
-/// Pushes class data to the native home-screen widget layer.
-/// Call this any time the class list or homework state changes.
 class WidgetService {
   static const _appGroupId = 'group.lexivo';
   static const _androidProvider = 'com.lexivo.app.ClassWidgetProvider';
@@ -15,9 +13,6 @@ class WidgetService {
     await HomeWidget.setAppGroupId(_appGroupId);
   }
 
-  /// Fetches classes and pending homework counts from Supabase and pushes to
-  /// widget storage. Uses class_homework + class_homework_progress, matching
-  /// what the class home screen shows.
   static Future<void> refreshFromSupabase() async {
     final user = currentUser;
     if (user == null) return;
@@ -32,21 +27,20 @@ class WidgetService {
 
       final memberships = await supabase
           .from('class_members')
-          .select('class_id, class_xp, class_streak')
+          .select('class_id, class_xp')
           .eq('student_id', user.id);
+
       List<ClassRow> joinedClasses = [];
       final pendingHwCounts = <String, int>{};
-      final classMemberStats = <String, Map<String, int>>{}; // classId → {xp, streak}
+      final classXpMap = <String, int>{};
+      final classStreakMap = <String, int>{};
 
       for (final m in memberships as List) {
         final mp = m as Map;
-        classMemberStats[mp['class_id'] as String] = {
-          'xp': mp['class_xp'] as int? ?? 0,
-          'streak': mp['class_streak'] as int? ?? 0,
-        };
+        classXpMap[mp['class_id'] as String] = mp['class_xp'] as int? ?? 0;
       }
 
-      if ((memberships as List).isNotEmpty) {
+      if ((memberships).isNotEmpty) {
         final classIds = memberships
             .map((m) => (m as Map)['class_id'] as String)
             .toList();
@@ -62,7 +56,6 @@ class WidgetService {
         if (joinedClasses.isNotEmpty) {
           final joinedIds = joinedClasses.map((c) => c.id).toList();
 
-          // Fetch homework assignments and completion progress in parallel
           final results = await Future.wait([
             supabase
                 .from('class_homework')
@@ -72,18 +65,24 @@ class WidgetService {
                 .from('class_homework_progress')
                 .select('homework_id, mode')
                 .eq('student_id', user.id),
+            supabase
+                .from('class_study_days')
+                .select('class_id, study_date')
+                .eq('student_id', user.id)
+                .inFilter('class_id', joinedIds),
           ]);
 
           final allHw = results[0] as List;
           final progList = results[1] as List;
+          final studyDayRows = results[2] as List;
 
+          // Homework pending counts
           final doneMap = <String, Set<String>>{};
           for (final p in progList) {
             final m = p as Map;
-            final hwId = m['homework_id'] as String;
-            doneMap.putIfAbsent(hwId, () => {}).add(m['mode'] as String);
+            doneMap.putIfAbsent(m['homework_id'] as String, () => {})
+                .add(m['mode'] as String);
           }
-
           for (final h in allHw) {
             final m = h as Map;
             final studentIds = m['student_ids'] as List?;
@@ -95,6 +94,18 @@ class WidgetService {
               pendingHwCounts[classId] = (pendingHwCounts[classId] ?? 0) + 1;
             }
           }
+
+          // Streak per class from study days
+          final datesByClass = <String, List<String>>{};
+          for (final row in studyDayRows) {
+            final rm = row as Map;
+            datesByClass
+                .putIfAbsent(rm['class_id'] as String, () => [])
+                .add(rm['study_date'] as String);
+          }
+          for (final cid in joinedIds) {
+            classStreakMap[cid] = _computeStreak(datesByClass[cid] ?? []);
+          }
         }
       }
 
@@ -102,15 +113,14 @@ class WidgetService {
       if (allClasses.isNotEmpty) {
         await pushClasses(allClasses, pendingHwCounts);
 
-        // Push per-class XP + streak for stats widgets
         final classStatsPayload = allClasses.map((c) => {
           'id': c.id,
           'name': c.name,
-          'xp': classMemberStats[c.id]?['xp'] ?? 0,
-          'streak': classMemberStats[c.id]?['streak'] ?? 0,
+          'xp': classXpMap[c.id] ?? 0,
+          'streak': classStreakMap[c.id] ?? 0,
         }).toList();
         await HomeWidget.saveWidgetData<String>(
-          'lexivo_class_stats', jsonEncode(classStatsPayload));
+            'lexivo_class_stats', jsonEncode(classStatsPayload));
         await HomeWidget.updateWidget(
           androidName: 'com.lexivo.app.StatsWidgetProvider',
           iOSName: 'StatsWidget',
@@ -121,7 +131,6 @@ class WidgetService {
     }
   }
 
-  /// Reads streak + XP from app SharedPreferences and pushes to the stats widget.
   static Future<void> pushStats() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -133,12 +142,9 @@ class WidgetService {
         androidName: 'com.lexivo.app.StatsWidgetProvider',
         iOSName: 'StatsWidget',
       );
-    } catch (_) {
-      // Non-fatal
-    }
+    } catch (_) {}
   }
 
-  /// [pendingHwCounts] maps class_id → number of incomplete homework assignments.
   static Future<void> pushClasses(
     List<ClassRow> classes,
     Map<String, int> pendingHwCounts,
@@ -156,4 +162,24 @@ class WidgetService {
       iOSName: 'ClassWidget',
     );
   }
+
+  // Mirrors class_streak_screen.dart logic
+  static int _computeStreak(List<String> dates) {
+    if (dates.isEmpty) return 0;
+    final set = dates.toSet();
+    final now = DateTime.now().subtract(const Duration(hours: 2));
+    final today = _dateStr(now);
+    final yesterday = _dateStr(now.subtract(const Duration(days: 1)));
+    if (!set.contains(today) && !set.contains(yesterday)) return 0;
+    var cursor = set.contains(today) ? now : now.subtract(const Duration(days: 1));
+    var streak = 0;
+    while (set.contains(_dateStr(cursor))) {
+      streak++;
+      cursor = cursor.subtract(const Duration(days: 1));
+    }
+    return streak;
+  }
+
+  static String _dateStr(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 }

@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.widget.RemoteViews
 import org.json.JSONArray
 import org.json.JSONException
@@ -39,6 +40,9 @@ class StatsWidgetProvider : AppWidgetProvider() {
 
             val views = RemoteViews(context.packageName, R.layout.widget_stats)
 
+            // className is used for both the label and the tap deep-link
+            var className = ""
+
             if (source == "personal") {
                 val streak = prefs.getInt("lexivo_widget_streak", 0)
                 val xp = prefs.getInt("lexivo_widget_xp", 0)
@@ -48,7 +52,6 @@ class StatsWidgetProvider : AppWidgetProvider() {
             } else {
                 var streak = 0
                 var xp = 0
-                var name = "Class"
 
                 // Name from lexivo_widget_classes (always populated on every refresh)
                 val classesJson = prefs.getString("lexivo_widget_classes", null)
@@ -58,7 +61,7 @@ class StatsWidgetProvider : AppWidgetProvider() {
                         for (i in 0 until arr.length()) {
                             val obj = arr.getJSONObject(i)
                             if (obj.getString("id") == source) {
-                                name = obj.getString("name").uppercase()
+                                className = obj.getString("name")
                                 break
                             }
                         }
@@ -81,18 +84,28 @@ class StatsWidgetProvider : AppWidgetProvider() {
                     } catch (_: JSONException) {}
                 }
 
-                views.setTextViewText(R.id.widget_source_label, name)
+                views.setTextViewText(R.id.widget_source_label, className.uppercase().ifEmpty { "CLASS" })
                 views.setTextViewText(R.id.widget_streak_value, streak.toString())
                 views.setTextViewText(R.id.widget_xp_value, formatXP(xp))
             }
 
-            val launchIntent = context.packageManager
-                .getLaunchIntentForPackage(context.packageName)
-                ?.apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP }
+            // Tap: open class deep-link or main app
+            val tapIntent: Intent? = if (source == "personal") {
+                context.packageManager.getLaunchIntentForPackage(context.packageName)
+                    ?.apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP }
+            } else {
+                val uri = Uri.parse(
+                    "lexivo://class/$source?name=${Uri.encode(className)}&isTeacher=false"
+                )
+                Intent(Intent.ACTION_VIEW, uri).apply {
+                    setPackage(context.packageName)
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                }
+            }
 
-            if (launchIntent != null) {
+            if (tapIntent != null) {
                 val pendingIntent = PendingIntent.getActivity(
-                    context, widgetId + 200_000, launchIntent,
+                    context, widgetId + 200_000, tapIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                 )
                 views.setOnClickPendingIntent(R.id.stats_root, pendingIntent)

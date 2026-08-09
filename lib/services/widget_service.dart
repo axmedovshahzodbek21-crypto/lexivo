@@ -37,7 +37,7 @@ class WidgetService {
 
       for (final m in memberships as List) {
         final mp = m as Map;
-        classXpMap[mp['class_id'] as String] = mp['class_xp'] as int? ?? 0;
+        classXpMap[mp['class_id'] as String] = (mp['class_xp'] as num?)?.toInt() ?? 0;
       }
 
       if ((memberships).isNotEmpty) {
@@ -126,8 +126,9 @@ class WidgetService {
           iOSName: 'StatsWidget',
         );
       }
-    } catch (_) {
-      // Non-fatal — widget keeps stale data
+    } catch (e, st) {
+      // ignore: avoid_print
+      print('[WidgetService] refreshFromSupabase error: $e\n$st');
     }
   }
 

@@ -46,10 +46,27 @@ class StatsWidgetProvider : AppWidgetProvider() {
                 views.setTextViewText(R.id.widget_streak_value, streak.toString())
                 views.setTextViewText(R.id.widget_xp_value, formatXP(xp))
             } else {
-                val classStatsJson = prefs.getString("lexivo_class_stats", null)
                 var streak = 0
                 var xp = 0
                 var name = "Class"
+
+                // Name from lexivo_widget_classes (always populated on every refresh)
+                val classesJson = prefs.getString("lexivo_widget_classes", null)
+                if (classesJson != null) {
+                    try {
+                        val arr = JSONArray(classesJson)
+                        for (i in 0 until arr.length()) {
+                            val obj = arr.getJSONObject(i)
+                            if (obj.getString("id") == source) {
+                                name = obj.getString("name").uppercase()
+                                break
+                            }
+                        }
+                    } catch (_: JSONException) {}
+                }
+
+                // XP + streak from lexivo_class_stats (populated after first sync)
+                val classStatsJson = prefs.getString("lexivo_class_stats", null)
                 if (classStatsJson != null) {
                     try {
                         val arr = JSONArray(classStatsJson)
@@ -58,12 +75,12 @@ class StatsWidgetProvider : AppWidgetProvider() {
                             if (obj.getString("id") == source) {
                                 streak = obj.getInt("streak")
                                 xp = obj.getInt("xp")
-                                name = obj.getString("name").uppercase()
                                 break
                             }
                         }
                     } catch (_: JSONException) {}
                 }
+
                 views.setTextViewText(R.id.widget_source_label, name)
                 views.setTextViewText(R.id.widget_streak_value, streak.toString())
                 views.setTextViewText(R.id.widget_xp_value, formatXP(xp))

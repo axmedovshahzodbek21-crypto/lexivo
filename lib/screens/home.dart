@@ -1802,7 +1802,7 @@ class _HomeScreenState extends State<HomeScreen>
                       spacing: 6,
                       runSpacing: 5,
                       children: [
-                        _classChip('⚡ ${card.classXP} XP'),
+                        _classChip('⚡ ${(card.classXP / 10).toStringAsFixed(1)} XP'),
                         _classChip('🔥 ${card.classStreak} day streak'),
                         if (card.pendingHomework > 0)
                           _classChipWarning('📚 ${card.pendingHomework} pending'),

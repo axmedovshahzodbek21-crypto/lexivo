@@ -202,7 +202,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
         await Navigator.push(context, MaterialPageRoute(
           builder: (_) => LearningScreen(
             wordDay: wd, userProfile: '', collectionName: widget.unitName,
-            classId: widget.classId, dayIndex: 0, noXP: true, onHomeworkCompleted: onCompleted,
+            classId: widget.classId, dayIndex: 0, onHomeworkCompleted: onCompleted,
           ),
         ));
       case 'flashcard':

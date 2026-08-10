@@ -242,8 +242,10 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                   .insert({'class_id': widget.classId, 'folder_id': f.id});
               if (mounted) { _load(); }
             } catch (e) {
-              if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Failed to assign: $e'), duration: const Duration(seconds: 3)));
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Failed to assign: $e'), duration: const Duration(seconds: 3)));
+              }
             }
           },
         )),

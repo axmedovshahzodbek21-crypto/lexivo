@@ -6,6 +6,7 @@ import 'class_leaderboard_screen.dart';
 import 'class_homework_tab.dart';
 import 'class_curriculum_tab.dart';
 import 'class_dashboard_screen.dart';
+import 'class_progress_screen.dart';
 
 class ClassShell extends StatefulWidget {
   final String classId;
@@ -45,7 +46,9 @@ class _ClassShellState extends State<ClassShell> {
       else
         ClassHomeworkTab(classId: widget.classId, className: widget.className, isTeacher: false),
       if (widget.isTeacher)
-        ClassDashboardScreen(classId: widget.classId, className: widget.className),
+        ClassDashboardScreen(classId: widget.classId, className: widget.className)
+      else
+        ClassProgressScreen(classId: widget.classId, className: widget.className),
     ];
   }
 
@@ -58,7 +61,9 @@ class _ClassShellState extends State<ClassShell> {
       label: widget.isTeacher ? 'Curriculum' : 'Homework',
     ),
     if (widget.isTeacher)
-      const BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: 'Dashboard'),
+      const BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: 'Dashboard')
+    else
+      const BottomNavigationBarItem(icon: Icon(Icons.bar_chart_rounded), label: 'Progress'),
   ];
 
   Future<void> _confirmExit() async {

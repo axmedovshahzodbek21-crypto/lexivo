@@ -122,7 +122,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
             .select('id, name, class_words(count)')
             .eq('class_id', widget.classId).order('created_at'),
         supabase.from('class_homework')
-            .select('id, unit_id, class_unit_id, collection_name, day_number, modes, due_date, assigned_to, student_ids, teacher_units(name), class_word_units(name)')
+            .select('id, unit_id, class_unit_id, collection_name, day_number, modes, due_date, student_ids, teacher_units(name), class_word_units(name)')
             .eq('class_id', widget.classId).order('created_at', ascending: false),
       ]);
 
@@ -188,14 +188,13 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                 : (cwMap?['name'] as String?) ?? 'Unit';
         final rawModes = (m['modes'] as List?)?.map((x) => x as String).toList() ?? ['learn', 'flashcard', 'quiz'];
         final rawStudentIds = (m['student_ids'] as List?)?.map((x) => x as String).toList() ?? [];
-        final assignedTo = m['assigned_to'] as String? ?? 'class';
-        final totalStudents = assignedTo == 'class' ? _students.length : rawStudentIds.length;
+        final totalStudents = rawStudentIds.isEmpty ? _students.length : rawStudentIds.length;
         return _Homework(
           id: m['id'] as String, unitId: unitId, classUnitId: classUnitId,
           collectionName: collName, dayNumber: dayNum,
           unitName: unitName, source: source,
           modes: rawModes, dueDate: m['due_date'] as String?,
-          assignedTo: assignedTo, studentIds: rawStudentIds,
+          assignedTo: rawStudentIds.isEmpty ? 'class' : 'specific', studentIds: rawStudentIds,
           totalStudents: totalStudents, completionCounts: completionMap[m['id'] as String] ?? {},
         );
       }).toList();
@@ -595,11 +594,10 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
               onPressed: () async {
                 final modes = selectedModes.entries.where((e) => e.value).map((e) => e.key).toList();
                 await supabase.from('class_homework').insert({
-                  'class_id': widget.classId, 'teacher_id': userId,
+                  'class_id': widget.classId,
                   'collection_name': collName, 'day_number': day.dayNumber,
                   'modes': modes,
                   if (dueDate != null) 'due_date': dueDate!.toIso8601String().substring(0, 10),
-                  'assigned_to': assignedTo,
                   if (assignedTo == 'specific') 'student_ids': selectedStudents.toList(),
                 });
                 if (ctx.mounted) Navigator.pop(ctx);
@@ -714,12 +712,11 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
               onPressed: () async {
                 final modes = selectedModes.entries.where((e) => e.value).map((e) => e.key).toList();
                 await supabase.from('class_homework').insert({
-                  'class_id': widget.classId, 'teacher_id': user.id,
+                  'class_id': widget.classId,
                   if (!unit.isClassWords) 'unit_id': unit.id,
                   if (unit.isClassWords) 'class_unit_id': unit.id,
                   'modes': modes,
                   if (dueDate != null) 'due_date': dueDate!.toIso8601String().substring(0, 10),
-                  'assigned_to': assignedTo,
                   if (assignedTo == 'specific') 'student_ids': selectedStudents.toList(),
                 });
                 if (ctx.mounted) Navigator.pop(ctx);

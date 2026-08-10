@@ -127,13 +127,16 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
       ]);
 
       final folderRows  = results[0] as List;
+      debugPrint('folderRows: $folderRows');
       final cwUnitRows  = results[1] as List;
       final hwRows      = results[2] as List;
 
       // Folders
       final folders = folderRows.map((e) {
         final m = Map<String, dynamic>.from(e as Map);
-        final tf = Map<String, dynamic>.from(m['teacher_folders'] as Map);
+        final tfRaw = m['teacher_folders'];
+        if (tfRaw == null) return null;
+        final tf = Map<String, dynamic>.from(tfRaw as Map);
         final units = ((tf['teacher_units'] as List?) ?? []).map((u) {
           final um = Map<String, dynamic>.from(u as Map);
           final words = um['teacher_unit_words'] as List?;
@@ -144,7 +147,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
         }).toList();
         return _AssignedFolder(assignmentId: m['id'] as String, folderId: m['folder_id'] as String,
             folderName: tf['name'] as String, units: units);
-      }).toList();
+      }).whereType<_AssignedFolder>().toList();
 
       // Class word units
       final classUnits = cwUnitRows.map((e) {
@@ -200,7 +203,8 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
       }).toList();
 
       if (mounted) setState(() { _folders = folders; _classUnits = classUnits; _homework = homework; _loading = false; });
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('_load error: $e\n$st');
       if (mounted) setState(() => _loading = false);
     }
   }

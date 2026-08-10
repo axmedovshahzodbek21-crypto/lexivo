@@ -235,11 +235,16 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
         ...available.map((f) => ListTile(
           leading: const Text('📁', style: TextStyle(fontSize: 22)),
           title: Text(f.name, style: TextStyle(color: context.appText, fontWeight: FontWeight.w600)),
-          onTap: () {
+          onTap: () async {
             Navigator.pop(ctx);
-            supabase.from('class_library_assignments')
-                .insert({'class_id': widget.classId, 'folder_id': f.id})
-                .then((_) { if (mounted) _load(); });
+            try {
+              await supabase.from('class_library_assignments')
+                  .insert({'class_id': widget.classId, 'folder_id': f.id});
+              if (mounted) { _load(); }
+            } catch (e) {
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Failed to assign: $e'), duration: const Duration(seconds: 3)));
+            }
           },
         )),
         Padding(

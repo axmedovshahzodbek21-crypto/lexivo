@@ -154,6 +154,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
     final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
       backgroundColor: context.surface,
       title: Text('Leave class?', style: TextStyle(color: context.appText)),
+      content: Text('You will need the class code to rejoin.', style: TextStyle(color: context.textMuted)),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(tr('cancel'), style: TextStyle(color: context.textMuted))),
         TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text('Leave', style: TextStyle(color: context.dangerColor))),

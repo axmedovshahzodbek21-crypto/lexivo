@@ -33,6 +33,23 @@ class HomeClassCard {
     this.studentCount = 0,
     this.activeToday = 0,
   });
+
+  Map<String, dynamic> toJson() => {
+    'classId': classId, 'className': className, 'isTeacher': isTeacher,
+    'classXP': classXP, 'classStreak': classStreak, 'pendingHomework': pendingHomework,
+    'studentCount': studentCount, 'activeToday': activeToday,
+  };
+
+  factory HomeClassCard.fromJson(Map<String, dynamic> m) => HomeClassCard(
+    classId: m['classId'] as String,
+    className: m['className'] as String,
+    isTeacher: m['isTeacher'] as bool? ?? false,
+    classXP: m['classXP'] as int? ?? 0,
+    classStreak: m['classStreak'] as int? ?? 0,
+    pendingHomework: m['pendingHomework'] as int? ?? 0,
+    studentCount: m['studentCount'] as int? ?? 0,
+    activeToday: m['activeToday'] as int? ?? 0,
+  );
 }
 
 String _dateStr(DateTime d) =>
@@ -63,36 +80,55 @@ Future<void> recordClassActivity(
 }) async {
   try {
     final today = _dateStr(DateTime.now());
-    await supabase.from('class_study_days').upsert(
-      {'student_id': userId, 'class_id': classId, 'study_date': today},
-      onConflict: 'student_id,class_id,study_date',
-      ignoreDuplicates: true,
-    );
-    if (xp > 0) {
+    final exists = await supabase
+        .from('class_study_days')
+        .select('student_id')
+        .eq('student_id', userId)
+        .eq('class_id', classId)
+        .eq('study_date', today)
+        .maybeSingle();
+    if (exists == null) {
+      await supabase.from('class_study_days').insert({
+        'student_id': userId,
+        'class_id': classId,
+        'study_date': today,
+      });
+    }
+  } catch (e, st) {
+    // ignore: avoid_print
+    print('[recordClassActivity] study_days error: $e\n$st');
+  }
+  if (xp > 0) {
+    try {
       final row = await supabase
           .from('class_members')
           .select('class_xp')
           .eq('student_id', userId)
           .eq('class_id', classId)
           .maybeSingle();
-      final current = (row?['class_xp'] as int?) ?? 0;
-      await Future.wait([
-        supabase
-            .from('class_members')
-            .update({'class_xp': current + xp})
-            .eq('student_id', userId)
-            .eq('class_id', classId),
-        supabase.from('class_xp_history').insert({
-          'user_id': userId,
-          'class_id': classId,
-          'amount': xp,
-          'reason': reason.isNotEmpty ? reason : 'Study',
-        }),
-      ]);
+      final current = (row?['class_xp'] as num?)?.toInt() ?? 0;
+      await supabase
+          .from('class_members')
+          .update({'class_xp': current + xp})
+          .eq('student_id', userId)
+          .eq('class_id', classId);
+      // ignore: avoid_print
+      print('[recordClassActivity] OK class_xp=${current + xp} classId=$classId');
+    } catch (e, st) {
+      // ignore: avoid_print
+      print('[recordClassActivity] class_members error: $e\n$st');
     }
-  } catch (e, st) {
-    // ignore: avoid_print
-    print('[recordClassActivity] error: $e\n$st');
+    try {
+      await supabase.from('class_xp_history').insert({
+        'user_id': userId,
+        'class_id': classId,
+        'amount': xp,
+        'reason': reason.isNotEmpty ? reason : 'Study',
+      });
+    } catch (e, st) {
+      // ignore: avoid_print
+      print('[recordClassActivity] history error: $e\n$st');
+    }
   }
 }
 

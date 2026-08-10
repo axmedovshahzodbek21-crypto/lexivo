@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
+import '../services/widget_service.dart';
 import '../app_theme.dart';
 import '../data/word_data.dart';
 import '../data/a1_collection.dart';
@@ -184,6 +185,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
         }
       }
       if (mounted) setState(() => _completedModes.add(mode));
+      WidgetService.refreshFromSupabase();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

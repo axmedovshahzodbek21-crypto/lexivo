@@ -43,6 +43,10 @@ class ClassTarget {
     title: m['title'] as String, createdAt: m['created_at'] as String,
     dueDate: m['due_date'] as String?, completedAt: m['completed_at'] as String?,
   );
+  Map<String, dynamic> toJson() => {
+    'id': id, 'class_id': classId, 'title': title, 'created_at': createdAt,
+    'due_date': dueDate, 'completed_at': completedAt,
+  };
 }
 
 class ClassAnnouncement {
@@ -52,6 +56,9 @@ class ClassAnnouncement {
     id: m['id'] as String, classId: m['class_id'] as String,
     message: m['message'] as String, createdAt: m['created_at'] as String,
   );
+  Map<String, dynamic> toJson() => {
+    'id': id, 'class_id': classId, 'message': message, 'created_at': createdAt,
+  };
 }
 
 class ClassLeaderboardRow {

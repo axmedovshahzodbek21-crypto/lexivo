@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
@@ -56,7 +58,32 @@ class ClassHomeScreen extends StatefulWidget {
   State<ClassHomeScreen> createState() => _ClassHomeScreenState();
 }
 
+class _ClassHomeCache {
+  final List<ClassAnnouncement> announcements;
+  final List<ClassTarget> targets;
+  final int memberCount;
+  final int pendingHwCount;
+  final String teacherName;
+  final String teacherId;
+  final String teacherBio;
+  final int activeToday;
+  final int needsAttentionCount;
+  final Map<String, int> readCounts;
+  final int myClassXp;
+  final int classStreak;
+  _ClassHomeCache({
+    required this.announcements, required this.targets,
+    required this.memberCount, required this.pendingHwCount,
+    required this.teacherName, required this.teacherId,
+    required this.teacherBio, required this.activeToday,
+    required this.needsAttentionCount, required this.readCounts,
+    required this.myClassXp, required this.classStreak,
+  });
+}
+
 class _ClassHomeScreenState extends State<ClassHomeScreen> {
+  static final _cache = <String, _ClassHomeCache>{};
+
   bool _loading = true;
   List<ClassAnnouncement> _announcements = [];
   List<ClassTarget> _targets = [];
@@ -71,11 +98,96 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
   int _myClassXp = 0;
   int _classStreak = 0;
 
+  static const _prefsPrefix = 'class_home_v1_';
+
+  void _applyCache(_ClassHomeCache c) {
+    _announcements = c.announcements;
+    _targets = c.targets;
+    _memberCount = c.memberCount;
+    _pendingHwCount = c.pendingHwCount;
+    _teacherName = c.teacherName;
+    _teacherId = c.teacherId;
+    _teacherBio = c.teacherBio;
+    _activeToday = c.activeToday;
+    _needsAttentionCount = c.needsAttentionCount;
+    _readCounts = c.readCounts;
+    _myClassXp = c.myClassXp;
+    _classStreak = c.classStreak;
+    _loading = false;
+  }
+
   @override
   void initState() {
     super.initState();
     appLangNotifier.addListener(_onLang);
-    _load();
+    final cached = _cache[widget.classId];
+    if (cached != null) {
+      _applyCache(cached);
+      _load(background: true);
+    } else {
+      _initWithPersistedCache();
+    }
+  }
+
+  Future<void> _initWithPersistedCache() async {
+    final persisted = await _loadFromPrefs();
+    if (persisted != null) {
+      _cache[widget.classId] = persisted;
+      if (mounted) setState(() => _applyCache(persisted));
+      _load(background: true);
+    } else {
+      _load();
+    }
+  }
+
+  Future<_ClassHomeCache?> _loadFromPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('$_prefsPrefix${widget.classId}');
+      if (raw == null) return null;
+      final m = jsonDecode(raw) as Map<String, dynamic>;
+      return _ClassHomeCache(
+        announcements: (m['announcements'] as List)
+            .map((e) => ClassAnnouncement.fromMap(Map<String, dynamic>.from(e as Map)))
+            .toList(),
+        targets: (m['targets'] as List)
+            .map((e) => ClassTarget.fromMap(Map<String, dynamic>.from(e as Map)))
+            .toList(),
+        memberCount: m['memberCount'] as int? ?? 0,
+        pendingHwCount: m['pendingHwCount'] as int? ?? 0,
+        teacherName: m['teacherName'] as String? ?? '',
+        teacherId: m['teacherId'] as String? ?? '',
+        teacherBio: m['teacherBio'] as String? ?? '',
+        activeToday: m['activeToday'] as int? ?? 0,
+        needsAttentionCount: m['needsAttentionCount'] as int? ?? 0,
+        readCounts: Map<String, int>.from(
+            ((m['readCounts'] as Map?) ?? {}).map((k, v) => MapEntry(k as String, (v as num).toInt()))),
+        myClassXp: m['myClassXp'] as int? ?? 0,
+        classStreak: m['classStreak'] as int? ?? 0,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _saveToPrefs(_ClassHomeCache c) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('$_prefsPrefix${widget.classId}', jsonEncode({
+        'announcements': c.announcements.map((a) => a.toJson()).toList(),
+        'targets': c.targets.map((t) => t.toJson()).toList(),
+        'memberCount': c.memberCount,
+        'pendingHwCount': c.pendingHwCount,
+        'teacherName': c.teacherName,
+        'teacherId': c.teacherId,
+        'teacherBio': c.teacherBio,
+        'activeToday': c.activeToday,
+        'needsAttentionCount': c.needsAttentionCount,
+        'readCounts': c.readCounts,
+        'myClassXp': c.myClassXp,
+        'classStreak': c.classStreak,
+      }));
+    } catch (_) {}
   }
 
   @override
@@ -86,8 +198,8 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
 
   void _onLang() { if (mounted) setState(() {}); }
 
-  Future<void> _load() async {
-    if (_announcements.isEmpty && _targets.isEmpty && mounted) setState(() => _loading = true);
+  Future<void> _load({bool background = false}) async {
+    if (!background && _announcements.isEmpty && _targets.isEmpty && mounted) setState(() => _loading = true);
 
     // Safety net: if any query hangs longer than 20s, release the spinner.
     final safetyNet = Timer(const Duration(seconds: 20), () {
@@ -243,6 +355,17 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
         _loadPendingHwCount(user.id);
         _loadClassStreak(user.id);
       }
+
+      final newCache = _ClassHomeCache(
+        announcements: anns, targets: targets,
+        memberCount: memberCount, pendingHwCount: _pendingHwCount,
+        teacherName: teacherName, teacherId: fetchedTeacherId,
+        teacherBio: teacherBio, activeToday: activeToday,
+        needsAttentionCount: needsAttentionCount, readCounts: readCounts,
+        myClassXp: myClassXp, classStreak: _classStreak,
+      );
+      _cache[widget.classId] = newCache;
+      _saveToPrefs(newCache);
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     } finally {
@@ -275,7 +398,22 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
         streak++;
         cursor = cursor.subtract(const Duration(days: 1));
       }
-      if (mounted) setState(() => _classStreak = streak);
+      if (mounted) {
+        setState(() => _classStreak = streak);
+        final c = _cache[widget.classId];
+        if (c != null) {
+          final updated = _ClassHomeCache(
+            announcements: c.announcements, targets: c.targets,
+            memberCount: c.memberCount, pendingHwCount: c.pendingHwCount,
+            teacherName: c.teacherName, teacherId: c.teacherId,
+            teacherBio: c.teacherBio, activeToday: c.activeToday,
+            needsAttentionCount: c.needsAttentionCount, readCounts: c.readCounts,
+            myClassXp: c.myClassXp, classStreak: streak,
+          );
+          _cache[widget.classId] = updated;
+          _saveToPrefs(updated);
+        }
+      }
     } catch (_) {}
   }
 

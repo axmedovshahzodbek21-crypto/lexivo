@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import 'library_unit_study_screen.dart';
@@ -24,6 +26,11 @@ class _AssignedFolder {
   final List<_FolderUnit> units;
   bool showAll = false;
   _AssignedFolder({required this.id, required this.assignmentId, required this.name, required this.units});
+  Map<String, dynamic> toJson() => {'id': id, 'assignmentId': assignmentId, 'name': name, 'units': units.map((u) => u.toJson()).toList()};
+  static _AssignedFolder fromJson(Map<String, dynamic> m) => _AssignedFolder(
+    id: m['id'] as String, assignmentId: m['assignmentId'] as String, name: m['name'] as String,
+    units: (m['units'] as List).map((u) => _FolderUnit.fromJson(Map<String, dynamic>.from(u as Map))).toList(),
+  );
 }
 
 class _FolderUnit {
@@ -34,6 +41,13 @@ class _FolderUnit {
   final String? hwDue;
   const _FolderUnit({required this.id, required this.name, required this.wordCount, this.homeworkId, this.hwModes, this.hwDue});
   bool get hasHomework => homeworkId != null;
+  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'wordCount': wordCount, 'homeworkId': homeworkId, 'hwModes': hwModes, 'hwDue': hwDue};
+  static _FolderUnit fromJson(Map<String, dynamic> m) => _FolderUnit(
+    id: m['id'] as String, name: m['name'] as String, wordCount: m['wordCount'] as int? ?? 0,
+    homeworkId: m['homeworkId'] as String?,
+    hwModes: m['hwModes'] != null ? List<String>.from(m['hwModes'] as List) : null,
+    hwDue: m['hwDue'] as String?,
+  );
 }
 
 // ── Class word unit models ─────────────────────────────────────────────────
@@ -46,6 +60,13 @@ class _CWUnit {
   final String? hwDue;
   const _CWUnit({required this.id, required this.name, required this.wordCount, this.homeworkId, this.hwModes, this.hwDue});
   bool get hasHomework => homeworkId != null;
+  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'wordCount': wordCount, 'homeworkId': homeworkId, 'hwModes': hwModes, 'hwDue': hwDue};
+  static _CWUnit fromJson(Map<String, dynamic> m) => _CWUnit(
+    id: m['id'] as String, name: m['name'] as String, wordCount: m['wordCount'] as int? ?? 0,
+    homeworkId: m['homeworkId'] as String?,
+    hwModes: m['hwModes'] != null ? List<String>.from(m['hwModes'] as List) : null,
+    hwDue: m['hwDue'] as String?,
+  );
 }
 
 // ── Collection homework models ─────────────────────────────────────────────
@@ -56,6 +77,12 @@ class _CollHW {
   final List<String> hwModes;
   final String? hwDue;
   const _CollHW({required this.homeworkId, required this.collectionName, required this.dayNumber, required this.topic, required this.wordCount, required this.hwModes, this.hwDue});
+  Map<String, dynamic> toJson() => {'homeworkId': homeworkId, 'collectionName': collectionName, 'topic': topic, 'dayNumber': dayNumber, 'wordCount': wordCount, 'hwModes': hwModes, 'hwDue': hwDue};
+  static _CollHW fromJson(Map<String, dynamic> m) => _CollHW(
+    homeworkId: m['homeworkId'] as String, collectionName: m['collectionName'] as String,
+    topic: m['topic'] as String, dayNumber: m['dayNumber'] as int, wordCount: m['wordCount'] as int? ?? 0,
+    hwModes: List<String>.from(m['hwModes'] as List), hwDue: m['hwDue'] as String?,
+  );
 }
 
 WordCollection? _collectionByName(String name) {
@@ -68,6 +95,18 @@ WordCollection? _collectionByName(String name) {
     case 'B1':                        return b1Collection;
     default: return null;
   }
+}
+
+// ── Cache ──────────────────────────────────────────────────────────────────
+
+class _HwCache {
+  final List<_AssignedFolder> folders;
+  final List<_CWUnit> cwUnits;
+  final List<_CollHW> collHwItems;
+  final Map<String, Set<String>> completedModes;
+  final int totalAssigned;
+  final int totalDone;
+  const _HwCache({required this.folders, required this.cwUnits, required this.collHwItems, required this.completedModes, required this.totalAssigned, required this.totalDone});
 }
 
 // ── Widget ─────────────────────────────────────────────────────────────────
@@ -83,6 +122,9 @@ class ClassHomeworkTab extends StatefulWidget {
 }
 
 class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
+  static final _memCache = <String, _HwCache>{};
+  static const _prefsPrefix = 'class_hw_v1_';
+
   bool _loading = true;
   List<_AssignedFolder> _folders = [];
   List<_CWUnit> _cwUnits = [];
@@ -94,13 +136,65 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   @override
   void initState() {
     super.initState();
+    final mem = _memCache[widget.classId];
+    if (mem != null) {
+      _applyCache(mem);
+      _load(background: true);
+    } else {
+      _initFromPrefs();
+    }
+  }
+
+  void _applyCache(_HwCache c) {
+    _folders = c.folders.map((f) => _AssignedFolder(id: f.id, assignmentId: f.assignmentId, name: f.name, units: List.from(f.units))).toList();
+    _cwUnits = c.cwUnits;
+    _collHwItems = c.collHwItems;
+    _completedModes = c.completedModes.map((k, v) => MapEntry(k, Set<String>.from(v)));
+    _totalAssigned = c.totalAssigned;
+    _totalDone = c.totalDone;
+    _loading = false;
+  }
+
+  Future<void> _initFromPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('$_prefsPrefix${widget.classId}');
+      if (raw != null) {
+        final m = jsonDecode(raw) as Map<String, dynamic>;
+        final cache = _HwCache(
+          folders: (m['folders'] as List).map((e) => _AssignedFolder.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
+          cwUnits: (m['cwUnits'] as List).map((e) => _CWUnit.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
+          collHwItems: (m['collHwItems'] as List).map((e) => _CollHW.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
+          completedModes: (m['completedModes'] as Map).map((k, v) => MapEntry(k as String, Set<String>.from(v as List))),
+          totalAssigned: m['totalAssigned'] as int? ?? 0,
+          totalDone: m['totalDone'] as int? ?? 0,
+        );
+        _memCache[widget.classId] = cache;
+        if (mounted) setState(() => _applyCache(cache));
+        _load(background: true);
+        return;
+      }
+    } catch (_) {}
     _load();
   }
 
-  Future<void> _load() async {
-    // Only block the UI with a spinner on the very first load
+  Future<void> _saveToPrefs(_HwCache c) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('$_prefsPrefix${widget.classId}', jsonEncode({
+        'folders': c.folders.map((f) => f.toJson()).toList(),
+        'cwUnits': c.cwUnits.map((u) => u.toJson()).toList(),
+        'collHwItems': c.collHwItems.map((h) => h.toJson()).toList(),
+        'completedModes': c.completedModes.map((k, v) => MapEntry(k, v.toList())),
+        'totalAssigned': c.totalAssigned,
+        'totalDone': c.totalDone,
+      }));
+    } catch (_) {}
+  }
+
+  Future<void> _load({bool background = false}) async {
     final isFirstLoad = _folders.isEmpty && _cwUnits.isEmpty && _collHwItems.isEmpty;
-    if (isFirstLoad && mounted) setState(() => _loading = true);
+    if (!background && isFirstLoad && mounted) setState(() => _loading = true);
     try {
       final userId = currentUser?.id;
 
@@ -268,6 +362,13 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
         _totalDone = done;
         _loading = false;
       }); }
+
+      final cache = _HwCache(
+        folders: folders, cwUnits: cwUnits, collHwItems: collHwItems,
+        completedModes: completedModes, totalAssigned: assigned, totalDone: done,
+      );
+      _memCache[widget.classId] = cache;
+      _saveToPrefs(cache);
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }

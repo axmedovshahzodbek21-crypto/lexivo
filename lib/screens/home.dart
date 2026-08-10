@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'leveled_words_screen.dart';
 import 'stats_screen.dart';
@@ -203,11 +204,35 @@ class _HomeScreenState extends State<HomeScreen>
     });
   }
 
+  static const _classesPrefsKey = 'home_class_cards_v1';
+
   Future<void> _loadClasses() async {
     final user = currentUser;
     if (user == null) return;
+
+    // Show cached cards instantly if available
+    if (_homeClasses.isEmpty) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final raw = prefs.getString(_classesPrefsKey);
+        if (raw != null) {
+          final cached = (jsonDecode(raw) as List)
+              .map((e) => HomeClassCard.fromJson(Map<String, dynamic>.from(e as Map)))
+              .toList();
+          if (mounted) setState(() => _homeClasses = cached);
+        }
+      } catch (_) {}
+    }
+
+    // Always fetch fresh data from network
     final cards = await getHomeClassCards(user.id);
     if (mounted) setState(() => _homeClasses = cards);
+
+    // Persist for next cold start
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_classesPrefsKey, jsonEncode(cards.map((c) => c.toJson()).toList()));
+    } catch (_) {}
   }
 
   Future<void> _saveLayout() async {

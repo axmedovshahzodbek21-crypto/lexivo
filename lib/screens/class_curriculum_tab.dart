@@ -225,6 +225,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
     }
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: context.surface,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -235,10 +236,11 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
         ...available.map((f) => ListTile(
           leading: const Text('📁', style: TextStyle(fontSize: 22)),
           title: Text(f.name, style: TextStyle(color: context.appText, fontWeight: FontWeight.w600)),
-          onTap: () async {
+          onTap: () {
             Navigator.pop(ctx);
-            await supabase.from('class_library_assignments').insert({'class_id': widget.classId, 'folder_id': f.id, 'teacher_id': user.id});
-            _load();
+            supabase.from('class_library_assignments')
+                .insert({'class_id': widget.classId, 'folder_id': f.id, 'teacher_id': user.id})
+                .then((_) { if (mounted) _load(); });
           },
         )),
         Padding(

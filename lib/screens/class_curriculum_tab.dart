@@ -127,7 +127,6 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
       ]);
 
       final folderRows  = results[0] as List;
-      debugPrint('folderRows: $folderRows');
       final cwUnitRows  = results[1] as List;
       final hwRows      = results[2] as List;
 
@@ -211,11 +210,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
       if (mounted) setState(() { _folders = folders; _classUnits = classUnits; _homework = homework; _loading = false; });
     } catch (e, st) {
       debugPrint('_load error: $e\n$st');
-      if (mounted) {
-        setState(() => _loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Load error: $e'), duration: const Duration(seconds: 6)));
-      }
+      if (mounted) { setState(() => _loading = false); }
     }
   }
 

@@ -1233,22 +1233,25 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                           style: TextStyle(fontSize: 11, color: hw.isOverdue ? const Color(0xFFEF4444) : context.textMuted, fontWeight: FontWeight.w600)),
                     ]),
                     const SizedBox(height: 8),
-                    Row(children: hw.modes.map((mode) {
+                    ...hw.modes.map((mode) {
                       final count = hw.completionCounts[mode] ?? 0;
-                      final emoji = {'learn': '📖', 'flashcard': '🃏', 'quiz': '❓', 'match': '🔗'}[mode]!;
-                      final pct = totalStudents == 0 ? 0 : (count / totalStudents * 100).round();
-                      return Expanded(child: Column(children: [
-                        Text(emoji, style: const TextStyle(fontSize: 16)), const SizedBox(height: 2),
-                        Text('$count/$totalStudents', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: context.appText)),
-                        const SizedBox(height: 2),
-                        ClipRRect(borderRadius: BorderRadius.circular(2), child: LinearProgressIndicator(
-                          value: totalStudents == 0 ? 0 : count / totalStudents, minHeight: 4,
-                          backgroundColor: context.surface2,
-                          color: pct == 100 ? const Color(0xFF10B981) : context.primary,
-                        )),
-                      ]));
-                    }).toList()),
-                    const SizedBox(height: 8),
+                      final emoji = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯'}[mode] ?? '';
+                      final color = {'learn': const Color(0xFF6366F1), 'flashcard': const Color(0xFF8B5CF6), 'quiz': const Color(0xFFEC4899), 'match': const Color(0xFF14B8A6)}[mode] ?? context.primary;
+                      final pct = totalStudents == 0 ? 0.0 : count / totalStudents;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 5),
+                        child: Row(children: [
+                          SizedBox(width: 70, child: Text('$emoji ${mode[0].toUpperCase()}${mode.substring(1)}',
+                              style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600))),
+                          Expanded(child: ClipRRect(borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(value: pct, minHeight: 6, backgroundColor: context.surface2, color: color))),
+                          const SizedBox(width: 8),
+                          SizedBox(width: 36, child: Text('$count/$totalStudents', textAlign: TextAlign.right,
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.appText))),
+                        ]),
+                      );
+                    }),
+                    const SizedBox(height: 4),
                     Text('Tap to see per-student progress →', style: TextStyle(fontSize: 11, color: context.textMuted)),
                   ]),
                 ),

@@ -136,7 +136,13 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
         final m = Map<String, dynamic>.from(e as Map);
         final tfRaw = m['teacher_folders'];
         if (tfRaw == null) return null;
-        final tf = Map<String, dynamic>.from(tfRaw as Map);
+        final Map<String, dynamic> tf;
+        if (tfRaw is List) {
+          if (tfRaw.isEmpty) return null;
+          tf = Map<String, dynamic>.from(tfRaw[0] as Map);
+        } else {
+          tf = Map<String, dynamic>.from(tfRaw as Map);
+        }
         final units = ((tf['teacher_units'] as List?) ?? []).map((u) {
           final um = Map<String, dynamic>.from(u as Map);
           final words = um['teacher_unit_words'] as List?;
@@ -205,7 +211,11 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
       if (mounted) setState(() { _folders = folders; _classUnits = classUnits; _homework = homework; _loading = false; });
     } catch (e, st) {
       debugPrint('_load error: $e\n$st');
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Load error: $e'), duration: const Duration(seconds: 6)));
+      }
     }
   }
 

@@ -238,7 +238,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
           onTap: () {
             Navigator.pop(ctx);
             supabase.from('class_library_assignments')
-                .insert({'class_id': widget.classId, 'folder_id': f.id, 'teacher_id': user.id})
+                .insert({'class_id': widget.classId, 'folder_id': f.id})
                 .then((_) { if (mounted) _load(); });
           },
         )),

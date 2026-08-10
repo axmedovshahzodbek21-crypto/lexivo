@@ -90,7 +90,10 @@ Future<void> recordClassActivity(
         }),
       ]);
     }
-  } catch (_) {}
+  } catch (e, st) {
+    // ignore: avoid_print
+    print('[recordClassActivity] error: $e\n$st');
+  }
 }
 
 /// Returns class cards for the homescreen (teacher + student classes).

@@ -117,7 +117,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
       final results = await Future.wait<dynamic>([
         supabase.from('class_library_assignments')
             .select('id, folder_id, teacher_folders(name, teacher_units(id, name, teacher_unit_words(count)))')
-            .eq('class_id', widget.classId).order('created_at'),
+            .eq('class_id', widget.classId),
         supabase.from('class_word_units')
             .select('id, name, class_words(count)')
             .eq('class_id', widget.classId).order('created_at'),

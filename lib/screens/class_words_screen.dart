@@ -107,7 +107,8 @@ Output only the formatted blocks. No commentary.''';
 class ClassWordsScreen extends StatefulWidget {
   final String classId, className;
   final bool isTeacher;
-  const ClassWordsScreen({super.key, required this.classId, required this.className, required this.isTeacher});
+  final VoidCallback? onGoHome;
+  const ClassWordsScreen({super.key, required this.classId, required this.className, required this.isTeacher, this.onGoHome});
 
   @override
   State<ClassWordsScreen> createState() => _ClassWordsScreenState();
@@ -505,7 +506,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
       appBar: AppBar(
         backgroundColor: context.bg,
         elevation: 0,
-        leading: IconButton(icon: Icon(Icons.arrow_back, color: context.appText), onPressed: () => Navigator.pop(context)),
+        leading: IconButton(icon: Icon(Icons.arrow_back, color: context.appText), onPressed: () { if (widget.onGoHome != null) { widget.onGoHome!(); } else { Navigator.pop(context); } }),
         title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(tr('class_words'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
           Text(widget.className, style: TextStyle(fontSize: 11, color: context.textMuted)),

@@ -1064,26 +1064,104 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
               )),
           ]),
           const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16)),
-            child: Column(children: [
-              const Text('📗', style: TextStyle(fontSize: 30)),
-              const SizedBox(height: 8),
-              Text('Pre-built Collection Days', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
-              const SizedBox(height: 4),
-              Text('Assign a day from 30 Days, A1, A2, B1 and more directly as homework.',
-                  textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: context.textMuted)),
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: _pickCollectionDay,
-                icon: const Icon(Icons.add, size: 16),
-                label: const Text('Assign a Day', style: TextStyle(fontSize: 13)),
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF22C55E), foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-              ),
-            ]),
-          ),
+          Builder(builder: (_) {
+            final collHw = _homework.where((h) => h.source == 'collection').toList();
+            if (collHw.isEmpty) {
+              return Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16)),
+                child: Column(children: [
+                  const Text('📗', style: TextStyle(fontSize: 30)),
+                  const SizedBox(height: 8),
+                  Text('Pre-built Collection Days', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+                  const SizedBox(height: 4),
+                  Text('Assign a day from 30 Days, A1, A2, B1 and more directly as homework.',
+                      textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: context.textMuted)),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: _pickCollectionDay,
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Assign a Day', style: TextStyle(fontSize: 13)),
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF22C55E), foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                  ),
+                ]),
+              );
+            }
+            final groups = <String, List<_Homework>>{};
+            for (final h in collHw) { final n = h.collectionName!; (groups[n] ??= []).add(h); }
+            return Column(children: groups.entries.map((entry) {
+              final name = entry.key;
+              final days = entry.value..sort((a, b) => (a.dayNumber ?? 0).compareTo(b.dayNumber ?? 0));
+              final expanded = _expandedCWUnits.contains('coll_$name');
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFF166534), Color(0xFF15803D)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(children: [
+                  GestureDetector(
+                    onTap: () => setState(() { if (expanded) { _expandedCWUnits.remove('coll_$name'); } else { _expandedCWUnits.add('coll_$name'); } }),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      child: Row(children: [
+                        const Text('📗', style: TextStyle(fontSize: 20)),
+                        const SizedBox(width: 10),
+                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: Colors.white)),
+                          Text('${days.length} day${days.length != 1 ? 's' : ''} assigned',
+                              style: const TextStyle(fontSize: 11, color: Color(0xB3FFFFFF))),
+                        ])),
+                        Icon(expanded ? Icons.expand_less : Icons.expand_more, color: Colors.white70, size: 20),
+                      ]),
+                    ),
+                  ),
+                  if (expanded)
+                    Container(
+                      decoration: BoxDecoration(color: context.surface, borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16))),
+                      padding: const EdgeInsets.all(10),
+                      child: Column(children: days.map((hw) {
+                        final total = hw.totalStudents;
+                        final avgDone = hw.modes.isEmpty ? 0 : (hw.modes.map((m) => hw.completionCounts[m] ?? 0).reduce((a, b) => a + b) / hw.modes.length).floor();
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 6),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(12)),
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Row(children: [
+                              Expanded(child: Text('Day ${hw.dayNumber}: ${hw.unitName.contains(': ') ? hw.unitName.split(': ').skip(1).join(': ') : hw.unitName}',
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText))),
+                              Text('$avgDone/$total', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: context.appText)),
+                            ]),
+                            const SizedBox(height: 6),
+                            ...hw.modes.map((mode) {
+                              final done = hw.completionCounts[mode] ?? 0;
+                              final pct = total == 0 ? 0.0 : done / total;
+                              final color = {'learn': const Color(0xFF6366F1), 'flashcard': const Color(0xFF8B5CF6), 'quiz': const Color(0xFFEC4899), 'match': const Color(0xFF14B8A6)}[mode] ?? context.primary;
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 4),
+                                child: Row(children: [
+                                  SizedBox(width: 60, child: Text('${{'learn':'📖','flashcard':'🃏','quiz':'🧠','match':'🎯'}[mode] ?? ''} ${mode[0].toUpperCase()}${mode.substring(1)}',
+                                      style: TextStyle(fontSize: 11, color: color))),
+                                  Expanded(child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: LinearProgressIndicator(value: pct, backgroundColor: context.surface, valueColor: AlwaysStoppedAnimation(color), minHeight: 6),
+                                  )),
+                                  const SizedBox(width: 6),
+                                  SizedBox(width: 32, child: Text('$done/$total', textAlign: TextAlign.right,
+                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.appText))),
+                                ]),
+                              );
+                            }),
+                          ]),
+                        );
+                      }).toList()),
+                    ),
+                ]),
+              );
+            }).toList());
+          }),
 
           const SizedBox(height: 20),
 

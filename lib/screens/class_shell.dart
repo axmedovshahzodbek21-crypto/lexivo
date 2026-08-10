@@ -48,7 +48,7 @@ class _ClassShellState extends State<ClassShell> {
       if (widget.isTeacher)
         ClassDashboardScreen(classId: widget.classId, className: widget.className)
       else
-        ClassProgressScreen(classId: widget.classId, className: widget.className),
+        ClassProgressScreen(classId: widget.classId, className: widget.className, onGoHome: () => setState(() => _tab = 0)),
     ];
   }
 

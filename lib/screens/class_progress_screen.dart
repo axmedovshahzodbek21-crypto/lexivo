@@ -6,7 +6,8 @@ import '../app_theme.dart';
 class ClassProgressScreen extends StatefulWidget {
   final String classId;
   final String className;
-  const ClassProgressScreen({super.key, required this.classId, required this.className});
+  final VoidCallback? onGoHome;
+  const ClassProgressScreen({super.key, required this.classId, required this.className, this.onGoHome});
 
   @override
   State<ClassProgressScreen> createState() => _ClassProgressScreenState();
@@ -45,26 +46,34 @@ class _ClassProgressScreenState extends State<ClassProgressScreen> {
 
   Future<void> _load() async {
     final user = currentUser;
-    if (user == null) return;
-    final results = await Future.wait([
-      getClassSRSAll(userId: user.id, classId: widget.classId),
-      getClassStarredWordIds(userId: user.id, classId: widget.classId),
-      getClassHardWordIds(userId: user.id, classId: widget.classId),
-      supabase.from('class_words').select('id').eq('class_id', widget.classId),
-    ]);
-    final all      = results[0] as List<ClassSRSEntry>;
-    final starred  = results[1] as List;
-    final hard     = results[2] as List;
-    final countRes = results[3] as List;
-    _cache[widget.classId] = (entries: all, starredCount: starred.length, hardCount: hard.length, totalWords: countRes.length);
-    if (mounted) {
-      setState(() {
-        _entries      = all;
-        _starredCount = starred.length;
-        _hardCount    = hard.length;
-        _totalWords   = countRes.length;
-        _loading      = false;
-      });
+    if (user == null) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
+    try {
+      final results = await Future.wait([
+        getClassSRSAll(userId: user.id, classId: widget.classId),
+        getClassStarredWordIds(userId: user.id, classId: widget.classId),
+        getClassHardWordIds(userId: user.id, classId: widget.classId),
+        supabase.from('class_words').select('id').eq('class_id', widget.classId),
+      ]);
+      final all      = results[0] as List<ClassSRSEntry>;
+      final starred  = results[1] as List;
+      final hard     = results[2] as List;
+      final countRes = results[3] as List;
+      _cache[widget.classId] = (entries: all, starredCount: starred.length, hardCount: hard.length, totalWords: countRes.length);
+      if (mounted) {
+        setState(() {
+          _entries      = all;
+          _starredCount = starred.length;
+          _hardCount    = hard.length;
+          _totalWords   = countRes.length;
+          _loading      = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('ClassProgressScreen _load error: $e');
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -83,7 +92,7 @@ class _ClassProgressScreenState extends State<ClassProgressScreen> {
       return Scaffold(
         backgroundColor: context.bg,
         appBar: AppBar(backgroundColor: context.bg, elevation: 0,
-          leading: IconButton(icon: Icon(Icons.arrow_back, color: context.appText), onPressed: () => Navigator.pop(context)),
+          leading: IconButton(icon: Icon(Icons.arrow_back, color: context.appText), onPressed: () { if (widget.onGoHome != null) { widget.onGoHome!(); } else { Navigator.pop(context); } }),
           title: Text('My Progress', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
         ),
         body: Center(child: CircularProgressIndicator(color: context.primary)),
@@ -105,7 +114,7 @@ class _ClassProgressScreenState extends State<ClassProgressScreen> {
       appBar: AppBar(
         backgroundColor: context.bg,
         elevation: 0,
-        leading: IconButton(icon: Icon(Icons.arrow_back, color: context.appText), onPressed: () => Navigator.pop(context)),
+        leading: IconButton(icon: Icon(Icons.arrow_back, color: context.appText), onPressed: () { if (widget.onGoHome != null) { widget.onGoHome!(); } else { Navigator.pop(context); } }),
         title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('My Progress', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
           Text(widget.className, style: TextStyle(fontSize: 11, color: context.textMuted)),

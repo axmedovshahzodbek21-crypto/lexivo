@@ -2,18 +2,7 @@ import 'package:flutter/material.dart';
 import '../data/storage_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
-
-String _displayXP(int raw) =>
-    (raw / 10).toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '');
-
-class _XpSession {
-  final String reason;
-  final String? source;
-  final int startTime;
-  int totalAmount;
-  int count = 1;
-  _XpSession({required this.reason, this.source, required this.startTime, required this.totalAmount});
-}
+import 'personal_xp_calendar_screen.dart';
 
 // All levels in order: [name, minXP stored, maxXP stored (-1 = infinity)]
 const _kLevels = [
@@ -49,7 +38,6 @@ class _XpLevelSheet extends StatefulWidget {
 class _XpLevelSheetState extends State<_XpLevelSheet> {
   String? _peekedLevel;
   List<Map<String, dynamic>> _history = [];
-  final Set<String> _expandedDays = {};
 
   String get _levelName => StorageService.getLevelName(widget.xp);
   int get _nextXP      => StorageService.getNextLevelXP(widget.xp);
@@ -477,168 +465,23 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
 
   Widget _buildHistory(BuildContext context) {
     if (_history.isEmpty) return const SizedBox.shrink();
-
-    final grouped = <String, List<Map<String, dynamic>>>{};
-    for (final e in _history) {
-      final d = DateTime.fromMillisecondsSinceEpoch(e['timestamp'] as int);
-      final key = '${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}/${d.year}';
-      (grouped[key] ??= []).add(e);
-    }
-    final dateKeys = grouped.keys.toList()..sort((a, b) {
-      final ap = a.split('/'); final bp = b.split('/');
-      final ad = DateTime(int.parse(ap[2]), int.parse(ap[0]), int.parse(ap[1]));
-      final bd = DateTime(int.parse(bp[2]), int.parse(bp[0]), int.parse(bp[1]));
-      return bd.compareTo(ad);
-    });
-
-    String icon(String reason) {
-      switch (reason) {
-        case 'Learn': return '📖';
-        case 'Quiz': return '🧠';
-        case 'Flashcard': return '🃏';
-        case 'SRS Review': return '🔄';
-        case 'Streak Bonus': return '🔥';
-        case 'Level Complete': return '🏆';
-        default: return '⭐';
-      }
-    }
-
-    String timeLabel(int ts) {
-      final d = DateTime.fromMillisecondsSinceEpoch(ts);
-      return '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
-    }
-
-    List<_XpSession> groupSessions(List<Map<String, dynamic>> entries) {
-      final ordered = entries.reversed.toList();
-      final sessions = <_XpSession>[];
-      for (final e in ordered) {
-        final ts = e['timestamp'] as int;
-        final reason = e['reason'] as String;
-        final source = e['source'] as String?;
-        final amount = e['amount'] as int;
-        if (sessions.isEmpty ||
-            sessions.last.reason != reason ||
-            sessions.last.source != source ||
-            ts - sessions.last.startTime > 3600000) {
-          sessions.add(_XpSession(reason: reason, source: source, startTime: ts, totalAmount: amount));
-        } else {
-          sessions.last.totalAmount += amount;
-          sessions.last.count++;
-        }
-      }
-      return sessions.reversed.toList();
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('XP HISTORY', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.textMuted, letterSpacing: 1)),
-        const SizedBox(height: 10),
-        ...dateKeys.map((dateKey) {
-          final entries = grouped[dateKey]!;
-          final dayTotal = entries.fold<int>(0, (s, e) => s + (e['amount'] as int));
-          final isExpanded = _expandedDays.contains(dateKey);
-          final sessions = isExpanded ? groupSessions(entries) : <_XpSession>[];
-
-          return Column(
-            children: [
-              GestureDetector(
-                onTap: () => setState(() {
-                  if (isExpanded) { _expandedDays.remove(dateKey); }
-                  else { _expandedDays.add(dateKey); }
-                }),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-                  decoration: BoxDecoration(
-                    color: context.surface,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: context.cardShadow,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(dateKey, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: context.appText)),
-                      ),
-                      Text('+${_displayXP(dayTotal)} XP', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.primary)),
-                      const SizedBox(width: 6),
-                      Icon(isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, size: 18, color: context.textMuted),
-                    ],
-                  ),
-                ),
-              ),
-              if (isExpanded) ...[
-                const SizedBox(height: 4),
-                Container(
-                  decoration: BoxDecoration(
-                    color: context.surface,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: context.cardShadow,
-                  ),
-                  child: Column(
-                    children: List.generate(sessions.length, (j) {
-                      final s = sessions[j];
-                      final isLast = j == sessions.length - 1;
-                      final showCount = s.count > 1 && (s.reason == 'Learn' || s.reason == 'SRS Review');
-                      return Column(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                            child: Row(
-                              children: [
-                                Text(icon(s.reason), style: const TextStyle(fontSize: 20)),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Text(s.reason, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.appText)),
-                                          if (showCount) ...[
-                                            const SizedBox(width: 6),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                              decoration: BoxDecoration(color: context.border, borderRadius: BorderRadius.circular(8)),
-                                              child: Text('${s.count} words', style: TextStyle(fontSize: 10, color: context.textMuted)),
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Row(
-                                        children: [
-                                          Text(timeLabel(s.startTime), style: TextStyle(fontSize: 11, color: context.textMuted)),
-                                          if (s.source != null) ...[
-                                            Text(' · ', style: TextStyle(fontSize: 11, color: context.textMuted)),
-                                            Flexible(
-                                              child: Text(s.source!, style: TextStyle(fontSize: 11, color: context.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                                  decoration: BoxDecoration(color: context.primary.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
-                                  child: Text('+${_displayXP(s.totalAmount)} XP', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.primary)),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (!isLast) Divider(height: 1, indent: 44, color: context.border),
-                        ],
-                      );
-                    }),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 8),
-            ],
-          );
-        }),
-      ],
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(
+        builder: (_) => PersonalXpCalendarScreen(totalXpRaw: widget.xp),
+      )),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: context.surface,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: context.cardShadow,
+        ),
+        child: Row(children: [
+          Text('XP HISTORY', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.textMuted, letterSpacing: 1)),
+          const Spacer(),
+          Text('View Calendar →', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.primary)),
+        ]),
+      ),
     );
   }
 }

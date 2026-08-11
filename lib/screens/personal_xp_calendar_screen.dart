@@ -312,7 +312,7 @@ class _PersonalXpCalendarScreenState extends State<PersonalXpCalendarScreen> {
       barrierLabel: '',
       barrierColor: Colors.black.withValues(alpha: 0.5),
       transitionDuration: const Duration(milliseconds: 280),
-      pageBuilder: (ctx, _, __) => Align(
+      pageBuilder: (ctx, _, secAnim) => Align(
         alignment: Alignment.centerRight,
         child: Material(
           color: Colors.transparent,
@@ -351,7 +351,7 @@ class _PersonalXpCalendarScreenState extends State<PersonalXpCalendarScreen> {
                   child: ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                     itemCount: sorted.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    separatorBuilder: (_, idx) => const SizedBox(height: 8),
                     itemBuilder: (_, i) {
                       final e = sorted[i];
                       final xp = ((e['amount'] as num?)?.toInt() ?? 0);

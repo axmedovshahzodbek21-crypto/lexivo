@@ -788,8 +788,9 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
             Row(children: [
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  Text('${hw.source == 'library' ? '📖' : '📝'} ${hw.unitName}',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+                  Flexible(child: Text('${hw.source == 'library' ? '📖' : '📝'} ${hw.unitName}',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText),
+                      overflow: TextOverflow.ellipsis)),
                   const SizedBox(width: 6),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

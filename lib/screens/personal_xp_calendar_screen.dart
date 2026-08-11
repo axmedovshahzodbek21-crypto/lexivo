@@ -303,115 +303,89 @@ class _PersonalXpCalendarScreenState extends State<PersonalXpCalendarScreen> {
   void _showDaySheet(BuildContext context, String dateStr,
       List<Map<String, dynamic>> entries, Color color) {
     final totalXp = _dayTotal(entries);
-    // Sort entries newest first and group consecutive same-reason sessions
-    final sorted = [...entries]..sort(
-        (a, b) => (b['timestamp'] as int).compareTo(a['timestamp'] as int));
+    final sorted = [...entries]
+      ..sort((a, b) => (b['timestamp'] as int).compareTo(a['timestamp'] as int));
 
-    showModalBottomSheet(
+    showGeneralDialog(
       context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (_) => Container(
-        margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-        decoration: BoxDecoration(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFF1E1E2E)
-              : Colors.white,
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          // Handle
-          Container(
-            margin: const EdgeInsets.only(top: 12, bottom: 4),
-            width: 36,
-            height: 4,
-            decoration: BoxDecoration(
-                color: Colors.grey.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(2)),
-          ),
-          // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-            child: Row(children: [
-              Expanded(
-                  child: Text(dateStr,
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: color,
-                          letterSpacing: 1))),
-              Text('+${_displayXP(totalXp)} XP',
-                  style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w900,
-                      color: color)),
-            ]),
-          ),
-          const Divider(height: 16),
-          // Activity list
-          Flexible(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-              child: Column(
-                children: sorted.map((e) {
-                  final xp = ((e['amount'] as num?)?.toInt() ?? 0);
-                  final reason = e['reason'] as String? ?? '';
-                  final source = e['source'] as String?;
-                  final icon = _reasonIcons[reason] ?? '⭐';
-                  final ts = e['timestamp'] as int;
-                  final d = DateTime.fromMillisecondsSinceEpoch(ts);
-                  final h = d.hour.toString().padLeft(2, '0');
-                  final m = d.minute.toString().padLeft(2, '0');
-                  final timeStr = '$h:$m';
-
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.07),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Row(children: [
-                      Text(icon, style: const TextStyle(fontSize: 20)),
-                      const SizedBox(width: 12),
-                      Expanded(
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                            Text(reason,
-                                style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: Theme.of(context).brightness ==
-                                            Brightness.dark
-                                        ? Colors.white
-                                        : Colors.black87)),
-                            if (source != null)
-                              Text(source,
-                                  style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey.shade500),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis)
-                            else
-                              Text(timeStr,
-                                  style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey.shade500)),
-                          ])),
-                      Text('+${_displayXP(xp)} XP',
-                          style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w900,
-                              color: color)),
-                    ]),
-                  );
-                }).toList(),
+      barrierDismissible: true,
+      barrierLabel: '',
+      barrierColor: Colors.black.withValues(alpha: 0.5),
+      transitionDuration: const Duration(milliseconds: 280),
+      pageBuilder: (ctx, _, __) => Align(
+        alignment: Alignment.centerRight,
+        child: Material(
+          color: Colors.transparent,
+          child: SafeArea(
+            child: Container(
+              width: MediaQuery.of(ctx).size.width * 0.72,
+              height: double.infinity,
+              decoration: BoxDecoration(
+                color: context.surface,
+                borderRadius: const BorderRadius.horizontal(left: Radius.circular(28)),
+                boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 32, offset: Offset(-4, 0))],
               ),
+              child: Column(children: [
+                // Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 16, 12),
+                  child: Row(children: [
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(dateStr, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: color, letterSpacing: 1)),
+                      const SizedBox(height: 2),
+                      Text('+${_displayXP(totalXp)} XP', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: color)),
+                    ])),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+                        child: Icon(Icons.close_rounded, size: 20, color: color),
+                      ),
+                    ),
+                  ]),
+                ),
+                Divider(color: context.border, height: 1),
+                // Entries
+                Expanded(
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                    itemCount: sorted.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (_, i) {
+                      final e = sorted[i];
+                      final xp = ((e['amount'] as num?)?.toInt() ?? 0);
+                      final reason = e['reason'] as String? ?? '';
+                      final source = e['source'] as String?;
+                      final icon = _reasonIcons[reason] ?? '⭐';
+                      final ts = e['timestamp'] as int;
+                      final d = DateTime.fromMillisecondsSinceEpoch(ts);
+                      final timeStr = '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(color: color.withValues(alpha: 0.07), borderRadius: BorderRadius.circular(14)),
+                        child: Row(children: [
+                          Text(icon, style: const TextStyle(fontSize: 20)),
+                          const SizedBox(width: 10),
+                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(reason, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: context.appText)),
+                            Text(source ?? timeStr, style: TextStyle(fontSize: 11, color: context.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          ])),
+                          Text('+${_displayXP(xp)} XP', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: color)),
+                        ]),
+                      );
+                    },
+                  ),
+                ),
+              ]),
             ),
           ),
-        ]),
+        ),
+      ),
+      transitionBuilder: (ctx, anim, _, child) => SlideTransition(
+        position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
+            .animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+        child: child,
       ),
     );
   }

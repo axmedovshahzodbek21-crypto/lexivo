@@ -23,6 +23,7 @@ import '../services/sync_service.dart';
 import '../services/supabase_service.dart';
 import 'class_shell.dart';
 import 'xp_level_sheet.dart';
+import 'personal_xp_calendar_screen.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 
@@ -82,7 +83,8 @@ class _HomeScreenState extends State<HomeScreen>
   bool _hideWordOfDay = false;
   bool _hideSession = false;
   bool _hideStats = false;
-  List<String> _sectionOrder = ['goal', 'wod', 'session', 'stats', 'classes'];
+  bool _hideXpHistory = false;
+  List<String> _sectionOrder = ['goal', 'wod', 'session', 'stats', 'xp_history', 'classes'];
 
   // Class cards
   List<HomeClassCard> _homeClasses = [];
@@ -195,11 +197,13 @@ class _HomeScreenState extends State<HomeScreen>
       _hideWordOfDay = prefs.getBool('home_hide_wod') ?? false;
       _hideSession = prefs.getBool('home_hide_session') ?? false;
       _hideStats = prefs.getBool('home_hide_stats') ?? false;
+      _hideXpHistory = prefs.getBool('home_hide_xp_history') ?? false;
       final orderStr = prefs.getString('home_section_order');
       var order = orderStr != null
           ? orderStr.split(',')
-          : ['goal', 'wod', 'session', 'stats', 'classes'];
+          : ['goal', 'wod', 'session', 'stats', 'xp_history', 'classes'];
       if (!order.contains('classes')) order = [...order, 'classes'];
+      if (!order.contains('xp_history')) order = [...order.where((id) => id != 'classes'), 'xp_history', 'classes'];
       _sectionOrder = order;
     });
   }
@@ -241,16 +245,17 @@ class _HomeScreenState extends State<HomeScreen>
     await prefs.setBool('home_hide_wod', _hideWordOfDay);
     await prefs.setBool('home_hide_session', _hideSession);
     await prefs.setBool('home_hide_stats', _hideStats);
+    await prefs.setBool('home_hide_xp_history', _hideXpHistory);
     await prefs.setString('home_section_order', _sectionOrder.join(','));
   }
 
   void _showCustomizeSheet() {
     const sectionIcons = {
-      'goal': '🎯', 'wod': '✨', 'session': '▶️', 'stats': '📊',
+      'goal': '🎯', 'wod': '✨', 'session': '▶️', 'stats': '📊', 'xp_history': '📅',
     };
     const sectionLabels = {
       'goal': 'Daily Goal & Level', 'wod': 'Word of the Day',
-      'session': 'Start Learning', 'stats': 'Stats Row',
+      'session': 'Start Learning', 'stats': 'Stats Row', 'xp_history': 'XP History',
     };
 
     // Only the 4 known toggleable sections — exclude 'classes' and any unknown IDs
@@ -268,6 +273,7 @@ class _HomeScreenState extends State<HomeScreen>
               case 'wod':  return _hideWordOfDay;
               case 'session': return _hideSession;
               case 'stats': return _hideStats;
+              case 'xp_history': return _hideXpHistory;
               default: return false;
             }
           }
@@ -279,6 +285,7 @@ class _HomeScreenState extends State<HomeScreen>
                 case 'wod':  _hideWordOfDay = hidden; break;
                 case 'session': _hideSession = hidden; break;
                 case 'stats': _hideStats = hidden; break;
+                case 'xp_history': _hideXpHistory = hidden; break;
               }
             });
             setSheet(() {});
@@ -366,11 +373,12 @@ class _HomeScreenState extends State<HomeScreen>
                     TextButton(
                       onPressed: () {
                         setState(() {
-                          _sectionOrder = ['goal', 'wod', 'session', 'stats', 'classes'];
+                          _sectionOrder = ['goal', 'wod', 'session', 'stats', 'xp_history', 'classes'];
                           _hideGoalLevel = false;
                           _hideWordOfDay = false;
                           _hideSession   = false;
                           _hideStats     = false;
+                          _hideXpHistory = false;
                         });
                         setSheet(() {});
                         _saveLayout();
@@ -1734,6 +1742,53 @@ class _HomeScreenState extends State<HomeScreen>
               )),
                 const SizedBox(height: 14),
               ], // stats
+
+              if (sid == 'xp_history' && !_hideXpHistory) ...[
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => PersonalXpCalendarScreen(totalXpRaw: _xp)),
+                  ).then((_) => _loadStats()),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF4C1D95), Color(0xFF6C63FF)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        const BoxShadow(color: Color(0xFF2E1065), offset: Offset(0, 7), blurRadius: 0),
+                        BoxShadow(color: const Color(0xFF6C63FF).withValues(alpha: 0.4), blurRadius: 20, offset: const Offset(0, 12)),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        const Text('📅', style: TextStyle(fontSize: 32)),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('XP History', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white)),
+                              const SizedBox(height: 3),
+                              Text(
+                                '${StorageService.displayXP(_xp)} XP earned',
+                                style: const TextStyle(fontSize: 13, color: Colors.white70, fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 14),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+              ],
 
               if (sid == 'classes' && _homeClasses.isNotEmpty) ...[
                 const SizedBox(height: 8),

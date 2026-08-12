@@ -9,6 +9,7 @@ import 'stats_screen.dart';
 import 'leaderboard_screen.dart';
 import 'classes_screen.dart';
 import 'imported_words_screen.dart';
+import 'reading_screen.dart';
 import 'pomodoro_service.dart';
 import 'break_screen.dart';
 import '../app_theme.dart';
@@ -191,6 +192,7 @@ class _MainShellState extends State<MainShell> {
       const LeaderboardScreen(),
       const ClassesScreen(),
       const ImportedWordsScreen(),
+      const ReadingScreen(),
     ];
 
     return PopScope(
@@ -206,7 +208,7 @@ class _MainShellState extends State<MainShell> {
         body: Stack(
           children: [
             IndexedStack(index: _currentIndex, children: screens),
-            if (_currentIndex != 3 && _currentIndex != 4 && _currentIndex != 5 && _currentIndex != 6)
+            if (_currentIndex != 3 && _currentIndex != 4 && _currentIndex != 5 && _currentIndex != 6 && _currentIndex != 7)
               Positioned(
                 top: MediaQuery.of(context).padding.top + 56,
                 right: 16,
@@ -254,6 +256,7 @@ class _MainShellState extends State<MainShell> {
                     _buildNavItem(context, 4, Icons.emoji_events_rounded, tr('nav_leaderboard')),
                     _buildNavItem(context, 5, Icons.school_rounded, tr('nav_classes')),
                     _buildNavItem(context, 6, Icons.folder_open_rounded, 'My Words'),
+                    _buildNavItem(context, 7, Icons.menu_book_rounded, 'Reading'),
                   ],
                 ),
               ),

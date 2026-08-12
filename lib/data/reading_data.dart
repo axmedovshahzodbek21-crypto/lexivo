@@ -5587,7 +5587,7 @@ In conclusion, vaccination is a powerful tool for preventing disease, protecting
       ),
       ReadingQuestion(
         question: 'What can be inferred about the economic benefits of vaccination?',
-        explanation: 'It can be inferred that vaccination provides substantial economic returns by reducing medical treatment costs, lowering the burden on hospitals, and keeping workers and students healthy and productive, with the World Bank estimating that every dollar spent on immunization returns up to $44 in economic benefits.',
+        explanation: 'It can be inferred that vaccination provides substantial economic returns by reducing medical treatment costs, lowering the burden on hospitals, and keeping workers and students healthy and productive, with the World Bank estimating that every dollar spent on immunization returns up to \$44 in economic benefits.',
       ),
     ],
   ),
@@ -5640,7 +5640,7 @@ In conclusion, vaccination is a powerful tool for preventing disease, protecting
       ),
       ReadingQuestion(
         question: 'According to the passage, what economic benefits do vaccines provide?',
-        explanation: 'They reduce the cost of medical treatment, lower the burden on hospitals, and keep workers and students healthy and productive; according to the World Bank, every dollar spent on immunization returns up to $44 in economic benefits.',
+        explanation: 'They reduce the cost of medical treatment, lower the burden on hospitals, and keep workers and students healthy and productive; according to the World Bank, every dollar spent on immunization returns up to \$44 in economic benefits.',
       ),
       ReadingQuestion(
         question: 'What can be inferred about mandatory vaccination policies?',
@@ -5864,7 +5864,7 @@ In conclusion, poverty is a complex and urgent global issue that affects health,
       ),
       ReadingQuestion(
         question: 'According to the passage, what is the difference between absolute poverty and relative poverty?',
-        explanation: 'Absolute poverty is the inability to afford basic necessities of life, measured by the international poverty line of $2.15 per day, while relative poverty is based on income significantly below the national average within a society, limiting full participation.',
+        explanation: 'Absolute poverty is the inability to afford basic necessities of life, measured by the international poverty line of \$2.15 per day, while relative poverty is based on income significantly below the national average within a society, limiting full participation.',
       ),
       ReadingQuestion(
         question: 'The word "interconnected" in the third paragraph most likely means...',

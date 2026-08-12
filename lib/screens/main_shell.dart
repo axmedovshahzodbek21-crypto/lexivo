@@ -256,7 +256,7 @@ class _MainShellState extends State<MainShell> {
                     _buildNavItem(context, 4, Icons.emoji_events_rounded, tr('nav_leaderboard')),
                     _buildNavItem(context, 5, Icons.school_rounded, tr('nav_classes')),
                     _buildNavItem(context, 6, Icons.folder_open_rounded, 'My Words'),
-                    _buildNavItem(context, 7, Icons.menu_book_rounded, 'Reading'),
+                    _buildNavItem(context, 7, Icons.lightbulb_rounded, 'Ideas'),
                   ],
                 ),
               ),

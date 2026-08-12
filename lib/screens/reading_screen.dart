@@ -27,7 +27,7 @@ class ReadingScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          '📖 Reading',
+          '💡 Ideas',
           style: TextStyle(
             color: context.appText,
             fontWeight: FontWeight.bold,

@@ -118,7 +118,7 @@ class _RealEnglishVideoScreenState extends State<RealEnglishVideoScreen> {
                         crossAxisCount: 2,
                         crossAxisSpacing: 12,
                         mainAxisSpacing: 12,
-                        childAspectRatio: 0.72,
+                        childAspectRatio: 0.88,
                       ),
                       itemCount: _collection!.days.length,
                       itemBuilder: (ctx, i) {
@@ -258,19 +258,21 @@ class _UnitCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final allDone = progress.learnDone && progress.flashcardDone && progress.quizDone;
     final pct = [progress.learnDone, progress.flashcardDone, progress.quizDone].where((b) => b).length / 3;
+    final activeAccent = allDone ? Colors.green : accent;
 
     return Container(
       decoration: BoxDecoration(
         color: context.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: allDone ? Colors.green.shade300 : context.border, width: 1.5),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(14.5),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // top accent bar
             Container(height: 3, decoration: BoxDecoration(
               gradient: LinearGradient(colors: allDone
                 ? [const Color(0xFF22c55e), const Color(0xFF4ade80)]
@@ -282,41 +284,56 @@ class _UnitCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(color: allDone ? Colors.green : accent, borderRadius: BorderRadius.circular(20)),
-                          child: Text('${day.dayNumber}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)),
+                    // header row
+                    Row(children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(color: activeAccent, borderRadius: BorderRadius.circular(20)),
+                        child: Text('${day.dayNumber}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)),
+                      ),
+                      const Spacer(),
+                      Text('${day.words.length} words', style: TextStyle(fontSize: 9, color: context.textMuted)),
+                    ]),
+                    const SizedBox(height: 4),
+                    Text(day.topic, maxLines: 2, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold,
+                        color: allDone ? Colors.green.shade700 : context.appText, height: 1.3)),
+                    const Spacer(),
+                    // big Learn button
+                    GestureDetector(
+                      onTap: onLearn,
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: activeAccent.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: activeAccent.withValues(alpha: 0.3)),
                         ),
-                        const Spacer(),
-                        Text('${day.words.length} words', style: TextStyle(fontSize: 9, color: context.textMuted)),
-                      ],
+                        child: Column(mainAxisSize: MainAxisSize.min, children: [
+                          Text(progress.learnDone ? '✅' : '📖', style: const TextStyle(fontSize: 20)),
+                          const SizedBox(height: 2),
+                          Text('Learn', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold,
+                            color: progress.learnDone ? Colors.green.shade600 : activeAccent)),
+                        ]),
+                      ),
                     ),
-                    const SizedBox(height: 5),
-                    Expanded(
-                      child: Text(day.topic, maxLines: 3, overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold,
-                          color: allDone ? Colors.green.shade700 : context.appText, height: 1.3)),
-                    ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
+                    // progress bar
                     ClipRRect(
                       borderRadius: BorderRadius.circular(3),
                       child: LinearProgressIndicator(value: pct, minHeight: 3, backgroundColor: context.border,
-                        valueColor: AlwaysStoppedAnimation<Color>(allDone ? Colors.green : accent)),
+                        valueColor: AlwaysStoppedAnimation<Color>(activeAccent)),
                     ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        _ActionBtn(icon: '📖', label: 'Learn',  done: progress.learnDone,     locked: false,                 color: accent,                     onTap: onLearn),
-                        const SizedBox(width: 4),
-                        _ActionBtn(icon: '🃏', label: 'Cards',  done: progress.flashcardDone, locked: !progress.learnDone,   color: const Color(0xFF9333EA),    onTap: onFlashcards),
-                        const SizedBox(width: 4),
-                        _ActionBtn(icon: '🧠', label: 'Quiz',   done: progress.quizDone,      locked: !progress.learnDone,   color: const Color(0xFFEA580C),    onTap: onQuiz),
-                        const SizedBox(width: 4),
-                        _ActionBtn(icon: '🔀', label: 'Match',  done: false,                  locked: !progress.learnDone,   color: const Color(0xFFEC4899),    onTap: onMatch),
-                      ],
-                    ),
+                    const SizedBox(height: 8),
+                    // small icon-only lock buttons
+                    Row(children: [
+                      _SmallBtn(icon: '🃏', done: progress.flashcardDone, locked: !progress.learnDone, color: const Color(0xFF9333EA), label: 'Cards', onTap: onFlashcards),
+                      const SizedBox(width: 6),
+                      _SmallBtn(icon: '🧠', done: progress.quizDone,      locked: !progress.learnDone, color: const Color(0xFFEA580C), label: 'Quiz',  onTap: onQuiz),
+                      const SizedBox(width: 6),
+                      _SmallBtn(icon: '🔀', done: false,                  locked: !progress.learnDone, color: const Color(0xFFEC4899), label: 'Match', onTap: onMatch),
+                    ]),
                   ],
                 ),
               ),
@@ -328,9 +345,12 @@ class _UnitCard extends StatelessWidget {
   }
 }
 
-class _ActionBtn extends StatelessWidget {
-  final String icon; final String label; final bool done; final bool locked; final Color color; final VoidCallback onTap;
-  const _ActionBtn({required this.icon, required this.label, required this.done, required this.locked, required this.color, required this.onTap});
+class _SmallBtn extends StatelessWidget {
+  final String icon, label;
+  final bool done, locked;
+  final Color color;
+  final VoidCallback onTap;
+  const _SmallBtn({required this.icon, required this.label, required this.done, required this.locked, required this.color, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -338,18 +358,16 @@ class _ActionBtn extends StatelessWidget {
       child: GestureDetector(
         onTap: locked ? null : onTap,
         child: Opacity(
-          opacity: locked ? 0.35 : 1.0,
+          opacity: locked ? 0.4 : 1.0,
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 5),
             decoration: BoxDecoration(
-              color: done ? Colors.green.withValues(alpha: 0.12) : color.withValues(alpha: 0.1),
+              color: done ? Colors.green.withValues(alpha: 0.1) : color.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Column(children: [
-              Text(locked ? '🔒' : (done ? '✅' : icon), style: const TextStyle(fontSize: 11)),
-              Text(label, style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold,
-                color: done ? Colors.green.shade600 : context.textMuted)),
-            ]),
+            child: Center(
+              child: Text(locked ? '🔒' : (done ? '✅' : icon), style: const TextStyle(fontSize: 14)),
+            ),
           ),
         ),
       ),

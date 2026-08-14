@@ -2301,53 +2301,72 @@ class _HomeScreenState extends State<HomeScreen>
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         decoration: BoxDecoration(
-          color: const Color(0xFF6C63FF),
+          gradient: const LinearGradient(
+            colors: [Color(0xFFA78BFA), Color(0xFF6C63FF), Color(0xFF4C1D95)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             const BoxShadow(
               color: Color(0xFF3D37B3),
-              offset: Offset(0, 6),
+              offset: Offset(0, 4),
               blurRadius: 0,
             ),
             BoxShadow(
-              color: const Color(0xFF6C63FF).withValues(alpha: 0.4),
-              blurRadius: 16,
-              offset: const Offset(0, 10),
+              color: const Color(0xFF6C63FF).withValues(alpha: 0.45),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
-        child: Row(
+        child: Stack(
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Today's Session",
-                    style: TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${_dailyGoal - _todayLearned} Words Left',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+            Positioned(
+              right: -4,
+              bottom: -10,
+              child: Text(
+                '⚡',
+                style: TextStyle(
+                  fontSize: 72,
+                  color: Colors.white.withValues(alpha: 0.07),
+                ),
               ),
             ),
-            const SizedBox(width: 12),
-            ElevatedButton(
-              onPressed: _showPomodoroThenPicker,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF6C63FF),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              ),
-              child: const Text('Start', style: TextStyle(fontWeight: FontWeight.bold)),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "TODAY'S SESSION",
+                        style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.8),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${_dailyGoal - _todayLearned} Words Left',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton(
+                  onPressed: _showPomodoroThenPicker,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF6C63FF),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  ),
+                  child: const Text('Start', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ],
             ),
           ],
         ),
@@ -2357,47 +2376,61 @@ class _HomeScreenState extends State<HomeScreen>
     if (_reviewsDue > 0) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: context.surface2,
+          gradient: const LinearGradient(
+            colors: [Color(0xFFFCD34D), Color(0xFFF59E0B), Color(0xFFB45309)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: context.border),
+          boxShadow: const [
+            BoxShadow(color: Color(0xFFB45309), offset: Offset(0, 4), blurRadius: 0),
+            BoxShadow(color: Color(0x55F59E0B), blurRadius: 18, offset: Offset(0, 8)),
+          ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            Text(
-              "Today's Session",
-              style: TextStyle(color: context.textMuted, fontSize: 14),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Daily Limit Reached 🎯',
-              style: TextStyle(
-                color: context.appText,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'You\'ve learned $_todayLearned words today. Come back tomorrow!',
-              style: TextStyle(color: context.textMuted, fontSize: 13),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _showLimitReachedDialog,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: context.border,
-                foregroundColor: context.textMuted,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            Positioned(
+              right: -8,
+              bottom: -12,
+              child: Text(
+                '🎯',
+                style: TextStyle(
+                  fontSize: 72,
+                  color: Colors.white.withValues(alpha: 0.07),
                 ),
               ),
-              child: const Text(
-                'Learn anyway',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "TODAY'S SESSION",
+                  style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.8),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Daily Limit Reached 🎯',
+                  style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'You\'ve learned $_todayLearned words today. Come back tomorrow!',
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+                const SizedBox(height: 14),
+                ElevatedButton(
+                  onPressed: _showLimitReachedDialog,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white.withValues(alpha: 0.25),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Learn anyway', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ],
             ),
           ],
         ),
@@ -2406,61 +2439,76 @@ class _HomeScreenState extends State<HomeScreen>
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF0F3460), Color(0xFF16213E)],
+          colors: [Color(0xFF1E3A5F), Color(0xFF0F3460), Color(0xFF0A1628)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(color: Color(0xFF0A1628), offset: Offset(0, 4), blurRadius: 0),
+          BoxShadow(color: Color(0x440F3460), blurRadius: 18, offset: Offset(0, 8)),
+        ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          const Text(
-            '🎉 All caught up!',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
+          Positioned(
+            right: -8,
+            bottom: -12,
+            child: Text(
+              '🎉',
+              style: TextStyle(
+                fontSize: 72,
+                color: Colors.white.withValues(alpha: 0.07),
+              ),
             ),
           ),
-          const SizedBox(height: 4),
-          const Text(
-            'No reviews due. You\'ve done everything for today!',
-            style: TextStyle(color: Colors.white60, fontSize: 13),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => FreeTimeScreen(
-                  wordOfDay: _wordOfDay,
-                  userProfile: widget.userProfile,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'ALL CAUGHT UP',
+                style: TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.8),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                '🎉 Nothing due today!',
+                style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                "You've done everything for today. Explore free time!",
+                style: TextStyle(color: Colors.white60, fontSize: 13),
+              ),
+              const SizedBox(height: 14),
+              ElevatedButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => FreeTimeScreen(
+                      wordOfDay: _wordOfDay,
+                      userProfile: widget.userProfile,
+                    ),
+                  ),
+                ).then((_) => _loadStats()),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6C63FF),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Free Time Activities ✨', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: _showLimitReachedDialog,
+                child: const Text(
+                  'Learn anyway',
+                  style: TextStyle(color: Colors.white54, fontSize: 12),
                 ),
               ),
-            ).then((_) => _loadStats()),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6C63FF),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text(
-              'Free Time Activities ✨',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: _showLimitReachedDialog,
-            child: const Text(
-              'Learn anyway',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
-            ),
+            ],
           ),
         ],
       ),

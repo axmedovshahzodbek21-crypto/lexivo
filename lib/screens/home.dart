@@ -1988,8 +1988,12 @@ class _HomeScreenState extends State<HomeScreen>
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [Color(0xFF6C63FF), Color(0xFF9F97FF)],
+                          colors: [Color(0xFFA78BFA), Color(0xFF6C63FF), Color(0xFF4C1D95)],
                         ),
+                        boxShadow: [
+                          BoxShadow(color: Color(0xFF3D1F9E), offset: Offset(0, 4), blurRadius: 0),
+                          BoxShadow(color: Color(0x446C63FF), blurRadius: 18, offset: Offset(0, 8)),
+                        ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2176,17 +2180,31 @@ class _HomeScreenState extends State<HomeScreen>
                                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: context.appText)),
                                 const Spacer(),
                                 Text('$_todayLearned / $_dailyGoal',
-                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.primary)),
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF6C63FF))),
                               ],
                             ),
                             const SizedBox(height: 8),
                             ClipRRect(
-                              borderRadius: BorderRadius.circular(4),
-                              child: LinearProgressIndicator(
-                                value: goalProgress,
-                                backgroundColor: context.border,
-                                valueColor: AlwaysStoppedAnimation<Color>(context.primary),
-                                minHeight: 6,
+                              borderRadius: BorderRadius.circular(5),
+                              child: SizedBox(
+                                height: 7,
+                                child: Stack(
+                                  children: [
+                                    Container(color: context.surface2),
+                                    FractionallySizedBox(
+                                      widthFactor: goalProgress,
+                                      child: Container(
+                                        decoration: const BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [Color(0xFFA78BFA), Color(0xFF6C63FF)],
+                                            begin: Alignment.centerLeft,
+                                            end: Alignment.centerRight,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -2196,7 +2214,7 @@ class _HomeScreenState extends State<HomeScreen>
                                   : '${_dailyGoal - _todayLearned} more to go',
                               style: TextStyle(
                                 fontSize: 10,
-                                color: _todayLearned >= _dailyGoal ? context.primary : context.textMuted,
+                                color: _todayLearned >= _dailyGoal ? const Color(0xFF6C63FF) : context.textMuted,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -2258,26 +2276,37 @@ class _HomeScreenState extends State<HomeScreen>
     required VoidCallback onTap,
     Color iconBg = const Color(0xFF6C63FF),
   }) {
+    final hsl = HSLColor.fromColor(iconBg);
+    final light = hsl.withLightness((hsl.lightness + 0.14).clamp(0.0, 1.0)).toColor();
+    final dark = hsl.withLightness((hsl.lightness - 0.12).clamp(0.0, 1.0)).toColor();
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
       child: Material(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(14),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(14),
-          splashColor: context.primary.withValues(alpha: 0.12),
-          highlightColor: context.primary.withValues(alpha: 0.06),
+          splashColor: iconBg.withValues(alpha: 0.12),
+          highlightColor: iconBg.withValues(alpha: 0.06),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
             child: Row(
               children: [
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: 42,
+                  height: 42,
                   decoration: BoxDecoration(
-                    color: iconBg.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
+                    gradient: LinearGradient(
+                      colors: [light, iconBg, dark],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(13),
+                    boxShadow: [
+                      BoxShadow(color: dark.withValues(alpha: 0.9), offset: const Offset(0, 3), blurRadius: 0),
+                      BoxShadow(color: iconBg.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 4)),
+                    ],
                   ),
                   child: Center(child: Text(icon, style: const TextStyle(fontSize: 20))),
                 ),

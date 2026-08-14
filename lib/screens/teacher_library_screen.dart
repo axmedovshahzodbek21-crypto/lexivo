@@ -302,7 +302,7 @@ class _FolderCardState extends State<_FolderCard> with SingleTickerProviderState
   void _applyPulse(String value) {
     _ctrl.stop();
     if (value == 'off') return;
-    final ms = value == 'slow' ? 1500 : value == 'fast' ? 500 : 900;
+    final ms = value == 'slow' ? 2000 : value == 'fast' ? 900 : 1500;
     _ctrl.duration = Duration(milliseconds: ms);
     _ctrl.repeat(reverse: true);
   }

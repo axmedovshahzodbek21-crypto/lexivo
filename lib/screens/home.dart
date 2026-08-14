@@ -127,7 +127,7 @@ class _HomeScreenState extends State<HomeScreen>
   void _applyPulse(String value) {
     _heartbeatController.stop();
     if (value == 'off') return;
-    final ms = value == 'slow' ? 1500 : value == 'fast' ? 500 : 900;
+    final ms = value == 'slow' ? 2000 : value == 'fast' ? 900 : 1500;
     _heartbeatController.duration = Duration(milliseconds: ms);
     _heartbeatController.repeat(reverse: true);
   }

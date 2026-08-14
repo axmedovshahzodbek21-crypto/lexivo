@@ -174,13 +174,17 @@ class _StatsScreenState extends State<StatsScreen> {
                         child: Container(
                           width: double.infinity,
                         padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF6C63FF), Color(0xFF8B83FF)],
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Color(0xFFA78BFA), Color(0xFF6C63FF), Color(0xFF4C1D95)],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.all(Radius.circular(20)),
+                          boxShadow: [
+                            BoxShadow(color: Color(0xFF3D37B3), offset: Offset(0, 4), blurRadius: 0),
+                            BoxShadow(color: Color(0x446C63FF), blurRadius: 18, offset: Offset(0, 8)),
+                          ],
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -505,17 +509,27 @@ class _StatsScreenState extends State<StatsScreen> {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: studied
-                          ? context.primary
-                          : context.surface2,
+                      gradient: studied
+                          ? const LinearGradient(
+                              colors: [Color(0xFF34D399), Color(0xFF10B981), Color(0xFF059669)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : null,
+                      color: studied ? null : context.surface2,
                       borderRadius: BorderRadius.circular(10),
+                      boxShadow: studied
+                          ? const [
+                              BoxShadow(color: Color(0xFF059669), offset: Offset(0, 2), blurRadius: 0),
+                              BoxShadow(color: Color(0x4410B981), blurRadius: 8, offset: Offset(0, 4)),
+                            ]
+                          : null,
                     ),
                     child: Center(
                       child: Text(
                         studied ? '✓' : '·',
                         style: TextStyle(
-                          color:
-                              studied ? Colors.white : context.textMuted,
+                          color: studied ? Colors.white : context.textMuted,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -618,14 +632,28 @@ class _StatsScreenState extends State<StatsScreen> {
                     TextStyle(fontSize: 12, color: context.textMuted)),
           ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: progress,
-            backgroundColor: context.surface2,
-            valueColor: AlwaysStoppedAnimation<Color>(color),
-            minHeight: 6,
+          borderRadius: BorderRadius.circular(5),
+          child: SizedBox(
+            height: 10,
+            child: Stack(
+              children: [
+                Container(color: context.surface2),
+                FractionallySizedBox(
+                  widthFactor: progress,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [color.withValues(alpha: 0.7), color],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -648,30 +676,35 @@ class _StatsScreenState extends State<StatsScreen> {
 
   Widget _buildStatTile(
       BuildContext context, String emoji, String value, String label, Color color) {
+    final hsl = HSLColor.fromColor(color);
+    final light = hsl.withLightness((hsl.lightness + 0.15).clamp(0.0, 1.0)).toColor();
+    final dark = hsl.withLightness((hsl.lightness - 0.12).clamp(0.0, 1.0)).toColor();
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: context.surface,
+        gradient: LinearGradient(colors: [light, color, dark], begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: context.cardShadow,
+        boxShadow: [
+          BoxShadow(color: dark.withValues(alpha: 0.9), offset: const Offset(0, 3), blurRadius: 0),
+          BoxShadow(color: color.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 6)),
+        ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
+      child: Stack(
+        clipBehavior: Clip.hardEdge,
         children: [
-          Text(emoji, style: const TextStyle(fontSize: 24)),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
+          Positioned(
+            right: -6,
+            bottom: -8,
+            child: Text(emoji, style: TextStyle(fontSize: 48, color: Colors.white.withValues(alpha: 0.12))),
           ),
-          Text(
-            label,
-            style: TextStyle(fontSize: 11, color: context.textMuted),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(value, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Colors.white)),
+              const SizedBox(height: 2),
+              Text(label, style: const TextStyle(fontSize: 11, color: Colors.white70, fontWeight: FontWeight.w600)),
+            ],
           ),
         ],
       ),

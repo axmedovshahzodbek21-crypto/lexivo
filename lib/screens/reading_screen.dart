@@ -42,119 +42,138 @@ class ReadingScreen extends StatelessWidget {
                 children: [
                   const Text('📚', style: TextStyle(fontSize: 48)),
                   const SizedBox(height: 12),
-                  Text(
-                    'No passages yet',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: context.appText,
-                    ),
-                  ),
+                  Text('No passages yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
                   const SizedBox(height: 6),
-                  Text(
-                    'Passages will appear here once added.',
-                    style: TextStyle(fontSize: 13, color: context.textMuted),
-                  ),
+                  Text('Passages will appear here once added.', style: TextStyle(fontSize: 13, color: context.textMuted)),
                 ],
               ),
             )
-          : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-              itemCount: readingPassages.length,
-              separatorBuilder: (_, idx) => const SizedBox(height: 10),
-              itemBuilder: (context, i) {
-                final passage = readingPassages[i];
-                final colors = _cardColors(i);
-                return GestureDetector(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ReadingPassageScreen(passage: passage),
-                    ),
-                  ),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: colors,
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: colors[0].withValues(alpha: 0.45),
-                          offset: const Offset(0, 6),
-                          blurRadius: 16,
-                        ),
-                      ],
-                    ),
-                    child: Row(
+          : CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            '${passage.id}',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                passage.title,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                passage.topic,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.white.withValues(alpha: 0.75),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '${passage.questions.length} Q',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 14),
+                        const Text('IDEAS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFFEAB308), letterSpacing: 1.2)),
+                        const SizedBox(height: 4),
+                        Text('Reading Passages', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: context.appText, height: 1.1)),
+                        const SizedBox(height: 4),
+                        Text('${readingPassages.length} passages to explore', style: TextStyle(fontSize: 13, color: context.textMuted)),
                       ],
                     ),
                   ),
-                );
-              },
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 0.78,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, i) {
+                        final passage = readingPassages[i];
+                        final colors = _cardColors(i);
+                        final numStr = passage.id.toString().padLeft(2, '0');
+                        return GestureDetector(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => ReadingPassageScreen(passage: passage)),
+                          ),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [colors[0], colors[1]],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(18),
+                              boxShadow: [
+                                BoxShadow(color: colors[1].withValues(alpha: 0.85), offset: const Offset(0, 4), blurRadius: 0),
+                                BoxShadow(color: colors[0].withValues(alpha: 0.35), blurRadius: 12, offset: const Offset(0, 8)),
+                              ],
+                            ),
+                            child: Stack(
+                              clipBehavior: Clip.hardEdge,
+                              children: [
+                                Positioned(
+                                  right: -4,
+                                  bottom: -8,
+                                  child: Text(
+                                    numStr,
+                                    style: TextStyle(
+                                      fontSize: 56,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white.withValues(alpha: 0.1),
+                                      height: 1,
+                                    ),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(alpha: 0.22),
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                        child: Text(
+                                          'PASS $numStr',
+                                          style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 0.5),
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      Text(
+                                        passage.title,
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.white, height: 1.3),
+                                      ),
+                                      const SizedBox(height: 3),
+                                      Text(
+                                        passage.topic,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.75), fontWeight: FontWeight.w600),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white.withValues(alpha: 0.22),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              '${passage.questions.length} Q',
+                                              style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white),
+                                            ),
+                                          ),
+                                          const Spacer(),
+                                          const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 12),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                      childCount: readingPassages.length,
+                    ),
+                  ),
+                ),
+              ],
             ),
     );
   }

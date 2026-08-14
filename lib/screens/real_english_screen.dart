@@ -40,38 +40,54 @@ class RealEnglishScreen extends StatelessWidget {
                 Text('No sets yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
               ]),
             )
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-              children: [
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 0.88,
+          : CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('REAL ENGLISH', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF5B8AF0), letterSpacing: 1.2)),
+                        const SizedBox(height: 4),
+                        Text('Learn From Videos', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: context.appText, height: 1.1)),
+                        const SizedBox(height: 4),
+                        Text('${realEnglishSets.length} video sets available', style: TextStyle(fontSize: 13, color: context.textMuted)),
+                      ],
+                    ),
                   ),
-                  itemCount: realEnglishSets.length,
-                  itemBuilder: (ctx, i) {
-                    final set = realEnglishSets[i];
-                    return _SetCard(
-                      set: set,
-                      index: i,
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => RealEnglishDetailScreen(
-                            set: set,
-                            userProfile: userProfile,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
                 ),
-                const SizedBox(height: 20),
-                _HowItWorksCard(),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 0.88,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (ctx, i) {
+                        final set = realEnglishSets[i];
+                        return _SetCard(
+                          set: set,
+                          index: i,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => RealEnglishDetailScreen(set: set, userProfile: userProfile)),
+                          ),
+                        );
+                      },
+                      childCount: realEnglishSets.length,
+                    ),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                    child: _HowItWorksCard(),
+                  ),
+                ),
               ],
             ),
     );
@@ -93,13 +109,30 @@ class _SetCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(colors: colors, begin: Alignment.topLeft, end: Alignment.bottomRight),
+          gradient: LinearGradient(
+            colors: [colors[0], colors[1]],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: colors[0].withValues(alpha: 0.45), blurRadius: 16, offset: const Offset(0, 8))],
+          boxShadow: [
+            BoxShadow(color: colors[1].withValues(alpha: 0.9), offset: const Offset(0, 4), blurRadius: 0),
+            BoxShadow(color: colors[0].withValues(alpha: 0.35), blurRadius: 14, offset: const Offset(0, 8)),
+          ],
         ),
         child: Stack(
+          clipBehavior: Clip.hardEdge,
           children: [
-            const Positioned(top: 12, left: 14, child: Text('🎬', style: TextStyle(fontSize: 26))),
+            Positioned(
+              right: -4,
+              bottom: -8,
+              child: IgnorePointer(
+                child: Text(
+                  '🎬',
+                  style: TextStyle(fontSize: 60, color: Colors.white.withValues(alpha: 0.1)),
+                ),
+              ),
+            ),
             Positioned(
               left: 0, right: 0, bottom: 0,
               child: Container(
@@ -112,11 +145,10 @@ class _SetCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(set.title, maxLines: 2, overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12, height: 1.3,
-                        shadows: [Shadow(color: Colors.black26, blurRadius: 4)])),
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12, height: 1.3)),
                     const SizedBox(height: 3),
                     Text('${set.videos.length} videos',
-                      style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 10)),
+                      style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 10, fontWeight: FontWeight.w600)),
                   ],
                 ),
               ),
@@ -134,25 +166,86 @@ class _HowItWorksCard extends StatelessWidget {
     const steps = [
       ('📖', 'Learn the words from a real video'),
       ('🔄', 'Review them with SRS over ~11 days'),
-      ('🔓', 'Complete the +7 day review → link unlocks'),
+      ('🔓', 'Complete the +7 day review to unlock'),
       ('🎬', 'Watch the video and understand every word'),
     ];
+    const lineColor = Color(0xFF5B8AF0);
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: context.border)),
+      decoration: BoxDecoration(
+        color: context.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.border),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('HOW IT WORKS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.8)),
-          const SizedBox(height: 12),
-          ...steps.map((s) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Row(children: [
-              Text(s.$1, style: const TextStyle(fontSize: 20)),
-              const SizedBox(width: 12),
-              Expanded(child: Text(s.$2, style: TextStyle(fontSize: 13, color: context.textMuted))),
-            ]),
-          )),
+          const Text('HOW IT WORKS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: lineColor, letterSpacing: 1.0)),
+          const SizedBox(height: 16),
+          ...List.generate(steps.length, (i) {
+            final s = steps[i];
+            final isLast = i == steps.length - 1;
+            return IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    width: 36,
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF8AB4F8), lineColor],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            '0${i + 1}',
+                            style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900),
+                          ),
+                        ),
+                        if (!isLast)
+                          Expanded(
+                            child: Container(
+                              width: 2,
+                              margin: const EdgeInsets.symmetric(vertical: 2),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [lineColor.withValues(alpha: 0.5), lineColor.withValues(alpha: 0.15)],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(bottom: isLast ? 0 : 16),
+                      child: Row(
+                        children: [
+                          Text(s.$1, style: const TextStyle(fontSize: 18)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(s.$2, style: TextStyle(fontSize: 13, color: context.textMuted, height: 1.4)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );

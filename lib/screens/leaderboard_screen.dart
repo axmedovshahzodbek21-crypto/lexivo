@@ -673,15 +673,21 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     final myId = _myId;
 
     final configs = [
-      (idx: 1, medal: '🥈', topPad: 16.0, avatarSize: 40.0,
-       grad: [const Color(0xFFC0C0C0).withValues(alpha: 0.18), const Color(0xFFC0C0C0).withValues(alpha: 0.04)],
-       border: const Color(0xFFC0C0C0).withValues(alpha: 0.5)),
-      (idx: 0, medal: '🥇', topPad: 36.0, avatarSize: 52.0,
-       grad: [const Color(0xFFFFD700).withValues(alpha: 0.22), const Color(0xFFF59E0B).withValues(alpha: 0.06)],
-       border: const Color(0xFFFFD700).withValues(alpha: 0.65)),
-      (idx: 2, medal: '🥉', topPad: 16.0, avatarSize: 40.0,
-       grad: [const Color(0xFFCD7F32).withValues(alpha: 0.18), const Color(0xFFCD7F32).withValues(alpha: 0.04)],
-       border: const Color(0xFFCD7F32).withValues(alpha: 0.5)),
+      (
+        idx: 1, watermark: '02', minH: 160.0, avatarSize: 42.0,
+        grad: [const Color(0xFFE2E8F0), const Color(0xFF94A3B8), const Color(0xFF334155)],
+        shadow: const Color(0xFF1E293B),
+      ),
+      (
+        idx: 0, watermark: '01', minH: 200.0, avatarSize: 54.0,
+        grad: [const Color(0xFFFDE047), const Color(0xFFF59E0B), const Color(0xFFB45309)],
+        shadow: const Color(0xFF78350F),
+      ),
+      (
+        idx: 2, watermark: '03', minH: 140.0, avatarSize: 38.0,
+        grad: [const Color(0xFFFED7AA), const Color(0xFFF97316), const Color(0xFF9A3412)],
+        shadow: const Color(0xFF7C2D12),
+      ),
     ];
 
     return Padding(
@@ -697,37 +703,82 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               onTap: () => _showStreakSheet(entry),
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 4),
-                padding: EdgeInsets.fromLTRB(8, cfg.topPad, 8, 14),
+                constraints: BoxConstraints(minHeight: cfg.minH),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: cfg.grad, begin: Alignment.topCenter, end: Alignment.bottomCenter),
+                  gradient: LinearGradient(
+                    colors: cfg.grad,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: isMe ? context.primary : cfg.border, width: isMe ? 2.5 : 1.5),
+                  boxShadow: [
+                    BoxShadow(color: cfg.shadow, offset: const Offset(0, 4), blurRadius: 0),
+                    BoxShadow(color: cfg.grad[1].withValues(alpha: 0.4), blurRadius: 14, offset: const Offset(0, 8)),
+                    if (isMe) BoxShadow(color: context.primary.withValues(alpha: 0.5), blurRadius: 0, spreadRadius: 2),
+                  ],
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                child: Stack(
+                  clipBehavior: Clip.hardEdge,
                   children: [
-                    Text(cfg.medal, style: TextStyle(fontSize: cfg.idx == 0 ? 30 : 22)),
-                    const SizedBox(height: 8),
-                    _Avatar(name: entry.name, size: cfg.avatarSize, avatarUrl: entry.avatarUrl, avatarColor: _userColor(entry.userId)),
-                    const SizedBox(height: 6),
-                    if (_savedIds.contains(entry.userId)) const Text('⭐', style: TextStyle(fontSize: 10)),
-                    Text(entry.name,
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.appText),
-                      maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${_fmtXp(entry.xp)} XP',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800,
-                        color: cfg.idx == 0 ? const Color(0xFFB45309) : context.primary),
-                    ),
-                    if (entry.streak > 0) Text('🔥 ${entry.streak}', style: const TextStyle(fontSize: 10)),
-                    if (studiedToday)
-                      Container(
-                        margin: const EdgeInsets.only(top: 4),
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
-                        child: const Text('TODAY', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.green)),
+                    Positioned(
+                      right: -6,
+                      bottom: -10,
+                      child: Text(
+                        cfg.watermark,
+                        style: TextStyle(fontSize: 52, fontWeight: FontWeight.w900, color: Colors.white.withValues(alpha: 0.12), height: 1),
                       ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 14, 8, 14),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.25),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(cfg.watermark, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Colors.white)),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2.5),
+                            ),
+                            child: _Avatar(name: entry.name, size: cfg.avatarSize, avatarUrl: entry.avatarUrl, avatarColor: _userColor(entry.userId)),
+                          ),
+                          const SizedBox(height: 6),
+                          if (_savedIds.contains(entry.userId)) const Text('⭐', style: TextStyle(fontSize: 10)),
+                          Text(
+                            entry.name,
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.white),
+                            maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${_fmtXp(entry.xp)} XP',
+                            style: TextStyle(
+                              fontSize: 11, fontWeight: FontWeight.w800,
+                              color: Colors.white.withValues(alpha: 0.9),
+                            ),
+                          ),
+                          if (entry.streak > 0)
+                            Text('🔥 ${entry.streak}', style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.8))),
+                          if (studiedToday)
+                            Container(
+                              margin: const EdgeInsets.only(top: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.25),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Text('TODAY', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.white)),
+                            ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),

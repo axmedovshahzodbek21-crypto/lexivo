@@ -92,10 +92,26 @@ class _SearchScreenState extends State<SearchScreen> {
     return Scaffold(
       backgroundColor: context.bg,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: context.surface,
         elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF8B5CF6).withValues(alpha: 0.18),
+                blurRadius: 20,
+                offset: const Offset(0, 4),
+              ),
+            ],
+            border: const Border(
+              bottom: BorderSide(color: Color(0xFF8B5CF6), width: 1.5),
+            ),
+          ),
+        ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: context.primary),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF8B5CF6)),
           onPressed: () => Navigator.maybePop(context),
         ),
         title: TextField(
@@ -105,6 +121,7 @@ class _SearchScreenState extends State<SearchScreen> {
             hintText: tr('search_hint'),
             hintStyle: TextStyle(color: context.textMuted, fontSize: 15),
             border: InputBorder.none,
+            prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF8B5CF6), size: 20),
           ),
           style: TextStyle(fontSize: 16, color: context.appText),
         ),
@@ -120,25 +137,27 @@ class _SearchScreenState extends State<SearchScreen> {
         ],
       ),
       body: _controller.text.isEmpty
-          ? Center(
+          ? SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('🔍', style: TextStyle(fontSize: 60)),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Search across all collections',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: context.appText,
-                    ),
+                  const Text(
+                    'DISCOVER',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF8B5CF6), letterSpacing: 1.2),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Search your words',
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: context.appText, height: 1.1),
+                  ),
+                  const SizedBox(height: 6),
                   Text(
                     'Type a word, translation, or definition',
-                    style: TextStyle(fontSize: 13, color: context.textMuted),
+                    style: TextStyle(fontSize: 14, color: context.textMuted),
                   ),
+                  const SizedBox(height: 48),
+                  Center(child: Text('🔍', style: TextStyle(fontSize: 80, color: const Color(0xFF8B5CF6).withValues(alpha: 0.3)))),
                 ],
               ),
             )
@@ -187,6 +206,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     decoration: BoxDecoration(
                       color: context.surface,
                       borderRadius: BorderRadius.circular(14),
+                      border: Border(left: BorderSide(color: r.color, width: 4)),
                       boxShadow: context.cardShadow,
                     ),
                     child: Row(

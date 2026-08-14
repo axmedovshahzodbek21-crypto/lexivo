@@ -108,7 +108,7 @@ class _RealEnglishVideoScreenState extends State<RealEnglishVideoScreen> {
                     unitCount: _collection?.days.length ?? 0,
                   ),
                   const SizedBox(height: 20),
-                  if (_collection == null || _collection!.days.every((d) => d.words.isEmpty))
+                  if (_collection == null || _collection!.days.isEmpty)
                     _EmptyState()
                   else
                     GridView.builder(

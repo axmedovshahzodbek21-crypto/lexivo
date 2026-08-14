@@ -29,7 +29,7 @@ const List<RealEnglishSet> realEnglishSets = [
     id: 'preview-set',
     title: 'How to Sound More Natural in English',
     videos: [
-      RealEnglishVideo(id: 'preview-set-v1',  title: 'Video 1',  duration: '', collectionName: 'Natural English V1'),
+      RealEnglishVideo(id: 'preview-set-v1',  title: 'Video 1',  duration: '03:42', collectionName: 'Natural English V1'),
       RealEnglishVideo(id: 'preview-set-v2',  title: 'Video 2',  duration: '', collectionName: 'Natural English V2'),
       RealEnglishVideo(id: 'preview-set-v3',  title: 'Video 3',  duration: '', collectionName: 'Natural English V3'),
       RealEnglishVideo(id: 'preview-set-v4',  title: 'Video 4',  duration: '', collectionName: 'Natural English V4'),
@@ -39,6 +39,8 @@ const List<RealEnglishSet> realEnglishSets = [
       RealEnglishVideo(id: 'preview-set-v8',  title: 'Video 8',  duration: '', collectionName: 'Natural English V8'),
       RealEnglishVideo(id: 'preview-set-v9',  title: 'Video 9',  duration: '', collectionName: 'Natural English V9'),
       RealEnglishVideo(id: 'preview-set-v10', title: 'Video 10', duration: '', collectionName: 'Natural English V10'),
+      RealEnglishVideo(id: 'preview-set-v11', title: 'Video 11', duration: '', collectionName: 'Natural English V11'),
+      RealEnglishVideo(id: 'preview-set-v12', title: 'Video 12', duration: '', collectionName: 'Natural English V12'),
     ],
   ),
 ];

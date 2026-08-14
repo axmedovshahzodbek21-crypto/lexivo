@@ -270,8 +270,38 @@ class _MainShellState extends State<MainShell> {
     );
   }
 
+  // Per-nav-item accent colors — index matches screen order
+  static const _navAccents = <({Color color, Color light, Color dark})>[
+    (color: Color(0xFFF97316), light: Color(0xFFFB923C), dark: Color(0xFFC2410C)), // 0 Home
+    (color: Color(0xFF8B5CF6), light: Color(0xFFA78BFA), dark: Color(0xFF6D28D9)), // 1 Search
+    (color: Color(0xFF06B6D4), light: Color(0xFF22D3EE), dark: Color(0xFF0891B2)), // 2 Review
+    (color: Color(0xFF10B981), light: Color(0xFF34D399), dark: Color(0xFF059669)), // 3 Progress
+    (color: Color(0xFFF59E0B), light: Color(0xFFFCD34D), dark: Color(0xFFB45309)), // 4 Leaderboard
+    (color: Color(0xFFEF4444), light: Color(0xFFF87171), dark: Color(0xFFB91C1C)), // 5 Classes
+    (color: Color(0xFF84CC16), light: Color(0xFFA3E635), dark: Color(0xFF4D7C0F)), // 6 My Words
+    (color: Color(0xFFEAB308), light: Color(0xFFFDE047), dark: Color(0xFFA16207)), // 7 Ideas
+    (color: Color(0xFFEC4899), light: Color(0xFFF472B6), dark: Color(0xFFBE185D)), // 8 Real English
+  ];
+
+  BoxDecoration _activeNavDecoration(int index) {
+    final nc = _navAccents[index];
+    return BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [nc.light, nc.color, nc.dark],
+      ),
+      borderRadius: BorderRadius.circular(14),
+      boxShadow: [
+        BoxShadow(color: nc.dark.withValues(alpha: 0.9), offset: const Offset(0, 3), blurRadius: 0),
+        BoxShadow(color: nc.color.withValues(alpha: 0.45), offset: const Offset(0, 5), blurRadius: 14),
+      ],
+    );
+  }
+
   Widget _buildNavItem(BuildContext context, int index, IconData icon, String label) {
     final isSelected = _currentIndex == index;
+    final nc = _navAccents[index];
     return GestureDetector(
       onTap: () {
         setState(() => _currentIndex = index);
@@ -279,28 +309,19 @@ class _MainShellState extends State<MainShell> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? context.primary.withValues(alpha: 0.1)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: isSelected ? _activeNavDecoration(index) : BoxDecoration(borderRadius: BorderRadius.circular(14)),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              color: isSelected ? context.primary : context.textMuted,
-              size: 24,
-            ),
+            Icon(icon, color: isSelected ? Colors.white : nc.color.withValues(alpha: 0.55), size: 24),
             const SizedBox(height: 2),
             Text(
               label,
               style: TextStyle(
                 fontSize: 11,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? context.primary : context.textMuted,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.normal,
+                color: isSelected ? Colors.white : nc.color.withValues(alpha: 0.55),
               ),
             ),
           ],
@@ -309,14 +330,9 @@ class _MainShellState extends State<MainShell> {
     );
   }
 
-  Widget _buildNavItemWithBadge(
-    BuildContext context,
-    int index,
-    IconData icon,
-    String label,
-    int badge,
-  ) {
+  Widget _buildNavItemWithBadge(BuildContext context, int index, IconData icon, String label, int badge) {
     final isSelected = _currentIndex == index;
+    final nc = _navAccents[index];
     return GestureDetector(
       onTap: () {
         setState(() => _currentIndex = index);
@@ -324,42 +340,23 @@ class _MainShellState extends State<MainShell> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? context.primary.withValues(alpha: 0.1)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: isSelected ? _activeNavDecoration(index) : BoxDecoration(borderRadius: BorderRadius.circular(14)),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Stack(
               clipBehavior: Clip.none,
               children: [
-                Icon(
-                  icon,
-                  color: isSelected ? context.primary : context.textMuted,
-                  size: 24,
-                ),
+                Icon(icon, color: isSelected ? Colors.white : nc.color.withValues(alpha: 0.55), size: 24),
                 if (badge > 0)
                   Positioned(
                     right: -6,
                     top: -4,
                     child: Container(
                       padding: const EdgeInsets.all(3),
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        '$badge',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                      child: Text('$badge', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
                     ),
                   ),
               ],
@@ -369,8 +366,8 @@ class _MainShellState extends State<MainShell> {
               label,
               style: TextStyle(
                 fontSize: 11,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? context.primary : context.textMuted,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.normal,
+                color: isSelected ? Colors.white : nc.color.withValues(alpha: 0.55),
               ),
             ),
           ],

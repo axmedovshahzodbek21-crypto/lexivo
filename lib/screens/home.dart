@@ -1239,6 +1239,7 @@ class _HomeScreenState extends State<HomeScreen>
     return Scaffold(
       backgroundColor: context.bg,
       drawer: _buildDrawer(context),
+      drawerEdgeDragWidth: 60,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,

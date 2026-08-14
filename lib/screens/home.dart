@@ -17,6 +17,8 @@ import 'settings_screen.dart';
 import 'free_time_screen.dart';
 import 'pomodoro_setup_screen.dart';
 import 'custom_lists_screen.dart';
+import 'reading_screen.dart';
+import 'real_english_screen.dart';
 import '../data/word_data.dart';
 import '../data/storage_service.dart';
 import '../services/sync_service.dart';
@@ -2107,11 +2109,23 @@ class _HomeScreenState extends State<HomeScreen>
                       Navigator.push(context,
                           MaterialPageRoute(builder: (context) => const StarredWordsScreen()));
                     }),
-                    _buildDrawerTile(context, icon: '📊', label: 'Stats',
-                        iconBg: const Color(0xFF10b981), onTap: () {
+                    _buildDrawerTile(context, icon: '📖', label: 'Library',
+                        iconBg: const Color(0xFF0ea5e9), onTap: () {
                       Navigator.pop(context);
                       Navigator.push(context,
-                          MaterialPageRoute(builder: (context) => StatsScreen())).then((_) => _loadStats());
+                          MaterialPageRoute(builder: (context) => const WordsLibraryScreen()));
+                    }),
+                    _buildDrawerTile(context, icon: '💡', label: 'Ideas',
+                        iconBg: const Color(0xFFa855f7), onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (context) => const ReadingScreen()));
+                    }),
+                    _buildDrawerTile(context, icon: '🎬', label: 'Real English',
+                        iconBg: const Color(0xFFef4444), onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (context) => RealEnglishScreen(userProfile: widget.userProfile)));
                     }),
                     // ── Today's goal card ──
                     Padding(

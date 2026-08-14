@@ -1825,7 +1825,11 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
                 const SizedBox(height: 12),
                 for (final card in _homeClasses) ...[
-                  _buildClassCard(context, card),
+                  AnimatedBuilder(
+                    animation: _heartbeat,
+                    builder: (_, child) => Transform.scale(scale: _heartbeat.value, child: child),
+                    child: _buildClassCard(context, card),
+                  ),
                   const SizedBox(height: 10),
                 ],
                 const SizedBox(height: 4),

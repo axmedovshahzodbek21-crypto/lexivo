@@ -449,37 +449,6 @@ class _SetCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                    if (progress.total > 0 || set.duration != null) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          if (progress.total > 0)
-                            Text(
-                              '${progress.total} words',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.6),
-                                fontSize: 10,
-                              ),
-                            ),
-                          if (progress.total > 0 && set.duration != null)
-                            Text(
-                              ' · ',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.4),
-                                fontSize: 10,
-                              ),
-                            ),
-                          if (set.duration != null)
-                            Text(
-                              set.duration!,
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.6),
-                                fontSize: 10,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ],
                   ],
                 ),
               ),

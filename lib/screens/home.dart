@@ -2113,7 +2113,7 @@ class _HomeScreenState extends State<HomeScreen>
                         iconBg: const Color(0xFF0ea5e9), onTap: () {
                       Navigator.pop(context);
                       Navigator.push(context,
-                          MaterialPageRoute(builder: (context) => const WordsLibraryScreen()));
+                          MaterialPageRoute(builder: (context) => const CustomListsScreen()));
                     }),
                     _buildDrawerTile(context, icon: '💡', label: 'Ideas',
                         iconBg: const Color(0xFFa855f7), onTap: () {

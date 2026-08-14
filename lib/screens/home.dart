@@ -107,9 +107,9 @@ class _HomeScreenState extends State<HomeScreen>
     );
     _heartbeatController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 900),
     )..repeat(reverse: true);
-    _heartbeat = Tween<double>(begin: 1.0, end: 1.015).animate(
+    _heartbeat = Tween<double>(begin: 1.0, end: 1.04).animate(
       CurvedAnimation(parent: _heartbeatController, curve: Curves.easeInOut),
     );
     _dailyGoal = widget.dailyWordGoal;
@@ -1028,73 +1028,81 @@ class _HomeScreenState extends State<HomeScreen>
                                   ),
                                 ),
                                 const SizedBox(height: 20),
-                                _buildSessionCard(context),
+                                AnimatedBuilder(
+                                  animation: _heartbeat,
+                                  builder: (_, child) => Transform.scale(scale: _heartbeat.value, child: child),
+                                  child: _buildSessionCard(context),
+                                ),
                                 const SizedBox(height: 20),
                                 // Stats row
-                                Row(
-                                  children: [
-                                    _buildStatCard(
-                                      context,
-                                      '$_wordsLearned',
-                                      'Words\nLearned',
-                                      () => Navigator.push(
+                                AnimatedBuilder(
+                                  animation: _heartbeat,
+                                  builder: (_, child) => Transform.scale(scale: _heartbeat.value, child: child),
+                                  child: Row(
+                                    children: [
+                                      _buildStatCard(
                                         context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              WordsLearnedScreen(),
-                                        ),
-                                      ).then((_) => _loadStats()),
-                                      gradient: [const Color(0xFF0E7490), const Color(0xFF22D3EE)],
-                                      edge: const Color(0xFF164E63),
-                                      glow: const Color(0xFF0E7490),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    _buildStatCard(
-                                      context,
-                                      '$_streak',
-                                      'Day\nStreak',
-                                      () => Navigator.push(
+                                        '$_wordsLearned',
+                                        'Words\nLearned',
+                                        () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                WordsLearnedScreen(),
+                                          ),
+                                        ).then((_) => _loadStats()),
+                                        gradient: [const Color(0xFF0E7490), const Color(0xFF22D3EE)],
+                                        edge: const Color(0xFF164E63),
+                                        glow: const Color(0xFF0E7490),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      _buildStatCard(
                                         context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              StreakCalendarScreen(),
-                                        ),
-                                      ).then((_) => _loadStats()),
-                                      gradient: [const Color(0xFFEA580C), const Color(0xFFFB923C)],
-                                      edge: const Color(0xFFC2410C),
-                                      glow: const Color(0xFFEA580C),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    _buildStatCard(
-                                      context,
-                                      '$_reviewsDue',
-                                      'Reviews\nDue',
-                                      () => Navigator.push(
+                                        '$_streak',
+                                        'Day\nStreak',
+                                        () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                StreakCalendarScreen(),
+                                          ),
+                                        ).then((_) => _loadStats()),
+                                        gradient: [const Color(0xFFEA580C), const Color(0xFFFB923C)],
+                                        edge: const Color(0xFFC2410C),
+                                        glow: const Color(0xFFEA580C),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      _buildStatCard(
                                         context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              ReviewsDueScreen(
-                                                userProfile: widget.userProfile,
-                                              ),
-                                        ),
-                                      ).then((_) => _loadStats()),
-                                      gradient: _reviewsDue > 0
-                                          ? [const Color(0xFFDC2626), const Color(0xFFF87171)]
-                                          : [const Color(0xFF059669), const Color(0xFF34D399)],
-                                      edge: _reviewsDue > 0 ? const Color(0xFF991B1B) : const Color(0xFF064E3B),
-                                      glow: _reviewsDue > 0 ? const Color(0xFFDC2626) : const Color(0xFF059669),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    _buildStatCard(
-                                      context,
-                                      StorageService.displayXP(_xp),
-                                      'Total\nXP',
-                                      () => showXpLevelSheet(context, _xp),
-                                      gradient: [const Color(0xFFD97706), const Color(0xFFFBBF24)],
-                                      edge: const Color(0xFF92400E),
-                                      glow: const Color(0xFFD97706),
-                                    ),
-                                  ],
+                                        '$_reviewsDue',
+                                        'Reviews\nDue',
+                                        () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                ReviewsDueScreen(
+                                                  userProfile: widget.userProfile,
+                                                ),
+                                          ),
+                                        ).then((_) => _loadStats()),
+                                        gradient: _reviewsDue > 0
+                                            ? [const Color(0xFFDC2626), const Color(0xFFF87171)]
+                                            : [const Color(0xFF059669), const Color(0xFF34D399)],
+                                        edge: _reviewsDue > 0 ? const Color(0xFF991B1B) : const Color(0xFF064E3B),
+                                        glow: _reviewsDue > 0 ? const Color(0xFFDC2626) : const Color(0xFF059669),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      _buildStatCard(
+                                        context,
+                                        StorageService.displayXP(_xp),
+                                        'Total\nXP',
+                                        () => showXpLevelSheet(context, _xp),
+                                        gradient: [const Color(0xFFD97706), const Color(0xFFFBBF24)],
+                                        edge: const Color(0xFF92400E),
+                                        glow: const Color(0xFFD97706),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),

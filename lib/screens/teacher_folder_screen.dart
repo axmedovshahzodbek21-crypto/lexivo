@@ -18,6 +18,8 @@ class TeacherFolderScreen extends StatefulWidget {
 }
 
 class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
+  static final Map<String, List<_Unit>> _cache = {};
+
   List<_Unit> _units = [];
   bool _loading = true;
 
@@ -30,6 +32,10 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
   @override
   void initState() {
     super.initState();
+    if (_cache.containsKey(widget.folderId)) {
+      _units = _cache[widget.folderId]!;
+      _loading = false;
+    }
     _load();
   }
 
@@ -42,20 +48,17 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
           .eq('folder_id', widget.folderId)
           .order('position')
           .order('created_at');
-      if (mounted) {
-        setState(() {
-          _units = (data as List).map((e) {
-            final m = Map<String, dynamic>.from(e as Map);
-            final words = m['teacher_unit_words'] as List?;
-            return _Unit(
-              id: m['id'] as String,
-              name: m['name'] as String,
-              wordCount: words?.isNotEmpty == true ? (words![0]['count'] as num?)?.toInt() ?? 0 : 0,
-            );
-          }).toList();
-          _loading = false;
-        });
-      }
+      final units = (data as List).map((e) {
+        final m = Map<String, dynamic>.from(e as Map);
+        final words = m['teacher_unit_words'] as List?;
+        return _Unit(
+          id: m['id'] as String,
+          name: m['name'] as String,
+          wordCount: words?.isNotEmpty == true ? (words![0]['count'] as num?)?.toInt() ?? 0 : 0,
+        );
+      }).toList();
+      _cache[widget.folderId] = units;
+      if (mounted) setState(() { _units = units; _loading = false; });
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
@@ -260,7 +263,9 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
     itemBuilder: (context, i) {
       final unit = _units[i];
       final color = _cardColors[i % _cardColors.length];
-      return GestureDetector(
+      return _UnitCard(
+        unit: unit,
+        color: color,
         onTap: () async {
           await Navigator.push(context, MaterialPageRoute(
             builder: (_) => TeacherUnitScreen(
@@ -272,28 +277,86 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
           _load();
         },
         onLongPress: () => _showUnitOptions(unit),
+      );
+    },
+  );
+}
+
+class _UnitCard extends StatefulWidget {
+  final _Unit unit;
+  final Color color;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+  const _UnitCard({required this.unit, required this.color, required this.onTap, required this.onLongPress});
+
+  @override
+  State<_UnitCard> createState() => _UnitCardState();
+}
+
+class _UnitCardState extends State<_UnitCard> with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))
+      ..repeat(reverse: true);
+    _scale = Tween<double>(begin: 1.0, end: 1.04).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = widget.color;
+    final lighter = Color.lerp(color, Colors.white, 0.25)!;
+    final darker = Color.lerp(color, Colors.black, 0.25)!;
+
+    return ScaleTransition(
+      scale: _scale,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        onLongPress: widget.onLongPress,
         child: Container(
           decoration: BoxDecoration(
-            color: color,
             borderRadius: BorderRadius.circular(18),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [lighter, color, darker],
+            ),
             boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.25), offset: const Offset(0, 6)),
-              BoxShadow(color: Colors.black.withValues(alpha: 0.18), offset: const Offset(0, 10), blurRadius: 24),
+              BoxShadow(color: color.withValues(alpha: 0.55), offset: const Offset(0, 8), blurRadius: 16),
+              BoxShadow(color: Colors.black.withValues(alpha: 0.3), offset: const Offset(0, 12), blurRadius: 24),
             ],
+          ),
+          foregroundDecoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border(
+              bottom: BorderSide(color: darker, width: 4),
+              right: BorderSide(color: darker, width: 2),
+            ),
           ),
           padding: const EdgeInsets.all(12),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Text('📖', style: TextStyle(fontSize: 26)),
             const Spacer(),
-            Text(unit.name,
+            Text(widget.unit.name,
                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                 maxLines: 2, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 2),
-            Text('${unit.wordCount} ${unit.wordCount == 1 ? 'word' : 'words'}',
+            Text('${widget.unit.wordCount} ${widget.unit.wordCount == 1 ? 'word' : 'words'}',
                 style: const TextStyle(color: Colors.white70, fontSize: 11)),
           ]),
         ),
-      );
-    },
-  );
+      ),
+    );
+  }
 }

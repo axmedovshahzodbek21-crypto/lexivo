@@ -257,7 +257,9 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
     itemBuilder: (context, i) {
       final folder = _folders[i];
       final color = _cardColors[i % _cardColors.length];
-      return GestureDetector(
+      return _FolderCard(
+        folder: folder,
+        color: color,
         onTap: () async {
           await Navigator.push(context, MaterialPageRoute(
             builder: (_) => TeacherFolderScreen(folderId: folder.id, folderName: folder.name),
@@ -265,28 +267,86 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
           _load();
         },
         onLongPress: () => _showFolderOptions(folder),
+      );
+    },
+  );
+}
+
+class _FolderCard extends StatefulWidget {
+  final _Folder folder;
+  final Color color;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+  const _FolderCard({required this.folder, required this.color, required this.onTap, required this.onLongPress});
+
+  @override
+  State<_FolderCard> createState() => _FolderCardState();
+}
+
+class _FolderCardState extends State<_FolderCard> with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))
+      ..repeat(reverse: true);
+    _scale = Tween<double>(begin: 1.0, end: 1.04).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = widget.color;
+    final lighter = Color.lerp(color, Colors.white, 0.25)!;
+    final darker = Color.lerp(color, Colors.black, 0.25)!;
+
+    return ScaleTransition(
+      scale: _scale,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        onLongPress: widget.onLongPress,
         child: Container(
           decoration: BoxDecoration(
-            color: color,
             borderRadius: BorderRadius.circular(18),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [lighter, color, darker],
+            ),
             boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.25), offset: const Offset(0, 6)),
-              BoxShadow(color: Colors.black.withValues(alpha: 0.18), offset: const Offset(0, 10), blurRadius: 24),
+              BoxShadow(color: color.withValues(alpha: 0.55), offset: const Offset(0, 8), blurRadius: 16),
+              BoxShadow(color: Colors.black.withValues(alpha: 0.3), offset: const Offset(0, 12), blurRadius: 24),
             ],
+          ),
+          foregroundDecoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border(
+              bottom: BorderSide(color: darker, width: 4),
+              right: BorderSide(color: darker, width: 2),
+            ),
           ),
           padding: const EdgeInsets.all(12),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Text('📁', style: TextStyle(fontSize: 26)),
             const Spacer(),
-            Text(folder.name,
+            Text(widget.folder.name,
                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                 maxLines: 2, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 2),
-            Text('${folder.unitCount} ${folder.unitCount == 1 ? 'unit' : 'units'}',
+            Text('${widget.folder.unitCount} ${widget.folder.unitCount == 1 ? 'unit' : 'units'}',
                 style: const TextStyle(color: Colors.white70, fontSize: 11)),
           ]),
         ),
-      );
-    },
-  );
+      ),
+    );
+  }
 }

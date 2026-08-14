@@ -17,6 +17,8 @@ class TeacherLibraryScreen extends StatefulWidget {
 }
 
 class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
+  static List<_Folder>? _cache;
+
   List<_Folder> _folders = [];
   bool _loading = true;
 
@@ -29,6 +31,10 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
   @override
   void initState() {
     super.initState();
+    if (_cache != null) {
+      _folders = _cache!;
+      _loading = false;
+    }
     _load();
   }
 
@@ -43,20 +49,17 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
           .eq('teacher_id', user.id)
           .order('position')
           .order('created_at');
-      if (mounted) {
-        setState(() {
-          _folders = (data as List).map((e) {
-            final m = Map<String, dynamic>.from(e as Map);
-            final units = m['teacher_units'] as List?;
-            return _Folder(
-              id: m['id'] as String,
-              name: m['name'] as String,
-              unitCount: units?.isNotEmpty == true ? (units![0]['count'] as num?)?.toInt() ?? 0 : 0,
-            );
-          }).toList();
-          _loading = false;
-        });
-      }
+      final folders = (data as List).map((e) {
+        final m = Map<String, dynamic>.from(e as Map);
+        final units = m['teacher_units'] as List?;
+        return _Folder(
+          id: m['id'] as String,
+          name: m['name'] as String,
+          unitCount: units?.isNotEmpty == true ? (units![0]['count'] as num?)?.toInt() ?? 0 : 0,
+        );
+      }).toList();
+      _cache = folders;
+      if (mounted) setState(() { _folders = folders; _loading = false; });
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }

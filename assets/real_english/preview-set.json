@@ -1,0 +1,17 @@
+{
+  "name": "Real English: Natural English",
+  "description": "Key phrases and vocabulary from a real interview coaching session.",
+  "youtubeUrl": "PASTE_YOUTUBE_LINK_HERE",
+  "days": [
+    { "dayNumber": 1, "topic": "Day 1 Topic", "words": [] },
+    { "dayNumber": 2, "topic": "Day 2 Topic", "words": [] },
+    { "dayNumber": 3, "topic": "Day 3 Topic", "words": [] },
+    { "dayNumber": 4, "topic": "Day 4 Topic", "words": [] },
+    { "dayNumber": 5, "topic": "Day 5 Topic", "words": [] },
+    { "dayNumber": 6, "topic": "Day 6 Topic", "words": [] },
+    { "dayNumber": 7, "topic": "Day 7 Topic", "words": [] },
+    { "dayNumber": 8, "topic": "Day 8 Topic", "words": [] },
+    { "dayNumber": 9, "topic": "Day 9 Topic", "words": [] },
+    { "dayNumber": 10, "topic": "Day 10 Topic", "words": [] }
+  ]
+}

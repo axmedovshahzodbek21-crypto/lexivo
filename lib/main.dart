@@ -16,6 +16,7 @@ import 'screens/break_screen.dart';
 
 final ValueNotifier<double> textScaleNotifier = ValueNotifier(1.0);
 final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(ThemeMode.system);
+final ValueNotifier<String> pulseNotifier = ValueNotifier('normal'); // 'off' | 'slow' | 'normal' | 'fast'
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
@@ -38,6 +39,9 @@ void main() async {
   );
   appLangNotifier.value = prefs.getString('ui_language') ?? 'en';
   textScaleNotifier.value = prefs.getDouble('text_scale') ?? 1.0;
+  final pulseEnabled = prefs.getBool('pulse_enabled') ?? true;
+  final pulseSpeed = prefs.getString('pulse_speed') ?? 'normal';
+  pulseNotifier.value = pulseEnabled ? pulseSpeed : 'off';
   final themeModeStr = prefs.getString('theme_mode') ?? 'system';
   themeModeNotifier.value = themeModeStr == 'dark'
       ? ThemeMode.dark

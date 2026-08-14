@@ -31,6 +31,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _profileImagePath;
   String? _profileImageUrl;
   String _themeMode = 'system';
+  bool _pulseEnabled = true;
+  String _pulseSpeed = 'normal'; // 'slow' | 'normal' | 'fast'
   bool _loading = true;
 
   final _nameController = TextEditingController();
@@ -66,6 +68,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _profileImagePath = prefs.getString('profile_image_path');
       _profileImageUrl = prefs.getString('profile_image_url');
       _themeMode = prefs.getString('theme_mode') ?? 'system';
+      _pulseEnabled = prefs.getBool('pulse_enabled') ?? true;
+      _pulseSpeed = prefs.getString('pulse_speed') ?? 'normal';
       _nameController.text = _userName;
       _loading = false;
     });
@@ -369,6 +373,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     SyncService.pushSettings();
   }
 
+  Future<void> _setPulse({bool? enabled, String? speed}) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (enabled != null) {
+      await prefs.setBool('pulse_enabled', enabled);
+      setState(() => _pulseEnabled = enabled);
+    }
+    if (speed != null) {
+      await prefs.setString('pulse_speed', speed);
+      setState(() => _pulseSpeed = speed);
+    }
+    pulseNotifier.value = _pulseEnabled ? _pulseSpeed : 'off';
+  }
+
   Future<void> _setThemeMode(String mode) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('theme_mode', mode);
@@ -614,6 +631,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           _themeOption(context, tr('dark'), 'dark', Icons.dark_mode),
                         ],
                       ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Pulse Section
+                _buildSectionHeader(context, 'Card Pulse', icon: '💓', iconBg: const Color(0xFFEC4899).withValues(alpha: 0.12)),
+                _buildCard(
+                  context,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text('Animate cards', style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
+                        subtitle: Text('Cards gently pulse on home & library screens', style: TextStyle(fontSize: 12, color: context.textMuted)),
+                        value: _pulseEnabled,
+                        activeThumbColor: context.primary,
+                        onChanged: (v) => _setPulse(enabled: v),
+                      ),
+                      if (_pulseEnabled) ...[
+                        const SizedBox(height: 8),
+                        Text('Speed', style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
+                        const SizedBox(height: 10),
+                        Row(children: [
+                          _pulseSpeedOption(context, 'Slow', 'slow'),
+                          const SizedBox(width: 8),
+                          _pulseSpeedOption(context, 'Normal', 'normal'),
+                          const SizedBox(width: 8),
+                          _pulseSpeedOption(context, 'Fast', 'fast'),
+                        ]),
+                      ],
                     ],
                   ),
                 ),
@@ -1353,6 +1403,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _pulseSpeedOption(BuildContext context, String label, String value) {
+    final selected = _pulseSpeed == value;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => _setPulse(speed: value),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFFEC4899) : context.surface2,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: selected ? const Color(0xFFEC4899) : context.border),
+          ),
+          child: Center(
+            child: Text(label, style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: selected ? Colors.white : context.textMuted,
+            )),
+          ),
+        ),
       ),
     );
   }

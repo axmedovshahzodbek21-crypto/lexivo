@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import 'teacher_folder_screen.dart';
+import '../main.dart';
 
 class _Folder {
   final String id, name;
@@ -290,15 +291,27 @@ class _FolderCardState extends State<_FolderCard> with SingleTickerProviderState
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))
-      ..repeat(reverse: true);
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
     _scale = Tween<double>(begin: 1.0, end: 1.04).animate(
       CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
     );
+    _applyPulse(pulseNotifier.value);
+    pulseNotifier.addListener(_onPulseChange);
   }
+
+  void _applyPulse(String value) {
+    _ctrl.stop();
+    if (value == 'off') return;
+    final ms = value == 'slow' ? 1500 : value == 'fast' ? 500 : 900;
+    _ctrl.duration = Duration(milliseconds: ms);
+    _ctrl.repeat(reverse: true);
+  }
+
+  void _onPulseChange() => _applyPulse(pulseNotifier.value);
 
   @override
   void dispose() {
+    pulseNotifier.removeListener(_onPulseChange);
     _ctrl.dispose();
     super.dispose();
   }

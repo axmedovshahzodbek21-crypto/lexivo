@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import '../main.dart';
 import 'leveled_words_screen.dart';
 import 'stats_screen.dart';
 import 'package:flutter/material.dart';
@@ -108,10 +109,12 @@ class _HomeScreenState extends State<HomeScreen>
     _heartbeatController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
-    )..repeat(reverse: true);
+    );
     _heartbeat = Tween<double>(begin: 1.0, end: 1.04).animate(
       CurvedAnimation(parent: _heartbeatController, curve: Curves.easeInOut),
     );
+    _applyPulse(pulseNotifier.value);
+    pulseNotifier.addListener(_onPulseChange);
     _dailyGoal = widget.dailyWordGoal;
     WidgetsBinding.instance.addObserver(this);
     _pickWordOfDay();
@@ -121,10 +124,21 @@ class _HomeScreenState extends State<HomeScreen>
     appLangNotifier.addListener(_onLangChange);
   }
 
+  void _applyPulse(String value) {
+    _heartbeatController.stop();
+    if (value == 'off') return;
+    final ms = value == 'slow' ? 1500 : value == 'fast' ? 500 : 900;
+    _heartbeatController.duration = Duration(milliseconds: ms);
+    _heartbeatController.repeat(reverse: true);
+  }
+
+  void _onPulseChange() => _applyPulse(pulseNotifier.value);
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     appLangNotifier.removeListener(_onLangChange);
+    pulseNotifier.removeListener(_onPulseChange);
     _heartbeatController.dispose();
     _controller.dispose();
     super.dispose();

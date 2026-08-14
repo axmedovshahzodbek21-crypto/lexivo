@@ -1311,14 +1311,14 @@ class _HomeScreenState extends State<HomeScreen>
                   margin: const EdgeInsets.only(bottom: 20),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFFFCD34D), Color(0xFFF59E0B), Color(0xFFB45309)],
+                      colors: [Color(0xFFFB923C), Color(0xFFF97316), Color(0xFFC2410C)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: const [
-                      BoxShadow(color: Color(0xFF78350F), offset: Offset(0, 4), blurRadius: 0),
-                      BoxShadow(color: Color(0x55F59E0B), blurRadius: 18, offset: Offset(0, 8)),
+                      BoxShadow(color: Color(0xFF7C2D12), offset: Offset(0, 4), blurRadius: 0),
+                      BoxShadow(color: Color(0x55F97316), blurRadius: 18, offset: Offset(0, 8)),
                     ],
                   ),
                   child: Stack(

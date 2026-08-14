@@ -1444,7 +1444,7 @@ class _HomeScreenState extends State<HomeScreen>
               IntrinsicHeight(child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Total XP card (orange)
+                  // Total XP card (purple)
                   Expanded(
                     flex: 3,
                     child: AnimatedBuilder(
@@ -1456,21 +1456,21 @@ class _HomeScreenState extends State<HomeScreen>
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [Color(0xFFD97706), Color(0xFFFBBF24)],
+                              colors: [Color(0xFFA78BFA), Color(0xFF6C63FF), Color(0xFF4C1D95)],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
                             borderRadius: BorderRadius.circular(20),
                             boxShadow: [
                               const BoxShadow(
-                                color: Color(0xFF92400E),
+                                color: Color(0xFF3D1F9E),
                                 offset: Offset(0, 8),
                                 blurRadius: 0,
                               ),
                               BoxShadow(
-                                color: const Color(0xFFD97706).withValues(alpha: 0.4),
+                                color: Color(0x556C63FF),
                                 blurRadius: 20,
-                                offset: const Offset(0, 12),
+                                offset: Offset(0, 12),
                               ),
                             ],
                           ),

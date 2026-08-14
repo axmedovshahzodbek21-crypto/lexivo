@@ -3,30 +3,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../app_theme.dart';
 import '../data/real_english_data.dart';
-import '../data/word_data.dart';
-import '../data/json_parsers.dart';
-import '../data/storage_service.dart';
-import 'learning.dart';
-import 'flashcard.dart';
-import 'quiz_screen.dart';
-import 'matching_screen.dart';
+import 'real_english_video_screen.dart';
 
 const _kAccentColors = [
   Color(0xFF5B8AF0), Color(0xFFFF6B6B), Color(0xFF06D6A0), Color(0xFFFFD166),
   Color(0xFFA78BFA), Color(0xFFFF9F43), Color(0xFFF72585), Color(0xFF4ECDC4),
+  Color(0xFF3D8BFF), Color(0xFFFF5E57), Color(0xFF00C9A7), Color(0xFFFFC75F),
 ];
 
 Color _accent(int index) => _kAccentColors[index % _kAccentColors.length];
 
 class RealEnglishDetailScreen extends StatefulWidget {
   final RealEnglishSet set;
-  final int setIndex;
   final String userProfile;
 
   const RealEnglishDetailScreen({
     super.key,
     required this.set,
-    required this.setIndex,
     required this.userProfile,
   });
 
@@ -35,61 +28,33 @@ class RealEnglishDetailScreen extends StatefulWidget {
 }
 
 class _RealEnglishDetailScreenState extends State<RealEnglishDetailScreen> {
-  WordCollection? _collection;
-  Map<int, UnitProgress> _progressMap = {};
-  bool _loading = true;
+  final Map<String, int> _wordCounts = {};
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _loadWordCounts();
   }
 
-  Future<void> _load() async {
-    try {
-      final raw = await rootBundle.loadString(
-        'assets/real_english/${widget.set.id}.json',
-      );
-      final data = jsonDecode(raw) as Map<String, dynamic>;
-      final col = wordCollectionFromJson(data);
-
-      final Map<int, UnitProgress> progress = {};
-      for (final day in col.days) {
-        progress[day.dayNumber] = await StorageService.getUnitProgress(
-          col.name,
-          day.dayNumber,
+  Future<void> _loadWordCounts() async {
+    for (final video in widget.set.videos) {
+      try {
+        final raw = await rootBundle.loadString('assets/real_english/${video.id}.json');
+        final data = jsonDecode(raw) as Map<String, dynamic>;
+        final days = data['days'] as List<dynamic>;
+        final count = days.fold<int>(
+          0,
+          (s, d) => s + ((d as Map<String, dynamic>)['words'] as List).length,
         );
+        if (mounted) setState(() => _wordCounts[video.id] = count);
+      } catch (_) {
+        if (mounted) setState(() => _wordCounts[video.id] = 0);
       }
-
-      if (mounted) {
-        setState(() {
-          _collection = col;
-          _progressMap = progress;
-          _loading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
     }
-  }
-
-  Future<void> _reload() async {
-    if (_collection == null) return;
-    final Map<int, UnitProgress> progress = {};
-    for (final day in _collection!.days) {
-      progress[day.dayNumber] = await StorageService.getUnitProgress(
-        _collection!.name,
-        day.dayNumber,
-      );
-    }
-    if (mounted) setState(() => _progressMap = progress);
   }
 
   @override
   Widget build(BuildContext context) {
-    final accent = _accent(widget.setIndex);
-    final totalWords = _collection?.days.fold<int>(0, (s, d) => s + d.words.length) ?? 0;
-
     return Scaffold(
       backgroundColor: context.bg,
       appBar: AppBar(
@@ -100,476 +65,138 @@ class _RealEnglishDetailScreenState extends State<RealEnglishDetailScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Real English',
+          widget.set.title,
           style: TextStyle(
             color: context.appText,
             fontWeight: FontWeight.bold,
-            fontSize: 16,
+            fontSize: 15,
           ),
+          overflow: TextOverflow.ellipsis,
         ),
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Hero banner
-                  _HeroBanner(
-                    set: widget.set,
-                    accent: accent,
-                    totalWords: totalWords,
-                    unitCount: _collection?.days.length ?? 0,
-                  ),
-                  const SizedBox(height: 20),
-
-                  if (_collection == null || _collection!.days.every((d) => d.words.isEmpty))
-                    _EmptyState()
-                  else
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: 0.72,
-                      ),
-                      itemCount: _collection!.days.length,
-                      itemBuilder: (ctx, i) {
-                        final day = _collection!.days[i];
-                        final progress = _progressMap[day.dayNumber] ?? const UnitProgress();
-                        return _UnitCard(
-                          day: day,
-                          progress: progress,
-                          accent: accent,
-                          onLearn: () => _startLearning(day, i),
-                          onFlashcards: () => _startFlashcards(day),
-                          onQuiz: () => _startQuiz(day),
-                          onMatch: () => _startMatching(day),
-                        );
-                      },
-                    ),
-                ],
-              ),
-            ),
-    );
-  }
-
-  void _startLearning(WordDay day, int index) {
-    if (_collection == null) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => LearningScreen(
-          wordDay: day,
-          userProfile: widget.userProfile,
-          collectionName: _collection!.name,
-          collection: _collection!,
-          dayIndex: index,
+      body: GridView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 1.3,
         ),
-      ),
-    ).then((_) => _reload());
-  }
-
-  void _startFlashcards(WordDay day) {
-    if (_collection == null) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => FlashcardSettingsScreen(
-          wordDay: day,
-          userProfile: widget.userProfile,
-          collectionName: _collection!.name,
-        ),
-      ),
-    ).then((_) => _reload());
-  }
-
-  void _startQuiz(WordDay day) {
-    if (_collection == null) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => QuizSettingsScreen(
-          wordDay: day,
-          userProfile: widget.userProfile,
-          collectionName: _collection!.name,
-        ),
-      ),
-    ).then((_) => _reload());
-  }
-
-  void _startMatching(WordDay day) {
-    if (_collection == null) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => MatchingScreen(
-          wordDay: day,
-          collectionName: _collection!.name,
-        ),
-      ),
-    );
-  }
-}
-
-// ── Hero banner ────────────────────────────────────────────────────────────────
-
-class _HeroBanner extends StatelessWidget {
-  final RealEnglishSet set;
-  final Color accent;
-  final int totalWords;
-  final int unitCount;
-
-  const _HeroBanner({
-    required this.set,
-    required this.accent,
-    required this.totalWords,
-    required this.unitCount,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [accent.withValues(alpha: 0.75), accent],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: accent.withValues(alpha: 0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('🎬', style: TextStyle(fontSize: 28)),
-          const SizedBox(height: 8),
-          Text(
-            set.title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w900,
-              fontSize: 17,
-              height: 1.3,
-              shadows: [Shadow(color: Colors.black26, blurRadius: 6)],
-            ),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            children: [
-              if (totalWords > 0)
-                _Pill('$totalWords words'),
-              if (set.duration != null)
-                _Pill('⏱ ${set.duration}'),
-              if (unitCount > 0)
-                _Pill('$unitCount units'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Pill extends StatelessWidget {
-  final String label;
-  const _Pill(this.label);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-}
-
-// ── Unit card ──────────────────────────────────────────────────────────────────
-
-class _UnitCard extends StatelessWidget {
-  final WordDay day;
-  final UnitProgress progress;
-  final Color accent;
-  final VoidCallback onLearn;
-  final VoidCallback onFlashcards;
-  final VoidCallback onQuiz;
-  final VoidCallback onMatch;
-
-  const _UnitCard({
-    required this.day,
-    required this.progress,
-    required this.accent,
-    required this.onLearn,
-    required this.onFlashcards,
-    required this.onQuiz,
-    required this.onMatch,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final allDone = progress.learnDone && progress.flashcardDone && progress.quizDone;
-    final stagesComplete = [
-      progress.learnDone,
-      progress.flashcardDone,
-      progress.quizDone,
-    ].where((b) => b).length;
-    final pct = stagesComplete / 3;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: context.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: allDone ? Colors.green.shade300 : context.border,
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: allDone
-                ? Colors.green.withValues(alpha: 0.12)
-                : Colors.black.withValues(alpha: 0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14.5),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Accent strip
-            Container(
-              height: 3,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: allDone
-                      ? [const Color(0xFF22c55e), const Color(0xFF4ade80)]
-                      : [accent.withValues(alpha: 0.6), accent],
+        itemCount: widget.set.videos.length,
+        itemBuilder: (ctx, i) {
+          final video = widget.set.videos[i];
+          final wordCount = _wordCounts[video.id] ?? 0;
+          final accent = _accent(i);
+          return _VideoCard(
+            video: video,
+            index: i,
+            wordCount: wordCount,
+            accent: accent,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => RealEnglishVideoScreen(
+                  set: widget.set,
+                  video: video,
+                  videoIndex: i,
+                  userProfile: widget.userProfile,
                 ),
               ),
             ),
-
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: allDone ? Colors.green : accent,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            '${day.dayNumber}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          '${day.words.length} words',
-                          style: TextStyle(
-                            fontSize: 9,
-                            color: context.textMuted,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 5),
-                    Expanded(
-                      child: Text(
-                        day.topic,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: allDone ? Colors.green.shade700 : context.appText,
-                          height: 1.3,
-                        ),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-
-                    // Progress bar
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(3),
-                      child: LinearProgressIndicator(
-                        value: pct,
-                        minHeight: 3,
-                        backgroundColor: context.border,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          allDone ? Colors.green : accent,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-
-                    // Buttons row
-                    Row(
-                      children: [
-                        _ActionBtn(
-                          icon: '📖',
-                          label: 'Learn',
-                          done: progress.learnDone,
-                          locked: false,
-                          color: accent,
-                          onTap: onLearn,
-                        ),
-                        const SizedBox(width: 4),
-                        _ActionBtn(
-                          icon: '🃏',
-                          label: 'Cards',
-                          done: progress.flashcardDone,
-                          locked: !progress.learnDone,
-                          color: const Color(0xFF9333EA),
-                          onTap: onFlashcards,
-                        ),
-                        const SizedBox(width: 4),
-                        _ActionBtn(
-                          icon: '🧠',
-                          label: 'Quiz',
-                          done: progress.quizDone,
-                          locked: !progress.learnDone,
-                          color: const Color(0xFFEA580C),
-                          onTap: onQuiz,
-                        ),
-                        const SizedBox(width: 4),
-                        _ActionBtn(
-                          icon: '🔀',
-                          label: 'Match',
-                          done: false,
-                          locked: !progress.learnDone,
-                          color: const Color(0xFFEC4899),
-                          onTap: onMatch,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 }
 
-class _ActionBtn extends StatelessWidget {
-  final String icon;
-  final String label;
-  final bool done;
-  final bool locked;
-  final Color color;
+class _VideoCard extends StatelessWidget {
+  final RealEnglishVideo video;
+  final int index;
+  final int wordCount;
+  final Color accent;
   final VoidCallback onTap;
 
-  const _ActionBtn({
-    required this.icon,
-    required this.label,
-    required this.done,
-    required this.locked,
-    required this.color,
+  const _VideoCard({
+    required this.video,
+    required this.index,
+    required this.wordCount,
+    required this.accent,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: locked ? null : onTap,
-        child: Opacity(
-          opacity: locked ? 0.35 : 1.0,
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 5),
-            decoration: BoxDecoration(
-              color: done
-                  ? Colors.green.withValues(alpha: 0.12)
-                  : color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: context.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: context.border, width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
-            child: Column(
-              children: [
-                Text(
-                  locked ? '🔒' : (done ? '✅' : icon),
-                  style: const TextStyle(fontSize: 11),
-                ),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 8,
-                    fontWeight: FontWeight.bold,
-                    color: done ? Colors.green.shade600 : context.textMuted,
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14.5),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Accent strip
+              Container(
+                height: 3,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [accent.withValues(alpha: 0.6), accent],
                   ),
                 ),
-              ],
-            ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        video.title,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          color: context.appText,
+                        ),
+                      ),
+                      const Spacer(),
+                      Row(
+                        children: [
+                          Text(
+                            wordCount > 0 ? '$wordCount words' : 'No words yet',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: context.textMuted,
+                              fontStyle: wordCount == 0 ? FontStyle.italic : FontStyle.normal,
+                            ),
+                          ),
+                          if (video.duration.isNotEmpty && wordCount > 0) ...[
+                            Text(' · ', style: TextStyle(fontSize: 10, color: context.textMuted)),
+                            Text(
+                              video.duration,
+                              style: TextStyle(fontSize: 10, color: context.textMuted),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-// ── Empty state ────────────────────────────────────────────────────────────────
-
-class _EmptyState extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 40),
-          const Text('📭', style: TextStyle(fontSize: 48)),
-          const SizedBox(height: 12),
-          Text(
-            'Words coming soon',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: context.appText,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'This set is being prepared.',
-            style: TextStyle(fontSize: 13, color: context.textMuted),
-          ),
-        ],
       ),
     );
   }

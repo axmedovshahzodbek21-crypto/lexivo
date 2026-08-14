@@ -1,0 +1,11 @@
+﻿{
+  "name": "Natural English V2",
+  "description": "",
+  "youtubeUrl": "PASTE_YOUTUBE_URL_HERE",
+  "days": [
+    { "dayNumber": 1, "topic": "Unit 1", "words": [] },
+    { "dayNumber": 2, "topic": "Unit 2", "words": [] },
+    { "dayNumber": 3, "topic": "Unit 3", "words": [] },
+    { "dayNumber": 4, "topic": "Unit 4", "words": [] }
+  ]
+}

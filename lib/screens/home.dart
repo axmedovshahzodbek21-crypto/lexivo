@@ -1309,83 +1309,85 @@ class _HomeScreenState extends State<HomeScreen>
                 Container(
                   width: double.infinity,
                   margin: const EdgeInsets.only(bottom: 20),
-                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFF3E0),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFFFB74D)),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFCD34D), Color(0xFFF59E0B), Color(0xFFB45309)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: const [
+                      BoxShadow(color: Color(0xFF78350F), offset: Offset(0, 4), blurRadius: 0),
+                      BoxShadow(color: Color(0x55F59E0B), blurRadius: 18, offset: Offset(0, 8)),
+                    ],
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Stack(
+                    clipBehavior: Clip.hardEdge,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Flexible(
-                            child: Row(
+                      Positioned(
+                        right: -4,
+                        bottom: -10,
+                        child: Text(
+                          '🔔',
+                          style: TextStyle(fontSize: 80, color: Colors.white.withValues(alpha: 0.1)),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(18),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
                               children: [
-                                const Text('🔔', style: TextStyle(fontSize: 20)),
-                                const SizedBox(width: 8),
-                                Flexible(
+                                const Text(
+                                  'REVIEW DUE',
+                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1.2),
+                                ),
+                                const Spacer(),
+                                GestureDetector(
+                                  onTap: () => setState(() => _bannerDismissed = true),
                                   child: Text(
-                                    '$_reviewsDue words due for review!',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                      color: Color(0xFF1A1A2E),
-                                    ),
+                                    'Skip →',
+                                    style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.7), fontWeight: FontWeight.w600),
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: () =>
-                                setState(() => _bannerDismissed = true),
-                            child: const Text(
-                              'Skip →',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '$_reviewsDue ${_reviewsDue == 1 ? 'word' : 'words'} due for review!',
+                              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Colors.white),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Complete your reviews before learning new words for best results.',
-                        style: TextStyle(fontSize: 12, color: Colors.brown),
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () =>
-                              Navigator.push(
+                            const SizedBox(height: 4),
+                            Text(
+                              'Complete your reviews before learning new words for best results.',
+                              style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.85), height: 1.4),
+                            ),
+                            const SizedBox(height: 14),
+                            GestureDetector(
+                              onTap: () => Navigator.push(
                                 context,
-                                MaterialPageRoute(
-                                  builder: (context) => ReviewsDueScreen(
-                                    userProfile: widget.userProfile,
-                                  ),
-                                ),
+                                MaterialPageRoute(builder: (context) => ReviewsDueScreen(userProfile: widget.userProfile)),
                               ).then((_) {
                                 setState(() => _bannerDismissed = true);
                                 _loadStats();
                               }),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFF9800),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(vertical: 13),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.25),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
+                                ),
+                                alignment: Alignment.center,
+                                child: const Text(
+                                  'Start Reviews 🧠',
+                                  style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 15),
+                                ),
+                              ),
                             ),
-                          ),
-                          child: const Text(
-                            'Start Reviews 🧠',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
+                          ],
                         ),
                       ),
                     ],

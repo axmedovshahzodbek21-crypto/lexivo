@@ -77,6 +77,7 @@ class _HomeScreenState extends State<HomeScreen>
   WordItem? _wordOfDay;
   String _userName = '';
   String? _profileImagePath;
+  String? _profileImageUrl;
 
   // Home layout visibility
   bool _hideGoalLevel = false;
@@ -183,6 +184,7 @@ class _HomeScreenState extends State<HomeScreen>
     final skippedCount = await StorageService.getTotalSkippedWordsCount();
     final userName = prefs.getString('user_name') ?? '';
     final profileImagePath = prefs.getString('profile_image_path');
+    final profileImageUrl = prefs.getString('profile_image_url');
     setState(() {
       _wordsLearned = learned.length + skippedCount;
       _streak = streak;
@@ -193,6 +195,7 @@ class _HomeScreenState extends State<HomeScreen>
       _todayLearned = todayCount;
       _userName = userName;
       _profileImagePath = profileImagePath;
+      _profileImageUrl = profileImageUrl;
       _hideGoalLevel = prefs.getBool('home_hide_goal_level') ?? false;
       _hideWordOfDay = prefs.getBool('home_hide_wod') ?? false;
       _hideSession = prefs.getBool('home_hide_session') ?? false;
@@ -658,16 +661,24 @@ class _HomeScreenState extends State<HomeScreen>
                                 width: 2,
                               ),
                             ),
-                            child: _profileImagePath != null
+                            child: _profileImageUrl != null
                                 ? ClipRRect(
                                     borderRadius: BorderRadius.circular(22),
-                                    child: Image.file(
-                                      File(_profileImagePath!),
+                                    child: Image.network(
+                                      _profileImageUrl!,
                                       fit: BoxFit.cover,
+                                      errorBuilder: (c, e, s) => _profileImagePath != null
+                                          ? Image.file(File(_profileImagePath!), fit: BoxFit.cover)
+                                          : const Center(child: Text('👤')),
                                     ),
                                   )
-                                : const Center(
-                                    child: Text(
+                                : _profileImagePath != null
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(22),
+                                        child: Image.file(File(_profileImagePath!), fit: BoxFit.cover),
+                                      )
+                                    : const Center(
+                                        child: Text(
                                       '👤',
                                       style: TextStyle(fontSize: 20),
                                     ),
@@ -1978,9 +1989,11 @@ class _HomeScreenState extends State<HomeScreen>
                                       borderRadius: BorderRadius.circular(32),
                                       child: Container(
                                         color: Colors.white.withValues(alpha: 0.2),
-                                        child: _profileImagePath != null
-                                            ? Image.file(File(_profileImagePath!), fit: BoxFit.cover)
-                                            : const Center(child: Text('👤', style: TextStyle(fontSize: 30))),
+                                        child: _profileImageUrl != null
+                                            ? Image.network(_profileImageUrl!, fit: BoxFit.cover, errorBuilder: (c, e, s) => _profileImagePath != null ? Image.file(File(_profileImagePath!), fit: BoxFit.cover) : const Center(child: Text('👤', style: TextStyle(fontSize: 30))))
+                                            : _profileImagePath != null
+                                                ? Image.file(File(_profileImagePath!), fit: BoxFit.cover)
+                                                : const Center(child: Text('👤', style: TextStyle(fontSize: 30))),
                                       ),
                                     ),
                                   ),

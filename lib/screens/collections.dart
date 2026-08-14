@@ -107,6 +107,12 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
     return const Color(0xFF2ECC71);
   }
 
+  Color get _colorDark {
+    if (widget.collection == thirtyDaysCollection) return const Color(0xFF4338CA);
+    if (widget.collection == vocabularyChallengeCollection) return const Color(0xFFBE123C);
+    return const Color(0xFF14532D);
+  }
+
   LinearGradient get _gradient => LinearGradient(
     colors: [_color, _colorLight],
     begin: Alignment.topLeft,
@@ -282,114 +288,120 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
 
   Widget _buildUnitCard(BuildContext context, WordDay day, UnitProgress progress, StoryUnlockInfo storyInfo) {
     final isComplete = progress.isComplete;
-    final stages = progress.stagesComplete;
+    final wordCount = day.words.length;
+    final numStr = day.dayNumber.toString().padLeft(2, '0');
 
-    return DecoratedBox(
+    final gradient = isComplete
+        ? const LinearGradient(
+            colors: [Color(0xFF4ADE80), Color(0xFF22C55E), Color(0xFF15803D)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          )
+        : LinearGradient(
+            colors: [_colorLight, _color, _colorDark],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          );
+    final shadowColor = isComplete ? const Color(0xFF14532D) : _colorDark;
+
+    return Container(
       decoration: BoxDecoration(
+        gradient: gradient,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(
-            color: isComplete
-                ? Colors.green.withValues(alpha: 0.18)
-                : Colors.black.withValues(alpha: 0.07),
-            offset: const Offset(0, 4),
-            blurRadius: 12,
+          BoxShadow(color: shadowColor.withValues(alpha: 0.9), offset: const Offset(0, 4), blurRadius: 0),
+          BoxShadow(color: shadowColor.withValues(alpha: 0.35), blurRadius: 12, offset: const Offset(0, 8)),
+        ],
+      ),
+      child: Stack(
+        clipBehavior: Clip.hardEdge,
+        children: [
+          Positioned(
+            right: -2,
+            bottom: -8,
+            child: Text(
+              numStr,
+              style: TextStyle(
+                fontSize: 52,
+                fontWeight: FontWeight.w900,
+                color: Colors.white.withValues(alpha: 0.1),
+                height: 1,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'UNIT $numStr',
+                        style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 0.5),
+                      ),
+                    ),
+                    const Spacer(),
+                    if (isComplete)
+                      const Icon(Icons.check_circle_rounded, color: Colors.white, size: 14)
+                    else if (storyInfo.anyUnlocked)
+                      const Text('📚', style: TextStyle(fontSize: 10)),
+                  ],
+                ),
+                const SizedBox(height: 5),
+                Expanded(
+                  child: Text(
+                    day.topic,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white, height: 1.3),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        '$wordCount w',
+                        style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    const Spacer(),
+                    _gradientStageDot('📖', progress.learnDone),
+                    const SizedBox(width: 3),
+                    _gradientStageDot('🃏', progress.flashcardDone),
+                    const SizedBox(width: 3),
+                    _gradientStageDot('🧠', progress.quizDone),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          decoration: BoxDecoration(
-            color: context.surface,
-            border: Border.all(
-              color: isComplete ? Colors.green.shade300 : context.border,
-              width: 1.5,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Gradient top accent strip
-              Container(
-                height: 3,
-                decoration: BoxDecoration(
-                  gradient: isComplete
-                      ? const LinearGradient(colors: [Color(0xFF22c55e), Color(0xFF4ade80)])
-                      : _gradient,
-                ),
-              ),
-              // Content
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: isComplete ? Colors.green : _color,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              '${day.dayNumber}',
-                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900),
-                            ),
-                          ),
-                          const Spacer(),
-                          if (isComplete)
-                            const Icon(Icons.check_circle_rounded, color: Colors.green, size: 14)
-                          else if (storyInfo.anyUnlocked)
-                            const Text('📚', style: TextStyle(fontSize: 10)),
-                        ],
-                      ),
-                      const SizedBox(height: 5),
-                      Expanded(
-                        child: Text(
-                          day.topic,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: isComplete ? Colors.green.shade700 : context.appText,
-                            height: 1.3,
-                          ),
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(3),
-                        child: LinearProgressIndicator(
-                          value: stages / 3,
-                          minHeight: 4,
-                          backgroundColor: context.border,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            isComplete ? Colors.green : _color,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Row(
-                        children: [
-                          _stageDot(context, '📖', progress.learnDone),
-                          const SizedBox(width: 3),
-                          _stageDot(context, '🃏', progress.flashcardDone),
-                          const SizedBox(width: 3),
-                          _stageDot(context, '🧠', progress.quizDone),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+    );
+  }
+
+  Widget _gradientStageDot(String emoji, bool done) {
+    return Container(
+      width: 16,
+      height: 16,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: done ? 0.3 : 0.12),
+        borderRadius: BorderRadius.circular(3),
       ),
+      child: Center(child: Text(emoji, style: const TextStyle(fontSize: 9))),
     );
   }
 
@@ -461,27 +473,6 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
     );
   }
 
-  Widget _stageDot(BuildContext context, String emoji, bool done) {
-    return Container(
-      width: 16,
-      height: 16,
-      decoration: BoxDecoration(
-        color: done
-            ? Colors.green.withValues(alpha: 0.15)
-            : context.surface2,
-        borderRadius: BorderRadius.circular(3),
-      ),
-      child: Center(
-        child: Text(
-          emoji,
-          style: TextStyle(
-            fontSize: 9,
-            color: done ? null : context.textMuted,
-          ),
-        ),
-      ),
-    );
-  }
 
   void _onUnitTap(
     BuildContext context,

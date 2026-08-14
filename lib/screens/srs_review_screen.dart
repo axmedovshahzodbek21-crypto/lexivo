@@ -317,12 +317,35 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
       width: double.infinity,
       height: 200,
       decoration: BoxDecoration(
-        color: context.primary,
+        gradient: const LinearGradient(
+          colors: [Color(0xFFA78BFA), Color(0xFF6C63FF), Color(0xFF4C1D95)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: context.primary.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 8))],
+        boxShadow: const [
+          BoxShadow(color: Color(0xFF3D37B3), offset: Offset(0, 4), blurRadius: 0),
+          BoxShadow(color: Color(0x446C63FF), blurRadius: 18, offset: Offset(0, 8)),
+        ],
       ),
       child: Stack(
+        clipBehavior: Clip.hardEdge,
         children: [
+          Positioned(
+            right: -4,
+            bottom: -8,
+            child: IgnorePointer(
+              child: Text(
+                _current.word.isNotEmpty ? _current.word[0].toUpperCase() : '',
+                style: TextStyle(
+                  fontSize: 100,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white.withValues(alpha: 0.07),
+                  height: 1,
+                ),
+              ),
+            ),
+          ),
           Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -535,30 +558,48 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
-                      onPressed: _markNotYet,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
+                    child: GestureDetector(
+                      onTap: _markNotYet,
+                      child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFF87171), Color(0xFFEF4444), Color(0xFFB91C1C)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: const [
+                            BoxShadow(color: Color(0xFFB91C1C), offset: Offset(0, 3), blurRadius: 0),
+                            BoxShadow(color: Color(0x55EF4444), blurRadius: 10, offset: Offset(0, 5)),
+                          ],
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(tr('not_yet'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white)),
                       ),
-                      child: Text(tr('not_yet'),
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: _markKnew,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
+                    child: GestureDetector(
+                      onTap: _markKnew,
+                      child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF4ADE80), Color(0xFF22C55E), Color(0xFF15803D)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: const [
+                            BoxShadow(color: Color(0xFF15803D), offset: Offset(0, 3), blurRadius: 0),
+                            BoxShadow(color: Color(0x5522C55E), blurRadius: 10, offset: Offset(0, 5)),
+                          ],
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(tr('know_it'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white)),
                       ),
-                      child: Text(tr('know_it'),
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                     ),
                   ),
                 ],
@@ -638,30 +679,48 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
           Row(
             children: [
               Expanded(
-                child: OutlinedButton(
-                  onPressed: _markNotYet,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    side: const BorderSide(color: Colors.red),
+                child: GestureDetector(
+                  onTap: _markNotYet,
+                  child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFF87171), Color(0xFFEF4444), Color(0xFFB91C1C)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: const [
+                        BoxShadow(color: Color(0xFFB91C1C), offset: Offset(0, 3), blurRadius: 0),
+                        BoxShadow(color: Color(0x55EF4444), blurRadius: 10, offset: Offset(0, 5)),
+                      ],
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(tr('not_yet'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white)),
                   ),
-                  child: Text(tr('not_yet'),
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: ElevatedButton(
-                  onPressed: _markKnew,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
+                child: GestureDetector(
+                  onTap: _markKnew,
+                  child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF4ADE80), Color(0xFF22C55E), Color(0xFF15803D)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: const [
+                        BoxShadow(color: Color(0xFF15803D), offset: Offset(0, 3), blurRadius: 0),
+                        BoxShadow(color: Color(0x5522C55E), blurRadius: 10, offset: Offset(0, 5)),
+                      ],
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(tr('know_it'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white)),
                   ),
-                  child: Text(tr('know_it'),
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
               ),
             ],

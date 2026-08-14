@@ -724,20 +724,24 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
           Row(
             children: [
               Expanded(
-                child: ElevatedButton(
-                  onPressed: _markHard,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFFEEEE),
-                    foregroundColor: const Color(0xFFE53935),
+                child: GestureDetector(
+                  onTap: _markHard,
+                  child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFF87171), Color(0xFFEF4444), Color(0xFFB91C1C)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                       borderRadius: BorderRadius.circular(14),
+                      boxShadow: const [
+                        BoxShadow(color: Color(0xFFB91C1C), offset: Offset(0, 3), blurRadius: 0),
+                        BoxShadow(color: Color(0x55EF4444), blurRadius: 10, offset: Offset(0, 5)),
+                      ],
                     ),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                    tr('hard'),
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                    alignment: Alignment.center,
+                    child: Text(tr('hard'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white)),
                   ),
                 ),
               ),
@@ -747,33 +751,32 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: context.surface2,
                   foregroundColor: context.textMuted,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 14,
-                    horizontal: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   elevation: 0,
                 ),
                 child: const Text('⏭', style: TextStyle(fontSize: 18)),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: ElevatedButton(
-                  onPressed: _markEasy,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE8F5E9),
-                    foregroundColor: const Color(0xFF2E7D32),
+                child: GestureDetector(
+                  onTap: _markEasy,
+                  child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF4ADE80), Color(0xFF22C55E), Color(0xFF15803D)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                       borderRadius: BorderRadius.circular(14),
+                      boxShadow: const [
+                        BoxShadow(color: Color(0xFF15803D), offset: Offset(0, 3), blurRadius: 0),
+                        BoxShadow(color: Color(0x5522C55E), blurRadius: 10, offset: Offset(0, 5)),
+                      ],
                     ),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                    tr('easy'),
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                    alignment: Alignment.center,
+                    child: Text(tr('easy'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white)),
                   ),
                 ),
               ),
@@ -961,49 +964,67 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
 
   Widget _buildFront() {
     final isTranslationMode = widget.cardMode == CardMode.translationToWord;
+    final displayText = isTranslationMode ? _currentWord.translation : _currentWord.word;
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: isTranslationMode
-            ? const Color(0xFF2ECC71)
-            : const Color(0xFF6C63FF),
+        gradient: LinearGradient(
+          colors: isTranslationMode
+              ? const [Color(0xFF4ADE80), Color(0xFF22C55E), Color(0xFF15803D)]
+              : const [Color(0xFFA78BFA), Color(0xFF6C63FF), Color(0xFF4C1D95)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color:
-                (isTranslationMode
-                        ? const Color(0xFF2ECC71)
-                        : const Color(0xFF6C63FF))
-                    .withValues(alpha: 0.3),
-            blurRadius: 20,
+            color: isTranslationMode ? const Color(0xFF14532D) : const Color(0xFF3D37B3),
+            offset: const Offset(0, 4),
+            blurRadius: 0,
+          ),
+          BoxShadow(
+            color: isTranslationMode
+                ? const Color(0xFF22C55E).withValues(alpha: 0.4)
+                : const Color(0xFF6C63FF).withValues(alpha: 0.4),
+            blurRadius: 16,
             offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          Text(
-            isTranslationMode ? _currentWord.translation : _currentWord.word,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+          Positioned(
+            right: -8,
+            bottom: -12,
+            child: IgnorePointer(
+              child: Text(
+                displayText.isNotEmpty ? displayText[0].toUpperCase() : '',
+                style: TextStyle(
+                  fontSize: 120,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white.withValues(alpha: 0.07),
+                  height: 1,
+                ),
+              ),
             ),
           ),
-          if (!isTranslationMode) ...[
-            const SizedBox(height: 12),
-            Text(
-              _currentWord.partOfSpeech,
-              style: const TextStyle(fontSize: 14, color: Colors.white60),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _currentWord.pronunciation,
-              style: const TextStyle(fontSize: 14, color: Colors.white70),
-            ),
-          ],
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                displayText,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+              if (!isTranslationMode) ...[
+                const SizedBox(height: 12),
+                Text(_currentWord.partOfSpeech, style: const TextStyle(fontSize: 14, color: Colors.white60)),
+                const SizedBox(height: 8),
+                Text(_currentWord.pronunciation, style: const TextStyle(fontSize: 14, color: Colors.white70)),
+              ],
+            ],
+          ),
         ],
       ),
     );

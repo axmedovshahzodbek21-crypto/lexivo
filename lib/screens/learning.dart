@@ -750,14 +750,42 @@ class _LearningScreenState extends State<LearningScreen> {
                                     width: double.infinity,
                                     padding: const EdgeInsets.all(24),
                                     decoration: BoxDecoration(
-                                      color: isLearned
-                                          ? const Color(0xFF2ECC71)
-                                          : isHard
-                                              ? const Color(0xFFE74C3C)
-                                              : isSkipped
-                                                  ? Colors.orange
-                                                  : context.primary,
+                                      gradient: LinearGradient(
+                                        colors: isLearned
+                                            ? const [Color(0xFF4ADE80), Color(0xFF22C55E), Color(0xFF15803D)]
+                                            : isHard
+                                                ? const [Color(0xFFF87171), Color(0xFFEF4444), Color(0xFFB91C1C)]
+                                                : isSkipped
+                                                    ? const [Color(0xFFFCD34D), Color(0xFFF59E0B), Color(0xFFB45309)]
+                                                    : const [Color(0xFFA78BFA), Color(0xFF6C63FF), Color(0xFF4C1D95)],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
                                       borderRadius: BorderRadius.circular(20),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: isLearned
+                                              ? const Color(0xFF14532D)
+                                              : isHard
+                                                  ? const Color(0xFF7F1D1D)
+                                                  : isSkipped
+                                                      ? const Color(0xFF92400E)
+                                                      : const Color(0xFF3D37B3),
+                                          offset: const Offset(0, 4),
+                                          blurRadius: 0,
+                                        ),
+                                        BoxShadow(
+                                          color: (isLearned
+                                              ? const Color(0xFF22C55E)
+                                              : isHard
+                                                  ? const Color(0xFFEF4444)
+                                                  : isSkipped
+                                                      ? const Color(0xFFF59E0B)
+                                                      : const Color(0xFF6C63FF)).withValues(alpha: 0.4),
+                                          blurRadius: 18,
+                                          offset: const Offset(0, 8),
+                                        ),
+                                      ],
                                     ),
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,

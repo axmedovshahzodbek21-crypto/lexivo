@@ -19,6 +19,7 @@ import 'pomodoro_setup_screen.dart';
 import 'custom_lists_screen.dart';
 import 'reading_screen.dart';
 import 'real_english_screen.dart';
+import 'teacher_library_screen.dart';
 import '../data/word_data.dart';
 import '../data/storage_service.dart';
 import '../services/sync_service.dart';
@@ -2113,7 +2114,7 @@ class _HomeScreenState extends State<HomeScreen>
                         iconBg: const Color(0xFF0ea5e9), onTap: () {
                       Navigator.pop(context);
                       Navigator.push(context,
-                          MaterialPageRoute(builder: (context) => const CustomListsScreen()));
+                          MaterialPageRoute(builder: (context) => const TeacherLibraryScreen()));
                     }),
                     _buildDrawerTile(context, icon: '💡', label: 'Ideas',
                         iconBg: const Color(0xFFa855f7), onTap: () {

@@ -105,6 +105,8 @@ class TeacherUnitScreen extends StatefulWidget {
 }
 
 class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTickerProviderStateMixin {
+  static final Map<String, List<_Word>> _cache = {};
+
   late TabController _tabs;
   List<_Word> _words = [];
   bool _loading = true;
@@ -123,6 +125,10 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
     super.initState();
     _tabs = TabController(length: 2, vsync: this);
     _pasteCtrl.addListener(_onPasteChange);
+    if (_cache.containsKey(widget.unitId)) {
+      _words = _cache[widget.unitId]!;
+      _loading = false;
+    }
     _load();
   }
 
@@ -159,9 +165,11 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
           .eq('unit_id', widget.unitId)
           .order('position')
           .order('created_at');
+      final words = (data as List).map((e) => _Word.fromMap(Map<String, dynamic>.from(e as Map))).toList();
+      _cache[widget.unitId] = words;
       if (mounted) {
         setState(() {
-          _words = (data as List).map((e) => _Word.fromMap(Map<String, dynamic>.from(e as Map))).toList();
+          _words = words;
           _loading = false;
         });
       }
@@ -200,6 +208,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
   Future<void> _deleteWord(String id) async {
     await supabase.from('teacher_unit_words').delete().eq('id', id);
     if (mounted) setState(() => _words.removeWhere((w) => w.id == id));
+    _cache[widget.unitId] = _words;
   }
 
   void _showWordDetail(_Word word) {

@@ -61,39 +61,37 @@ List<_ParsedWord> _parseOutput(String text) {
   return results;
 }
 
-String _buildPrompt(String wordLang, String translationLang, String words) {
+String _exampleBlock(String lang, String tl) {
+  return List.generate(10, (i) {
+    final n = i + 1;
+    final desc = n == 1 ? 'natural sentence using the word' : 'another natural sentence';
+    return 'Example $n: [$desc in $lang]\nExample $n Translation: [$tl translation of example $n]';
+  }).join('\n');
+}
+
+// hasTranslations: true when the pasted input is already word-translation
+// pairs (their translation is kept verbatim) rather than a bare word list.
+String _buildPrompt(String wordLang, String translationLang, String words, {bool hasTranslations = false}) {
   final lang = wordLang.toLowerCase();
   final tl = translationLang.toLowerCase();
-  return '''You are a vocabulary flashcard generator. Create detailed flashcard data for these $lang words, with translations in $tl.
+  final intro = hasTranslations
+      ? 'I have $lang-$tl word pairs. For each pair, keep my translation exactly as written. Add a short definition in $lang and 10 example sentences in $lang with their $tl translations.'
+      : 'You are a vocabulary flashcard generator. Create detailed flashcard data for these $lang words, with translations in $tl.';
+  final label = hasTranslations ? 'Word pairs to process (word - translation)' : 'Words to process';
+  final wordLine = hasTranslations ? 'Word: [the $lang word — keep exactly as given]' : 'Word: [the $lang word]';
+  final transLine = hasTranslations ? 'Translation: [keep exactly as given in my pairs]' : 'Translation: [$tl translation]';
 
-Words to process:
+  return '''$intro
+
+$label:
 $words
 
 For each word output exactly this format, separated by ---:
 
-Word: [the $lang word]
-Translation: [$tl translation]
+$wordLine
+$transLine
 Definition: [short definition in $lang, max 20 words]
-Example 1: [natural sentence using the word in $lang]
-Example 1 Translation: [$tl translation of example 1]
-Example 2: [another natural sentence in $lang]
-Example 2 Translation: [$tl translation of example 2]
-Example 3: [another natural sentence in $lang]
-Example 3 Translation: [$tl translation of example 3]
-Example 4: [another natural sentence in $lang]
-Example 4 Translation: [$tl translation of example 4]
-Example 5: [another natural sentence in $lang]
-Example 5 Translation: [$tl translation of example 5]
-Example 6: [another natural sentence in $lang]
-Example 6 Translation: [$tl translation of example 6]
-Example 7: [another natural sentence in $lang]
-Example 7 Translation: [$tl translation of example 7]
-Example 8: [another natural sentence in $lang]
-Example 8 Translation: [$tl translation of example 8]
-Example 9: [another natural sentence in $lang]
-Example 9 Translation: [$tl translation of example 9]
-Example 10: [another natural sentence in $lang]
-Example 10 Translation: [$tl translation of example 10]
+${_exampleBlock(lang, tl)}
 
 Output only the formatted blocks. No commentary.''';
 }
@@ -139,6 +137,17 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
 
   void _onPasteChange() {
     if (mounted) setState(() => _parsed = _parseOutput(_pasteCtrl.text));
+  }
+
+  void _copyPrompt(BuildContext context, {required bool hasTranslations}) {
+    final input = _wordsInputCtrl.text.trim();
+    final words = input.isEmpty
+        ? (hasTranslations ? 'apple - olma\nbook - kitob' : 'apple, book, water')
+        : input;
+    final prompt = _buildPrompt(_wordLang, _translationLang, words, hasTranslations: hasTranslations);
+    Clipboard.setData(ClipboardData(text: prompt));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Prompt copied! Paste into AI chatbot.'), duration: Duration(seconds: 2)));
   }
 
   Future<void> _load() async {
@@ -419,7 +428,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
             maxLines: 4,
             style: TextStyle(color: context.appText, fontSize: 13),
             decoration: InputDecoration(
-              hintText: 'apple, book, water\nor one per line',
+              hintText: 'apple, book, water\nor one per line\nor already-translated pairs like: apple - olma',
               hintStyle: TextStyle(color: context.textMuted, fontSize: 13),
               filled: true, fillColor: context.surface2,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
@@ -430,18 +439,27 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: () {
-                final words = _wordsInputCtrl.text.trim();
-                final prompt = _buildPrompt(_wordLang, _translationLang, words.isEmpty ? 'apple, book, water' : words);
-                Clipboard.setData(ClipboardData(text: prompt));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Prompt copied! Paste into AI chatbot.'), duration: Duration(seconds: 2)));
-              },
+              onPressed: () => _copyPrompt(context, hasTranslations: false),
               icon: const Text('📋', style: TextStyle(fontSize: 14)),
-              label: const Text('Copy AI Prompt', style: TextStyle(fontWeight: FontWeight.w600)),
+              label: const Text('Copy Prompt — just words, AI translates', style: TextStyle(fontWeight: FontWeight.w600)),
               style: OutlinedButton.styleFrom(
                 foregroundColor: context.primary,
                 side: BorderSide(color: context.primary.withValues(alpha: 0.5)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _copyPrompt(context, hasTranslations: true),
+              icon: const Text('📋', style: TextStyle(fontSize: 14)),
+              label: const Text('Copy Prompt — I already have translations', style: TextStyle(fontWeight: FontWeight.w600)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: context.textMuted,
+                side: BorderSide(color: context.border),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 padding: const EdgeInsets.symmetric(vertical: 10),
               ),

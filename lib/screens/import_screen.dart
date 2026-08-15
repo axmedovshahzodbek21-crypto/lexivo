@@ -19,17 +19,8 @@ const _languages = [
   {'label': 'Uzbek',    'code': 'uz-UZ'},
 ];
 
-String _buildPrompt1(String wordLang, String transLang) => '''
-I have a list of $wordLang words I want to learn. For each word, provide the translation in $transLang, a short definition in $wordLang, and 5 example sentences in $wordLang with their $transLang translations.
-
-Format EXACTLY like this for every word. Use plain text only — no markdown, no bold, no asterisks, no extra formatting:
-
-word: enormous
-partOfSpeech: adjective
-pronunciation: /ɪˈnɔːrməs/
-translation: ulkan
-definition: extremely large in size or extent
-definitionUz: Ulkan — juda katta yoki keng hajmga ega bo'lgan narsa yoki hodisa.
+// Shared illustrative "enormous" example block shown to the AI, up to 10 examples.
+const _exampleFormatBlock = '''
 example1: The enormous building towered above the city.
 example1Translation: Ulkan bino shahar ustida baland turardi.
 example2: She faced an enormous challenge at work.
@@ -40,6 +31,29 @@ example4: He made an enormous effort to finish the project on time.
 example4Translation: U loyihani o'z vaqtida tugatish uchun ulkan harakat qildi.
 example5: The discovery had an enormous impact on modern science.
 example5Translation: Bu kashfiyot zamonaviy fanga ulkan ta'sir ko'rsatdi.
+example6: The company invested an enormous amount of money in research.
+example6Translation: Kompaniya tadqiqotlarga ulkan miqdorda mablag' sarfladi.
+example7: Cleaning up after the enormous storm took several weeks.
+example7Translation: Ulkan bo'rondan keyin tozalash bir necha hafta davom etdi.
+example8: The enormous crowd gathered to watch the festival.
+example8Translation: Festivalni tomosha qilish uchun ulkan olomon to'plandi.
+example9: Losing his job was an enormous setback for him.
+example9Translation: Ishini yo'qotish u uchun ulkan qiyinchilik bo'ldi.
+example10: The enormous mountain range stretched across the horizon.
+example10Translation: Ulkan tog' tizmasi ufq bo'ylab cho'zilgan edi.''';
+
+String _buildPrompt1(String wordLang, String transLang) => '''
+I have a list of $wordLang words I want to learn. For each word, provide the translation in $transLang, a short definition in $wordLang, and up to 10 example sentences in $wordLang with their $transLang translations.
+
+Format EXACTLY like this for every word. Use plain text only — no markdown, no bold, no asterisks, no extra formatting:
+
+word: enormous
+partOfSpeech: adjective
+pronunciation: /ɪˈnɔːrməs/
+translation: ulkan
+definition: extremely large in size or extent
+definitionUz: Ulkan — juda katta yoki keng hajmga ega bo'lgan narsa yoki hodisa.
+$_exampleFormatBlock
 ---
 
 Important: the example above uses English/Uzbek only to show the format. In your actual response, write the definition and examples in $wordLang, the translations and definitionUz in $transLang.
@@ -48,7 +62,7 @@ Here are my words:
 [PASTE YOUR WORDS HERE, one per line]''';
 
 String _buildPrompt2(String wordLang, String transLang) => '''
-I have $wordLang-$transLang word pairs. For each pair, keep my translation exactly as written. Add a short definition in $wordLang, a short explanation in $transLang (definitionUz), and 5 example sentences in $wordLang with their $transLang translations.
+I have $wordLang-$transLang word pairs. For each pair, keep my translation exactly as written. Add a short definition in $wordLang, a short explanation in $transLang (definitionUz), and up to 10 example sentences in $wordLang with their $transLang translations.
 
 Format EXACTLY like this for every word. Use plain text only — no markdown, no bold, no asterisks, no extra formatting:
 
@@ -58,16 +72,7 @@ pronunciation: /ɪˈnɔːrməs/
 translation: ulkan
 definition: extremely large in size or extent
 definitionUz: Ulkan — juda katta yoki keng hajmga ega bo'lgan narsa yoki hodisa.
-example1: The enormous building towered above the city.
-example1Translation: Ulkan bino shahar ustida baland turardi.
-example2: She faced an enormous challenge at work.
-example2Translation: U ishda ulkan muammoga duch keldi.
-example3: The storm caused enormous damage to the coastline.
-example3Translation: Bo'ron qirg'oqqa ulkan zarar yetkazdi.
-example4: He made an enormous effort to finish the project on time.
-example4Translation: U loyihani o'z vaqtida tugatish uchun ulkan harakat qildi.
-example5: The discovery had an enormous impact on modern science.
-example5Translation: Bu kashfiyot zamonaviy fanga ulkan ta'sir ko'rsatdi.
+$_exampleFormatBlock
 ---
 
 Important: the example above uses English/Uzbek only to show the format. In your actual response, write the definition and examples in $wordLang, the translations and definitionUz in $transLang.
@@ -90,6 +95,13 @@ List<ImportedWord> _parseOutput(String text, String langCode) {
       fields[key] = val;
     }
     if (!fields.containsKey('word') || !fields.containsKey('translation')) continue;
+    // Unlimited examples — collect "exampleN" / "exampleNtranslation" for any N.
+    final examples = <ImportedWordExample>[];
+    for (var n = 1; n <= 20; n++) {
+      final sentence = fields['example$n'];
+      if (sentence == null || sentence.isEmpty) continue;
+      examples.add(ImportedWordExample(sentence: sentence, translation: fields['example${n}translation']));
+    }
     result.add(ImportedWord(
       word: fields['word']!,
       partOfSpeech: fields['partofspeech']?.isNotEmpty == true ? fields['partofspeech'] : null,
@@ -97,16 +109,7 @@ List<ImportedWord> _parseOutput(String text, String langCode) {
       translation: fields['translation']!,
       definition: fields['definition'] ?? '',
       definitionUz: fields['definitionuz']?.isNotEmpty == true ? fields['definitionuz'] : null,
-      example1: fields['example1'] ?? '',
-      example1Translation: fields['example1translation'] ?? '',
-      example2: fields['example2'] ?? '',
-      example2Translation: fields['example2translation'] ?? '',
-      example3: fields['example3']?.isNotEmpty == true ? fields['example3'] : null,
-      example3Translation: fields['example3translation']?.isNotEmpty == true ? fields['example3translation'] : null,
-      example4: fields['example4']?.isNotEmpty == true ? fields['example4'] : null,
-      example4Translation: fields['example4translation']?.isNotEmpty == true ? fields['example4translation'] : null,
-      example5: fields['example5']?.isNotEmpty == true ? fields['example5'] : null,
-      example5Translation: fields['example5translation']?.isNotEmpty == true ? fields['example5translation'] : null,
+      examples: examples,
       language: langCode,
       addedAt: DateTime.now().millisecondsSinceEpoch,
       collectionName: '',
@@ -596,45 +599,13 @@ class _WordPreviewCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(word.definition, style: TextStyle(color: context.textMuted, fontSize: 12)),
           ],
-          if (word.example1.isNotEmpty) ...[
+          for (final ex in word.examples) ...[
             const SizedBox(height: 4),
-            Text('"${word.example1}"', style: TextStyle(color: context.appText, fontSize: 12, fontStyle: FontStyle.italic)),
-          ],
-          if (word.example1Translation.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            Text('↳ ${word.example1Translation}', style: TextStyle(color: context.textMuted, fontSize: 12)),
-          ],
-          if (word.example2.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text('"${word.example2}"', style: TextStyle(color: context.appText, fontSize: 12, fontStyle: FontStyle.italic)),
-          ],
-          if (word.example2Translation.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            Text('↳ ${word.example2Translation}', style: TextStyle(color: context.textMuted, fontSize: 12)),
-          ],
-          if (word.example3 != null && word.example3!.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text('"${word.example3}"', style: TextStyle(color: context.appText, fontSize: 12, fontStyle: FontStyle.italic)),
-          ],
-          if (word.example3Translation != null && word.example3Translation!.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            Text('↳ ${word.example3Translation}', style: TextStyle(color: context.textMuted, fontSize: 12)),
-          ],
-          if (word.example4 != null && word.example4!.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text('"${word.example4}"', style: TextStyle(color: context.appText, fontSize: 12, fontStyle: FontStyle.italic)),
-          ],
-          if (word.example4Translation != null && word.example4Translation!.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            Text('↳ ${word.example4Translation}', style: TextStyle(color: context.textMuted, fontSize: 12)),
-          ],
-          if (word.example5 != null && word.example5!.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text('"${word.example5}"', style: TextStyle(color: context.appText, fontSize: 12, fontStyle: FontStyle.italic)),
-          ],
-          if (word.example5Translation != null && word.example5Translation!.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            Text('↳ ${word.example5Translation}', style: TextStyle(color: context.textMuted, fontSize: 12)),
+            Text('"${ex.sentence}"', style: TextStyle(color: context.appText, fontSize: 12, fontStyle: FontStyle.italic)),
+            if (ex.translation != null && ex.translation!.isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Text('↳ ${ex.translation}', style: TextStyle(color: context.textMuted, fontSize: 12)),
+            ],
           ],
         ],
       ),

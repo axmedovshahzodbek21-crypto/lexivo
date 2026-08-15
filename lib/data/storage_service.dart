@@ -318,6 +318,23 @@ class StoryUnlockInfo {
 //  IMPORTED WORDS MODEL
 // ─────────────────────────────────────────────
 
+class ImportedWordExample {
+  final String sentence;
+  final String? translation;
+
+  const ImportedWordExample({required this.sentence, this.translation});
+
+  Map<String, dynamic> toJson() => {
+    'sentence': sentence,
+    if (translation != null) 'translation': translation,
+  };
+
+  factory ImportedWordExample.fromJson(Map<String, dynamic> json) => ImportedWordExample(
+    sentence: json['sentence'] ?? '',
+    translation: json['translation'] as String?,
+  );
+}
+
 class ImportedWord {
   final String word;
   final String? partOfSpeech;
@@ -325,16 +342,7 @@ class ImportedWord {
   final String translation;
   final String definition;
   final String? definitionUz;
-  final String example1;
-  final String example1Translation;
-  final String example2;
-  final String example2Translation;
-  final String? example3;
-  final String? example3Translation;
-  final String? example4;
-  final String? example4Translation;
-  final String? example5;
-  final String? example5Translation;
+  final List<ImportedWordExample> examples; // unlimited, unlike WordItem's fixed example1-3
   final String language;
   final int addedAt;
   final String collectionName;
@@ -348,16 +356,7 @@ class ImportedWord {
     required this.translation,
     required this.definition,
     this.definitionUz,
-    required this.example1,
-    required this.example1Translation,
-    required this.example2,
-    required this.example2Translation,
-    this.example3,
-    this.example3Translation,
-    this.example4,
-    this.example4Translation,
-    this.example5,
-    this.example5Translation,
+    this.examples = const [],
     required this.language,
     required this.addedAt,
     required this.collectionName,
@@ -372,16 +371,7 @@ class ImportedWord {
     translation: translation,
     definition: definition,
     definitionUz: definitionUz,
-    example1: example1,
-    example1Translation: example1Translation,
-    example2: example2,
-    example2Translation: example2Translation,
-    example3: example3,
-    example3Translation: example3Translation,
-    example4: example4,
-    example4Translation: example4Translation,
-    example5: example5,
-    example5Translation: example5Translation,
+    examples: examples,
     language: language,
     addedAt: addedAt,
     collectionName: collectionName,
@@ -396,16 +386,7 @@ class ImportedWord {
     'translation': translation,
     'definition': definition,
     if (definitionUz != null) 'definitionUz': definitionUz,
-    'example1': example1,
-    'example1Translation': example1Translation,
-    'example2': example2,
-    'example2Translation': example2Translation,
-    if (example3 != null) 'example3': example3,
-    if (example3Translation != null) 'example3Translation': example3Translation,
-    if (example4 != null) 'example4': example4,
-    if (example4Translation != null) 'example4Translation': example4Translation,
-    if (example5 != null) 'example5': example5,
-    if (example5Translation != null) 'example5Translation': example5Translation,
+    'examples': examples.map((e) => e.toJson()).toList(),
     'language': language,
     'addedAt': addedAt,
     'collectionName': collectionName,
@@ -413,30 +394,43 @@ class ImportedWord {
     if (deletedAt != null) 'deletedAt': deletedAt,
   };
 
-  factory ImportedWord.fromJson(Map<String, dynamic> json) => ImportedWord(
-    word: json['word'] ?? '',
-    partOfSpeech: json['partOfSpeech'] as String?,
-    pronunciation: json['pronunciation'] as String?,
-    translation: json['translation'] ?? '',
-    definition: json['definition'] ?? '',
-    definitionUz: json['definitionUz'] as String?,
-    example1: json['example1'] ?? '',
-    example1Translation: json['example1Translation'] ?? '',
-    example2: json['example2'] ?? '',
-    example2Translation: json['example2Translation'] ?? '',
-    example3: json['example3'] as String?,
-    example3Translation: json['example3Translation'] as String?,
-    example4: json['example4'] as String?,
-    example4Translation: json['example4Translation'] as String?,
-    example5: json['example5'] as String?,
-    example5Translation: json['example5Translation'] as String?,
-    language: json['language'] ?? 'en-US',
-    addedAt: json['addedAt'] ?? 0,
-    collectionName: json['collectionName'] ?? 'My Words',
-    folderName: json['folderName'] as String?,
-    deletedAt: json['deletedAt'] as int?,
-  );
+  // Migrates old-shape records (fixed example1..5 fields) into the current
+  // examples[] shape, for words stored/synced before that change.
+  factory ImportedWord.fromJson(Map<String, dynamic> json) {
+    List<ImportedWordExample> examples;
+    final rawExamples = json['examples'];
+    if (rawExamples is List) {
+      examples = rawExamples
+          .map((e) => ImportedWordExample.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+    } else {
+      examples = [];
+      for (var i = 1; i <= 5; i++) {
+        final sentence = json['example$i'] as String?;
+        if (sentence != null && sentence.isNotEmpty) {
+          examples.add(ImportedWordExample(sentence: sentence, translation: json['example${i}Translation'] as String?));
+        }
+      }
+    }
+    return ImportedWord(
+      word: json['word'] ?? '',
+      partOfSpeech: json['partOfSpeech'] as String?,
+      pronunciation: json['pronunciation'] as String?,
+      translation: json['translation'] ?? '',
+      definition: json['definition'] ?? '',
+      definitionUz: json['definitionUz'] as String?,
+      examples: examples,
+      language: json['language'] ?? 'en-US',
+      addedAt: json['addedAt'] ?? 0,
+      collectionName: json['collectionName'] ?? 'My Words',
+      folderName: json['folderName'] as String?,
+      deletedAt: json['deletedAt'] as int?,
+    );
+  }
 
+  // Folds the unlimited examples[] into WordItem's fixed example1-3 +
+  // extraExamples/extraExampleTranslations shape used across Learn/
+  // Flashcards/Quiz/Match.
   WordItem toWordItem() => WordItem(
     word: word,
     partOfSpeech: partOfSpeech ?? '',
@@ -444,20 +438,14 @@ class ImportedWord {
     translation: translation,
     definition: definition,
     definitionUz: definitionUz ?? '',
-    example1: example1,
-    example1Translation: example1Translation,
-    example2: example2,
-    example2Translation: example2Translation,
-    example3: example3 ?? '',
-    example3Translation: example3Translation ?? '',
-    extraExamples: [
-      if (example4 != null && example4!.isNotEmpty) example4!,
-      if (example5 != null && example5!.isNotEmpty) example5!,
-    ],
-    extraExampleTranslations: [
-      if (example4 != null && example4!.isNotEmpty) example4Translation ?? '',
-      if (example5 != null && example5!.isNotEmpty) example5Translation ?? '',
-    ],
+    example1: examples.isNotEmpty ? examples[0].sentence : '',
+    example1Translation: examples.isNotEmpty ? (examples[0].translation ?? '') : '',
+    example2: examples.length > 1 ? examples[1].sentence : '',
+    example2Translation: examples.length > 1 ? (examples[1].translation ?? '') : '',
+    example3: examples.length > 2 ? examples[2].sentence : '',
+    example3Translation: examples.length > 2 ? (examples[2].translation ?? '') : '',
+    extraExamples: examples.skip(3).map((e) => e.sentence).toList(),
+    extraExampleTranslations: examples.skip(3).map((e) => e.translation ?? '').toList(),
   );
 }
 
@@ -1988,12 +1976,12 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
         .where((w) => !existingSet.contains(w.word.toLowerCase().trim()))
         .map((w) => ImportedWord(
           word: w.word,
+          partOfSpeech: w.partOfSpeech,
+          pronunciation: w.pronunciation,
           translation: w.translation,
           definition: w.definition,
-          example1: w.example1,
-          example1Translation: w.example1Translation,
-          example2: w.example2,
-          example2Translation: w.example2Translation,
+          definitionUz: w.definitionUz,
+          examples: w.examples.take(10).toList(),
           language: w.language,
           addedAt: w.addedAt,
           collectionName: collectionName,

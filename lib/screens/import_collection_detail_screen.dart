@@ -334,25 +334,9 @@ class _WordCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(word.definition, style: TextStyle(color: context.textMuted, fontSize: 12)),
                 ],
-                if (word.example1.isNotEmpty) ...[
+                for (final ex in word.examples) ...[
                   const SizedBox(height: 4),
-                  Text('"${word.example1}"', style: TextStyle(color: context.appText, fontSize: 12, fontStyle: FontStyle.italic)),
-                ],
-                if (word.example2.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text('"${word.example2}"', style: TextStyle(color: context.appText, fontSize: 12, fontStyle: FontStyle.italic)),
-                ],
-                if (word.example3 != null && word.example3!.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text('"${word.example3}"', style: TextStyle(color: context.appText, fontSize: 12, fontStyle: FontStyle.italic)),
-                ],
-                if (word.example4 != null && word.example4!.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text('"${word.example4}"', style: TextStyle(color: context.appText, fontSize: 12, fontStyle: FontStyle.italic)),
-                ],
-                if (word.example5 != null && word.example5!.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text('"${word.example5}"', style: TextStyle(color: context.appText, fontSize: 12, fontStyle: FontStyle.italic)),
+                  Text('"${ex.sentence}"', style: TextStyle(color: context.appText, fontSize: 12, fontStyle: FontStyle.italic)),
                 ],
               ],
             ),

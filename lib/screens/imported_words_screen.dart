@@ -300,8 +300,11 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
         mainAxisSpacing: 10,
         childAspectRatio: 0.95,
       ),
-      itemCount: _folders.length,
+      itemCount: _folders.length + 1,
       itemBuilder: (context, i) {
+        if (i == _folders.length) {
+          return _AddTile(label: 'New Folder', onTap: _startCreating);
+        }
         final folder = _folders[i];
         final color = _cardColors[i % _cardColors.length];
         return GestureDetector(
@@ -341,6 +344,36 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+// A dashed-look "+ New X" tile appended to a folder/unit grid so adding one
+// is as visible as the existing items, not just a small AppBar icon.
+class _AddTile extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  const _AddTile({required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: context.primary.withValues(alpha: 0.4), width: 2),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.add_circle_outline, color: context.primary, size: 26),
+            const SizedBox(height: 6),
+            Text(label, textAlign: TextAlign.center, style: TextStyle(color: context.primary, fontWeight: FontWeight.bold, fontSize: 11)),
+          ],
+        ),
+      ),
     );
   }
 }

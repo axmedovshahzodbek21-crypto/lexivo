@@ -280,9 +280,15 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> {
         decoration: BoxDecoration(
           gradient: LinearGradient(colors: colors, begin: Alignment.topLeft, end: Alignment.bottomRight),
           borderRadius: BorderRadius.circular(18),
-          boxShadow: [BoxShadow(color: colors[0].withValues(alpha: 0.4), blurRadius: 14, offset: const Offset(0, 6))],
+          boxShadow: [
+            BoxShadow(color: colors[0].withValues(alpha: 0.8), blurRadius: 0, offset: const Offset(0, 6)),
+            BoxShadow(color: colors[0].withValues(alpha: 0.4), blurRadius: 20, offset: const Offset(0, 10)),
+          ],
         ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        child: Stack(children: [
+          Positioned(right: 4, bottom: -6,
+            child: Text(cls.name.isNotEmpty ? cls.name[0].toUpperCase() : '', style: TextStyle(fontSize: 72, fontWeight: FontWeight.w900, color: Colors.white.withValues(alpha: 0.08), height: 1))),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Expanded(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 12, 8, 8),
@@ -334,11 +340,16 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> {
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+                ),
                 child: const Text('Enter →', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white)),
               ),
             ]),
           ),
+        ]),
         ]),
       ),
     );

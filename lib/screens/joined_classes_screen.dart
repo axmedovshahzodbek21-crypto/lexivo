@@ -291,6 +291,19 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
     ),
   );
 
+  static const _kJoinedGradients = [
+    [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+    [Color(0xFFEC4899), Color(0xFFF43F5E)],
+    [Color(0xFF10B981), Color(0xFF14B8A6)],
+    [Color(0xFF3B82F6), Color(0xFF06B6D4)],
+    [Color(0xFFF59E0B), Color(0xFFF97316)],
+    [Color(0xFF8B5CF6), Color(0xFFA855F7)],
+    [Color(0xFFEF4444), Color(0xFFEC4899)],
+    [Color(0xFF06B6D4), Color(0xFF3B82F6)],
+  ];
+  List<Color> _joinedCardColors(String id) =>
+      _kJoinedGradients[id.codeUnits.fold(0, (a, b) => a + b) % _kJoinedGradients.length];
+
   Widget _buildJoinedClassCard(ClassRow cls) {
     final user = currentUser;
     final notes = _classNotes[cls.id] ?? [];
@@ -302,54 +315,82 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
     final teacherName = _teacherNames[cls.teacherId] ?? 'Teacher';
     final isLbExpanded = _expandedLeaderboard == cls.id;
     final leaderboard = _classLeaderboards[cls.id] ?? [];
+    final colors = _joinedCardColors(cls.id);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16), boxShadow: context.cardShadow),
+      decoration: BoxDecoration(
+        color: context.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: colors[0].withValues(alpha: 0.8), blurRadius: 0, offset: const Offset(0, 5)),
+          BoxShadow(color: colors[0].withValues(alpha: 0.35), blurRadius: 20, offset: const Offset(0, 10)),
+        ],
+      ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
-          child: Row(children: [
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Wrap(spacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                Text(cls.name, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: context.appText)),
-                if (unread > 0) _badge('$unread new', context.primary),
-                if (active.isNotEmpty) _badge('${active.length} target${active.length != 1 ? 's' : ''}', Colors.amber),
+        // Gradient header strip
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: colors, begin: Alignment.topLeft, end: Alignment.bottomRight),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          child: Stack(children: [
+            Positioned(right: 8, top: -4,
+              child: Text(cls.name.isNotEmpty ? cls.name[0].toUpperCase() : '', style: TextStyle(fontSize: 72, fontWeight: FontWeight.w900, color: Colors.white.withValues(alpha: 0.08), height: 1))),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+              child: Row(children: [
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Wrap(spacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                    Text(cls.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                    if (unread > 0) Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(8)), child: Text('$unread new', style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold))),
+                    if (active.isNotEmpty) Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)), child: Text('${active.length} target${active.length != 1 ? 's' : ''}', style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold))),
+                  ]),
+                  const SizedBox(height: 2),
+                  Text('👩‍🏫 $teacherName · ${cls.joinCode}', style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.7))),
+                ])),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () => _toggleLeaderboard(cls.id),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    decoration: BoxDecoration(color: isLbExpanded ? Colors.white.withValues(alpha: 0.35) : Colors.black.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(10)),
+                    child: const Text('🏆', style: TextStyle(fontSize: 16)),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: () => _leaveClass(cls.id),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(10)),
+                    child: Text(tr('leave'), style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.8))),
+                  ),
+                ),
               ]),
-              const SizedBox(height: 2),
-              Text('👩‍🏫 $teacherName · ${cls.joinCode}', style: TextStyle(fontSize: 11, color: context.textMuted)),
-            ])),
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: () => _toggleLeaderboard(cls.id),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                decoration: BoxDecoration(color: isLbExpanded ? context.primary : context.surface2, borderRadius: BorderRadius.circular(10)),
-                child: Text('🏆', style: TextStyle(fontSize: 16, color: isLbExpanded ? Colors.white : null)),
-              ),
-            ),
-            const SizedBox(width: 6),
-            GestureDetector(
-              onTap: () => _leaveClass(cls.id),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(10)),
-                child: Text(tr('leave'), style: TextStyle(fontSize: 12, color: context.textMuted)),
-              ),
             ),
           ]),
         ),
 
         Padding(
-          padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-          child: SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => Navigator.push(context, MaterialPageRoute(
-                builder: (_) => ClassShell(classId: cls.id, className: cls.name, isTeacher: false),
-              )).then((_) => _load()),
-              style: ElevatedButton.styleFrom(backgroundColor: context.primary, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 10), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-              child: const Text('Enter Class →', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+          child: GestureDetector(
+            onTap: () => Navigator.push(context, MaterialPageRoute(
+              builder: (_) => ClassShell(classId: cls.id, className: cls.name, isTeacher: false),
+            )).then((_) => _load()),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: colors, begin: Alignment.topLeft, end: Alignment.bottomRight),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(color: colors[0].withValues(alpha: 0.5), blurRadius: 0, offset: const Offset(0, 4)),
+                  BoxShadow(color: colors[0].withValues(alpha: 0.25), blurRadius: 12, offset: const Offset(0, 6)),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: const Text('Enter Class →', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: Colors.white)),
             ),
           ),
         ),
@@ -457,9 +498,4 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
     ]),
   );
 
-  Widget _badge(String text, Color color) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-    decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
-    child: Text(text, style: TextStyle(fontSize: 9, color: color, fontWeight: FontWeight.bold)),
-  );
 }

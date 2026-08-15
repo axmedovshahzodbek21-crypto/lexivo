@@ -42,7 +42,7 @@ example9Translation: Ishini yo'qotish u uchun ulkan qiyinchilik bo'ldi.
 example10: The enormous mountain range stretched across the horizon.
 example10Translation: Ulkan tog' tizmasi ufq bo'ylab cho'zilgan edi.''';
 
-String _buildPrompt1(String wordLang, String transLang) => '''
+String _buildPrompt1(String wordLang, String transLang, String words) => '''
 I have a list of $wordLang words I want to learn. For each word, provide the translation in $transLang, a short definition in $wordLang, and up to 10 example sentences in $wordLang with their $transLang translations.
 
 Format EXACTLY like this for every word. Use plain text only — no markdown, no bold, no asterisks, no extra formatting:
@@ -59,9 +59,9 @@ $_exampleFormatBlock
 Important: the example above uses English/Uzbek only to show the format. In your actual response, write the definition and examples in $wordLang, the translations and definitionUz in $transLang.
 
 Here are my words:
-[PASTE YOUR WORDS HERE, one per line]''';
+$words''';
 
-String _buildPrompt2(String wordLang, String transLang) => '''
+String _buildPrompt2(String wordLang, String transLang, String words) => '''
 I have $wordLang-$transLang word pairs. For each pair, keep my translation exactly as written. Add a short definition in $wordLang, a short explanation in $transLang (definitionUz), and up to 10 example sentences in $wordLang with their $transLang translations.
 
 Format EXACTLY like this for every word. Use plain text only — no markdown, no bold, no asterisks, no extra formatting:
@@ -78,7 +78,7 @@ $_exampleFormatBlock
 Important: the example above uses English/Uzbek only to show the format. In your actual response, write the definition and examples in $wordLang, the translations and definitionUz in $transLang.
 
 Here are my pairs (word - translation):
-[PASTE YOUR PAIRS HERE, one per line]''';
+$words''';
 
 List<ImportedWord> _parseOutput(String text, String langCode) {
   if (text.trim().isEmpty) return [];
@@ -130,6 +130,7 @@ class ImportScreen extends StatefulWidget {
 
 class _ImportScreenState extends State<ImportScreen> {
   final _collectionCtrl = TextEditingController();
+  final _wordsInputCtrl = TextEditingController();
   final _pasteCtrl = TextEditingController();
 
   String _wordLang = 'English';
@@ -149,12 +150,14 @@ class _ImportScreenState extends State<ImportScreen> {
       _collectionCtrl.text = widget.prefilledCollection!;
     }
     _pasteCtrl.addListener(_onPasteChanged);
+    _wordsInputCtrl.addListener(() { if (mounted) setState(() {}); });
     _showTutorialIfNeeded();
   }
 
   @override
   void dispose() {
     _collectionCtrl.dispose();
+    _wordsInputCtrl.dispose();
     _pasteCtrl.dispose();
     super.dispose();
   }
@@ -211,8 +214,9 @@ class _ImportScreenState extends State<ImportScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final prompt1 = _buildPrompt1(_wordLang, _transLang);
-    final prompt2 = _buildPrompt2(_wordLang, _transLang);
+    final wordsInput = _wordsInputCtrl.text.trim();
+    final prompt1 = _buildPrompt1(_wordLang, _transLang, wordsInput.isEmpty ? 'apple, book, water' : wordsInput);
+    final prompt2 = _buildPrompt2(_wordLang, _transLang, wordsInput.isEmpty ? 'apple - olma\nbook - kitob' : wordsInput);
 
     return Scaffold(
       backgroundColor: context.bg,
@@ -292,6 +296,29 @@ class _ImportScreenState extends State<ImportScreen> {
                   value: _transLang,
                   onChanged: (val) => setState(() => _transLang = val),
                 )),
+              ],
+            )),
+
+            const SizedBox(height: 12),
+
+            // ── Words input — embedded directly into whichever prompt you copy below ──
+            _Card(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('1. Enter words to import', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _wordsInputCtrl,
+                  maxLines: 4,
+                  style: TextStyle(color: context.appText, fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: 'apple, book, water\nor one per line\nor already-translated pairs like: apple - olma',
+                    hintStyle: TextStyle(color: context.textMuted, fontSize: 13),
+                    filled: true, fillColor: context.surface2,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
               ],
             )),
 

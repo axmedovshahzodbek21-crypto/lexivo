@@ -6,6 +6,7 @@ import 'import_screen.dart';
 import 'learning.dart';
 import 'flashcard.dart';
 import 'quiz_screen.dart';
+import 'matching_screen.dart';
 
 class ImportCollectionDetailScreen extends StatefulWidget {
   final String collectionName;
@@ -225,9 +226,12 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
             _StudyButton(
               icon: '🔗', label: 'Match',
               color: const Color(0xFF10B981),
-              onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Match coming soon!'), duration: Duration(seconds: 2)),
-              ),
+              onTap: () => Navigator.push(context, MaterialPageRoute(
+                builder: (_) => MatchingScreen(
+                  wordDay: _wordDay,
+                  collectionName: widget.collectionName,
+                ),
+              )),
             ),
           ],
         ),

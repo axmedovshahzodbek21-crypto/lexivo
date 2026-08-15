@@ -339,6 +339,7 @@ class ImportedWord {
   final int addedAt;
   final String collectionName;
   final String? folderName;
+  final int? deletedAt; // tombstone: set instead of removing, so deletion syncs across devices
 
   ImportedWord({
     required this.word,
@@ -361,7 +362,32 @@ class ImportedWord {
     required this.addedAt,
     required this.collectionName,
     this.folderName,
+    this.deletedAt,
   });
+
+  ImportedWord copyWith({int? deletedAt}) => ImportedWord(
+    word: word,
+    partOfSpeech: partOfSpeech,
+    pronunciation: pronunciation,
+    translation: translation,
+    definition: definition,
+    definitionUz: definitionUz,
+    example1: example1,
+    example1Translation: example1Translation,
+    example2: example2,
+    example2Translation: example2Translation,
+    example3: example3,
+    example3Translation: example3Translation,
+    example4: example4,
+    example4Translation: example4Translation,
+    example5: example5,
+    example5Translation: example5Translation,
+    language: language,
+    addedAt: addedAt,
+    collectionName: collectionName,
+    folderName: folderName,
+    deletedAt: deletedAt ?? this.deletedAt,
+  );
 
   Map<String, dynamic> toJson() => {
     'word': word,
@@ -384,6 +410,7 @@ class ImportedWord {
     'addedAt': addedAt,
     'collectionName': collectionName,
     if (folderName != null) 'folderName': folderName,
+    if (deletedAt != null) 'deletedAt': deletedAt,
   };
 
   factory ImportedWord.fromJson(Map<String, dynamic> json) => ImportedWord(
@@ -407,6 +434,7 @@ class ImportedWord {
     addedAt: json['addedAt'] ?? 0,
     collectionName: json['collectionName'] ?? 'My Words',
     folderName: json['folderName'] as String?,
+    deletedAt: json['deletedAt'] as int?,
   );
 
   WordItem toWordItem() => WordItem(
@@ -1854,7 +1882,12 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
 
   static const _importedKey = 'imported_words';
 
-  static Future<List<ImportedWord>> getImportedWords() async {
+  // Includes soft-deleted (tombstoned) words. Only sync push/merge logic
+  // should use this — everything else should use getImportedWords() below,
+  // which hides tombstones. Deletions are kept as tombstones (rather than
+  // removed outright) so they can propagate to other devices instead of the
+  // deleted word silently reappearing on the next sync pull.
+  static Future<List<ImportedWord>> getImportedWordsRaw() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_importedKey);
     if (raw == null) return [];
@@ -1862,6 +1895,11 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     return list
         .map((e) => ImportedWord.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  static Future<List<ImportedWord>> getImportedWords() async {
+    final all = await getImportedWordsRaw();
+    return all.where((w) => w.deletedAt == null).toList();
   }
 
   static Future<List<ImportedWord>> getImportedWordsByCollection(
@@ -1939,10 +1977,12 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     String? folderName,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    final existing = await getImportedWords();
+    final raw = await getImportedWordsRaw();
+    // Dedupe against live words only — re-importing a word that was
+    // previously deleted (a tombstone) is allowed, so it comes back fresh.
     final existingSet = <String>{};
-    for (final w in existing) {
-      existingSet.add(w.word.toLowerCase().trim());
+    for (final w in raw) {
+      if (w.deletedAt == null) existingSet.add(w.word.toLowerCase().trim());
     }
     final fresh = words
         .where((w) => !existingSet.contains(w.word.toLowerCase().trim()))
@@ -1960,40 +2000,51 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
           folderName: folderName,
         ))
         .toList();
-    existing.addAll(fresh);
-    await prefs.setString(_importedKey, jsonEncode(existing.map((e) => e.toJson()).toList()));
+    raw.addAll(fresh);
+    await prefs.setString(_importedKey, jsonEncode(raw.map((e) => e.toJson()).toList()));
     SyncService.pushLists();
   }
 
+  // Soft-delete: mark with a tombstone timestamp instead of removing
+  // outright, so the deletion syncs to (and takes effect on) other devices.
   static Future<void> deleteImportedWord(
     String word,
     String collectionName, {
     String? folderName,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    final existing = await getImportedWords();
-    existing.removeWhere((w) =>
-      w.word == word && w.collectionName == collectionName && w.folderName == folderName
-    );
-    await prefs.setString(_importedKey, jsonEncode(existing.map((e) => e.toJson()).toList()));
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final raw = await getImportedWordsRaw();
+    final updated = raw.map((w) =>
+      (w.word == word && w.collectionName == collectionName && w.folderName == folderName)
+        ? w.copyWith(deletedAt: now)
+        : w
+    ).toList();
+    await prefs.setString(_importedKey, jsonEncode(updated.map((e) => e.toJson()).toList()));
     SyncService.pushLists();
   }
 
   static Future<void> deleteImportedCollection(String collectionName, {String? folderName}) async {
     final prefs = await SharedPreferences.getInstance();
-    final existing = await getImportedWords();
-    existing.removeWhere((w) =>
-      w.collectionName == collectionName && w.folderName == folderName
-    );
-    await prefs.setString(_importedKey, jsonEncode(existing.map((e) => e.toJson()).toList()));
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final raw = await getImportedWordsRaw();
+    final updated = raw.map((w) =>
+      (w.collectionName == collectionName && w.folderName == folderName)
+        ? w.copyWith(deletedAt: now)
+        : w
+    ).toList();
+    await prefs.setString(_importedKey, jsonEncode(updated.map((e) => e.toJson()).toList()));
     SyncService.pushLists();
   }
 
   static Future<void> deleteImportedFolder(String folderName) async {
     final prefs = await SharedPreferences.getInstance();
-    final existing = await getImportedWords();
-    existing.removeWhere((w) => w.folderName == folderName);
-    await prefs.setString(_importedKey, jsonEncode(existing.map((e) => e.toJson()).toList()));
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final raw = await getImportedWordsRaw();
+    final updated = raw.map((w) =>
+      w.folderName == folderName ? w.copyWith(deletedAt: now) : w
+    ).toList();
+    await prefs.setString(_importedKey, jsonEncode(updated.map((e) => e.toJson()).toList()));
     SyncService.pushLists();
   }
 

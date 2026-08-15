@@ -549,24 +549,28 @@ class SyncService {
         }
       }
 
-      // imported_words
+      // imported_words — per-record last-write-wins merge (keyed by word+collection+folder).
+      // Cloud rows include tombstones (deletedAt), so a deletion made on another
+      // device correctly overwrites a stale local copy instead of being ignored.
       final cloudImported = (row['imported_words'] as List? ?? []).cast<Map<String, dynamic>>();
-      if (cloudImported.isNotEmpty) {
+      {
         final localRaw = prefs.getString('imported_words') ?? '[]';
         final localList = (jsonDecode(localRaw) as List).cast<Map<String, dynamic>>();
-        final localKeys = {
-          for (final w in localList)
-            '${w['word']}__${w['collectionName'] ?? ''}__${w['folderName'] ?? ''}',
+        String keyOf(Map<String, dynamic> w) => '${w['word']}__${w['collectionName'] ?? ''}__${w['folderName'] ?? ''}';
+        int tsOf(Map<String, dynamic> w) => (w['deletedAt'] as int?) ?? (w['addedAt'] as int?) ?? 0;
+        final byKey = <String, Map<String, dynamic>>{
+          for (final w in localList) keyOf(w): w,
         };
         bool changed = false;
         for (final w in cloudImported) {
-          final key = '${w['word']}__${w['collectionName'] ?? ''}__${w['folderName'] ?? ''}';
-          if (!localKeys.contains(key)) {
-            localList.add(w);
+          final key = keyOf(w);
+          final existing = byKey[key];
+          if (existing == null || tsOf(w) > tsOf(existing)) {
+            byKey[key] = w;
             changed = true;
           }
         }
-        if (changed) await prefs.setString('imported_words', jsonEncode(localList));
+        if (changed) await prefs.setString('imported_words', jsonEncode(byKey.values.toList()));
       }
     } catch (_) {}
   }

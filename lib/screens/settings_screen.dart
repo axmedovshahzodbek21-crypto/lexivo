@@ -458,7 +458,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.all(20),
               children: [
                 // Profile Section
-                _buildSectionHeader(context, tr('profile'), icon: '👤', iconBg: const Color(0xFF6366F1).withValues(alpha: 0.12)),
+                _buildSectionHeader(context, tr('profile'), icon: '👤',
+                  gradient: const [Color(0xFF6366F1), Color(0xFF818CF8)],
+                  shadowColor: const Color(0xFF4338CA)),
                 _buildCard(
                   context,
                   child: Row(
@@ -608,7 +610,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 const SizedBox(height: 24),
 
-                _buildSectionHeader(context, tr('appearance'), icon: '🎨', iconBg: const Color(0xFFF59E0B).withValues(alpha: 0.12)),
+                _buildSectionHeader(context, tr('appearance'), icon: '🎨',
+                  gradient: const [Color(0xFFF59E0B), Color(0xFFFBBF24)],
+                  shadowColor: const Color(0xFFB45309)),
                 _buildCard(
                   context,
                   child: Column(
@@ -638,7 +642,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 24),
 
                 // Pulse Section
-                _buildSectionHeader(context, 'Card Pulse', icon: '💓', iconBg: const Color(0xFFEC4899).withValues(alpha: 0.12)),
+                _buildSectionHeader(context, 'Card Pulse', icon: '💓',
+                  gradient: const [Color(0xFFEC4899), Color(0xFFF472B6)],
+                  shadowColor: const Color(0xFFBE185D)),
                 _buildCard(
                   context,
                   child: Column(
@@ -671,7 +677,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 24),
 
                 // Language Section
-                _buildSectionHeader(context, tr('language'), icon: '🌐', iconBg: const Color(0xFF3B82F6).withValues(alpha: 0.12)),
+                _buildSectionHeader(context, tr('language'), icon: '🌐',
+                  gradient: const [Color(0xFF3B82F6), Color(0xFF60A5FA)],
+                  shadowColor: const Color(0xFF1D4ED8)),
                 _buildCard(
                   context,
                   child: Column(
@@ -698,7 +706,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 const SizedBox(height: 24),
 
-                _buildSectionHeader(context, tr('notifications'), icon: '🔔', iconBg: const Color(0xFFEF4444).withValues(alpha: 0.1)),
+                _buildSectionHeader(context, tr('notifications'), icon: '🔔',
+                  gradient: const [Color(0xFFEF4444), Color(0xFFF87171)],
+                  shadowColor: const Color(0xFFB91C1C)),
                 _buildCard(
                   context,
                   child: SwitchListTile(
@@ -793,7 +803,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 const SizedBox(height: 24),
 
-                _buildSectionHeader(context, tr('english_level'), icon: '📊', iconBg: const Color(0xFF10B981).withValues(alpha: 0.12)),
+                _buildSectionHeader(context, tr('english_level'), icon: '📊',
+                  gradient: const [Color(0xFF10B981), Color(0xFF34D399)],
+                  shadowColor: const Color(0xFF047857)),
                 _buildCard(
                   context,
                   child: Column(
@@ -897,7 +909,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 const SizedBox(height: 24),
 
-                _buildSectionHeader(context, tr('display'), icon: '🔤', iconBg: const Color(0xFF6366F1).withValues(alpha: 0.12)),
+                _buildSectionHeader(context, tr('display'), icon: '🔤',
+                  gradient: const [Color(0xFF6366F1), Color(0xFF818CF8)],
+                  shadowColor: const Color(0xFF4338CA)),
                 _buildCard(
                   context,
                   child: Column(
@@ -954,7 +968,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                 ),
-                _buildSectionHeader(context, tr('daily_goal_section'), icon: '🎯', iconBg: const Color(0xFFF97316).withValues(alpha: 0.12)),
+                _buildSectionHeader(context, tr('daily_goal_section'), icon: '🎯',
+                  gradient: const [Color(0xFFF97316), Color(0xFFFB923C)],
+                  shadowColor: const Color(0xFFC2410C)),
                 _buildCard(
                   context,
                   child: Column(
@@ -1013,7 +1029,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 const SizedBox(height: 24),
 
-                _buildSectionHeader(context, tr('about'), icon: 'ℹ️', iconBg: const Color(0xFF6366F1).withValues(alpha: 0.12)),
+                _buildSectionHeader(context, tr('about'), icon: 'ℹ️',
+                  gradient: const [Color(0xFF6366F1), Color(0xFF818CF8)],
+                  shadowColor: const Color(0xFF4338CA)),
                 _buildCard(
                   context,
                   child: Column(
@@ -1076,7 +1094,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 const SizedBox(height: 24),
 
-                _buildSectionHeader(context, tr('account'), icon: '🔑', iconBg: const Color(0xFF6366F1).withValues(alpha: 0.12)),
+                _buildSectionHeader(context, tr('account'), icon: '🔑',
+                  gradient: const [Color(0xFF6366F1), Color(0xFF818CF8)],
+                  shadowColor: const Color(0xFF4338CA)),
                 _buildCard(
                   context,
                   child: Column(
@@ -1151,7 +1171,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 const SizedBox(height: 24),
 
-                _buildSectionHeader(context, tr('data'), icon: '⚠️', iconBg: const Color(0xFFEF4444).withValues(alpha: 0.1)),
+                _buildSectionHeader(context, tr('data'), icon: '⚠️',
+                  gradient: const [Color(0xFFDC2626), Color(0xFFEF4444)],
+                  shadowColor: const Color(0xFF991B1B)),
                 _buildCard(
                   context,
                   child: ListTile(
@@ -1377,28 +1399,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title, {String icon = '', Color? iconBg}) {
+  Widget _buildSectionHeader(BuildContext context, String title, {
+    String icon = '',
+    Color? iconBg,
+    List<Color>? gradient,
+    Color? shadowColor,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
           if (icon.isNotEmpty) ...[
             Container(
-              width: 30,
-              height: 30,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                color: iconBg ?? context.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(9),
+                gradient: gradient != null
+                    ? LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: gradient,
+                      )
+                    : null,
+                color: gradient == null ? (iconBg ?? context.primary.withValues(alpha: 0.1)) : null,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: shadowColor != null
+                    ? [
+                        BoxShadow(
+                          color: shadowColor.withValues(alpha: 1.0),
+                          offset: const Offset(0, 4),
+                          blurRadius: 0,
+                        ),
+                        BoxShadow(
+                          color: shadowColor.withValues(alpha: 0.35),
+                          offset: const Offset(0, 8),
+                          blurRadius: 16,
+                        ),
+                      ]
+                    : null,
               ),
-              child: Center(child: Text(icon, style: const TextStyle(fontSize: 15))),
+              child: Center(child: Text(icon, style: const TextStyle(fontSize: 20))),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
           ],
           Text(
             title,
             style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
               color: context.appText,
             ),
           ),

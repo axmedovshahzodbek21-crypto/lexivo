@@ -193,27 +193,88 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.bg,
-      appBar: AppBar(
-        backgroundColor: context.bg,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: context.appText),
-          onPressed: () => Navigator.pop(context),
+      body: Column(children: [
+        _buildHeroHeader(),
+        Expanded(
+          child: _loading
+              ? Center(child: CircularProgressIndicator(color: Color(0xFF10B981)))
+              : RefreshIndicator(
+                  color: const Color(0xFF10B981),
+                  onRefresh: _load,
+                  child: _joinedClasses.isEmpty
+                      ? _buildEmpty()
+                      : ListView(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+                          children: _joinedClasses.map(_buildJoinedClassCard).toList(),
+                        ),
+                ),
         ),
-        title: Text(tr('joined_classes'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+      ]),
+    );
+  }
+
+  Widget _buildHeroHeader() {
+    final top = MediaQuery.of(context).padding.top;
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF34D399), Color(0xFF10B981), Color(0xFF065F46)],
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+        ),
+        boxShadow: [BoxShadow(color: Color(0x5910B981), blurRadius: 32, offset: Offset(0, 8))],
       ),
-      body: _loading
-          ? Center(child: CircularProgressIndicator(color: context.primary))
-          : RefreshIndicator(
-              color: context.primary,
-              onRefresh: _load,
-              child: _joinedClasses.isEmpty
-                  ? _buildEmpty()
-                  : ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-                      children: _joinedClasses.map(_buildJoinedClassCard).toList(),
-                    ),
+      child: Stack(children: [
+        Positioned(right: 12, top: 0,
+          child: Text('🎓', style: TextStyle(fontSize: 96, color: Colors.white.withValues(alpha: 0.05), height: 1))),
+        Padding(
+          padding: EdgeInsets.fromLTRB(20, top + 20, 20, 24),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFF34D399), Color(0xFF10B981)]),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x26000000), blurRadius: 14, offset: Offset(0, 6)),
+                    BoxShadow(color: Color(0xFF065F46), blurRadius: 0, offset: Offset(0, 3)),
+                  ],
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.chevron_left, color: Colors.white, size: 18),
+                  const SizedBox(width: 2),
+                  Text(tr('back'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                ]),
+              ),
             ),
+            const SizedBox(height: 16),
+            Row(children: [
+              Container(
+                width: 56, height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: const [BoxShadow(color: Color(0x26000000), blurRadius: 0, offset: Offset(0, 4))],
+                ),
+                alignment: Alignment.center,
+                child: const Text('🎓', style: TextStyle(fontSize: 28)),
+              ),
+              const SizedBox(width: 14),
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('JOINED CLASSES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white.withValues(alpha: 0.5), letterSpacing: 1.5)),
+                Text(
+                  _joinedClasses.isEmpty ? tr('joined_classes') : '${_joinedClasses.length} Class${_joinedClasses.length != 1 ? 'es' : ''}',
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, shadows: [Shadow(color: Color(0x40000000), blurRadius: 8, offset: Offset(0, 2))]),
+                ),
+              ]),
+            ]),
+            const SizedBox(height: 8),
+            Text('Classes you are enrolled in as a student.', style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.65))),
+          ]),
+        ),
+      ]),
     );
   }
 

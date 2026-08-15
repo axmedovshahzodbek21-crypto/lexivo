@@ -125,50 +125,123 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.bg,
-      appBar: AppBar(
-        backgroundColor: context.bg,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: context.appText),
-          onPressed: () => Navigator.pop(context),
+      body: Column(children: [
+        _buildHeroHeader(),
+        Expanded(
+          child: _loading
+              ? Center(child: CircularProgressIndicator(color: context.primary))
+              : RefreshIndicator(
+                  color: context.primary,
+                  onRefresh: _load,
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+                    children: [
+                      _buildLibraryBanner(),
+                      const SizedBox(height: 16),
+                      if (_myClasses.isEmpty)
+                        _emptyCard('📋', tr('no_classes_yet'))
+                      else
+                        GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: 0.82,
+                          ),
+                          itemCount: _myClasses.length,
+                          itemBuilder: (_, i) => _buildMyClassCard(_myClasses[i]),
+                        ),
+                    ],
+                  ),
+                ),
         ),
-        title: Text(tr('my_classes'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
-        actions: [
-          TextButton.icon(
-            onPressed: _showCreateSheet,
-            icon: Icon(Icons.add, color: context.primary, size: 18),
-            label: Text(tr('create_class'), style: TextStyle(color: context.primary, fontWeight: FontWeight.bold, fontSize: 13)),
-          ),
-        ],
+      ]),
+    );
+  }
+
+  Widget _buildHeroHeader() {
+    final top = MediaQuery.of(context).padding.top;
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFFA78BFA), Color(0xFF6C63FF), Color(0xFF4C1D95)],
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+        ),
+        boxShadow: [BoxShadow(color: Color(0x596C63FF), blurRadius: 32, offset: Offset(0, 8))],
       ),
-      body: _loading
-          ? Center(child: CircularProgressIndicator(color: context.primary))
-          : RefreshIndicator(
-              color: context.primary,
-              onRefresh: _load,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-                children: [
-                  _buildLibraryBanner(),
-                  const SizedBox(height: 16),
-                  if (_myClasses.isEmpty)
-                    _emptyCard('📋', tr('no_classes_yet'))
-                  else
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: 0.82,
-                      ),
-                      itemCount: _myClasses.length,
-                      itemBuilder: (_, i) => _buildMyClassCard(_myClasses[i]),
-                    ),
-                ],
+      child: Stack(children: [
+        Positioned(right: 12, top: 0,
+          child: Text('🏫', style: TextStyle(fontSize: 96, color: Colors.white.withValues(alpha: 0.05), height: 1))),
+        Padding(
+          padding: EdgeInsets.fromLTRB(20, top + 20, 20, 24),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(colors: [Color(0xFFA78BFA), Color(0xFF6C63FF)]),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: const [
+                      BoxShadow(color: Color(0x26000000), blurRadius: 14, offset: Offset(0, 6)),
+                      BoxShadow(color: Color(0xFF3D1F9E), blurRadius: 0, offset: Offset(0, 3)),
+                    ],
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(Icons.chevron_left, color: Colors.white, size: 18),
+                    const SizedBox(width: 2),
+                    Text(tr('back'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                  ]),
+                ),
               ),
-            ),
+              GestureDetector(
+                onTap: _showCreateSheet,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.22),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                    boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 14, offset: Offset(0, 3))],
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(Icons.add, color: Colors.white, size: 16),
+                    const SizedBox(width: 4),
+                    Text(tr('create_class'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                  ]),
+                ),
+              ),
+            ]),
+            const SizedBox(height: 16),
+            Row(children: [
+              Container(
+                width: 56, height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: const [BoxShadow(color: Color(0x26000000), blurRadius: 0, offset: Offset(0, 4))],
+                ),
+                alignment: Alignment.center,
+                child: const Text('🏫', style: TextStyle(fontSize: 28)),
+              ),
+              const SizedBox(width: 14),
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('MY CLASSES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white.withValues(alpha: 0.5), letterSpacing: 1.5)),
+                Text(
+                  _myClasses.isEmpty ? tr('my_classes') : '${_myClasses.length} Class${_myClasses.length != 1 ? 'es' : ''}',
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, shadows: [Shadow(color: Color(0x40000000), blurRadius: 8, offset: Offset(0, 2))]),
+                ),
+              ]),
+            ]),
+            const SizedBox(height: 8),
+            Text('Classes you created as a teacher.', style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.65))),
+          ]),
+        ),
+      ]),
     );
   }
 

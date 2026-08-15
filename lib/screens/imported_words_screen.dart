@@ -1,8 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../app_theme.dart';
 import '../data/storage_service.dart';
 import '../services/sync_service.dart';
 import 'my_words_folder_screen.dart';
+
+const _exampleSeededKey = 'mywords_example_seeded';
+
+// One-time real example (folder → collection → word) so a first-time user
+// sees the actual structure, not an empty page. Guarded by a local flag so
+// it never reappears even if they delete it — this is a courtesy seed, not
+// a permanent fixture.
+Future<bool> _seedExampleFolder() async {
+  final prefs = await SharedPreferences.getInstance();
+  if (prefs.getBool(_exampleSeededKey) ?? false) return false;
+  await prefs.setBool(_exampleSeededKey, true);
+  await StorageService.addImportedWords(
+    [
+      ImportedWord(
+        word: 'apple',
+        translation: 'olma',
+        definition: 'a round fruit with red, yellow, or green skin and a whitish inside',
+        partOfSpeech: 'noun',
+        pronunciation: '/ˈæp.əl/',
+        definitionUz: "qizil, sariq yoki yashil po'stli, ichi oq mevali dumaloq meva",
+        examples: const [ImportedWordExample(sentence: 'She ate a fresh apple for breakfast.', translation: 'U nonushta uchun yangi olma yedi.')],
+        language: 'en-US',
+        addedAt: DateTime.now().millisecondsSinceEpoch,
+        collectionName: 'Unit 1',
+      ),
+    ],
+    'Unit 1',
+    folderName: 'Vocabulary 101',
+  );
+  return true;
+}
 
 class _HeartbeatCard extends StatefulWidget {
   final Widget child;
@@ -65,6 +97,9 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
   Future<void> _load() async {
     await SyncService.pullAll();
     final folders = await StorageService.getImportedFolders();
+    if (folders.isEmpty && await _seedExampleFolder()) {
+      return _load();
+    }
     if (mounted) setState(() { _folders = folders; _loading = false; });
   }
 

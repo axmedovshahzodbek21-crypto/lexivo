@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import 'teacher_folder_screen.dart';
@@ -8,6 +9,42 @@ class _Folder {
   final String id, name;
   final int unitCount;
   const _Folder({required this.id, required this.name, required this.unitCount});
+}
+
+const _exampleSeededKey = 'library_example_seeded';
+
+// One-time real example (folder → unit → word) so a first-time teacher sees
+// the actual structure, not an empty page. Guarded by a local flag so it
+// never reappears even if they delete it — this is a courtesy seed, not a
+// permanent fixture.
+Future<bool> _seedExampleFolder(String teacherId) async {
+  final prefs = await SharedPreferences.getInstance();
+  if (prefs.getBool(_exampleSeededKey) ?? false) return false;
+  await prefs.setBool(_exampleSeededKey, true);
+  try {
+    final folder = await supabase
+        .from('teacher_folders')
+        .insert({'teacher_id': teacherId, 'name': 'Vocabulary 101'})
+        .select('id').single();
+    final unit = await supabase
+        .from('teacher_units')
+        .insert({'folder_id': folder['id'], 'teacher_id': teacherId, 'name': 'Unit 1'})
+        .select('id').single();
+    await supabase.from('teacher_unit_words').insert({
+      'unit_id': unit['id'],
+      'teacher_id': teacherId,
+      'word': 'apple',
+      'translation': 'olma',
+      'definition': 'a round fruit with red, yellow, or green skin and a whitish inside',
+      'part_of_speech': 'noun',
+      'pronunciation': '/ˈæp.əl/',
+      'definition_uz': "qizil, sariq yoki yashil po'stli, ichi oq mevali dumaloq meva",
+      'examples': [{'sentence': 'She ate a fresh apple for breakfast.', 'translation': 'U nonushta uchun yangi olma yedi.'}],
+    });
+    return true;
+  } catch (_) {
+    return false;
+  }
 }
 
 class TeacherLibraryScreen extends StatefulWidget {
@@ -50,7 +87,7 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
           .eq('teacher_id', user.id)
           .order('position')
           .order('created_at');
-      final folders = (data as List).map((e) {
+      var folders = (data as List).map((e) {
         final m = Map<String, dynamic>.from(e as Map);
         final units = m['teacher_units'] as List?;
         return _Folder(
@@ -59,6 +96,9 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
           unitCount: units?.isNotEmpty == true ? (units![0]['count'] as num?)?.toInt() ?? 0 : 0,
         );
       }).toList();
+      if (folders.isEmpty && await _seedExampleFolder(user.id)) {
+        return _load();
+      }
       _cache = folders;
       if (mounted) setState(() { _folders = folders; _loading = false; });
     } catch (_) {

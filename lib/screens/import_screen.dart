@@ -136,10 +136,6 @@ class _ImportScreenState extends State<ImportScreen> {
   String _wordLang = 'English';
   String _wordLangCode = 'en-US';
   String _transLang = 'Uzbek';
-  bool _prompt1Open = false;
-  bool _prompt2Open = false;
-  bool _copied1 = false;
-  bool _copied2 = false;
   bool _adding = false;
   List<ImportedWord> _parsed = [];
 
@@ -184,15 +180,17 @@ class _ImportScreenState extends State<ImportScreen> {
     );
   }
 
-  void _copyPrompt(String prompt, int which) {
+  void _copyPrompt({required bool hasTranslations}) {
+    final input = _wordsInputCtrl.text.trim();
+    final words = input.isEmpty
+        ? (hasTranslations ? 'apple - olma\nbook - kitob' : 'apple, book, water')
+        : input;
+    final prompt = hasTranslations
+        ? _buildPrompt2(_wordLang, _transLang, words)
+        : _buildPrompt1(_wordLang, _transLang, words);
     Clipboard.setData(ClipboardData(text: prompt));
-    setState(() {
-      if (which == 1) { _copied1 = true; }
-      else { _copied2 = true; }
-    });
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) setState(() { _copied1 = false; _copied2 = false; });
-    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Prompt copied! Paste into AI chatbot.'), duration: Duration(seconds: 2)));
   }
 
   Future<void> _pasteFromClipboard() async {
@@ -214,10 +212,6 @@ class _ImportScreenState extends State<ImportScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final wordsInput = _wordsInputCtrl.text.trim();
-    final prompt1 = _buildPrompt1(_wordLang, _transLang, wordsInput.isEmpty ? 'apple, book, water' : wordsInput);
-    final prompt2 = _buildPrompt2(_wordLang, _transLang, wordsInput.isEmpty ? 'apple - olma\nbook - kitob' : wordsInput);
-
     return Scaffold(
       backgroundColor: context.bg,
       appBar: AppBar(
@@ -279,29 +273,29 @@ class _ImportScreenState extends State<ImportScreen> {
             const SizedBox(height: 12),
 
             // ── Language selectors ───────────────────────────────────────
-            _Card(child: Row(
+            _Card(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: _LangPicker(
-                  label: 'Word language',
-                  value: _wordLang,
-                  onChanged: (val) {
+                Text('Word Language / Translation Language', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted)),
+                const SizedBox(height: 10),
+                Row(children: [
+                  Expanded(child: _langDropdown(_wordLang, (val) {
+                    if (val == null) return;
                     final lang = _languages.firstWhere((l) => l['label'] == val);
                     setState(() { _wordLang = val; _wordLangCode = lang['code']!; });
                     _onPasteChanged();
-                  },
-                )),
-                const SizedBox(width: 12),
-                Expanded(child: _LangPicker(
-                  label: 'Translation language',
-                  value: _transLang,
-                  onChanged: (val) => setState(() => _transLang = val),
-                )),
+                  })),
+                  Padding(padding: const EdgeInsets.symmetric(horizontal: 10), child: Text('→', style: TextStyle(color: context.textMuted, fontWeight: FontWeight.bold))),
+                  Expanded(child: _langDropdown(_transLang, (val) {
+                    if (val != null) setState(() => _transLang = val);
+                  })),
+                ]),
               ],
             )),
 
             const SizedBox(height: 12),
 
-            // ── Words input — embedded directly into whichever prompt you copy below ──
+            // ── Words input + copy prompt ────────────────────────────────
             _Card(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -319,34 +313,38 @@ class _ImportScreenState extends State<ImportScreen> {
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   ),
                 ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _copyPrompt(hasTranslations: false),
+                    icon: const Text('📋', style: TextStyle(fontSize: 14)),
+                    label: const Text('Copy Prompt — just words, AI translates', style: TextStyle(fontWeight: FontWeight.w600)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: context.primary,
+                      side: BorderSide(color: context.primary.withValues(alpha: 0.5)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _copyPrompt(hasTranslations: true),
+                    icon: const Text('📋', style: TextStyle(fontSize: 14)),
+                    label: const Text('Copy Prompt — I already have translations', style: TextStyle(fontWeight: FontWeight.w600)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: context.textMuted,
+                      side: BorderSide(color: context.border),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
               ],
             )),
-
-            const SizedBox(height: 12),
-
-            // ── Prompt 1 ─────────────────────────────────────────────────
-            _PromptCard(
-              title: 'I have a word list',
-              subtitle: 'No translations yet — AI adds everything',
-              prompt: prompt1,
-              isOpen: _prompt1Open,
-              copied: _copied1,
-              onToggle: () => setState(() => _prompt1Open = !_prompt1Open),
-              onCopy: () => _copyPrompt(prompt1, 1),
-            ),
-
-            const SizedBox(height: 12),
-
-            // ── Prompt 2 ─────────────────────────────────────────────────
-            _PromptCard(
-              title: 'I have word + translation pairs',
-              subtitle: 'AI keeps your translations, adds examples',
-              prompt: prompt2,
-              isOpen: _prompt2Open,
-              copied: _copied2,
-              onToggle: () => setState(() => _prompt2Open = !_prompt2Open),
-              onCopy: () => _copyPrompt(prompt2, 2),
-            ),
 
             const SizedBox(height: 12),
 
@@ -354,7 +352,7 @@ class _ImportScreenState extends State<ImportScreen> {
             _Card(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Paste AI output here',
+                Text('2. Paste AI output',
                   style: TextStyle(fontWeight: FontWeight.w600, color: context.appText, fontSize: 14)),
                 const SizedBox(height: 10),
                 TextField(
@@ -362,7 +360,7 @@ class _ImportScreenState extends State<ImportScreen> {
                   maxLines: 8,
                   style: TextStyle(color: context.appText, fontSize: 13, fontFamily: 'monospace'),
                   decoration: InputDecoration(
-                    hintText: 'Paste the formatted output from the AI here...',
+                    hintText: 'Paste the AI response here...',
                     hintStyle: TextStyle(color: context.textMuted, fontSize: 13),
                     filled: true,
                     fillColor: context.surface2,
@@ -445,6 +443,22 @@ class _ImportScreenState extends State<ImportScreen> {
       ),
     );
   }
+
+  Widget _langDropdown(String value, void Function(String?) onChanged) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+    decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(10)),
+    child: DropdownButtonHideUnderline(
+      child: DropdownButton<String>(
+        value: value,
+        isExpanded: true,
+        dropdownColor: context.surface,
+        style: TextStyle(color: context.appText, fontSize: 13),
+        icon: Icon(Icons.keyboard_arrow_down, color: context.textMuted, size: 18),
+        items: _languages.map((l) => DropdownMenuItem(value: l['label'], child: Text(l['label']!))).toList(),
+        onChanged: onChanged,
+      ),
+    ),
+  );
 }
 
 // ── Reusable widgets ──────────────────────────────────────────────────────────
@@ -469,135 +483,6 @@ class _Card extends StatelessWidget {
   }
 }
 
-class _LangPicker extends StatelessWidget {
-  final String label;
-  final String value;
-  final ValueChanged<String> onChanged;
-
-  const _LangPicker({required this.label, required this.value, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: context.textMuted)),
-        const SizedBox(height: 6),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: context.surface2,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: context.border),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: value,
-              isExpanded: true,
-              dropdownColor: context.surface,
-              style: TextStyle(color: context.appText, fontSize: 13),
-              onChanged: (v) { if (v != null) onChanged(v); },
-              items: _languages.map((l) => DropdownMenuItem(
-                value: l['label'],
-                child: Text(l['label']!),
-              )).toList(),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _PromptCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final String prompt;
-  final bool isOpen;
-  final bool copied;
-  final VoidCallback onToggle;
-  final VoidCallback onCopy;
-
-  const _PromptCard({
-    required this.title, required this.subtitle, required this.prompt,
-    required this.isOpen, required this.copied,
-    required this.onToggle, required this.onCopy,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.border),
-        boxShadow: context.cardShadow,
-      ),
-      child: Column(
-        children: [
-          InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: onToggle,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Expanded(child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(title, style: TextStyle(fontWeight: FontWeight.w600,
-                        color: context.appText, fontSize: 14)),
-                      const SizedBox(height: 2),
-                      Text(subtitle, style: TextStyle(color: context.textMuted, fontSize: 12)),
-                    ],
-                  )),
-                  Icon(isOpen ? Icons.expand_less : Icons.expand_more, color: context.textMuted),
-                ],
-              ),
-            ),
-          ),
-          if (isOpen) ...[
-            Divider(height: 1, color: context.border),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: context.surface2,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: SelectableText(
-                      prompt,
-                      style: TextStyle(color: context.appText, fontSize: 12, height: 1.6),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: onCopy,
-                      icon: Icon(copied ? Icons.check : Icons.copy, size: 16),
-                      label: Text(copied ? 'Copied!' : 'Copy prompt'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: context.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
 
 class _WordPreviewCard extends StatelessWidget {
   final ImportedWord word;

@@ -115,12 +115,47 @@ class _ClassesScreenState extends State<ClassesScreen> {
 
     return Scaffold(
       backgroundColor: context.bg,
-      body: SafeArea(
-        child: Column(children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-            child: Row(children: [
-              Text('🏫 ${tr('nav_classes')}', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: context.appText)),
+      body: Column(children: [
+          // Gradient hero header
+          Container(
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFFA78BFA), Color(0xFF6C63FF), Color(0xFF4C1D95)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [BoxShadow(color: Color(0x596C63FF), blurRadius: 32, offset: Offset(0, 8))],
+            ),
+            child: Stack(children: [
+              Positioned(
+                right: 12, top: 0,
+                child: Text('🏫', style: TextStyle(fontSize: 96, color: Colors.white.withValues(alpha: 0.05), height: 1)),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 20, 20, 24),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Container(
+                      width: 56, height: 56,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: const [BoxShadow(color: Color(0x26000000), blurRadius: 0, offset: Offset(0, 4))],
+                      ),
+                      alignment: Alignment.center,
+                      child: const Text('🏫', style: TextStyle(fontSize: 28)),
+                    ),
+                    const SizedBox(width: 14),
+                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('LEXIVO', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white.withValues(alpha: 0.5), letterSpacing: 1.5)),
+                      Text(tr('nav_classes'), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, shadows: [Shadow(color: Color(0x40000000), blurRadius: 8, offset: Offset(0, 2))])),
+                    ]),
+                  ]),
+                  const SizedBox(height: 8),
+                  Text('Create or join a class with your teacher or students.', style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.65))),
+                ]),
+              ),
             ]),
           ),
           Expanded(
@@ -156,7 +191,6 @@ class _ClassesScreenState extends State<ClassesScreen> {
                   ),
           ),
         ]),
-      ),
     );
   }
 
@@ -173,7 +207,10 @@ class _ClassesScreenState extends State<ClassesScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(colors: colors, begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: colors[0].withValues(alpha: 0.45), blurRadius: 20, offset: const Offset(0, 8))],
+        boxShadow: [
+          BoxShadow(color: colors[0].withValues(alpha: 0.45), blurRadius: 20, offset: const Offset(0, 8)),
+          BoxShadow(color: colors[1].withValues(alpha: 0.8), blurRadius: 0, offset: const Offset(0, 6)),
+        ],
       ),
       child: Row(children: [
         Container(
@@ -200,7 +237,10 @@ class _ClassesScreenState extends State<ClassesScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(colors: [context.primary, const Color(0xFF9333EA)], begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: context.primary.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 5))],
+        boxShadow: [
+          BoxShadow(color: context.primary.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 5)),
+          const BoxShadow(color: Color(0xCC4C1D95), blurRadius: 0, offset: Offset(0, 5)),
+        ],
       ),
       alignment: Alignment.center,
       child: Text(tr('create_class'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15)),
@@ -237,7 +277,7 @@ class _ClassesScreenState extends State<ClassesScreen> {
             const SizedBox(width: 8),
             ElevatedButton(
               onPressed: _joinClass,
-              style: ElevatedButton.styleFrom(backgroundColor: context.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), elevation: 0),
               child: Text(tr('join_class'), style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
           ]),

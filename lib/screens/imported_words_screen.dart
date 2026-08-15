@@ -199,6 +199,8 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(color: context.textMuted, height: 1.5, fontSize: 14)),
             const SizedBox(height: 24),
+            _buildExampleIllustration(),
+            const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -217,6 +219,42 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
       ),
     );
   }
+
+  // Illustrative example — not real data, just shows the Folder → Unit → Words shape.
+  Widget _buildExampleIllustration() => IgnorePointer(
+    child: Opacity(
+      opacity: 0.7,
+      child: Column(children: [
+        Text('HOW IT WORKS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.5)),
+        const SizedBox(height: 10),
+        Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 8, runSpacing: 8,
+          children: [
+            _exampleChip('FOLDER', '📁 Vocabulary 101', _cardColors[0]),
+            Icon(Icons.arrow_forward, size: 14, color: context.textMuted),
+            _exampleChip('UNIT', '📖 Unit 1', _cardColors[1]),
+            Icon(Icons.arrow_forward, size: 14, color: context.textMuted),
+            _exampleChip('WORDS', 'apple · book · water', null),
+          ],
+        ),
+      ]),
+    ),
+  );
+
+  Widget _exampleChip(String label, String value, Color? color) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+    decoration: BoxDecoration(
+      color: color?.withValues(alpha: 0.85) ?? context.surface2,
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: color?.withValues(alpha: 0.5) ?? context.border, width: 1.5),
+    ),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+      Text(label, style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: color != null ? Colors.white70 : context.textMuted, letterSpacing: 0.3)),
+      Text(value, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color != null ? Colors.white : context.appText)),
+    ]),
+  );
 
   Widget _buildGrid() {
     return GridView.builder(

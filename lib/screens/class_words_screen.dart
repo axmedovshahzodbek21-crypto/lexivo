@@ -11,6 +11,62 @@ import 'class_review_screen.dart';
 import 'quiz_screen.dart';
 import 'matching_screen.dart';
 
+List<Color> _classGradColors(String id) {
+  const grads = <List<Color>>[
+    [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+    [Color(0xFFEC4899), Color(0xFFF43F5E)],
+    [Color(0xFF22C55E), Color(0xFF14B8A6)],
+    [Color(0xFF3B82F6), Color(0xFF06B6D4)],
+    [Color(0xFFF59E0B), Color(0xFFF97316)],
+    [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+    [Color(0xFFEF4444), Color(0xFFF472B6)],
+    [Color(0xFF06B6D4), Color(0xFF3B82F6)],
+  ];
+  return grads[id.codeUnits.fold(0, (a, b) => a + b) % grads.length];
+}
+
+Widget _classGradHero(String classId, String className, String icon, String title, String subtitle) {
+  final cols = _classGradColors(classId);
+  return Container(
+    width: double.infinity,
+    decoration: BoxDecoration(
+      gradient: LinearGradient(colors: cols, begin: Alignment.topLeft, end: Alignment.bottomRight),
+      boxShadow: [
+        BoxShadow(color: cols[0].withValues(alpha: 0.8), blurRadius: 0, offset: const Offset(0, 6)),
+        BoxShadow(color: cols[0].withValues(alpha: 0.35), blurRadius: 32, offset: const Offset(0, 8)),
+      ],
+    ),
+    child: Stack(children: [
+      Positioned(right: 12, top: 0,
+        child: Text(icon, style: TextStyle(fontSize: 80, color: Colors.white.withValues(alpha: 0.06), height: 1))),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Container(
+              width: 52, height: 52,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: const [BoxShadow(color: Color(0x26000000), blurRadius: 0, offset: Offset(0, 4))],
+              ),
+              alignment: Alignment.center,
+              child: Text(icon, style: const TextStyle(fontSize: 26)),
+            ),
+            const SizedBox(width: 14),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(className, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white.withValues(alpha: 0.5), letterSpacing: 1.5), maxLines: 1, overflow: TextOverflow.ellipsis),
+              Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, shadows: [Shadow(color: Color(0x40000000), blurRadius: 8, offset: Offset(0, 2))])),
+            ])),
+          ]),
+          const SizedBox(height: 6),
+          Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.65))),
+        ]),
+      ),
+    ]),
+  );
+}
+
 class _WordEntry {
   final String id, word, translation;
   final String? definition, example1, example1Translation, example2, example2Translation;
@@ -503,44 +559,41 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.bg,
-      appBar: AppBar(
-        backgroundColor: context.bg,
-        elevation: 0,
-        leading: IconButton(icon: Icon(Icons.arrow_back, color: context.appText), onPressed: () { if (widget.onGoHome != null) { widget.onGoHome!(); } else { Navigator.pop(context); } }),
-        title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(tr('class_words'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
-          Text(widget.className, style: TextStyle(fontSize: 11, color: context.textMuted)),
-        ]),
-        bottom: widget.isTeacher
-            ? TabBar(
-                controller: _tabs,
-                labelColor: context.primary,
-                unselectedLabelColor: context.textMuted,
-                indicatorColor: context.primary,
-                tabs: [
-                  Tab(text: '✍️ ${tr('manual')}'),
-                  Tab(text: '🤖 AI Import'),
-                  const Tab(text: '📚 Collection'),
-                ],
-              )
-            : null,
-      ),
-      body: widget.isTeacher
-          ? TabBarView(
+      body: Column(
+        children: [
+          _classGradHero(widget.classId, widget.className, '📝', tr('class_words'), 'All vocabulary in this class'),
+          if (widget.isTeacher)
+            TabBar(
               controller: _tabs,
-              children: [
-                _buildManualTab(),
-                _buildAiTab(),
-                _buildImportTab(),
-              ],
-            )
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-              children: [
-                if (_words.isNotEmpty) _buildHubSection(),
-                _buildWordList(),
+              labelColor: context.primary,
+              unselectedLabelColor: context.textMuted,
+              indicatorColor: context.primary,
+              tabs: [
+                Tab(text: '✍️ ${tr('manual')}'),
+                Tab(text: '🤖 AI Import'),
+                const Tab(text: '📚 Collection'),
               ],
             ),
+          Expanded(
+            child: widget.isTeacher
+                ? TabBarView(
+                    controller: _tabs,
+                    children: [
+                      _buildManualTab(),
+                      _buildAiTab(),
+                      _buildImportTab(),
+                    ],
+                  )
+                : ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+                    children: [
+                      if (_words.isNotEmpty) _buildHubSection(),
+                      _buildWordList(),
+                    ],
+                  ),
+          ),
+        ],
+      ),
     );
   }
 

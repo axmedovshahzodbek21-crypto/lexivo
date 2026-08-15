@@ -14,6 +14,62 @@ Color _avatarColor(String id) {
   return cols[id.codeUnits.fold(0, (a, b) => a + b) % cols.length];
 }
 
+List<Color> _lbGradColors(String id) {
+  const grads = <List<Color>>[
+    [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+    [Color(0xFFEC4899), Color(0xFFF43F5E)],
+    [Color(0xFF22C55E), Color(0xFF14B8A6)],
+    [Color(0xFF3B82F6), Color(0xFF06B6D4)],
+    [Color(0xFFF59E0B), Color(0xFFF97316)],
+    [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+    [Color(0xFFEF4444), Color(0xFFF472B6)],
+    [Color(0xFF06B6D4), Color(0xFF3B82F6)],
+  ];
+  return grads[id.codeUnits.fold(0, (a, b) => a + b) % grads.length];
+}
+
+Widget _lbHero(String classId, String className) {
+  final cols = _lbGradColors(classId);
+  return Container(
+    width: double.infinity,
+    decoration: BoxDecoration(
+      gradient: LinearGradient(colors: cols, begin: Alignment.topLeft, end: Alignment.bottomRight),
+      boxShadow: [
+        BoxShadow(color: cols[0].withValues(alpha: 0.8), blurRadius: 0, offset: const Offset(0, 6)),
+        BoxShadow(color: cols[0].withValues(alpha: 0.35), blurRadius: 32, offset: const Offset(0, 8)),
+      ],
+    ),
+    child: Stack(children: [
+      Positioned(right: 12, top: 0,
+        child: Text('🏆', style: TextStyle(fontSize: 80, color: Colors.white.withValues(alpha: 0.06), height: 1))),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Container(
+              width: 52, height: 52,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: const [BoxShadow(color: Color(0x26000000), blurRadius: 0, offset: Offset(0, 4))],
+              ),
+              alignment: Alignment.center,
+              child: const Text('🏆', style: TextStyle(fontSize: 26)),
+            ),
+            const SizedBox(width: 14),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(className, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white.withValues(alpha: 0.5), letterSpacing: 1.5), maxLines: 1, overflow: TextOverflow.ellipsis),
+              const Text('Leaderboard', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, shadows: [Shadow(color: Color(0x40000000), blurRadius: 8, offset: Offset(0, 2))])),
+            ])),
+          ]),
+          const SizedBox(height: 6),
+          Text('Ranked by XP earned in class', style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.65))),
+        ]),
+      ),
+    ]),
+  );
+}
+
 class ClassLeaderboardScreen extends StatefulWidget {
   final String classId;
   final String className;
@@ -95,22 +151,27 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
     if (_loading || !_initialized) return const Center(child: CircularProgressIndicator());
 
     if (_rows.isEmpty) {
-      return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        const Text('🏆', style: TextStyle(fontSize: 56)),
-        const SizedBox(height: 12),
-        Text('No rankings yet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
-        const SizedBox(height: 6),
-        Text('Students need to earn XP first', style: TextStyle(color: context.textMuted, fontSize: 13)),
-      ]));
+      return Column(children: [
+        _lbHero(widget.classId, widget.className),
+        Expanded(child: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          const Text('🏆', style: TextStyle(fontSize: 56)),
+          const SizedBox(height: 12),
+          Text('No rankings yet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+          const SizedBox(height: 6),
+          Text('Students need to earn XP first', style: TextStyle(color: context.textMuted, fontSize: 13)),
+        ]))),
+      ]);
     }
 
     final rank = _myRank;
 
-    return RefreshIndicator(
-      onRefresh: _load,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-        children: [
+    return Column(children: [
+      _lbHero(widget.classId, widget.className),
+      Expanded(child: RefreshIndicator(
+        onRefresh: _load,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+          children: [
           // My position banner (only if not in top 3)
           if (rank > 3) ...[
             _myBanner(rank),
@@ -129,8 +190,9 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
           const SizedBox(height: 8),
           ..._rows.asMap().entries.map((e) => _buildRow(context, e.key + 1, e.value)),
         ],
-      ),
-    );
+        ),
+      )),
+    ]);
   }
 
   Widget _buildPodium(BuildContext context) {

@@ -82,6 +82,91 @@ typedef _CachedDashboard = ({
 });
 final _dashboardCache = <String, _CachedDashboard>{};
 
+// ── Gradient hero helpers ─────────────────────────────────────────────────────
+
+List<Color> _dashGradColors(String id) {
+  const grads = <List<Color>>[
+    [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+    [Color(0xFFEC4899), Color(0xFFF43F5E)],
+    [Color(0xFF22C55E), Color(0xFF14B8A6)],
+    [Color(0xFF3B82F6), Color(0xFF06B6D4)],
+    [Color(0xFFF59E0B), Color(0xFFF97316)],
+    [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+    [Color(0xFFEF4444), Color(0xFFF472B6)],
+    [Color(0xFF06B6D4), Color(0xFF3B82F6)],
+  ];
+  return grads[id.codeUnits.fold(0, (a, b) => a + b) % grads.length];
+}
+
+Widget _dashHero(String classId, String className, int studentCount, {
+  required VoidCallback onWords,
+  required VoidCallback onAnnounce,
+  required VoidCallback onRefresh,
+}) {
+  final cols = _dashGradColors(classId);
+  return Container(
+    width: double.infinity,
+    decoration: BoxDecoration(
+      gradient: LinearGradient(colors: cols, begin: Alignment.topLeft, end: Alignment.bottomRight),
+      boxShadow: [
+        BoxShadow(color: cols[0].withValues(alpha: 0.8), blurRadius: 0, offset: const Offset(0, 6)),
+        BoxShadow(color: cols[0].withValues(alpha: 0.35), blurRadius: 32, offset: const Offset(0, 8)),
+      ],
+    ),
+    child: Stack(children: [
+      Positioned(right: 12, top: 0,
+        child: Text('🏫', style: TextStyle(fontSize: 80, color: Colors.white.withValues(alpha: 0.06), height: 1))),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Container(
+              width: 52, height: 52,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: const [BoxShadow(color: Color(0x26000000), blurRadius: 0, offset: Offset(0, 4))],
+              ),
+              alignment: Alignment.center,
+              child: const Text('🏫', style: TextStyle(fontSize: 26)),
+            ),
+            const SizedBox(width: 14),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Teacher Dashboard', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white.withValues(alpha: 0.5), letterSpacing: 1.5)),
+              Text(className, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white, shadows: [Shadow(color: Color(0x40000000), blurRadius: 8, offset: Offset(0, 2))]), maxLines: 1, overflow: TextOverflow.ellipsis),
+            ])),
+            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              Text('$studentCount', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white)),
+              Text('students', style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.6))),
+            ]),
+          ]),
+          const SizedBox(height: 12),
+          Row(children: [
+            _heroBtn('📝 Words', onWords),
+            const SizedBox(width: 8),
+            _heroBtn('📢 Announce', onAnnounce),
+            const SizedBox(width: 8),
+            _heroBtn('🔄 Refresh', onRefresh),
+          ]),
+        ]),
+      ),
+    ]),
+  );
+}
+
+Widget _heroBtn(String label, VoidCallback onTap) => GestureDetector(
+  onTap: onTap,
+  child: Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.2),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+    ),
+    child: Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+  ),
+);
+
 // ── Screen ───────────────────────────────────────────────────────────────────
 
 class ClassDashboardScreen extends StatefulWidget {
@@ -231,32 +316,11 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Action row
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 4, 4, 0),
-          child: Row(
-            children: [
-              Text(
-                '${_students.length} ${tr('students')} · ${tr('dashboard')}',
-                style: TextStyle(fontSize: 12, color: context.textMuted),
-              ),
-              const Spacer(),
-              IconButton(
-                icon: Text('📝', style: const TextStyle(fontSize: 18)),
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClassWordsScreen(classId: widget.classId, className: widget.className, isTeacher: true))).then((_) => _load()),
-                tooltip: tr('class_words'),
-              ),
-              IconButton(
-                icon: Text('📢', style: const TextStyle(fontSize: 18)),
-                onPressed: _showAnnounceSheet,
-                tooltip: tr('announce'),
-              ),
-              IconButton(
-                icon: Icon(Icons.refresh, size: 20, color: context.textMuted),
-                onPressed: _load,
-              ),
-            ],
-          ),
+        // Gradient hero
+        _dashHero(widget.classId, widget.className, _students.length,
+          onWords: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClassWordsScreen(classId: widget.classId, className: widget.className, isTeacher: true))).then((_) => _load()),
+          onAnnounce: _showAnnounceSheet,
+          onRefresh: _load,
         ),
         TabBar(
           controller: _tabs,

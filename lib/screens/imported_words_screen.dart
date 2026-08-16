@@ -78,6 +78,7 @@ class ImportedWordsScreen extends StatefulWidget {
 
 class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
   List<ImportedFolder> _folders = [];
+  final Map<String, int> _completedCounts = {};
   bool _loading = true;
   bool _creating = false;
   final _folderCtrl = TextEditingController();
@@ -100,7 +101,23 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
     if (folders.isEmpty && await _seedExampleFolder()) {
       return _load();
     }
-    if (mounted) setState(() { _folders = folders; _loading = false; });
+    final completedCounts = <String, int>{};
+    for (final folder in folders) {
+      final cols = await StorageService.getCollectionsByFolder(folder.name);
+      var done = 0;
+      for (final col in cols) {
+        final p = await StorageService.getMyUnitProgress(folder.name, col.name);
+        if (p.completedAt != null) done++;
+      }
+      completedCounts[folder.name] = done;
+    }
+    if (mounted) {
+      setState(() {
+        _folders = folders;
+        _completedCounts..clear()..addAll(completedCounts);
+        _loading = false;
+      });
+    }
   }
 
   void _startCreating() => setState(() { _creating = true; _folderCtrl.clear(); });
@@ -336,7 +353,10 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 2),
-                  Text('${folder.wordCount} words',
+                  Text(
+                    (_completedCounts[folder.name] ?? 0) > 0
+                        ? '${folder.wordCount} words · ✅ ${_completedCounts[folder.name]}/${folder.collectionCount}'
+                        : '${folder.wordCount} words',
                     style: const TextStyle(color: Colors.white70, fontSize: 11)),
                 ],
               ),

@@ -43,6 +43,7 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
   static final Map<String, List<ImportedCollection>> _cache = {};
 
   List<ImportedCollection> _collections = [];
+  final Set<String> _completedUnits = {};
   bool _loading = true;
 
   @override
@@ -58,10 +59,16 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
 
   Future<void> _load() async {
     final cols = await StorageService.getCollectionsByFolder(widget.folderName);
+    final completed = <String>{};
+    for (final col in cols) {
+      final p = await StorageService.getMyUnitProgress(widget.folderName, col.name);
+      if (p.completedAt != null) completed.add(col.name);
+    }
     if (mounted) {
       setState(() {
         _collections = cols;
         _cache[widget.folderName] = cols;
+        _completedUnits..clear()..addAll(completed);
         _loading = false;
       });
     }
@@ -92,7 +99,10 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
               style: TextStyle(color: context.appText, fontWeight: FontWeight.bold, fontSize: 16),
               overflow: TextOverflow.ellipsis),
             if (!_loading)
-              Text('${_collections.length} ${_collections.length == 1 ? 'unit' : 'units'}',
+              Text(
+                _collections.isEmpty
+                    ? '0 units'
+                    : '${_collections.length} ${_collections.length == 1 ? 'unit' : 'units'} · ✅ ${_completedUnits.length}/${_collections.length} done',
                 style: TextStyle(color: context.textMuted, fontSize: 12)),
           ],
         ),
@@ -188,18 +198,24 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
                 ],
               ),
               padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Stack(
                 children: [
-                  const Text('📖', style: TextStyle(fontSize: 26)),
-                  const Spacer(),
-                  Text(col.name,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 2),
-                  Text('${col.count} ${col.count == 1 ? 'item' : 'items'}',
-                    style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('📖', style: TextStyle(fontSize: 26)),
+                      const Spacer(),
+                      Text(col.name,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis),
+                      const SizedBox(height: 2),
+                      Text('${col.count} ${col.count == 1 ? 'item' : 'items'}',
+                        style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                    ],
+                  ),
+                  if (_completedUnits.contains(col.name))
+                    const Positioned(top: 0, right: 0, child: Text('✅', style: TextStyle(fontSize: 14))),
                 ],
               ),
             ),

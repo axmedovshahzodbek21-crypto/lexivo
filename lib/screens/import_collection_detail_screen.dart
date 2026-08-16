@@ -23,11 +23,20 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
   bool _loading = true;
   bool _selectMode = false;
   final Set<String> _selected = {};
+  String? _completedAt;
+  List<String> _pendingNewWords = [];
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  Future<void> _loadProgress(List<ImportedWord> words) async {
+    final p = await StorageService.getMyUnitProgress(widget.folderName, widget.collectionName);
+    final pending = await StorageService.getMyUnitPendingNewWords(
+      widget.folderName, widget.collectionName, words.map((w) => w.word).toList());
+    if (mounted) setState(() { _completedAt = p.completedAt; _pendingNewWords = pending; });
   }
 
   void _toggleSelectMode() {
@@ -84,6 +93,7 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
   Future<void> _load() async {
     final words = await StorageService.getImportedWordsByCollection(widget.collectionName, folderName: widget.folderName);
     if (mounted) setState(() { _words = words; _loading = false; });
+    await _loadProgress(words);
   }
 
   WordDay get _wordDay => WordDay(
@@ -91,6 +101,39 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
     topic: widget.collectionName,
     words: _words.map((w) => w.toWordItem()).toList(),
   );
+
+  WordDay get _newWordsWordDay {
+    final pendingSet = _pendingNewWords.toSet();
+    return WordDay(
+      dayNumber: 0,
+      topic: widget.collectionName,
+      words: _words.where((w) => pendingSet.contains(w.word)).map((w) => w.toWordItem()).toList(),
+    );
+  }
+
+  // Returns true when this activity is what just completed the whole unit,
+  // so the study screen itself can show a "Unit Complete!" celebration —
+  // this screen may not even be visible when that happens.
+  Future<bool> _onLearnDone() async {
+    final justCompleted = await StorageService.markMyLearnComplete(widget.folderName, widget.collectionName);
+    _load();
+    return justCompleted;
+  }
+  Future<bool> _onFlashcardDone() async {
+    final justCompleted = await StorageService.markMyFlashcardComplete(widget.folderName, widget.collectionName);
+    _load();
+    return justCompleted;
+  }
+  Future<bool> _onQuizDone() async {
+    final justCompleted = await StorageService.markMyQuizComplete(widget.folderName, widget.collectionName);
+    _load();
+    return justCompleted;
+  }
+  Future<bool> _onMatchDone() async {
+    final justCompleted = await StorageService.markMyMatchComplete(widget.folderName, widget.collectionName);
+    _load();
+    return justCompleted;
+  }
 
   Future<void> _openImport() async {
     await Navigator.push(context, MaterialPageRoute(
@@ -173,6 +216,13 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
             if (!_loading)
               Text('${_words.length} ${_words.length == 1 ? 'word' : 'words'}',
                 style: TextStyle(color: context.textMuted, fontSize: 12)),
+            if (!_loading && _completedAt != null)
+              Text(
+                _pendingNewWords.isEmpty
+                    ? '✅ Completed'
+                    : '✅ Completed · ${_pendingNewWords.length} new word${_pendingNewWords.length == 1 ? '' : 's'} to learn',
+                style: TextStyle(color: context.successColor, fontWeight: FontWeight.w600, fontSize: 11),
+              ),
           ],
         ),
         actions: [
@@ -280,6 +330,76 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
       padding: EdgeInsets.fromLTRB(16, 16, 16, _selectMode ? 80 : 16),
       children: [
 
+        // ── Study new words only (shown when unit was completed and grew) ──
+        if (!_selectMode && _pendingNewWords.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text('Study ${_pendingNewWords.length} new word${_pendingNewWords.length == 1 ? '' : 's'}',
+              style: TextStyle(color: context.successColor, fontWeight: FontWeight.bold, fontSize: 13)),
+          ),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 2.2,
+            children: [
+              _StudyButton(
+                icon: '📖', label: 'Learn',
+                color: context.successColor,
+                onTap: () => Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => LearningScreen(
+                    wordDay: _newWordsWordDay,
+                    userProfile: 'worker',
+                    collectionName: widget.collectionName,
+                    onSessionComplete: _onLearnDone,
+                  ),
+                )),
+              ),
+              _StudyButton(
+                icon: '🃏', label: 'Flashcards',
+                color: context.successColor,
+                onTap: () => Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => FlashcardSettingsScreen(
+                    wordDay: _newWordsWordDay,
+                    userProfile: 'worker',
+                    collectionName: widget.collectionName,
+                    onSessionComplete: _onFlashcardDone,
+                  ),
+                )),
+              ),
+              _StudyButton(
+                icon: '❓', label: 'Quiz',
+                color: context.successColor,
+                onTap: () => Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => QuizSettingsScreen(
+                    wordDay: _newWordsWordDay,
+                    userProfile: 'worker',
+                    collectionName: widget.collectionName,
+                    onSessionComplete: _onQuizDone,
+                  ),
+                )),
+              ),
+              _StudyButton(
+                icon: '🔗', label: 'Match',
+                color: context.successColor,
+                onTap: () => Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => MatchingScreen(
+                    wordDay: _newWordsWordDay,
+                    collectionName: widget.collectionName,
+                    onSessionComplete: _onMatchDone,
+                  ),
+                )),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text('Study all words',
+            style: TextStyle(color: context.textMuted, fontWeight: FontWeight.bold, fontSize: 13)),
+          const SizedBox(height: 8),
+        ],
+
         // ── Study buttons ─────────────────────────────────────────────────
         if (!_selectMode)
         GridView.count(
@@ -298,6 +418,7 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
                   wordDay: _wordDay,
                   userProfile: 'worker',
                   collectionName: widget.collectionName,
+                  onSessionComplete: _onLearnDone,
                 ),
               )),
             ),
@@ -309,6 +430,7 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
                   wordDay: _wordDay,
                   userProfile: 'worker',
                   collectionName: widget.collectionName,
+                  onSessionComplete: _onFlashcardDone,
                 ),
               )),
             ),
@@ -320,6 +442,7 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
                   wordDay: _wordDay,
                   userProfile: 'worker',
                   collectionName: widget.collectionName,
+                  onSessionComplete: _onQuizDone,
                 ),
               )),
             ),
@@ -330,6 +453,7 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
                 builder: (_) => MatchingScreen(
                   wordDay: _wordDay,
                   collectionName: widget.collectionName,
+                  onSessionComplete: _onMatchDone,
                 ),
               )),
             ),

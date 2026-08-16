@@ -15,6 +15,7 @@ class QuizSettingsScreen extends StatefulWidget {
   final String userProfile;
   final String collectionName;
   final bool noXP;
+  final Future<bool> Function()? onSessionComplete;
 
   const QuizSettingsScreen({
     super.key,
@@ -22,6 +23,7 @@ class QuizSettingsScreen extends StatefulWidget {
     required this.userProfile,
     required this.collectionName,
     this.noXP = false,
+    this.onSessionComplete,
   });
 
   @override
@@ -139,6 +141,7 @@ class _QuizSettingsScreenState extends State<QuizSettingsScreen> {
                         quizType: _quizType,
                         questionCount: widget.wordDay.words.length,
                         noXP: widget.noXP,
+                        onSessionComplete: widget.onSessionComplete,
                       ),
                     ),
                   );
@@ -231,6 +234,7 @@ class QuizSessionScreen extends StatefulWidget {
   final bool noXP;
   final void Function(String word)? onWrongWord;
   final VoidCallback? onHomeworkCompleted;
+  final Future<bool> Function()? onSessionComplete;
 
   const QuizSessionScreen({
     super.key,
@@ -242,6 +246,7 @@ class QuizSessionScreen extends StatefulWidget {
     this.noXP = false,
     this.onWrongWord,
     this.onHomeworkCompleted,
+    this.onSessionComplete,
   });
 
   @override
@@ -369,8 +374,10 @@ class _QuizSessionScreenState extends State<QuizSessionScreen>
     }
   }
 
-  void _showFinishScreen() {
+  Future<void> _showFinishScreen() async {
     widget.onHomeworkCompleted?.call();
+    final myUnitCompleted = await widget.onSessionComplete?.call() ?? false;
+    if (!mounted) return;
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -383,6 +390,7 @@ class _QuizSessionScreenState extends State<QuizSessionScreen>
           wrongWords: _wrongWords,
           quizType: widget.quizType,
           noXP: widget.noXP,
+          myUnitCompleted: myUnitCompleted,
         ),
       ),
     );
@@ -592,6 +600,7 @@ class QuizFinishScreen extends StatefulWidget {
   final List<WordItem> wrongWords;
   final QuizType quizType;
   final bool noXP;
+  final bool myUnitCompleted;
 
   const QuizFinishScreen({
     super.key,
@@ -603,6 +612,7 @@ class QuizFinishScreen extends StatefulWidget {
     required this.wrongWords,
     required this.quizType,
     this.noXP = false,
+    this.myUnitCompleted = false,
   });
 
   @override
@@ -619,6 +629,7 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
     _confettiController = ConfettiController(
       duration: const Duration(seconds: 4),
     );
+    if (widget.myUnitCompleted) _confettiController.play();
     _awardXP();
   }
 
@@ -698,6 +709,21 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              if (widget.myUnitCompleted) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: context.successBg,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: context.successColor, width: 1.5),
+                  ),
+                  child: Text('🏆 Unit Complete!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontWeight: FontWeight.bold, color: context.successColor)),
+                ),
+              ],
               Text(emoji, style: const TextStyle(fontSize: 60)),
               const SizedBox(height: 20),
               Text(

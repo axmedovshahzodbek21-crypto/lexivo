@@ -23,6 +23,7 @@ class FlashcardSettingsScreen extends StatefulWidget {
   final String collectionName;
   final bool noXP;
   final VoidCallback? onHomeworkCompleted;
+  final Future<bool> Function()? onSessionComplete;
 
   const FlashcardSettingsScreen({
     super.key,
@@ -31,6 +32,7 @@ class FlashcardSettingsScreen extends StatefulWidget {
     required this.collectionName,
     this.noXP = false,
     this.onHomeworkCompleted,
+    this.onSessionComplete,
   });
 
   @override
@@ -133,6 +135,7 @@ class _FlashcardSettingsScreenState extends State<FlashcardSettingsScreen> {
                 shuffle: _shuffle,
                 noXP: widget.noXP,
                 onHomeworkCompleted: widget.onHomeworkCompleted,
+                onSessionComplete: widget.onSessionComplete,
               ),
             ),
           ),
@@ -368,6 +371,7 @@ class FlashcardSessionScreen extends StatefulWidget {
   final List<String>? startFromWords;
   final bool noXP;
   final VoidCallback? onHomeworkCompleted;
+  final Future<bool> Function()? onSessionComplete;
 
   const FlashcardSessionScreen({
     super.key,
@@ -380,6 +384,7 @@ class FlashcardSessionScreen extends StatefulWidget {
     this.startFromWords,
     this.noXP = false,
     this.onHomeworkCompleted,
+    this.onSessionComplete,
   });
 
   @override
@@ -597,9 +602,11 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
   }
 
 
-  void _showFinishScreen() {
+  Future<void> _showFinishScreen() async {
     if (!mounted) return;
     widget.onHomeworkCompleted?.call();
+    final myUnitCompleted = await widget.onSessionComplete?.call() ?? false;
+    if (!mounted) return;
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -612,6 +619,7 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
           hardWords: _hardWords,
           cardMode: widget.cardMode,
           shuffle: widget.shuffle,
+          myUnitCompleted: myUnitCompleted,
         ),
       ),
     );
@@ -1251,6 +1259,7 @@ class FlashcardFinishScreen extends StatelessWidget {
   final List<WordItem> hardWords;
   final CardMode cardMode;
   final bool shuffle;
+  final bool myUnitCompleted;
 
   const FlashcardFinishScreen({
     super.key,
@@ -1262,6 +1271,7 @@ class FlashcardFinishScreen extends StatelessWidget {
     required this.hardWords,
     required this.cardMode,
     required this.shuffle,
+    this.myUnitCompleted = false,
   });
 
   @override
@@ -1336,6 +1346,21 @@ class FlashcardFinishScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              if (myUnitCompleted) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: context.successBg,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: context.successColor, width: 1.5),
+                  ),
+                  child: Text('🏆 Unit Complete!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontWeight: FontWeight.bold, color: context.successColor)),
+                ),
+              ],
               Text(emoji, style: const TextStyle(fontSize: 60)),
               const SizedBox(height: 20),
               Text(

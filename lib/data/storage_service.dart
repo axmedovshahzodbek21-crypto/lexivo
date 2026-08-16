@@ -520,6 +520,72 @@ class UnitProgress {
 }
 
 // ─────────────────────────────────────────────
+//  MY WORDS UNIT PROGRESS MODEL
+// ─────────────────────────────────────────────
+//
+// Unlike UnitProgress above (keyed by collectionName_dayNumber, and
+// requiring only learn/flashcard/quiz), a My Words unit is user-created,
+// can grow after it's "done", and is keyed by folder+collection since
+// collection names aren't globally unique across folders. Completion
+// requires all four activities (My Words shows Learn/Flashcards/Quiz/
+// Match as equal parallel steps). Adding words to an already-completed
+// unit resets the four flags but keeps completedAt/completedWords, so
+// the unit shows "Completed · N new words to learn" instead of losing
+// its badge — see the hook in addImportedWords below.
+
+class MyUnitProgress {
+  final bool learnDone;
+  final bool flashcardDone;
+  final bool quizDone;
+  final bool matchDone;
+  final String? completedAt;
+  final List<String> completedWords;
+
+  const MyUnitProgress({
+    this.learnDone = false,
+    this.flashcardDone = false,
+    this.quizDone = false,
+    this.matchDone = false,
+    this.completedAt,
+    this.completedWords = const [],
+  });
+
+  MyUnitProgress copyWith({
+    bool? learnDone,
+    bool? flashcardDone,
+    bool? quizDone,
+    bool? matchDone,
+    String? completedAt,
+    List<String>? completedWords,
+  }) => MyUnitProgress(
+    learnDone: learnDone ?? this.learnDone,
+    flashcardDone: flashcardDone ?? this.flashcardDone,
+    quizDone: quizDone ?? this.quizDone,
+    matchDone: matchDone ?? this.matchDone,
+    completedAt: completedAt ?? this.completedAt,
+    completedWords: completedWords ?? this.completedWords,
+  );
+
+  Map<String, dynamic> toJson() => {
+    'learnDone': learnDone,
+    'flashcardDone': flashcardDone,
+    'quizDone': quizDone,
+    'matchDone': matchDone,
+    if (completedAt != null) 'completedAt': completedAt,
+    'completedWords': completedWords,
+  };
+
+  factory MyUnitProgress.fromJson(Map<String, dynamic> json) => MyUnitProgress(
+    learnDone: json['learnDone'] ?? false,
+    flashcardDone: json['flashcardDone'] ?? false,
+    quizDone: json['quizDone'] ?? false,
+    matchDone: json['matchDone'] ?? false,
+    completedAt: json['completedAt'] as String?,
+    completedWords: List<String>.from(json['completedWords'] as List? ?? []),
+  );
+}
+
+// ─────────────────────────────────────────────
 //  CUSTOM LIST MODEL
 // ─────────────────────────────────────────────
 
@@ -578,6 +644,7 @@ class StorageService {
   static const _dailyLimitKey = 'daily_words_learned';
   static const _dailyLimitDateKey = 'daily_words_date';
   static const _unitProgressKey = 'unit_progress';
+  static const _myUnitProgressKey = 'my_unit_progress';
 static const _hasCompletedQuizKey = 'has_completed_quiz';
   static const _hasPerfectQuizKey = 'has_perfect_quiz';
   static const _hasCompletedFlashcardKey = 'has_completed_flashcard';
@@ -814,6 +881,87 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
       ),
     );
     SyncService.pushLists();
+  }
+
+  // ── My Words Unit Progress ─────────────────
+
+  static String _myUnitKey(String? folderName, String collectionName) =>
+      '${folderName ?? ''}_$collectionName';
+
+  static Future<Map<String, MyUnitProgress>> _getAllMyUnitProgress() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_myUnitProgressKey);
+    if (raw == null) return {};
+    final map = jsonDecode(raw) as Map<String, dynamic>;
+    return map.map((k, v) => MapEntry(k, MyUnitProgress.fromJson(v)));
+  }
+
+  static Future<void> _saveMyUnitProgress(
+    String? folderName,
+    String collectionName,
+    MyUnitProgress progress,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final all = await _getAllMyUnitProgress();
+    all[_myUnitKey(folderName, collectionName)] = progress;
+    await prefs.setString(_myUnitProgressKey,
+        jsonEncode(all.map((k, v) => MapEntry(k, v.toJson()))));
+  }
+
+  static Future<MyUnitProgress> getMyUnitProgress(
+    String? folderName,
+    String collectionName,
+  ) async {
+    final all = await _getAllMyUnitProgress();
+    return all[_myUnitKey(folderName, collectionName)] ?? const MyUnitProgress();
+  }
+
+  // Returns true when this call is what just brought the unit to full
+  // completion (all four activities done), so callers can fire a one-time
+  // celebration — not true on every call, and not true again on redos.
+  static Future<bool> _markMyUnitActivityComplete(
+    String? folderName,
+    String collectionName,
+    MyUnitProgress Function(MyUnitProgress current) apply,
+  ) async {
+    final current = await getMyUnitProgress(folderName, collectionName);
+    final wasComplete = current.learnDone && current.flashcardDone && current.quizDone && current.matchDone;
+    var updated = apply(current);
+    final nowComplete = updated.learnDone && updated.flashcardDone && updated.quizDone && updated.matchDone;
+    if (nowComplete) {
+      final words = await getImportedWordsByCollection(collectionName, folderName: folderName);
+      updated = updated.copyWith(
+        completedWords: words.map((w) => w.word).toList(),
+        completedAt: DateTime.now().toUtc().toIso8601String(),
+      );
+    }
+    await _saveMyUnitProgress(folderName, collectionName, updated);
+    return nowComplete && !wasComplete;
+  }
+
+  static Future<bool> markMyLearnComplete(String? folderName, String collectionName) =>
+      _markMyUnitActivityComplete(folderName, collectionName, (c) => c.copyWith(learnDone: true));
+
+  static Future<bool> markMyFlashcardComplete(String? folderName, String collectionName) =>
+      _markMyUnitActivityComplete(folderName, collectionName, (c) => c.copyWith(flashcardDone: true));
+
+  static Future<bool> markMyQuizComplete(String? folderName, String collectionName) =>
+      _markMyUnitActivityComplete(folderName, collectionName, (c) => c.copyWith(quizDone: true));
+
+  static Future<bool> markMyMatchComplete(String? folderName, String collectionName) =>
+      _markMyUnitActivityComplete(folderName, collectionName, (c) => c.copyWith(matchDone: true));
+
+  // Words in this unit not yet covered by the last full completion. Empty
+  // whenever the unit has never been completed at all.
+  static Future<List<String>> getMyUnitPendingNewWords(
+    String? folderName,
+    String collectionName,
+    List<String> currentWords,
+  ) async {
+    final p = await getMyUnitProgress(folderName, collectionName);
+    if (p.completedAt == null) return [];
+    final completedSet = p.completedWords.toSet();
+    return currentWords.where((w) => !completedSet.contains(w)).toList();
   }
 
   // ── Daily Word Limit ───────────────────────
@@ -1991,6 +2139,14 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
         .toList();
     raw.addAll(fresh);
     await prefs.setString(_importedKey, jsonEncode(raw.map((e) => e.toJson()).toList()));
+    if (fresh.isNotEmpty) {
+      final progress = await getMyUnitProgress(folderName, collectionName);
+      if (progress.completedAt != null) {
+        await _saveMyUnitProgress(folderName, collectionName, progress.copyWith(
+          learnDone: false, flashcardDone: false, quizDone: false, matchDone: false,
+        ));
+      }
+    }
     SyncService.pushLists();
   }
 

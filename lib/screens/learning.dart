@@ -31,6 +31,7 @@ class LearningScreen extends StatefulWidget {
   // When set, this is a class learning session — SRS goes to Supabase, not personal storage.
   final String? classId;
   final VoidCallback? onHomeworkCompleted;
+  final Future<bool> Function()? onSessionComplete;
 
   const LearningScreen({
     super.key,
@@ -43,6 +44,7 @@ class LearningScreen extends StatefulWidget {
     this.noXP = false,
     this.classId,
     this.onHomeworkCompleted,
+    this.onSessionComplete,
   });
 
   @override
@@ -525,6 +527,7 @@ class _LearningScreenState extends State<LearningScreen> {
   Future<void> _showFinishDialog() async {
     _sessionComplete = true;
     widget.onHomeworkCompleted?.call();
+    final myUnitCompleted = await widget.onSessionComplete?.call() ?? false;
     _heartbeatTimer?.cancel();
     await StorageService.markLearningComplete(widget.collectionName, widget.wordDay.dayNumber);
     StorageService.clearLearnProgress(widget.collectionName, widget.wordDay.dayNumber);
@@ -537,10 +540,29 @@ class _LearningScreenState extends State<LearningScreen> {
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(tr('great_job'), textAlign: TextAlign.center, style: const TextStyle(fontSize: 24)),
-        content: Text(
-          tr('session_words_done').replaceFirst('{n}', '${widget.wordDay.words.length}'),
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 16, color: Colors.grey),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (myUnitCompleted) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: context.successBg,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: context.successColor, width: 1.5),
+                ),
+                child: Text('🏆 Unit Complete!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontWeight: FontWeight.bold, color: context.successColor)),
+              ),
+            ],
+            Text(
+              tr('session_words_done').replaceFirst('{n}', '${widget.wordDay.words.length}'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+          ],
         ),
         actionsAlignment: MainAxisAlignment.center,
         actions: [

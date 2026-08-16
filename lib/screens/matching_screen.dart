@@ -42,6 +42,7 @@ class MatchingScreen extends StatefulWidget {
 
   final void Function(String word)? onWrongPair;
   final VoidCallback? onHomeworkCompleted;
+  final Future<bool> Function()? onSessionComplete;
 
   const MatchingScreen({
     super.key,
@@ -50,6 +51,7 @@ class MatchingScreen extends StatefulWidget {
     this.noXP = false,
     this.onWrongPair,
     this.onHomeworkCompleted,
+    this.onSessionComplete,
   });
 
   @override
@@ -80,6 +82,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
 
   // Phase
   String _phase = 'playing';
+  bool _myUnitCompleted = false;
 
   Timer? _wrongTimer;
   Timer? _elapsedTimer;
@@ -180,7 +183,12 @@ class _MatchingScreenState extends State<MatchingScreen> {
           _totalTime += _elapsed;
           _phase = isLast ? 'done' : 'round_done';
         });
-        if (isLast) widget.onHomeworkCompleted?.call();
+        if (isLast) {
+          widget.onHomeworkCompleted?.call();
+          widget.onSessionComplete?.call().then((justCompleted) {
+            if (mounted && justCompleted) setState(() => _myUnitCompleted = true);
+          });
+        }
       }
     } else {
       // Wrong
@@ -277,6 +285,20 @@ class _MatchingScreenState extends State<MatchingScreen> {
         child: Column(
           children: [
             const SizedBox(height: 16),
+            if (_myUnitCompleted)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: context.successBg,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: context.successColor, width: 1.5),
+                ),
+                child: Text('🏆 Unit Complete!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontWeight: FontWeight.bold, color: context.successColor)),
+              ),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(24),

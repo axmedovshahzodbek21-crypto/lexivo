@@ -21,11 +21,64 @@ class ImportCollectionDetailScreen extends StatefulWidget {
 class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScreen> {
   List<ImportedWord> _words = [];
   bool _loading = true;
+  bool _selectMode = false;
+  final Set<String> _selected = {};
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  void _toggleSelectMode() {
+    setState(() {
+      _selectMode = !_selectMode;
+      _selected.clear();
+    });
+  }
+
+  void _toggleSelected(String word) {
+    setState(() {
+      if (_selected.contains(word)) {
+        _selected.remove(word);
+      } else {
+        _selected.add(word);
+      }
+    });
+  }
+
+  Future<void> _deleteSelected() async {
+    if (_selected.isEmpty) return;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Delete ${_selected.length} words?', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+        content: Text('This will permanently remove the selected words from this collection.',
+          style: TextStyle(color: context.textMuted)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel', style: TextStyle(color: context.textMuted)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Delete', style: TextStyle(color: context.dangerColor)),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      for (final word in _selected) {
+        await StorageService.deleteImportedWord(word, widget.collectionName, folderName: widget.folderName);
+      }
+      setState(() {
+        _selected.clear();
+        _selectMode = false;
+      });
+      _load();
+    }
   }
 
   Future<void> _load() async {
@@ -123,21 +176,67 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
           ],
         ),
         actions: [
-          IconButton(
-            icon: Icon(Icons.delete_outline, color: context.textMuted, size: 22),
-            onPressed: _deleteCollection,
-          ),
-          IconButton(
-            icon: Icon(Icons.add, color: context.primary, size: 26),
-            onPressed: _openImport,
-          ),
+          if (!_loading && _words.isNotEmpty)
+            TextButton(
+              onPressed: _toggleSelectMode,
+              child: Text(_selectMode ? 'Cancel' : 'Select',
+                style: TextStyle(color: context.primary, fontWeight: FontWeight.w600)),
+            ),
+          if (!_selectMode) ...[
+            IconButton(
+              icon: Icon(Icons.delete_outline, color: context.textMuted, size: 22),
+              onPressed: _deleteCollection,
+            ),
+            IconButton(
+              icon: Icon(Icons.add, color: context.primary, size: 26),
+              onPressed: _openImport,
+            ),
+          ],
         ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _words.isEmpty
               ? _buildEmpty()
-              : _buildContent(),
+              : Stack(
+                  children: [
+                    _buildContent(),
+                    if (_selectMode && _selected.isNotEmpty)
+                      Positioned(
+                        left: 0, right: 0, bottom: 16,
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: context.surface,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: context.border),
+                              boxShadow: context.cardShadow,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('${_selected.length} selected',
+                                  style: TextStyle(color: context.appText, fontWeight: FontWeight.w600, fontSize: 13)),
+                                const SizedBox(width: 12),
+                                ElevatedButton.icon(
+                                  onPressed: _deleteSelected,
+                                  icon: const Icon(Icons.delete_outline, size: 16, color: Colors.white),
+                                  label: const Text('Delete'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: context.dangerColor,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
     );
   }
 
@@ -178,10 +277,11 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
 
   Widget _buildContent() {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, _selectMode ? 80 : 16),
       children: [
 
         // ── Study buttons ─────────────────────────────────────────────────
+        if (!_selectMode)
         GridView.count(
           crossAxisCount: 2,
           shrinkWrap: true,
@@ -236,14 +336,21 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
           ],
         ),
 
-        const SizedBox(height: 16),
+        if (!_selectMode) const SizedBox(height: 16),
 
         // ── Word list ─────────────────────────────────────────────────────
-        ..._words.map((w) => _WordCard(word: w, onDelete: () => _deleteWord(w))),
+        ..._words.map((w) => _WordCard(
+          word: w,
+          onDelete: () => _deleteWord(w),
+          selectMode: _selectMode,
+          selected: _selected.contains(w.word),
+          onToggleSelected: () => _toggleSelected(w.word),
+        )),
 
         const SizedBox(height: 12),
 
         // ── Add more ──────────────────────────────────────────────────────
+        if (!_selectMode)
         GestureDetector(
           onTap: _openImport,
           child: Container(
@@ -304,51 +411,76 @@ class _StudyButton extends StatelessWidget {
 class _WordCard extends StatelessWidget {
   final ImportedWord word;
   final VoidCallback onDelete;
+  final bool selectMode;
+  final bool selected;
+  final VoidCallback onToggleSelected;
 
-  const _WordCard({required this.word, required this.onDelete});
+  const _WordCard({
+    required this.word,
+    required this.onDelete,
+    this.selectMode = false,
+    this.selected = false,
+    required this.onToggleSelected,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: context.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: context.border),
-        boxShadow: context.cardShadow,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(children: [
-                  Text(word.word, style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
-                ]),
-                const SizedBox(height: 2),
-                Text(word.translation, style: TextStyle(color: context.primary, fontWeight: FontWeight.w500, fontSize: 13)),
-                if (word.definition.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(word.definition, style: TextStyle(color: context.textMuted, fontSize: 12)),
+    return GestureDetector(
+      onTap: selectMode ? onToggleSelected : null,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: context.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: selected ? context.primary : context.border, width: selected ? 2 : 1),
+          boxShadow: context.cardShadow,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (selectMode) ...[
+              Container(
+                width: 20, height: 20,
+                margin: const EdgeInsets.only(top: 1, right: 10),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: selected ? context.primary : Colors.transparent,
+                  border: Border.all(color: selected ? context.primary : context.border, width: 2),
+                ),
+                child: selected ? const Icon(Icons.check, color: Colors.white, size: 14) : null,
+              ),
+            ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Text(word.word, style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
+                  ]),
+                  const SizedBox(height: 2),
+                  Text(word.translation, style: TextStyle(color: context.primary, fontWeight: FontWeight.w500, fontSize: 13)),
+                  if (word.definition.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(word.definition, style: TextStyle(color: context.textMuted, fontSize: 12)),
+                  ],
+                  for (final ex in word.examples) ...[
+                    const SizedBox(height: 4),
+                    Text('"${ex.sentence}"', style: TextStyle(color: context.appText, fontSize: 12, fontStyle: FontStyle.italic)),
+                  ],
                 ],
-                for (final ex in word.examples) ...[
-                  const SizedBox(height: 4),
-                  Text('"${ex.sentence}"', style: TextStyle(color: context.appText, fontSize: 12, fontStyle: FontStyle.italic)),
-                ],
-              ],
+              ),
             ),
-          ),
-          GestureDetector(
-            onTap: onDelete,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 8),
-              child: Icon(Icons.delete_outline, color: context.textMuted, size: 20),
-            ),
-          ),
-        ],
+            if (!selectMode)
+              GestureDetector(
+                onTap: onDelete,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: Icon(Icons.delete_outline, color: context.textMuted, size: 20),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

@@ -135,6 +135,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
   void initState() {
     super.initState();
     _tabs = TabController(length: 2, vsync: this);
+    _tabs.addListener(() { if (mounted) setState(() {}); });
     _pasteCtrl.addListener(_onPasteChange);
     if (_cache.containsKey(widget.unitId)) {
       _words = _cache[widget.unitId]!;
@@ -225,6 +226,61 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
     _cache[widget.unitId] = _words;
   }
 
+  bool _selectMode = false;
+  final Set<String> _selected = {};
+
+  void _toggleSelectMode() {
+    setState(() {
+      _selectMode = !_selectMode;
+      _selected.clear();
+    });
+  }
+
+  void _toggleSelected(String id) {
+    setState(() {
+      if (_selected.contains(id)) {
+        _selected.remove(id);
+      } else {
+        _selected.add(id);
+      }
+    });
+  }
+
+  Future<void> _deleteSelected() async {
+    if (_selected.isEmpty) return;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Delete ${_selected.length} words?', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+        content: Text('This will permanently remove the selected words from this unit.',
+          style: TextStyle(color: context.textMuted)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel', style: TextStyle(color: context.textMuted)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete', style: TextStyle(color: Color(0xFFEF4444))),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      await supabase.from('teacher_unit_words').delete().inFilter('id', _selected.toList());
+      if (mounted) {
+        setState(() {
+          _words.removeWhere((w) => _selected.contains(w.id));
+          _selected.clear();
+          _selectMode = false;
+        });
+      }
+      _cache[widget.unitId] = _words;
+    }
+  }
+
   void _showWordDetail(_Word word) {
     showModalBottomSheet(
       context: context,
@@ -309,6 +365,14 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
           Text(widget.unitName, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText), overflow: TextOverflow.ellipsis),
           Text(widget.folderName, style: TextStyle(fontSize: 11, color: context.textMuted)),
         ]),
+        actions: [
+          if (!_loading && _words.isNotEmpty && _tabs.index == 0)
+            TextButton(
+              onPressed: _toggleSelectMode,
+              child: Text(_selectMode ? 'Cancel' : 'Select',
+                style: TextStyle(color: context.primary, fontWeight: FontWeight.w600)),
+            ),
+        ],
         bottom: TabBar(
           controller: _tabs,
           labelColor: context.primary,
@@ -322,11 +386,49 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
       ),
       body: _loading
           ? Center(child: CircularProgressIndicator(color: context.primary))
-          : TabBarView(
-              controller: _tabs,
+          : Stack(
               children: [
-                _buildWordsTab(),
-                _buildAiTab(),
+                TabBarView(
+                  controller: _tabs,
+                  children: [
+                    _buildWordsTab(),
+                    _buildAiTab(),
+                  ],
+                ),
+                if (_selectMode && _selected.isNotEmpty)
+                  Positioned(
+                    left: 0, right: 0, bottom: 16,
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: context.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: context.border),
+                          boxShadow: context.cardShadow,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('${_selected.length} selected',
+                              style: TextStyle(color: context.appText, fontWeight: FontWeight.w600, fontSize: 13)),
+                            const SizedBox(width: 12),
+                            ElevatedButton.icon(
+                              onPressed: _deleteSelected,
+                              icon: const Icon(Icons.delete_outline, size: 16, color: Colors.white),
+                              label: const Text('Delete'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFEF4444),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
     );
@@ -372,6 +474,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
             child: Row(children: [
               Text('${_words.length} words', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.textMuted)),
               const Spacer(),
+              if (!_selectMode)
               GestureDetector(
                 onTap: () => _tabs.animateTo(1),
                 child: Container(
@@ -388,14 +491,32 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
           );
         }
         final word = _words[i - 1];
+        final isSelected = _selected.contains(word.id);
         return GestureDetector(
-          onTap: () => _showWordDetail(word),
-          onLongPress: () => _confirmDelete(word),
+          onTap: _selectMode ? () => _toggleSelected(word.id) : () => _showWordDetail(word),
+          onLongPress: _selectMode ? null : () => _confirmDelete(word),
           child: Container(
             margin: const EdgeInsets.only(bottom: 8),
             padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(14), boxShadow: context.cardShadow),
+            decoration: BoxDecoration(
+              color: context.surface,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: context.cardShadow,
+              border: isSelected ? Border.all(color: context.primary, width: 2) : null,
+            ),
             child: Row(children: [
+              if (_selectMode) ...[
+                Container(
+                  width: 20, height: 20,
+                  margin: const EdgeInsets.only(right: 10),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isSelected ? context.primary : Colors.transparent,
+                    border: Border.all(color: isSelected ? context.primary : context.border, width: 2),
+                  ),
+                  child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 14) : null,
+                ),
+              ],
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(word.word, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: context.appText)),
                 const SizedBox(height: 2),

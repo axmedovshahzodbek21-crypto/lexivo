@@ -34,6 +34,11 @@ class WordItem {
   final String example2Situation;
   final String example3Situation;
 
+  // BCP-47 language code (e.g. "ru-RU") of the word/examples, when known —
+  // set for AI-imported words so pronunciation uses the right TTS voice
+  // instead of always defaulting to English.
+  final String? language;
+
   const WordItem({
     required this.word,
     required this.partOfSpeech,
@@ -52,6 +57,7 @@ class WordItem {
     this.example3Translation = '',
     this.extraExamples = const [],
     this.extraExampleTranslations = const [],
+    this.language,
   });
 }
 

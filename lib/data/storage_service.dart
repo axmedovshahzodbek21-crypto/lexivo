@@ -446,6 +446,7 @@ class ImportedWord {
     example3Translation: examples.length > 2 ? (examples[2].translation ?? '') : '',
     extraExamples: examples.skip(3).map((e) => e.sentence).toList(),
     extraExampleTranslations: examples.skip(3).map((e) => e.translation ?? '').toList(),
+    language: language,
   );
 }
 

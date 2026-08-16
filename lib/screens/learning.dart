@@ -209,6 +209,17 @@ class _LearningScreenState extends State<LearningScreen> {
     }
   }
 
+  Future<void> _speakInLanguage(String word, String languageCode) async {
+    if (defaultTargetPlatform == TargetPlatform.windows) {
+      await _speakWithGoogle(word, languageCode);
+    } else {
+      await _tts.stop();
+      await _tts.setLanguage(languageCode);
+      await _tts.setSpeechRate(0.5);
+      await _tts.speak(word);
+    }
+  }
+
   void _scrollToTop() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) _scrollController.jumpTo(0);
@@ -825,13 +836,20 @@ class _LearningScreenState extends State<LearningScreen> {
                                           ),
                                           const SizedBox(height: 12),
                                         ],
-                                        Row(
-                                          children: [
-                                            _buildPronounceButton(tr('american'), () => _speakAmerican(_currentWord.word)),
-                                            const SizedBox(width: 8),
-                                            _buildPronounceButton(tr('british'), () => _speakBritish(_currentWord.word)),
-                                          ],
-                                        ),
+                                        if (_currentWord.language != null && !_currentWord.language!.startsWith('en'))
+                                          Row(
+                                            children: [
+                                              _buildPronounceButton('🔊 Listen', () => _speakInLanguage(_currentWord.word, _currentWord.language!)),
+                                            ],
+                                          )
+                                        else
+                                          Row(
+                                            children: [
+                                              _buildPronounceButton(tr('american'), () => _speakAmerican(_currentWord.word)),
+                                              const SizedBox(width: 8),
+                                              _buildPronounceButton(tr('british'), () => _speakBritish(_currentWord.word)),
+                                            ],
+                                          ),
                                         const SizedBox(height: 12),
                                         if (_revealed) ...[
                                           Text(_currentWord.definition, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: Colors.white, height: 1.5)),

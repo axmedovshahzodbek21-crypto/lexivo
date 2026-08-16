@@ -691,6 +691,14 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
     await _tts.speak(_currentWord.word);
   }
 
+  Future<void> _speakInLanguage() async {
+    if (!_hasWords) return;
+    final lang = _currentWord.language;
+    if (lang == null) return;
+    await _tts.setLanguage(lang);
+    await _tts.speak(_currentWord.word);
+  }
+
   Widget _buildButtonsPanel() {
     return Container(
       padding: EdgeInsets.fromLTRB(
@@ -714,11 +722,14 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildPronounceBtn(context, tr('american'), _speakAmerican),
-              const SizedBox(width: 12),
-              _buildPronounceBtn(context, tr('british'), _speakBritish),
-            ],
+            children:
+                _hasWords && _currentWord.language != null && !_currentWord.language!.startsWith('en')
+                    ? [_buildPronounceBtn(context, '🔊 Listen', _speakInLanguage)]
+                    : [
+                        _buildPronounceBtn(context, tr('american'), _speakAmerican),
+                        const SizedBox(width: 12),
+                        _buildPronounceBtn(context, tr('british'), _speakBritish),
+                      ],
           ),
           const SizedBox(height: 10),
           Row(

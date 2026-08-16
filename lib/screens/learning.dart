@@ -835,7 +835,7 @@ class _LearningScreenState extends State<LearningScreen> {
                                         if (_currentWord.language != null && !_currentWord.language!.startsWith('en'))
                                           Row(
                                             children: [
-                                              _buildPronounceButton('🔊 Listen', () => _speakInLanguage(_currentWord.word, _currentWord.language!)),
+                                              _buildPronounceButton('Listen', () => _speakInLanguage(_currentWord.word, _currentWord.language!)),
                                             ],
                                           )
                                         else

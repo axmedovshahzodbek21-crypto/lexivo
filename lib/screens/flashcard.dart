@@ -757,7 +757,7 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
             mainAxisAlignment: MainAxisAlignment.center,
             children:
                 _hasWords && _currentWord.language != null && !_currentWord.language!.startsWith('en')
-                    ? [_buildPronounceBtn(context, '🔊 Listen', _speakInLanguage)]
+                    ? [_buildPronounceBtn(context, 'Listen', _speakInLanguage)]
                     : [
                         _buildPronounceBtn(context, tr('american'), _speakAmerican),
                         const SizedBox(width: 12),

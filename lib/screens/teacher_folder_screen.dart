@@ -258,7 +258,7 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
   Widget _buildGrid() => GridView.builder(
     padding: const EdgeInsets.all(16),
     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-      crossAxisCount: 3, crossAxisSpacing: 10, mainAxisSpacing: 10, childAspectRatio: 0.95,
+      crossAxisCount: 3, crossAxisSpacing: 10, mainAxisSpacing: 10, childAspectRatio: 0.82,
     ),
     itemCount: _units.length + 1,
     itemBuilder: (context, i) {

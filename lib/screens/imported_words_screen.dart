@@ -298,7 +298,7 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
         crossAxisCount: 3,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
-        childAspectRatio: 0.95,
+        childAspectRatio: 0.82,
       ),
       itemCount: _folders.length + 1,
       itemBuilder: (context, i) {

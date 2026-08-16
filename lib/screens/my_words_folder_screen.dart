@@ -158,7 +158,7 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
         crossAxisCount: 3,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
-        childAspectRatio: 0.95,
+        childAspectRatio: 0.82,
       ),
       itemCount: _collections.length + 1,
       itemBuilder: (context, i) {

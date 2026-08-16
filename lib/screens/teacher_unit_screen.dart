@@ -5,9 +5,9 @@ import '../app_theme.dart';
 
 class _Word {
   final String id, word, translation;
-  final String? definition;
+  final String? definition, partOfSpeech, pronunciation, definitionUz;
   final List<Map<String, String>> examples;
-  const _Word({required this.id, required this.word, required this.translation, this.definition, this.examples = const []});
+  const _Word({required this.id, required this.word, required this.translation, this.definition, this.partOfSpeech, this.pronunciation, this.definitionUz, this.examples = const []});
   factory _Word.fromMap(Map<String, dynamic> m) {
     final rawExamples = m['examples'];
     final examples = (rawExamples as List?)
@@ -18,13 +18,16 @@ class _Word {
       word: m['word'] as String,
       translation: m['translation'] as String,
       definition: m['definition'] as String?,
+      partOfSpeech: m['part_of_speech'] as String?,
+      pronunciation: m['pronunciation'] as String?,
+      definitionUz: m['definition_uz'] as String?,
       examples: examples,
     );
   }
 }
 
 class _ParsedWord {
-  String word = '', translation = '', definition = '';
+  String word = '', translation = '', definition = '', partOfSpeech = '', pronunciation = '', definitionUz = '';
   List<Map<String, String>> examples = [];
 }
 
@@ -38,15 +41,20 @@ List<_ParsedWord> _parseOutput(String text) {
     for (final line in block.split('\n')) {
       final colon = line.indexOf(':');
       if (colon < 0) continue;
-      final key = line.substring(0, colon).trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+      // Strip whitespace so "Example 1:" / "Part of speech:" (this prompt's own
+      // style) and "example1:" / "partOfSpeech:" (My Words-prompt style) both parse.
+      final key = line.substring(0, colon).trim().toLowerCase().replaceAll(RegExp(r'\s+'), '');
       final val = line.substring(colon + 1).trim();
       switch (key) {
         case 'word': w.word = val;
         case 'translation': w.translation = val;
         case 'definition': w.definition = val;
+        case 'partofspeech': w.partOfSpeech = val;
+        case 'pronunciation': w.pronunciation = val;
+        case 'uzbekdefinition': case 'definitionuz': w.definitionUz = val;
         default:
-          final sentMatch = RegExp(r'^example (\d+)$').firstMatch(key);
-          final transMatch = RegExp(r'^example (\d+) translation$').firstMatch(key);
+          final sentMatch = RegExp(r'^example(\d+)$').firstMatch(key);
+          final transMatch = RegExp(r'^example(\d+)translation$').firstMatch(key);
           if (sentMatch != null) sentences[int.parse(sentMatch.group(1)!)] = val;
           if (transMatch != null) translations[int.parse(transMatch.group(1)!)] = val;
       }
@@ -89,8 +97,11 @@ $words
 For each word output exactly this format, separated by ---:
 
 $wordLine
+Part of speech: [noun / verb / adjective / adverb / phrase / etc.]
+Pronunciation: [IPA pronunciation, e.g. /wɜːrd/]
 $transLine
 Definition: [short definition in $lang, max 20 words]
+Uzbek definition: [short definition in Uzbek, max 20 words]
 ${_exampleBlock(lang, tl)}
 
 Output only the formatted blocks. No commentary.''';
@@ -161,7 +172,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
     try {
       final data = await supabase
           .from('teacher_unit_words')
-          .select('id, word, translation, definition, examples')
+          .select('id, word, translation, definition, part_of_speech, pronunciation, definition_uz, examples')
           .eq('unit_id', widget.unitId)
           .order('position')
           .order('created_at');
@@ -189,6 +200,9 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
         'word': w.word,
         'translation': w.translation,
         if (w.definition.isNotEmpty) 'definition': w.definition,
+        if (w.partOfSpeech.isNotEmpty) 'part_of_speech': w.partOfSpeech,
+        if (w.pronunciation.isNotEmpty) 'pronunciation': w.pronunciation,
+        if (w.definitionUz.isNotEmpty) 'definition_uz': w.definitionUz,
         if (w.examples.isNotEmpty) 'examples': w.examples,
       }).toList();
       await supabase.from('teacher_unit_words').insert(rows);

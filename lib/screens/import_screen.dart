@@ -90,7 +90,10 @@ List<ImportedWord> _parseOutput(String text, String langCode) {
     for (final line in lines) {
       final colonIdx = line.indexOf(':');
       if (colonIdx == -1) continue;
-      final key = line.substring(0, colonIdx).trim().toLowerCase().replaceAll(RegExp(r'[*_`#]'), '');
+      // Strip whitespace too so "Example 1:" / "Part of speech:" (Library-prompt
+      // style) and "example1:" / "partOfSpeech:" (this prompt's own style) both parse.
+      var key = line.substring(0, colonIdx).trim().toLowerCase().replaceAll(RegExp(r'[*_`#\s]'), '');
+      if (key == 'uzbekdefinition') key = 'definitionuz';
       final val = line.substring(colonIdx + 1).trim().replaceAll(RegExp(r'[*_`]'), '');
       fields[key] = val;
     }

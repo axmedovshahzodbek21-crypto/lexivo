@@ -209,15 +209,11 @@ class _LearningScreenState extends State<LearningScreen> {
     }
   }
 
+  // Always uses cloud TTS (not just on Windows like the American/British
+  // buttons) because a device's local TTS engine often lacks a voice pack
+  // for less-common languages — Google Cloud TTS covers them reliably.
   Future<void> _speakInLanguage(String word, String languageCode) async {
-    if (defaultTargetPlatform == TargetPlatform.windows) {
-      await _speakWithGoogle(word, languageCode);
-    } else {
-      await _tts.stop();
-      await _tts.setLanguage(languageCode);
-      await _tts.setSpeechRate(0.5);
-      await _tts.speak(word);
-    }
+    await _speakWithGoogle(word, languageCode);
   }
 
   void _scrollToTop() {

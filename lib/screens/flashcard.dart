@@ -1,12 +1,19 @@
 import 'quiz_screen.dart';
 import 'break_screen.dart';
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:http/http.dart' as http;
 import '../data/word_data.dart';
 import '../data/storage_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
+
+const String _googleTtsApiKey = 'AIzaSyDD0_ZvBD0g0KN67Mrh9kjbXpkE0-LpeKM';
 
 enum CardMode { wordToTranslation, wordToDefinition, translationToWord }
 
@@ -382,6 +389,7 @@ class FlashcardSessionScreen extends StatefulWidget {
 class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
     with TickerProviderStateMixin {
   final FlutterTts _tts = FlutterTts();
+  final AudioPlayer _audioPlayer = AudioPlayer();
   late List<WordItem> _sessionWords;
   late List<WordItem> _hardWords;
   late List<WordItem> _easyWords;
@@ -424,6 +432,7 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
   void dispose() {
     appLangNotifier.removeListener(_onLangChange);
     _tts.stop();
+    _audioPlayer.dispose();
     _flipController.dispose();
     super.dispose();
   }
@@ -691,12 +700,36 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
     await _tts.speak(_currentWord.word);
   }
 
+  // Uses cloud TTS rather than the device's local engine because local
+  // voice packs often don't cover less-common languages reliably.
   Future<void> _speakInLanguage() async {
     if (!_hasWords) return;
     final lang = _currentWord.language;
     if (lang == null) return;
+    final word = _currentWord.word;
+    try {
+      final response = await http.post(
+        Uri.parse('https://texttospeech.googleapis.com/v1/text:synthesize?key=$_googleTtsApiKey'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'input': {'text': word},
+          'voice': {'languageCode': lang, 'ssmlGender': 'FEMALE'},
+          'audioConfig': {'audioEncoding': 'MP3', 'speakingRate': 0.85},
+        }),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final audioContent = base64Decode(data['audioContent']);
+        final dir = await getTemporaryDirectory();
+        final file = File('${dir.path}/tts_output.mp3');
+        await file.writeAsBytes(audioContent);
+        await _audioPlayer.stop();
+        await _audioPlayer.play(DeviceFileSource(file.path));
+        return;
+      }
+    } catch (_) {}
     await _tts.setLanguage(lang);
-    await _tts.speak(_currentWord.word);
+    await _tts.speak(word);
   }
 
   Widget _buildButtonsPanel() {

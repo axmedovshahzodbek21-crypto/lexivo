@@ -366,22 +366,25 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        '$wordCount w',
-                        style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700),
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '$wordCount w',
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700),
+                        ),
                       ),
                     ),
                     const Spacer(),
                     _gradientStageDot('📖', progress.learnDone),
-                    const SizedBox(width: 3),
+                    const SizedBox(width: 2),
                     _gradientStageDot('🃏', progress.flashcardDone),
-                    const SizedBox(width: 3),
+                    const SizedBox(width: 2),
                     _gradientStageDot('🧠', progress.quizDone),
                   ],
                 ),
@@ -395,13 +398,13 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
 
   Widget _gradientStageDot(String emoji, bool done) {
     return Container(
-      width: 16,
-      height: 16,
+      width: 14,
+      height: 14,
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: done ? 0.3 : 0.12),
         borderRadius: BorderRadius.circular(3),
       ),
-      child: Center(child: Text(emoji, style: const TextStyle(fontSize: 9))),
+      child: Center(child: Text(emoji, style: const TextStyle(fontSize: 8))),
     );
   }
 

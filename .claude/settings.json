@@ -4,7 +4,8 @@
       "PowerShell(ls C:\\\\Users\\\\User\\\\lexivo-web\\\\ | Where-Object {-not $_.PSIsContainer} | Select-Object Name)",
       "Bash(npx tsc *)",
       "Bash(flutter build *)",
-      "Bash(git remote *)"
+      "Bash(git remote *)",
+      "Read(//c/Users/User/lexivo-web/lib/**)"
     ],
     "additionalDirectories": [
       "C:\\Users\\User\\lexivo-web\\public",

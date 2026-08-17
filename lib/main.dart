@@ -141,7 +141,10 @@ class _SplashRouterState extends State<SplashRouter> {
     } else {
       // Signed-in users go straight to the app regardless of local onboarding flag —
       // they already have an account so onboarding is irrelevant on a new device.
-      SyncService.pullAll();
+      // Awaited so no user action can push a stale pre-merge value (XP, learned
+      // words, etc.) over newer cloud data before the initial pull lands.
+      await SyncService.pullAll();
+      if (!mounted) return;
       WidgetService.refreshFromSupabase();
       WidgetService.pushStats();
       Navigator.pushReplacement(

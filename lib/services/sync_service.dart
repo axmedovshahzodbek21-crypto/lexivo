@@ -64,12 +64,27 @@ class SyncService {
         try { return jsonDecode(raw) as List; } catch (_) { return []; }
       }
       final studyDays = daysList('study_days');
+
+      // Accumulators must never regress the shared cloud row: fetch its
+      // current values and take max(local, cloud) before writing, mirroring
+      // the max() merge already applied on pull. Without this, a device
+      // pushing a lower (stale) locally-computed total after another device
+      // already pushed a higher one would silently erase the other device's
+      // earned XP/streak.
+      Map<String, dynamic>? cloudRow;
+      try {
+        cloudRow = await _sb.from('user_data').select('total_xp, streak, streak_freezes').eq('id', uid).maybeSingle();
+      } catch (_) {}
+      final xp = max(prefs.getInt('total_xp') ?? 0, ((cloudRow?['total_xp'] as num?) ?? 0).toInt());
+      final streak = max(prefs.getInt('streak') ?? 0, ((cloudRow?['streak'] as num?) ?? 0).toInt());
+      final freezes = max(prefs.getInt('streak_freezes') ?? 0, ((cloudRow?['streak_freezes'] as num?) ?? 0).toInt());
+
       await Future.wait([
         _sb.from('user_data').upsert({
           'id': uid,
-          'total_xp':            prefs.getInt('total_xp') ?? 0,
-          'streak':              prefs.getInt('streak') ?? 0,
-          'streak_freezes':      prefs.getInt('streak_freezes') ?? 0,
+          'total_xp':            xp,
+          'streak':              streak,
+          'streak_freezes':      freezes,
           'last_study_date':     prefs.getString('last_study_date'),
           'last_freeze_week':    prefs.getString('last_freeze_week'),
           if (prefs.getString('last_xp_date') == todayStr) ...{
@@ -90,9 +105,9 @@ class SyncService {
         }),
         _sb.from('user_stats').upsert({
           'id':               uid,
-          'xp':               prefs.getInt('total_xp') ?? 0,
-          'streak':           prefs.getInt('streak') ?? 0,
-          'freezes':          prefs.getInt('streak_freezes') ?? 0,
+          'xp':               xp,
+          'streak':           streak,
+          'freezes':          freezes,
           'last_study_date':  prefs.getString('last_study_date'),
           'last_freeze_week': prefs.getString('last_freeze_week'),
           'total_days':       studyDays.length,
@@ -108,6 +123,9 @@ class SyncService {
           'xp_updated_at':    ts,
         }),
       ]);
+      await prefs.setInt('total_xp', xp);
+      await prefs.setInt('streak', streak);
+      await prefs.setInt('streak_freezes', freezes);
       await prefs.setString('sync_stats_ts', ts);
     } catch (_) {}
     WidgetService.pushStats();

@@ -403,25 +403,40 @@ class SyncService {
   // another device already synced — without this, pushLists() overwrote the
   // whole row with only-local state.
   static Future<void> _mergeListsFromCloudRow(Map<String, dynamic> row, SharedPreferences prefs) async {
-      // learned_words
+      // learned_words — per-record last-write-wins merge (keyed by
+      // word+collection). Cloud rows may include tombstones (deletedAt), so
+      // an unlearn made on another device correctly overwrites a stale local
+      // copy instead of a naive add-only merge silently resurrecting it.
       final cloudLearned = (row['learned_words'] as List? ?? []).cast<Map<String, dynamic>>();
       if (cloudLearned.isNotEmpty) {
         final localRaw = prefs.getString('learned_words') ?? '[]';
         final localList = (jsonDecode(localRaw) as List).cast<Map<String, dynamic>>();
-        final localKeys = {for (final w in localList) '${w['word']}_${w['collectionName']}'};
+        String keyOf(Map<String, dynamic> w) => '${w['word']}::${w['collectionName']}';
+        int tsOf(Map<String, dynamic> w) {
+          final deletedAt = w['deletedAt'] as num?;
+          if (deletedAt != null) return deletedAt.toInt();
+          try { return DateTime.parse(w['learnedAt'] as String).millisecondsSinceEpoch; } catch (_) { return 0; }
+        }
+        final byKey = <String, Map<String, dynamic>>{ for (final w in localList) keyOf(w): w };
         bool changed = false;
-        for (final w in cloudLearned) {
-          if (!localKeys.contains('${w['word']}_${w['collectionName']}')) {
-            localList.add(w);
+        for (final cw in cloudLearned) {
+          final key = keyOf(cw);
+          final existing = byKey[key];
+          if (existing == null || tsOf(cw) > tsOf(existing)) {
+            byKey[key] = cw;
             changed = true;
           }
         }
         if (changed) {
-          await prefs.setString('learned_words', jsonEncode(localList));
+          await prefs.setString('learned_words', jsonEncode(byKey.values.toList()));
         }
       }
 
-      // srs_words: union by key, take higher reviewStage; skip words already mastered locally
+      // srs_words: union by key; when both sides are live, take the higher
+      // reviewStage (preserves real review progress); when either side is a
+      // tombstone (deletedAt), last-write-wins by timestamp instead, so an
+      // unlearn on another device isn't undone by this add-only-style merge.
+      // Skips words already mastered locally.
       final cloudSRS = (row['srs_words'] as List? ?? []).cast<Map<String, dynamic>>();
       if (cloudSRS.isNotEmpty) {
         final masteredRaw = prefs.getString('mastered_srs_words') ?? '[]';
@@ -434,6 +449,11 @@ class SyncService {
         final localMap = <String, Map<String, dynamic>>{
           for (final w in localList) '${w['word']}_${w['collectionName']}': w,
         };
+        int tsOf(Map<String, dynamic> w) {
+          final deletedAt = w['deletedAt'] as num?;
+          if (deletedAt != null) return deletedAt.toInt();
+          try { return DateTime.parse(w['learnedAt'] as String).millisecondsSinceEpoch; } catch (_) { return 0; }
+        }
         bool changed = false;
         for (final cw in cloudSRS) {
           final key = '${cw['word']}_${cw['collectionName']}';
@@ -442,6 +462,11 @@ class SyncService {
           if (lw == null) {
             localMap[key] = cw;
             changed = true;
+          } else if (cw['deletedAt'] != null || lw['deletedAt'] != null) {
+            if (tsOf(cw) > tsOf(lw)) {
+              localMap[key] = cw;
+              changed = true;
+            }
           } else {
             final cloudStage = (cw['reviewStage'] as num? ?? 0).toInt();
             final localStage = (lw['reviewStage'] as num? ?? 0).toInt();

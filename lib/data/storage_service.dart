@@ -13,6 +13,7 @@ class LearnedWord {
   final String unitTopic;
   final int dayNumber;
   final String learnedAt;
+  final int? deletedAt; // tombstone: set instead of removing, so unlearning syncs across devices
 
   LearnedWord({
     required this.word,
@@ -21,7 +22,18 @@ class LearnedWord {
     required this.unitTopic,
     required this.dayNumber,
     String? learnedAt,
+    this.deletedAt,
   }) : learnedAt = learnedAt ?? DateTime.now().toIso8601String();
+
+  LearnedWord copyWith({int? deletedAt}) => LearnedWord(
+    word: word,
+    translation: translation,
+    collectionName: collectionName,
+    unitTopic: unitTopic,
+    dayNumber: dayNumber,
+    learnedAt: learnedAt,
+    deletedAt: deletedAt ?? this.deletedAt,
+  );
 
   Map<String, dynamic> toJson() => {
     'word': word,
@@ -30,6 +42,7 @@ class LearnedWord {
     'unitTopic': unitTopic,
     'dayNumber': dayNumber,
     'learnedAt': learnedAt,
+    if (deletedAt != null) 'deletedAt': deletedAt,
   };
 
   factory LearnedWord.fromJson(Map<String, dynamic> json) => LearnedWord(
@@ -39,6 +52,7 @@ class LearnedWord {
     unitTopic: json['unitTopic'] ?? '',
     dayNumber: json['dayNumber'] ?? 0,
     learnedAt: json['learnedAt'] as String?,
+    deletedAt: json['deletedAt'] as int?,
   );
 }
 
@@ -57,6 +71,7 @@ class SRSWord {
   final int reviewStage;
   final String nextReviewDate;
   final String learnedAt;
+  final int? deletedAt; // tombstone: set instead of removing, so unlearning syncs across devices
 
   static const List<int> _intervals = [1, 3, 7, 14, 30];
 
@@ -75,6 +90,7 @@ class SRSWord {
     this.reviewStage = 0,
     String? nextReviewDate,
     String? learnedAt,
+    this.deletedAt,
   }) : nextReviewDate = nextReviewDate ?? _nextDateFromNow(1),
        learnedAt = learnedAt ?? _todayStr();
 
@@ -120,6 +136,16 @@ class SRSWord {
     partOfSpeech: partOfSpeech, pronunciation: pronunciation,
     collectionName: collectionName, unitTopic: unitTopic, dayNumber: dayNumber,
     reviewStage: reviewStage, nextReviewDate: nextReviewDate, learnedAt: learnedAt,
+    deletedAt: deletedAt,
+  );
+
+  SRSWord copyWith({int? deletedAt}) => SRSWord(
+    word: word, translation: translation, definition: definition,
+    example1: example1, example2: example2, example3: example3,
+    partOfSpeech: partOfSpeech, pronunciation: pronunciation,
+    collectionName: collectionName, unitTopic: unitTopic, dayNumber: dayNumber,
+    reviewStage: reviewStage, nextReviewDate: nextReviewDate, learnedAt: learnedAt,
+    deletedAt: deletedAt ?? this.deletedAt,
   );
 
   SRSWord dropStage() {
@@ -157,6 +183,7 @@ class SRSWord {
     'reviewStage': reviewStage,
     'nextReviewDate': nextReviewDate,
     'learnedAt': learnedAt,
+    if (deletedAt != null) 'deletedAt': deletedAt,
   };
 
   factory SRSWord.fromJson(Map<String, dynamic> json) => SRSWord(
@@ -174,6 +201,7 @@ class SRSWord {
     reviewStage: json['reviewStage'] ?? 0,
     nextReviewDate: json['nextReviewDate'],
     learnedAt: json['learnedAt'] ?? json['learnedDate'] ?? _todayStr(),
+    deletedAt: json['deletedAt'] as int?,
   );
 
   WordItem toWordItem() => WordItem(
@@ -1094,13 +1122,19 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
 
   // ── Learned Words ──────────────────────────
 
-  static Future<List<LearnedWord>> getLearnedWords() async {
+  // Includes tombstoned (deletedAt != null) entries — internal use only, so
+  // read-modify-write callers don't silently erase tombstones on their next
+  // save. Use getLearnedWords() for anything user-facing.
+  static Future<List<LearnedWord>> _getLearnedWordsRaw() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_learnedKey);
     if (raw == null) return [];
     final list = jsonDecode(raw) as List;
     return list.map((e) => LearnedWord.fromJson(e)).toList();
   }
+
+  static Future<List<LearnedWord>> getLearnedWords() async =>
+      (await _getLearnedWordsRaw()).where((w) => w.deletedAt == null).toList();
 
   static Future<void> saveLearnedWords(
     List<WordItem> words,
@@ -1109,13 +1143,14 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     int dayNumber,
   ) async {
     final prefs = await SharedPreferences.getInstance();
-    final existing = await getLearnedWords();
+    final existing = await _getLearnedWordsRaw();
+    final liveKeys = existing
+        .where((e) => e.deletedAt == null)
+        .map((e) => '${e.word}::${e.collectionName}')
+        .toSet();
     int newCount = 0;
     for (final w in words) {
-      final alreadySaved = existing.any(
-        (e) => e.word == w.word && e.collectionName == collectionName,
-      );
-      if (!alreadySaved) {
+      if (!liveKeys.contains('${w.word}::$collectionName')) {
         existing.add(
           LearnedWord(
             word: w.word,
@@ -1142,13 +1177,19 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
 
   // ── SRS Words ─────────────────────────────
 
-  static Future<List<SRSWord>> getSRSWords() async {
+  // Includes tombstoned (deletedAt != null) entries — internal use only, so
+  // read-modify-write callers don't silently erase tombstones on their next
+  // save. Use getSRSWords() for anything user-facing.
+  static Future<List<SRSWord>> _getSRSWordsRaw() async {
     final prefs = await SharedPreferences.getInstance();
     final srsRaw = prefs.getString(_srsKey);
     if (srsRaw == null) return [];
     final list = jsonDecode(srsRaw) as List;
     return list.map((e) => SRSWord.fromJson(e)).toList();
   }
+
+  static Future<List<SRSWord>> getSRSWords() async =>
+      (await _getSRSWordsRaw()).where((w) => w.deletedAt == null).toList();
 
   // Unlearns any SRS word whose next review (learnedAt + interval, from the
   // review log) is 3+ days in the past. Uses the same basis as getDueWords()
@@ -1179,18 +1220,31 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     if (toUnlearn.isEmpty) return;
 
     final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final unlearnKeys = toUnlearn.map((w) => '${w.collectionName}::${w.word}').toSet();
+
+    // Tombstone (not remove) so the unlearn propagates across devices instead
+    // of being silently undone by the next pull's additive-only merge, which
+    // would otherwise just see the word missing locally and re-add it back
+    // from a cloud copy that doesn't know it was unlearned.
+    final rawSRS = await _getSRSWordsRaw();
+    final updatedSRS = rawSRS.map((w) =>
+      unlearnKeys.contains('${w.collectionName}::${w.word}') ? w.copyWith(deletedAt: now) : w
+    ).toList();
+    await prefs.setString(_srsKey, jsonEncode(updatedSRS.map((w) => w.toJson()).toList()));
+
+    final rawLearned = await _getLearnedWordsRaw();
     final unlearnedWords = toUnlearn.map((w) => w.word).toSet();
+    final updatedLearned = rawLearned.map((w) =>
+      unlearnedWords.contains(w.word) ? w.copyWith(deletedAt: now) : w
+    ).toList();
+    await prefs.setString(_learnedKey, jsonEncode(updatedLearned.map((w) => w.toJson()).toList()));
 
-    // Remove from SRS
-    final remainingSRS = words.where((w) => !toUnlearn.contains(w)).toList();
-    await prefs.setString(_srsKey, jsonEncode(remainingSRS.map((w) => w.toJson()).toList()));
-
-    // Remove from learned words
-    final learned = await getLearnedWords();
-    final remainingLearned = learned.where((w) => !unlearnedWords.contains(w.word)).toList();
-    await prefs.setString(_learnedKey, jsonEncode(remainingLearned.map((w) => w.toJson()).toList()));
-
-    // Remove from review log
+    // Remove from review log — harmless even though this itself isn't
+    // tombstoned: getDueWords()/getSRSWords() only ever look up review_log
+    // entries by iterating the (now correctly-filtered) live SRS words, so a
+    // stale cloud review_log entry for a tombstoned word can never resurface
+    // it on its own.
     final updatedLog = Map<String, List<int>>.from(log);
     for (final w in toUnlearn) { updatedLog.remove('${w.collectionName}::${w.word}'); }
     await prefs.setString(_reviewLogKey, jsonEncode(updatedLog));
@@ -1205,6 +1259,10 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
       _unitProgressKey,
       jsonEncode(allProgress.map((k, v) => MapEntry(k, v.toJson()))),
     );
+
+    // Push immediately so the tombstones (and unit-progress reset) reach the
+    // server right away instead of waiting for some unrelated future write.
+    SyncService.pushLists();
   }
 
   static Future<List<DueSRSWord>> getDueWords() async {
@@ -1258,12 +1316,13 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     int dayNumber,
   ) async {
     final prefs = await SharedPreferences.getInstance();
-    final existing = await getSRSWords();
+    final existing = await _getSRSWordsRaw();
+    final liveKeys = existing
+        .where((e) => e.deletedAt == null)
+        .map((e) => '${e.word}::${e.collectionName}')
+        .toSet();
     for (final w in words) {
-      final alreadyExists = existing.any(
-        (e) => e.word == w.word && e.collectionName == collectionName,
-      );
-      if (!alreadyExists) {
+      if (!liveKeys.contains('${w.word}::$collectionName')) {
         existing.add(
           SRSWord(
             word: w.word,
@@ -1290,9 +1349,9 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
 
   static Future<void> updateSRSWord(SRSWord updated) async {
     final prefs = await SharedPreferences.getInstance();
-    final existing = await getSRSWords();
+    final existing = await _getSRSWordsRaw();
     final idx = existing.indexWhere(
-      (e) =>
+      (e) => e.deletedAt == null &&
           e.word == updated.word && e.collectionName == updated.collectionName,
     );
     if (idx >= 0) {
@@ -1321,9 +1380,9 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     // Mastery: all 5 intervals complete → graduate this specific word out of active SRS
     if (allIntervals.every((i) => completed.contains(i))) {
       final prefs = await SharedPreferences.getInstance();
-      final all = await getSRSWords();
-      final graduated = all.where((w) => '${w.collectionName}::${w.word}' == wordKey).toList();
-      final remaining = all.where((w) => '${w.collectionName}::${w.word}' != wordKey).toList();
+      final all = await _getSRSWordsRaw();
+      final graduated = all.where((w) => w.deletedAt == null && '${w.collectionName}::${w.word}' == wordKey).toList();
+      final remaining = all.where((w) => w.deletedAt != null || '${w.collectionName}::${w.word}' != wordKey).toList();
 
       if (graduated.isNotEmpty) {
         final masteredRaw = prefs.getString(_masteredSRSKey);

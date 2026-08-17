@@ -231,7 +231,7 @@ class SyncService {
           'learned_words':    arr('learned_words'),
           'srs_words':        combinedSrs,
           'starred_words':    starredNames,
-          'hard_words':       days('marked_hard_words').map((w) => {'word': w, 'addedAt': '1970-01-01T00:00:00.000Z'}).toList(),
+          'hard_words':       arr('marked_hard_words'), // includes tombstones (removedAt) so unmarking propagates
           'study_days':       days('study_days'),
           'review_days':      reviewDays,
           'word_goal_days':   wordGoalDays,
@@ -504,27 +504,38 @@ class SyncService {
         if (changed) await prefs.setStringList('starred_words', merged);
       }
 
-      // hard_words: cloud sends HardWordEntry[]; extract active word strings
+      // hard_words: per-word last-write-wins merge, keyed by word. Cloud rows
+      // may include tombstones (removedAt), so unmarking a word on another
+      // device correctly overwrites a stale local copy instead of a naive
+      // union merge silently resurrecting it.
       final cloudHardRaw = row['hard_words'] as List? ?? [];
       if (cloudHardRaw.isNotEmpty) {
-        final cloudActiveWords = cloudHardRaw.map((item) {
-          if (item is String) return item;
-          if (item is Map<String, dynamic>) {
-            final addedAt = item['addedAt'] as String? ?? '';
-            final removedAt = item['removedAt'] as String?;
-            if (removedAt == null || addedAt.compareTo(removedAt) > 0) {
-              return item['word'] as String?;
-            }
+        int tsOf(String? addedAt, String? removedAt) {
+          try {
+            final removed = removedAt != null ? DateTime.parse(removedAt) : null;
+            final added = addedAt != null ? DateTime.parse(addedAt) : DateTime.fromMillisecondsSinceEpoch(0);
+            return (removed != null && removed.isAfter(added) ? removed : added).millisecondsSinceEpoch;
+          } catch (_) { return 0; }
+        }
+        final localRaw = prefs.getString('marked_hard_words') ?? '[]';
+        final localList = (jsonDecode(localRaw) as List).cast<Map<String, dynamic>>();
+        final byWord = <String, Map<String, dynamic>>{ for (final e in localList) e['word'] as String: e };
+        bool changed = false;
+        for (final item in cloudHardRaw) {
+          final cw = item is String
+              ? {'word': item, 'addedAt': DateTime.fromMillisecondsSinceEpoch(0).toIso8601String()}
+              : item as Map<String, dynamic>;
+          final word = cw['word'] as String;
+          final existing = byWord[word];
+          final cloudTs = tsOf(cw['addedAt'] as String?, cw['removedAt'] as String?);
+          final localTs = existing == null ? -1 : tsOf(existing['addedAt'] as String?, existing['removedAt'] as String?);
+          if (existing == null || cloudTs > localTs) {
+            byWord[word] = cw;
+            changed = true;
           }
-          return null;
-        }).whereType<String>().toList();
-        if (cloudActiveWords.isNotEmpty) {
-          final localRaw = prefs.getString('marked_hard_words') ?? '[]';
-          final localHard = (jsonDecode(localRaw) as List).cast<String>().toSet();
-          final merged = {...localHard, ...cloudActiveWords}.toList();
-          if (merged.length > localHard.length) {
-            await prefs.setString('marked_hard_words', jsonEncode(merged));
-          }
+        }
+        if (changed) {
+          await prefs.setString('marked_hard_words', jsonEncode(byWord.values.toList()));
         }
       }
 

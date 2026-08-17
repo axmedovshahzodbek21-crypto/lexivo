@@ -322,6 +322,39 @@ class HardWord {
   );
 }
 
+// The explicit "Too Hard" marked-word list (distinct from HardWord above,
+// which is SRS-derived). addedAt/removedAt (ISO8601) are a tombstone pair —
+// re-marking a word sets a fresh addedAt and clears removedAt; un-marking
+// sets removedAt — so a removal syncs across devices instead of a naive
+// union merge silently resurrecting it. Mirrors web's HardWordEntry exactly.
+class HardWordEntry {
+  final String word;
+  final String addedAt;
+  final String? removedAt;
+
+  const HardWordEntry({required this.word, required this.addedAt, this.removedAt});
+
+  bool get isActive => removedAt == null || addedAt.compareTo(removedAt!) > 0;
+
+  Map<String, dynamic> toJson() => {
+    'word': word,
+    'addedAt': addedAt,
+    if (removedAt != null) 'removedAt': removedAt,
+  };
+
+  factory HardWordEntry.fromJson(dynamic json) {
+    if (json is String) {
+      return HardWordEntry(word: json, addedAt: DateTime.fromMillisecondsSinceEpoch(0).toIso8601String());
+    }
+    final map = json as Map<String, dynamic>;
+    return HardWordEntry(
+      word: map['word'] as String,
+      addedAt: map['addedAt'] as String? ?? DateTime.fromMillisecondsSinceEpoch(0).toIso8601String(),
+      removedAt: map['removedAt'] as String?,
+    );
+  }
+}
+
 // ─────────────────────────────────────────────
 //  STORY UNLOCK
 // ─────────────────────────────────────────────
@@ -1532,30 +1565,47 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
 
   // ── Marked Hard Words (explicit "Too Hard" list) ───────────────────────────
 
-  static Future<void> addMarkedHardWord(String word) async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_markedHardKey);
-    final list = raw != null ? List<String>.from(jsonDecode(raw)) : <String>[];
-    if (!list.contains(word)) {
-      list.add(word);
-      await prefs.setString(_markedHardKey, jsonEncode(list));
-      SyncService.pushLists();
-    }
-  }
-
-  static Future<List<String>> getMarkedHardWords() async {
+  static Future<List<HardWordEntry>> _getMarkedHardEntriesRaw() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_markedHardKey);
     if (raw == null) return [];
-    return List<String>.from(jsonDecode(raw));
+    return (jsonDecode(raw) as List).map((e) => HardWordEntry.fromJson(e)).toList();
+  }
+
+  static Future<void> _saveMarkedHardEntries(List<HardWordEntry> entries) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_markedHardKey, jsonEncode(entries.map((e) => e.toJson()).toList()));
+  }
+
+  static Future<void> addMarkedHardWord(String word) async {
+    final entries = await _getMarkedHardEntriesRaw();
+    final idx = entries.indexWhere((e) => e.word == word);
+    final now = DateTime.now().toUtc().toIso8601String();
+    if (idx == -1) {
+      entries.add(HardWordEntry(word: word, addedAt: now));
+    } else {
+      entries[idx] = HardWordEntry(word: word, addedAt: now); // re-add: clear any removedAt
+    }
+    await _saveMarkedHardEntries(entries);
+    SyncService.pushLists();
+  }
+
+  static Future<List<String>> getMarkedHardWords() async {
+    final entries = await _getMarkedHardEntriesRaw();
+    return entries.where((e) => e.isActive).map((e) => e.word).toList();
   }
 
   static Future<void> removeMarkedHardWord(String word) async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_markedHardKey);
-    final list = raw != null ? List<String>.from(jsonDecode(raw)) : <String>[];
-    list.remove(word);
-    await prefs.setString(_markedHardKey, jsonEncode(list));
+    final entries = await _getMarkedHardEntriesRaw();
+    final idx = entries.indexWhere((e) => e.word == word);
+    final now = DateTime.now().toUtc().toIso8601String();
+    if (idx == -1) {
+      // Word wasn't tracked locally — add a tombstone so the removal propagates cross-device
+      entries.add(HardWordEntry(word: word, addedAt: DateTime.fromMillisecondsSinceEpoch(0).toIso8601String(), removedAt: now));
+    } else {
+      entries[idx] = HardWordEntry(word: word, addedAt: entries[idx].addedAt, removedAt: now);
+    }
+    await _saveMarkedHardEntries(entries);
     SyncService.pushLists();
   }
 

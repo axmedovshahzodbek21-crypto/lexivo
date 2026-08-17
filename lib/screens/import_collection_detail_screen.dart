@@ -45,12 +45,14 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
         activity: await StorageService.getMyActivityPendingNewWords(
           widget.folderName, widget.collectionName, activity, wordList),
     };
-    if (mounted) setState(() {
-      _completedAt = p.completedAt;
-      _progress = p;
-      _pendingNewWords = pending;
-      _pendingByActivity = byActivity;
-    });
+    if (mounted) {
+      setState(() {
+        _completedAt = p.completedAt;
+        _progress = p;
+        _pendingNewWords = pending;
+        _pendingByActivity = byActivity;
+      });
+    }
   }
 
   void _toggleSelectMode() {

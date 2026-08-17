@@ -14,6 +14,8 @@ import 'class_progress_screen.dart';
 class ClassShell extends StatefulWidget {
   final String classId;
   final String className;
+  // Caller's best guess at role, used only to avoid a loading flash for the
+  // common case — never trusted for gating. See _verifyRole().
   final bool isTeacher;
 
   const ClassShell({
@@ -30,33 +32,78 @@ class ClassShell extends StatefulWidget {
 class _ClassShellState extends State<ClassShell> {
   int _tab = 0;
   int _dueCount = 0;
-  late final List<Widget> _screens;
+  List<Widget>? _screens;
+  bool _verifying = true;
+  bool _authorized = false;
+  bool _isTeacher = false;
 
   @override
   void initState() {
     super.initState();
+    _verifyRole();
+  }
+
+  // Re-derives the caller's actual role from Supabase instead of trusting
+  // widget.isTeacher, which can be wrong or forged — e.g. deep links build
+  // ClassShell straight from a URL query parameter
+  // (?isTeacher=true), so any crafted link could otherwise grant full
+  // teacher UI (curriculum editing, dashboard, homework assignment) to a
+  // student or an unauthenticated attacker. RLS is the real backstop on
+  // each mutating call, but the UI itself should never be gated on
+  // unverified client state either.
+  Future<void> _verifyRole() async {
+    final user = currentUser;
+    if (user == null) {
+      if (mounted) setState(() { _verifying = false; _authorized = false; });
+      return;
+    }
+    bool isTeacher = false;
+    bool authorized = false;
+    try {
+      final cls = await supabase.from('classes').select('teacher_id').eq('id', widget.classId).maybeSingle();
+      if (cls != null && cls['teacher_id'] == user.id) {
+        isTeacher = true;
+        authorized = true;
+      } else {
+        final membership = await supabase.from('class_members')
+            .select('class_id').eq('class_id', widget.classId).eq('student_id', user.id).maybeSingle();
+        authorized = membership != null;
+      }
+    } catch (_) {
+      authorized = false;
+    }
+    if (!mounted) return;
+    setState(() {
+      _isTeacher = isTeacher;
+      _authorized = authorized;
+      _verifying = false;
+      if (authorized) _buildScreens();
+    });
+    if (authorized && !isTeacher) _loadDueCount();
+  }
+
+  void _buildScreens() {
     _screens = [
       ClassHomeScreen(
         classId: widget.classId,
         className: widget.className,
-        isTeacher: widget.isTeacher,
-        onGoToDashboard: widget.isTeacher ? () => setState(() => _tab = 4) : null,
-        onGoToHomework: widget.isTeacher ? null : () => setState(() => _tab = 4),
+        isTeacher: _isTeacher,
+        onGoToDashboard: _isTeacher ? () => setState(() => _tab = 4) : null,
+        onGoToHomework: _isTeacher ? null : () => setState(() => _tab = 4),
       ),
-      ClassWordsScreen(classId: widget.classId, className: widget.className, isTeacher: widget.isTeacher, onGoHome: () => setState(() => _tab = 0)),
-      if (!widget.isTeacher)
+      ClassWordsScreen(classId: widget.classId, className: widget.className, isTeacher: _isTeacher, onGoHome: () => setState(() => _tab = 0)),
+      if (!_isTeacher)
         ClassReviewScreen(classId: widget.classId, className: widget.className, embedded: true),
       ClassLeaderboardScreen(classId: widget.classId, className: widget.className, isVisible: true),
-      if (widget.isTeacher)
+      if (_isTeacher)
         ClassCurriculumTab(classId: widget.classId, className: widget.className)
       else
         ClassHomeworkTab(classId: widget.classId, className: widget.className, isTeacher: false),
-      if (widget.isTeacher)
+      if (_isTeacher)
         ClassDashboardScreen(classId: widget.classId, className: widget.className)
       else
         ClassProgressScreen(classId: widget.classId, className: widget.className, onGoHome: () => setState(() => _tab = 0)),
     ];
-    if (!widget.isTeacher) _loadDueCount();
   }
 
   Future<void> _loadDueCount() async {
@@ -69,7 +116,7 @@ class _ClassShellState extends State<ClassShell> {
   List<BottomNavigationBarItem> get _navItems => [
     const BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
     const BottomNavigationBarItem(icon: Icon(Icons.auto_stories_rounded), label: 'Words'),
-    if (!widget.isTeacher)
+    if (!_isTeacher)
       BottomNavigationBarItem(
         icon: Badge(
           isLabelVisible: _dueCount > 0,
@@ -81,10 +128,10 @@ class _ClassShellState extends State<ClassShell> {
       ),
     const BottomNavigationBarItem(icon: Icon(Icons.emoji_events_rounded), label: 'Ranks'),
     BottomNavigationBarItem(
-      icon: Icon(widget.isTeacher ? Icons.menu_book_rounded : Icons.assignment_rounded),
-      label: widget.isTeacher ? 'Curriculum' : 'Homework',
+      icon: Icon(_isTeacher ? Icons.menu_book_rounded : Icons.assignment_rounded),
+      label: _isTeacher ? 'Curriculum' : 'Homework',
     ),
-    if (widget.isTeacher)
+    if (_isTeacher)
       const BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: 'Dashboard')
     else
       const BottomNavigationBarItem(icon: Icon(Icons.bar_chart_rounded), label: 'Progress'),
@@ -127,6 +174,42 @@ class _ClassShellState extends State<ClassShell> {
 
   @override
   Widget build(BuildContext context) {
+    if (_verifying) {
+      return Scaffold(
+        backgroundColor: context.bg,
+        body: Center(child: CircularProgressIndicator(color: context.primary)),
+      );
+    }
+
+    if (!_authorized || _screens == null) {
+      return Scaffold(
+        backgroundColor: context.bg,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_rounded, color: context.primary),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Text('🔒', style: TextStyle(fontSize: 56)),
+              const SizedBox(height: 16),
+              Text("You don't have access to this class",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
+              const SizedBox(height: 8),
+              Text('Ask the teacher for the join code, or check that you joined the right class.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: context.textMuted)),
+            ]),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: context.bg,
       appBar: AppBar(
@@ -145,7 +228,7 @@ class _ClassShellState extends State<ClassShell> {
               overflow: TextOverflow.ellipsis,
             ),
             Text(
-              widget.isTeacher ? '👩‍🏫 My Class' : '🎓 Classroom',
+              _isTeacher ? '👩‍🏫 My Class' : '🎓 Classroom',
               style: TextStyle(color: context.textMuted, fontSize: 11),
             ),
           ],
@@ -156,7 +239,7 @@ class _ClassShellState extends State<ClassShell> {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(color: context.primaryBg, borderRadius: BorderRadius.circular(20)),
             child: Text(
-              widget.isTeacher ? 'Teacher' : 'Student',
+              _isTeacher ? 'Teacher' : 'Student',
               style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: context.primary),
             ),
           ),
@@ -171,13 +254,13 @@ class _ClassShellState extends State<ClassShell> {
           }
           await _confirmExit();
         },
-        child: IndexedStack(index: _tab, children: _screens),
+        child: IndexedStack(index: _tab, children: _screens!),
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _tab,
         onTap: (i) {
           setState(() => _tab = i);
-          if (!widget.isTeacher) _loadDueCount();
+          if (!_isTeacher) _loadDueCount();
         },
         type: BottomNavigationBarType.fixed,
         backgroundColor: context.surface,

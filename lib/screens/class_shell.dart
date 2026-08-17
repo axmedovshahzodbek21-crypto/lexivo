@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
+import '../services/supabase_service.dart';
+import '../services/class_srs_service.dart';
 import 'class_home_screen.dart';
 import 'class_words_screen.dart';
+import 'class_review_screen.dart';
 import 'class_leaderboard_screen.dart';
 import 'class_homework_tab.dart';
 import 'class_curriculum_tab.dart';
@@ -26,6 +29,7 @@ class ClassShell extends StatefulWidget {
 
 class _ClassShellState extends State<ClassShell> {
   int _tab = 0;
+  int _dueCount = 0;
   late final List<Widget> _screens;
 
   @override
@@ -37,9 +41,11 @@ class _ClassShellState extends State<ClassShell> {
         className: widget.className,
         isTeacher: widget.isTeacher,
         onGoToDashboard: widget.isTeacher ? () => setState(() => _tab = 4) : null,
-        onGoToHomework: widget.isTeacher ? null : () => setState(() => _tab = 3),
+        onGoToHomework: widget.isTeacher ? null : () => setState(() => _tab = 4),
       ),
       ClassWordsScreen(classId: widget.classId, className: widget.className, isTeacher: widget.isTeacher, onGoHome: () => setState(() => _tab = 0)),
+      if (!widget.isTeacher)
+        ClassReviewScreen(classId: widget.classId, className: widget.className, embedded: true),
       ClassLeaderboardScreen(classId: widget.classId, className: widget.className, isVisible: true),
       if (widget.isTeacher)
         ClassCurriculumTab(classId: widget.classId, className: widget.className)
@@ -50,11 +56,29 @@ class _ClassShellState extends State<ClassShell> {
       else
         ClassProgressScreen(classId: widget.classId, className: widget.className, onGoHome: () => setState(() => _tab = 0)),
     ];
+    if (!widget.isTeacher) _loadDueCount();
+  }
+
+  Future<void> _loadDueCount() async {
+    final user = currentUser;
+    if (user == null) return;
+    final due = await getClassDueWords(userId: user.id, classId: widget.classId);
+    if (mounted) setState(() => _dueCount = due.length);
   }
 
   List<BottomNavigationBarItem> get _navItems => [
     const BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
     const BottomNavigationBarItem(icon: Icon(Icons.auto_stories_rounded), label: 'Words'),
+    if (!widget.isTeacher)
+      BottomNavigationBarItem(
+        icon: Badge(
+          isLabelVisible: _dueCount > 0,
+          label: Text('$_dueCount'),
+          backgroundColor: Colors.red,
+          child: const Icon(Icons.refresh_rounded),
+        ),
+        label: 'Review',
+      ),
     const BottomNavigationBarItem(icon: Icon(Icons.emoji_events_rounded), label: 'Ranks'),
     BottomNavigationBarItem(
       icon: Icon(widget.isTeacher ? Icons.menu_book_rounded : Icons.assignment_rounded),
@@ -151,7 +175,10 @@ class _ClassShellState extends State<ClassShell> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _tab,
-        onTap: (i) => setState(() => _tab = i),
+        onTap: (i) {
+          setState(() => _tab = i);
+          if (!widget.isTeacher) _loadDueCount();
+        },
         type: BottomNavigationBarType.fixed,
         backgroundColor: context.surface,
         selectedItemColor: context.primary,

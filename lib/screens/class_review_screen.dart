@@ -8,12 +8,14 @@ class ClassReviewScreen extends StatefulWidget {
   final String classId;
   final String className;
   final bool dueOnly; // true = SRS review (advances stage), false = all-words flashcard
+  final bool embedded; // true = rendered as a shell tab (no own Scaffold/AppBar, no pop-on-finish)
 
   const ClassReviewScreen({
     super.key,
     required this.classId,
     required this.className,
     this.dueOnly = true,
+    this.embedded = false,
   });
 
   @override
@@ -115,21 +117,42 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
     setState(() { _flipped = false; _index++; });
   }
 
+  // In embedded (tab) mode there's no route to pop — instead reset and
+  // re-check for due words, since the tab persists across sessions.
+  void _dismiss() {
+    if (!widget.embedded) {
+      Navigator.pop(context);
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _index = 0;
+      _flipped = false;
+      _knew = 0;
+      _didntKnow = 0;
+      _done = false;
+    });
+    _load();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final body = _buildBody(context);
+    if (widget.embedded) return body;
+    return Scaffold(
+      backgroundColor: context.bg,
+      appBar: _appBar(),
+      body: body,
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
     if (_loading) {
-      return Scaffold(
-        backgroundColor: context.bg,
-        appBar: _appBar(),
-        body: Center(child: CircularProgressIndicator(color: context.primary)),
-      );
+      return Center(child: CircularProgressIndicator(color: context.primary));
     }
 
     if (_cards.isEmpty) {
-      return Scaffold(
-        backgroundColor: context.bg,
-        appBar: _appBar(),
-        body: Center(child: Padding(
+      return Center(child: Padding(
           padding: const EdgeInsets.all(32),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             const Text('🎉', style: TextStyle(fontSize: 56)),
@@ -139,26 +162,22 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
             Text('No words due for review right now.', style: TextStyle(fontSize: 14, color: context.textMuted), textAlign: TextAlign.center),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: _dismiss,
               style: ElevatedButton.styleFrom(
                 backgroundColor: context.primary, foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
               ),
-              child: const Text('Back', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(widget.embedded ? 'Refresh' : 'Back', style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
           ]),
-        )),
-      );
+        ));
     }
 
     if (_done) {
       final total = _knew + _didntKnow;
       final pct = total == 0 ? 0 : (_knew / total * 100).round();
-      return Scaffold(
-        backgroundColor: context.bg,
-        appBar: _appBar(),
-        body: Center(child: Padding(
+      return Center(child: Padding(
           padding: const EdgeInsets.all(32),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Text(pct >= 80 ? '🏆' : pct >= 50 ? '⭐' : '💪', style: const TextStyle(fontSize: 56)),
@@ -174,7 +193,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
             ]),
             const SizedBox(height: 28),
             SizedBox(width: double.infinity, child: ElevatedButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: _dismiss,
               style: ElevatedButton.styleFrom(
                 backgroundColor: context.primary, foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -183,15 +202,11 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
               child: const Text('Finish', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             )),
           ]),
-        )),
-      );
+        ));
     }
 
     final card = _cards[_index];
-    return Scaffold(
-      backgroundColor: context.bg,
-      appBar: _appBar(),
-      body: Padding(
+    return Padding(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
         child: Column(children: [
           // Progress
@@ -274,8 +289,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
             )),
         ]),
-      ),
-    );
+      );
   }
 
   AppBar _appBar() => AppBar(

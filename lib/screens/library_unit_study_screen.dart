@@ -253,7 +253,10 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
       );
     }
 
-    final allDone = widget.modes.isNotEmpty && widget.modes.every(_completedModes.contains);
+    // An empty modes list has nothing left to complete, so treat it as done
+    // rather than falling through to _buildContinueScreen(next!, ...), which
+    // force-unwraps _nextMode — null when there's no mode to advance to.
+    final allDone = widget.modes.isEmpty || widget.modes.every(_completedModes.contains);
     final next = _nextMode;
     final skip = _skipMode;
 
@@ -287,16 +290,20 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('🎉', style: TextStyle(fontSize: 64)),
+          Text(widget.modes.isEmpty ? '📭' : '🎉', style: const TextStyle(fontSize: 64)),
           const SizedBox(height: 16),
-          Text('Unit Complete!',
+          Text(widget.modes.isEmpty ? 'No study modes assigned' : 'Unit Complete!',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: context.appText)),
           const SizedBox(height: 8),
-          Text('You finished all ${widget.modes.length} modes for this unit.',
+          Text(
+            widget.modes.isEmpty
+                ? 'This unit has no study modes to complete yet.'
+                : 'You finished all ${widget.modes.length} modes for this unit.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, color: context.textMuted)),
           const SizedBox(height: 32),
           // Mode summary chips
+          if (widget.modes.isNotEmpty)
           Wrap(
             spacing: 8, runSpacing: 8,
             alignment: WrapAlignment.center,

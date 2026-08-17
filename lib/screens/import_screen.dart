@@ -233,6 +233,28 @@ class _ImportScreenState extends State<ImportScreen> {
           ),
         ],
       ),
+      // Pinned to the bottom of the screen so it's reachable without
+      // scrolling past the preview list, however long it gets.
+      bottomNavigationBar: _parsed.isEmpty ? null : Padding(
+        padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 16),
+        child: ElevatedButton(
+          onPressed: _adding ? null : _addWords,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: context.primary,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+          child: _adding
+            ? const SizedBox(width: 20, height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            : Text(
+                'Add ${_parsed.length} ${_parsed.length == 1 ? 'word' : 'words'} to '
+                '"${_collectionCtrl.text.trim().isEmpty ? 'My Words' : _collectionCtrl.text.trim()}"',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+        ),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -412,30 +434,8 @@ class _ImportScreenState extends State<ImportScreen> {
                   if (_parsed.isEmpty)
                     Text('No words found — make sure the format matches the prompt',
                       style: TextStyle(color: context.textMuted, fontSize: 13))
-                  else ...[
+                  else
                     ..._parsed.map((w) => _WordPreviewCard(word: w)),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _adding ? null : _addWords,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: context.primary,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        child: _adding
-                          ? const SizedBox(width: 20, height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : Text(
-                              'Add ${_parsed.length} ${_parsed.length == 1 ? 'word' : 'words'} to '
-                              '"${_collectionCtrl.text.trim().isEmpty ? 'My Words' : _collectionCtrl.text.trim()}"',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                            ),
-                      ),
-                    ),
-                  ],
                 ],
               )),
             ],

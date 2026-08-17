@@ -5,7 +5,8 @@
       "Bash(npx tsc *)",
       "Bash(flutter build *)",
       "Bash(git remote *)",
-      "Read(//c/Users/User/lexivo-web/lib/**)"
+      "Read(//c/Users/User/lexivo-web/lib/**)",
+      "Read(//c/Users/User/lexivo-web/**)"
     ],
     "additionalDirectories": [
       "C:\\Users\\User\\lexivo-web\\public",

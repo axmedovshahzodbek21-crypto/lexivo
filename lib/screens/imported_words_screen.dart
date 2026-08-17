@@ -121,6 +121,32 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
   }
 
   void _startCreating() => setState(() { _creating = true; _folderCtrl.clear(); });
+
+  Future<void> _resetProgress() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Reset My Words progress?', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+        content: Text(
+          'This clears the Learn/Flashcards/Quiz/Match checkmarks and completion badges on every folder and unit, '
+          'so you can study them again from scratch. Your words and folders are not deleted.',
+          style: TextStyle(color: context.textMuted),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel', style: TextStyle(color: context.textMuted))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Reset', style: TextStyle(color: context.dangerColor))),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      await StorageService.resetMyWordsProgress();
+      _load();
+    }
+  }
   void _cancelCreating() => setState(() { _creating = false; _folderCtrl.clear(); });
 
   Future<void> _createFolder() async {
@@ -167,6 +193,12 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
         automaticallyImplyLeading: false,
         title: Text('My Words', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold, fontSize: 20)),
         actions: [
+          if (_folders.isNotEmpty)
+            IconButton(
+              icon: Icon(Icons.restart_alt, color: context.textMuted, size: 24),
+              tooltip: 'Reset My Words progress',
+              onPressed: _resetProgress,
+            ),
           IconButton(
             icon: Icon(Icons.add, color: context.primary, size: 26),
             onPressed: _startCreating,

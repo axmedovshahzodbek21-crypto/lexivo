@@ -1040,6 +1040,27 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     return currentWords.where((w) => pending.contains(w)).toList();
   }
 
+  // Clears all My Words unit progress (per-activity done-flags, word
+  // snapshots, completion badges) and their XP-awarded markers, for every
+  // folder/unit — but leaves the imported words/folders themselves
+  // untouched. Distinct from resetProgress-style flows that reset curated-
+  // collection progress; this is scoped to My Words only.
+  //
+  // My Words sessions always use dayNumber 0 as a sentinel (see
+  // ImportCollectionDetailScreen._wordDay), and curated collections never
+  // use day 0, so "_0"-suffixed XP-awarded entries are unambiguously
+  // My Words ones.
+  static Future<void> resetMyWordsProgress() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_myUnitProgressKey);
+    for (final key in const ['flash_xp_units', 'quiz_xp_units', 'match_xp_units']) {
+      final raw = prefs.getString(key);
+      if (raw == null) continue;
+      final filtered = List<String>.from(jsonDecode(raw)).where((k) => !k.endsWith('_0')).toList();
+      await prefs.setString(key, jsonEncode(filtered));
+    }
+  }
+
   // ── Daily Word Limit ───────────────────────
 
   static Future<int> getTodayLearnedCount() async {

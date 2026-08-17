@@ -32,6 +32,10 @@ class LearningScreen extends StatefulWidget {
   final String? classId;
   final VoidCallback? onHomeworkCompleted;
   final Future<bool> Function()? onSessionComplete;
+  // Forwarded into the finish dialog's "Start Flashcards"/"Take Quiz" buttons so
+  // chaining onward from Learn still marks My Words progress for that activity.
+  final Future<bool> Function()? onFlashcardsComplete;
+  final Future<bool> Function()? onQuizComplete;
 
   const LearningScreen({
     super.key,
@@ -45,6 +49,8 @@ class LearningScreen extends StatefulWidget {
     this.classId,
     this.onHomeworkCompleted,
     this.onSessionComplete,
+    this.onFlashcardsComplete,
+    this.onQuizComplete,
   });
 
   @override
@@ -57,6 +63,7 @@ class _LearningScreenState extends State<LearningScreen> {
   final ScrollController _scrollController = ScrollController();
   late int _currentIndex;
   bool _sessionComplete = false;
+  int _sessionXP = 0;
 
   final Set<int> _learnedIndices = {};
   final Set<int> _skippedIndices = {};
@@ -342,7 +349,9 @@ class _LearningScreenState extends State<LearningScreen> {
       );
       if (!widget.noXP && isNew) {
         final learned = await StorageService.getLearnedWords();
-        await StorageService.addXP(StorageService.learnXP(learned.length), reason: 'Learn', source: 'Unit ${widget.wordDay.dayNumber} · ${widget.collectionName}');
+        final xp = StorageService.learnXP(learned.length);
+        await StorageService.addXP(xp, reason: 'Learn', source: 'Unit ${widget.wordDay.dayNumber} · ${widget.collectionName}');
+        _sessionXP += xp;
       }
     }
     _next();
@@ -562,6 +571,25 @@ class _LearningScreenState extends State<LearningScreen> {
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 16, color: Colors.grey),
             ),
+            if (_sessionXP > 0) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('⚡', style: TextStyle(fontSize: 16)),
+                    const SizedBox(width: 6),
+                    Text('+${StorageService.displayXP(_sessionXP)} XP',
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFF59E0B))),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
         actionsAlignment: MainAxisAlignment.center,
@@ -599,6 +627,8 @@ class _LearningScreenState extends State<LearningScreen> {
                   wordDay: widget.wordDay,
                   userProfile: widget.userProfile,
                   collectionName: widget.collectionName,
+                  onSessionComplete: widget.onFlashcardsComplete,
+                  onQuizComplete: widget.onQuizComplete,
                 ),
               ));
             },
@@ -617,6 +647,7 @@ class _LearningScreenState extends State<LearningScreen> {
                   wordDay: widget.wordDay,
                   userProfile: widget.userProfile,
                   collectionName: widget.collectionName,
+                  onSessionComplete: widget.onQuizComplete,
                 ),
               ));
             },

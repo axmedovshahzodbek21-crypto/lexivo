@@ -6,6 +6,7 @@ import 'dart:math';
 import '../data/word_data.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
+import 'matching_screen.dart';
 // Removed unused import: '../data/storage_service.dart'
 
 enum QuizType { wordToTranslation, translationToWord, definitionToWord }
@@ -16,6 +17,9 @@ class QuizSettingsScreen extends StatefulWidget {
   final String collectionName;
   final bool noXP;
   final Future<bool> Function()? onSessionComplete;
+  // Forwarded into the finish screen's "Play Match" button so chaining onward
+  // from Quiz still marks My Words progress for the Match activity.
+  final Future<bool> Function()? onMatchComplete;
 
   const QuizSettingsScreen({
     super.key,
@@ -24,6 +28,7 @@ class QuizSettingsScreen extends StatefulWidget {
     required this.collectionName,
     this.noXP = false,
     this.onSessionComplete,
+    this.onMatchComplete,
   });
 
   @override
@@ -142,6 +147,7 @@ class _QuizSettingsScreenState extends State<QuizSettingsScreen> {
                         questionCount: widget.wordDay.words.length,
                         noXP: widget.noXP,
                         onSessionComplete: widget.onSessionComplete,
+                        onMatchComplete: widget.onMatchComplete,
                       ),
                     ),
                   );
@@ -235,6 +241,7 @@ class QuizSessionScreen extends StatefulWidget {
   final void Function(String word)? onWrongWord;
   final VoidCallback? onHomeworkCompleted;
   final Future<bool> Function()? onSessionComplete;
+  final Future<bool> Function()? onMatchComplete;
 
   const QuizSessionScreen({
     super.key,
@@ -247,6 +254,7 @@ class QuizSessionScreen extends StatefulWidget {
     this.onWrongWord,
     this.onHomeworkCompleted,
     this.onSessionComplete,
+    this.onMatchComplete,
   });
 
   @override
@@ -391,6 +399,7 @@ class _QuizSessionScreenState extends State<QuizSessionScreen>
           quizType: widget.quizType,
           noXP: widget.noXP,
           myUnitCompleted: myUnitCompleted,
+          onMatchComplete: widget.onMatchComplete,
         ),
       ),
     );
@@ -601,6 +610,9 @@ class QuizFinishScreen extends StatefulWidget {
   final QuizType quizType;
   final bool noXP;
   final bool myUnitCompleted;
+  // Forwarded into the "Play Match" button so chaining onward from Quiz
+  // still marks My Words progress for the Match activity.
+  final Future<bool> Function()? onMatchComplete;
 
   const QuizFinishScreen({
     super.key,
@@ -613,6 +625,7 @@ class QuizFinishScreen extends StatefulWidget {
     required this.quizType,
     this.noXP = false,
     this.myUnitCompleted = false,
+    this.onMatchComplete,
   });
 
   @override
@@ -621,6 +634,7 @@ class QuizFinishScreen extends StatefulWidget {
 
 class _QuizFinishScreenState extends State<QuizFinishScreen> {
   late ConfettiController _confettiController;
+  int _xpEarned = 0;
 
   @override
   void initState() {
@@ -652,11 +666,13 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
       widget.collectionName, widget.wordDay.dayNumber);
     if (!alreadyAwarded) {
       final wordCount = widget.wordDay.words.length;
+      final xp = wordCount * 5;
       await StorageService.addXP(
-        wordCount * 5,
+        xp,
         reason: 'Quiz',
         source: 'Unit ${widget.wordDay.dayNumber} · ${widget.collectionName}',
       );
+      if (mounted) setState(() => _xpEarned = xp);
       await StorageService.markQuizXPAwarded(
         widget.collectionName, widget.wordDay.dayNumber);
     }
@@ -766,7 +782,59 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
                   ],
                 ),
               ),
+              if (_xpEarned > 0) ...[
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('⚡', style: TextStyle(fontSize: 16)),
+                      const SizedBox(width: 6),
+                      Text('+${StorageService.displayXP(_xpEarned)} XP',
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFF59E0B))),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 28),
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MatchingScreen(
+                          wordDay: widget.wordDay,
+                          collectionName: widget.collectionName,
+                          noXP: widget.noXP,
+                          onSessionComplete: widget.onMatchComplete,
+                        ),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text(
+                    '🔗 Play Match',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
 
               if (widget.wrongWords.isNotEmpty) ...[
                 Container(

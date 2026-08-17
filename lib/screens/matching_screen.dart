@@ -83,6 +83,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
   // Phase
   String _phase = 'playing';
   bool _myUnitCompleted = false;
+  int _sessionXP = 0;
 
   Timer? _wrongTimer;
   Timer? _elapsedTimer;
@@ -168,12 +169,14 @@ class _MatchingScreenState extends State<MatchingScreen> {
           if (!widget.noXP) {
             StorageService.hasMatchXPAwarded(widget.collectionName, widget.wordDay.dayNumber).then((awarded) {
               if (!awarded) {
+                final xp = widget.wordDay.words.length * 4;
                 StorageService.addXP(
-                  widget.wordDay.words.length * 4,
+                  xp,
                   reason: 'Match',
                   source: 'Unit ${widget.wordDay.dayNumber} · ${widget.collectionName}',
                 );
                 StorageService.markMatchXPAwarded(widget.collectionName, widget.wordDay.dayNumber);
+                if (mounted) setState(() => _sessionXP = xp);
               }
             });
           }
@@ -329,6 +332,26 @@ class _MatchingScreenState extends State<MatchingScreen> {
                 ],
               ),
             ),
+            if (_sessionXP > 0) ...[
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('⚡', style: TextStyle(fontSize: 16)),
+                    const SizedBox(width: 6),
+                    Text('+${StorageService.displayXP(_sessionXP)} XP',
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFF59E0B))),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 20),
             Row(
               children: [

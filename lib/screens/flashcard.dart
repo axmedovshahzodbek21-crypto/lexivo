@@ -24,6 +24,11 @@ class FlashcardSettingsScreen extends StatefulWidget {
   final bool noXP;
   final VoidCallback? onHomeworkCompleted;
   final Future<bool> Function()? onSessionComplete;
+  // Forwarded into the finish screen's "Start Quiz" button so chaining onward
+  // from Flashcards still marks My Words progress for the Quiz activity.
+  final Future<bool> Function()? onQuizComplete;
+  // Forwarded two levels down, into Quiz's own "Play Match" button.
+  final Future<bool> Function()? onMatchComplete;
 
   const FlashcardSettingsScreen({
     super.key,
@@ -33,6 +38,8 @@ class FlashcardSettingsScreen extends StatefulWidget {
     this.noXP = false,
     this.onHomeworkCompleted,
     this.onSessionComplete,
+    this.onQuizComplete,
+    this.onMatchComplete,
   });
 
   @override
@@ -136,6 +143,8 @@ class _FlashcardSettingsScreenState extends State<FlashcardSettingsScreen> {
                 noXP: widget.noXP,
                 onHomeworkCompleted: widget.onHomeworkCompleted,
                 onSessionComplete: widget.onSessionComplete,
+                onQuizComplete: widget.onQuizComplete,
+                onMatchComplete: widget.onMatchComplete,
               ),
             ),
           ),
@@ -372,6 +381,8 @@ class FlashcardSessionScreen extends StatefulWidget {
   final bool noXP;
   final VoidCallback? onHomeworkCompleted;
   final Future<bool> Function()? onSessionComplete;
+  final Future<bool> Function()? onQuizComplete;
+  final Future<bool> Function()? onMatchComplete;
 
   const FlashcardSessionScreen({
     super.key,
@@ -385,6 +396,8 @@ class FlashcardSessionScreen extends StatefulWidget {
     this.noXP = false,
     this.onHomeworkCompleted,
     this.onSessionComplete,
+    this.onQuizComplete,
+    this.onMatchComplete,
   });
 
   @override
@@ -530,16 +543,17 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
     _starred.removeAt(_currentIndex);
     if (_sessionWords.isEmpty) {
       setState(() => _sessionFinished = true);
-      await _saveProgress();
+      final xpEarned = await _saveProgress();
       // FIX 5: Removed unnecessary addPostFrameCallback, call directly
-      _showFinishScreen();
+      _showFinishScreen(xpEarned);
       return;
     }
     if (_currentIndex >= _sessionWords.length) _currentIndex = 0;
     setState(() => _isFlipped = false);
   }
 
-  Future<void> _saveProgress() async {
+  Future<int> _saveProgress() async {
+    int xpEarned = 0;
     if (_easyWords.isNotEmpty) {
       await StorageService.removeHardWords(_easyWords, widget.collectionName);
     }
@@ -560,8 +574,9 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
           widget.collectionName, widget.wordDay.dayNumber);
         if (!alreadyAwarded) {
           final wordCount = widget.wordDay.words.length;
+          xpEarned = (wordCount * 3).round();
           await StorageService.addXP(
-            (wordCount * 3).round(),
+            xpEarned,
             reason: 'Flashcard',
             source: 'Unit ${widget.wordDay.dayNumber} · ${widget.collectionName}',
           );
@@ -584,6 +599,7 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
         _hardWords.map((w) => w.word).toList(),
       );
     }
+    return xpEarned;
   }
 
   Future<void> _saveExitProgress() async {
@@ -602,7 +618,7 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
   }
 
 
-  Future<void> _showFinishScreen() async {
+  Future<void> _showFinishScreen(int xpEarned) async {
     if (!mounted) return;
     widget.onHomeworkCompleted?.call();
     final myUnitCompleted = await widget.onSessionComplete?.call() ?? false;
@@ -620,6 +636,9 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
           cardMode: widget.cardMode,
           shuffle: widget.shuffle,
           myUnitCompleted: myUnitCompleted,
+          xpEarned: xpEarned,
+          onQuizComplete: widget.onQuizComplete,
+          onMatchComplete: widget.onMatchComplete,
         ),
       ),
     );
@@ -1260,6 +1279,9 @@ class FlashcardFinishScreen extends StatelessWidget {
   final CardMode cardMode;
   final bool shuffle;
   final bool myUnitCompleted;
+  final int xpEarned;
+  final Future<bool> Function()? onQuizComplete;
+  final Future<bool> Function()? onMatchComplete;
 
   const FlashcardFinishScreen({
     super.key,
@@ -1272,6 +1294,9 @@ class FlashcardFinishScreen extends StatelessWidget {
     required this.cardMode,
     required this.shuffle,
     this.myUnitCompleted = false,
+    this.xpEarned = 0,
+    this.onQuizComplete,
+    this.onMatchComplete,
   });
 
   @override
@@ -1395,6 +1420,26 @@ class FlashcardFinishScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              if (xpEarned > 0) ...[
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('⚡', style: TextStyle(fontSize: 16)),
+                      const SizedBox(width: 6),
+                      Text('+${StorageService.displayXP(xpEarned)} XP',
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFF59E0B))),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 28),
               if (hardWords.isNotEmpty) ...[
                 Container(
@@ -1475,6 +1520,8 @@ class FlashcardFinishScreen extends StatelessWidget {
                           collectionName: collectionName,
                           quizType: QuizType.wordToTranslation,
                           questionCount: originalWordDay.words.length.clamp(1, 20),
+                          onSessionComplete: onQuizComplete,
+                          onMatchComplete: onMatchComplete,
                         ),
                       ),
                     );

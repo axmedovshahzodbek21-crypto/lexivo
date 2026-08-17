@@ -24,6 +24,7 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
   bool _selectMode = false;
   final Set<String> _selected = {};
   String? _completedAt;
+  MyUnitProgress _progress = const MyUnitProgress();
   List<String> _pendingNewWords = [];
 
   @override
@@ -36,7 +37,7 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
     final p = await StorageService.getMyUnitProgress(widget.folderName, widget.collectionName);
     final pending = await StorageService.getMyUnitPendingNewWords(
       widget.folderName, widget.collectionName, words.map((w) => w.word).toList());
-    if (mounted) setState(() { _completedAt = p.completedAt; _pendingNewWords = pending; });
+    if (mounted) setState(() { _completedAt = p.completedAt; _progress = p; _pendingNewWords = pending; });
   }
 
   void _toggleSelectMode() {
@@ -216,13 +217,6 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
             if (!_loading)
               Text('${_words.length} ${_words.length == 1 ? 'word' : 'words'}',
                 style: TextStyle(color: context.textMuted, fontSize: 12)),
-            if (!_loading && _completedAt != null)
-              Text(
-                _pendingNewWords.isEmpty
-                    ? '✅ Completed'
-                    : '✅ Completed · ${_pendingNewWords.length} new word${_pendingNewWords.length == 1 ? '' : 's'} to learn',
-                style: TextStyle(color: context.successColor, fontWeight: FontWeight.w600, fontSize: 11),
-              ),
           ],
         ),
         actions: [
@@ -330,6 +324,34 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
       padding: EdgeInsets.fromLTRB(16, 16, 16, _selectMode ? 80 : 16),
       children: [
 
+        // ── Completed banner ────────────────────────────────────────────────
+        if (!_selectMode && _completedAt != null)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: context.successBg,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: context.successColor, width: 1.5),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('🏆 ', style: TextStyle(fontSize: 18)),
+                Flexible(
+                  child: Text(
+                    _pendingNewWords.isEmpty
+                        ? 'Completed'
+                        : 'Completed · ${_pendingNewWords.length} new word${_pendingNewWords.length == 1 ? '' : 's'} to learn',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontWeight: FontWeight.bold, color: context.successColor),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
         // ── Study new words only (shown when unit was completed and grew) ──
         if (!_selectMode && _pendingNewWords.isNotEmpty) ...[
           Padding(
@@ -413,42 +435,51 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
             _StudyButton(
               icon: '📖', label: 'Learn',
               color: const Color(0xFF6C63FF),
+              done: _progress.learnDone,
               onTap: () => Navigator.push(context, MaterialPageRoute(
                 builder: (_) => LearningScreen(
                   wordDay: _wordDay,
                   userProfile: 'worker',
                   collectionName: widget.collectionName,
                   onSessionComplete: _onLearnDone,
+                  onFlashcardsComplete: _onFlashcardDone,
+                  onQuizComplete: _onQuizDone,
                 ),
               )),
             ),
             _StudyButton(
               icon: '🃏', label: 'Flashcards',
               color: const Color(0xFFFF6B35),
+              done: _progress.flashcardDone,
               onTap: () => Navigator.push(context, MaterialPageRoute(
                 builder: (_) => FlashcardSettingsScreen(
                   wordDay: _wordDay,
                   userProfile: 'worker',
                   collectionName: widget.collectionName,
                   onSessionComplete: _onFlashcardDone,
+                  onQuizComplete: _onQuizDone,
+                  onMatchComplete: _onMatchDone,
                 ),
               )),
             ),
             _StudyButton(
               icon: '❓', label: 'Quiz',
               color: const Color(0xFFF59E0B),
+              done: _progress.quizDone,
               onTap: () => Navigator.push(context, MaterialPageRoute(
                 builder: (_) => QuizSettingsScreen(
                   wordDay: _wordDay,
                   userProfile: 'worker',
                   collectionName: widget.collectionName,
                   onSessionComplete: _onQuizDone,
+                  onMatchComplete: _onMatchDone,
                 ),
               )),
             ),
             _StudyButton(
               icon: '🔗', label: 'Match',
               color: const Color(0xFF10B981),
+              done: _progress.matchDone,
               onTap: () => Navigator.push(context, MaterialPageRoute(
                 builder: (_) => MatchingScreen(
                   wordDay: _wordDay,
@@ -506,8 +537,9 @@ class _StudyButton extends StatelessWidget {
   final String label;
   final Color color;
   final VoidCallback onTap;
+  final bool done;
 
-  const _StudyButton({required this.icon, required this.label, required this.color, required this.onTap});
+  const _StudyButton({required this.icon, required this.label, required this.color, required this.onTap, this.done = false});
 
   @override
   Widget build(BuildContext context) {
@@ -519,12 +551,21 @@ class _StudyButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
           children: [
-            Text(icon, style: const TextStyle(fontSize: 22)),
-            const SizedBox(height: 4),
-            Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12)),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(icon, style: const TextStyle(fontSize: 22)),
+                const SizedBox(height: 4),
+                Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12)),
+              ],
+            ),
+            if (done)
+              const Positioned(
+                top: 6, right: 6,
+                child: Text('✅', style: TextStyle(fontSize: 14)),
+              ),
           ],
         ),
       ),

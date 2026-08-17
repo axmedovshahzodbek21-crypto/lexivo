@@ -438,8 +438,43 @@ class _QuizSessionScreenState extends State<QuizSessionScreen>
     return null;
   }
 
+  // ── Not enough ────────────────────────────────────────────────────────────
+
+  Widget _buildNotEnough(BuildContext context) {
+    return Scaffold(
+      backgroundColor: context.bg,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.close, color: context.primary),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('📭', style: TextStyle(fontSize: 56)),
+              const SizedBox(height: 16),
+              Text('Not enough words',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: context.appText)),
+              const SizedBox(height: 8),
+              Text('Need at least 2 words to play.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: context.textMuted)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_questions.length < 2) return _buildNotEnough(context);
     final progress = (_currentIndex + 1) / _questions.length;
 
     return Scaffold(

@@ -10,6 +10,7 @@ import 'class_progress_screen.dart';
 import 'class_review_screen.dart';
 import 'quiz_screen.dart';
 import 'matching_screen.dart';
+import 'pomodoro_setup_screen.dart';
 
 List<Color> _classGradColors(String id) {
   const grads = <List<Color>>[
@@ -385,6 +386,24 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
 
   void _studyWords() {
     if (_words.isEmpty) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => PomodoroSetupScreen(
+        onSkip: () {
+          Navigator.pop(context);
+          _launchStudy();
+        },
+        onStart: () {
+          Navigator.pop(context);
+          _launchStudy();
+        },
+      ),
+    );
+  }
+
+  void _launchStudy() {
     Navigator.push(context, MaterialPageRoute(
       builder: (_) => LearningScreen(
         wordDay: _buildWordDay(),

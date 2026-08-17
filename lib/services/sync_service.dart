@@ -58,6 +58,11 @@ class SyncService {
         if (raw == null) return [];
         try { return (jsonDecode(raw) as List).cast<String>(); } catch (_) { return []; }
       }
+      List<dynamic> arr(String key) {
+        final raw = prefs.getString(key);
+        if (raw == null) return [];
+        try { return jsonDecode(raw) as List; } catch (_) { return []; }
+      }
       final studyDays = daysList('study_days');
       await Future.wait([
         _sb.from('user_data').upsert({
@@ -75,6 +80,12 @@ class SyncService {
             'daily_words_learned': prefs.getInt('daily_words_learned') ?? 0,
             'daily_words_date':    prefs.getString('daily_words_date'),
           },
+          // xp_history was previously only pushed by pushLists(), which fires
+          // on a decoupled trigger (word imports, list changes) — so earning
+          // XP updated the total immediately but the per-entry log could sit
+          // unsynced indefinitely. addXP() calls pushStats(), so include it
+          // here too.
+          'xp_history':          arr('xp_history'),
           'stats_updated_at':    ts,
         }),
         _sb.from('user_stats').upsert({

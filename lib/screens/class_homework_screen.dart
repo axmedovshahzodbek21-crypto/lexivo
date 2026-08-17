@@ -85,9 +85,11 @@ class _ClassHomeworkScreenState extends State<ClassHomeworkScreen> {
       final wordId = _word.id;
       if (_isLearned) {
         await supabase.from('class_word_progress').delete().eq('word_id', wordId).eq('student_id', user.id);
+        if (!mounted) return;
         setState(() => _learnedIds = _learnedIds.where((id) => id != wordId).toSet());
       } else {
         await supabase.from('class_word_progress').upsert({'word_id': wordId, 'student_id': user.id});
+        if (!mounted) return;
         setState(() => _learnedIds = {..._learnedIds, wordId});
       }
     } catch (_) {}

@@ -1,6 +1,9 @@
+import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
 import '../data/reading_data.dart';
+import '../data/storage_service.dart';
 import 'reading_passage_screen.dart';
 
 const _kTopicColors = [
@@ -16,8 +19,89 @@ const _kTopicColors = [
 
 List<Color> _cardColors(int index) => _kTopicColors[index % _kTopicColors.length];
 
-class ReadingScreen extends StatelessWidget {
+const _kSurpriseTicks = 9;
+
+class ReadingScreen extends StatefulWidget {
   const ReadingScreen({super.key});
+
+  @override
+  State<ReadingScreen> createState() => _ReadingScreenState();
+}
+
+class _ReadingScreenState extends State<ReadingScreen> {
+  final _random = Random();
+  Set<int> _visited = {};
+  int? _lastSurprisePassageId;
+  bool _shuffling = false;
+  ReadingPassage? _shown;
+
+  @override
+  void initState() {
+    super.initState();
+    StorageService.getVisitedPassageIds().then((ids) {
+      if (mounted) setState(() => _visited = ids);
+    });
+  }
+
+  ReadingPassage _pickRandom(List<ReadingPassage> pool, [int? avoidId]) {
+    if (pool.length <= 1) return pool[0];
+    ReadingPassage picked;
+    do {
+      picked = pool[_random.nextInt(pool.length)];
+    } while (picked.id == avoidId);
+    return picked;
+  }
+
+  Future<void> _openPassage(ReadingPassage passage) async {
+    setState(() => _visited = {..._visited, passage.id});
+    await StorageService.markPassageVisited(passage.id);
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => ReadingPassageScreen(passage: passage)),
+    );
+  }
+
+  void _surpriseMe() {
+    if (_shuffling || readingPassages.isEmpty) return;
+    final unvisited = readingPassages.where((p) => !_visited.contains(p.id)).toList();
+    final pool = unvisited.isNotEmpty ? unvisited : readingPassages;
+
+    final finalPassage = _pickRandom(pool, _lastSurprisePassageId);
+    _lastSurprisePassageId = finalPassage.id;
+
+    setState(() {
+      _shuffling = true;
+      _shown = _pickRandom(pool);
+    });
+
+    var tick = 0;
+    void runTick() {
+      tick += 1;
+      final isLast = tick >= _kSurpriseTicks;
+      final progress = tick / _kSurpriseTicks;
+      final shown = isLast ? finalPassage : _pickRandom(pool);
+      if (!mounted) return;
+      setState(() => _shown = shown);
+
+      if (isLast) {
+        Timer(const Duration(milliseconds: 260), () {
+          if (!mounted) return;
+          setState(() {
+            _shuffling = false;
+            _shown = null;
+          });
+          _openPassage(finalPassage);
+        });
+        return;
+      }
+
+      final delayMs = (70 + progress * progress * 260).round();
+      Timer(Duration(milliseconds: delayMs), runTick);
+    }
+
+    runTick();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,8 +118,94 @@ class ReadingScreen extends StatelessWidget {
             fontSize: 20,
           ),
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: GestureDetector(
+              onTap: _surpriseMe,
+              child: Opacity(
+                opacity: _shuffling ? 0.7 : 1,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFA78BFA), Color(0xFF6C63FF), Color(0xFF4C1D95)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: const [
+                      BoxShadow(color: Color(0xFF3D1F9E), offset: Offset(0, 3), blurRadius: 0),
+                      BoxShadow(color: Color(0x596C63FF), offset: Offset(0, 6), blurRadius: 14),
+                    ],
+                  ),
+                  child: const Text(
+                    '🎲 Surprise Me',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
-      body: readingPassages.isEmpty
+      body: Stack(
+        children: [
+          _buildBody(context),
+          if (_shuffling && _shown != null) _buildShuffleOverlay(context),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShuffleOverlay(BuildContext context) {
+    final shown = _shown!;
+    return Positioned.fill(
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.55),
+        alignment: Alignment.center,
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 90),
+          child: Container(
+            key: ValueKey(shown.id),
+            margin: const EdgeInsets.symmetric(horizontal: 40),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFA78BFA), Color(0xFF6C63FF)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 20, offset: Offset(0, 8))],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('🎲', style: TextStyle(fontSize: 32)),
+                const SizedBox(height: 10),
+                Text(
+                  shown.title,
+                  textAlign: TextAlign.center,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  shown.topic,
+                  style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.8), fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    return readingPassages.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -80,10 +250,7 @@ class ReadingScreen extends StatelessWidget {
                         final colors = _cardColors(i);
                         final numStr = passage.id.toString().padLeft(2, '0');
                         return GestureDetector(
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => ReadingPassageScreen(passage: passage)),
-                          ),
+                          onTap: () => _openPassage(passage),
                           child: Container(
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
@@ -174,7 +341,6 @@ class ReadingScreen extends StatelessWidget {
                   ),
                 ),
               ],
-            ),
-    );
+            );
   }
 }

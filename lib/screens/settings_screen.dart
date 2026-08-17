@@ -1353,7 +1353,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         'learned_words': [], 'srs_words': [], 'starred_words': [],
                         'hard_words': [], 'study_days': [], 'review_days': [],
                         'word_goal_days': [], 'unit_done_days': [], 'xp_history': [],
-                        'unit_progress': {}, 'review_log': {}, 'imported_words': [],
+                        'unit_progress': {}, 'review_log': {},
+                        // Deliberately NOT clearing imported_words — Reset
+                        // Progress undoes learning progress, not vocabulary
+                        // the user typed in themselves.
                         'achievements': [], 'lists_updated_at': ts,
                         'reset_at': ts,
                       });
@@ -1367,8 +1370,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ]);
                     }
                   } catch (_) {}
-                  // Always clear local storage and navigate
-                  await StorageService.clearAllProgress();
+                  // Always clear local storage and navigate — keeps My Words
+                  // folders/words intact, only resets progress (see doc
+                  // comment on resetProgressKeepingImportedWords()).
+                  await StorageService.resetProgressKeepingImportedWords();
                   final prefs = await SharedPreferences.getInstance();
                   outerNavigator.pushAndRemoveUntil(
                     MaterialPageRoute(

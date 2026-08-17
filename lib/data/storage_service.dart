@@ -2112,6 +2112,26 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     });
   }
 
+  // ── Reading: Visited Passages ──────────────────────────
+
+  static const _visitedPassagesKey = 'visited_reading_passages';
+
+  static Future<Set<int>> getVisitedPassageIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList(_visitedPassagesKey) ?? [];
+    return raw.map(int.parse).toSet();
+  }
+
+  static Future<void> markPassageVisited(int id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final existing = prefs.getStringList(_visitedPassagesKey) ?? [];
+    final entry = id.toString();
+    if (!existing.contains(entry)) {
+      existing.add(entry);
+      await prefs.setStringList(_visitedPassagesKey, existing);
+    }
+  }
+
   // ── Imported Words ─────────────────────────────────────────────────────────
 
   static const _importedKey = 'imported_words';
@@ -2407,7 +2427,25 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     // Clear ALL keys except device-level preferences that are not user-specific.
     // This is deliberately nuclear — any future key added to the app is
     // automatically cleared on sign-out without needing to update this list.
+    // Used for sign-out and delete-account, where wiping everything
+    // (including imported words) is correct. For "Reset Progress" specifically,
+    // use resetProgressKeepingImportedWords() instead — see its doc comment.
     const keepKeys = {'ui_language', 'text_scale', 'theme_mode', 'reduce_motion'};
+    final toRemove = prefs.getKeys().where((k) => !keepKeys.contains(k)).toList();
+    for (final key in toRemove) {
+      await prefs.remove(key);
+    }
+  }
+
+  // Same as clearAllProgress(), but preserves the user's My Words
+  // folders/words. "Reset Progress" is about undoing learning progress
+  // (XP, streaks, completion), not deleting vocabulary the user typed in
+  // themselves — that's what the dedicated My Words reset (progress only,
+  // see resetMyWordsProgress()) already handles narrowly. Sign-out and
+  // delete-account still use the fully nuclear clearAllProgress().
+  static Future<void> resetProgressKeepingImportedWords() async {
+    final prefs = await SharedPreferences.getInstance();
+    const keepKeys = {'ui_language', 'text_scale', 'theme_mode', 'reduce_motion', _importedKey};
     final toRemove = prefs.getKeys().where((k) => !keepKeys.contains(k)).toList();
     for (final key in toRemove) {
       await prefs.remove(key);

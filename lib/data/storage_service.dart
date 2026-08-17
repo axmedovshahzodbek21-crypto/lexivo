@@ -969,6 +969,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
       );
     }
     await _saveMyUnitProgress(folderName, collectionName, updated);
+    SyncService.pushLists();
     return nowComplete && !wasComplete;
   }
 
@@ -1059,6 +1060,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
       final filtered = List<String>.from(jsonDecode(raw)).where((k) => !k.endsWith('_0')).toList();
       await prefs.setString(key, jsonEncode(filtered));
     }
+    SyncService.pushLists();
   }
 
   // ── Daily Word Limit ───────────────────────

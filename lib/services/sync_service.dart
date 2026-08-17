@@ -30,7 +30,7 @@ class SyncService {
     await prefs.setInt('daily_words_learned', 0);
     await prefs.setInt('streak_freezes', 0);
     for (final k in [
-      'unit_progress', 'unit_done_days', 'review_days', 'word_goal_days',
+      'unit_progress', 'my_unit_progress', 'unit_done_days', 'review_days', 'word_goal_days',
       'study_days', 'xp_history', 'srs_review_log', 'marked_hard_words',
       'mastered_srs_words', 'last_xp_date', 'last_study_date',
       'daily_words_date', 'last_freeze_week', 'imported_words',
@@ -208,6 +208,7 @@ class SyncService {
           'unit_done_days':   days('unit_done_days'),
           'xp_history':       arr('xp_history'),
           'unit_progress':    obj('unit_progress'),
+          'my_unit_progress': obj('my_unit_progress'),
           'review_log':       obj('srs_review_log'),
           'imported_words':   arr('imported_words'),
           'achievements':     achievementEntries,
@@ -528,6 +529,52 @@ class SyncService {
           }
         }
         if (changed) await prefs.setString('unit_progress', jsonEncode(localProgress));
+      }
+
+      // my_unit_progress (object: folder+collection key → progress), OR flags
+      // + per-activity word snapshots (local's own snapshot wins once local
+      // has run that activity itself; cloud's snapshot only fills in an
+      // activity local hasn't done yet).
+      final cloudMyProgress = (row['my_unit_progress'] as Map<String, dynamic>?) ?? {};
+      if (cloudMyProgress.isNotEmpty) {
+        final localRaw = prefs.getString('my_unit_progress');
+        final localMyProgress = localRaw != null
+            ? (jsonDecode(localRaw) as Map<String, dynamic>)
+            : <String, dynamic>{};
+        bool changed = false;
+        for (final entry in cloudMyProgress.entries) {
+          if (!localMyProgress.containsKey(entry.key)) {
+            localMyProgress[entry.key] = entry.value;
+            changed = true;
+          } else {
+            final lp = localMyProgress[entry.key] as Map<String, dynamic>;
+            final cp = entry.value as Map<String, dynamic>;
+            Map<String, dynamic> pick(String activity) {
+              final doneKey = '${activity}Done';
+              final wordsKey = '${activity}Words';
+              final lDone = lp[doneKey] as bool? ?? false;
+              final cDone = cp[doneKey] as bool? ?? false;
+              final done = lDone || cDone;
+              final words = lDone ? lp[wordsKey] : (cDone ? cp[wordsKey] : lp[wordsKey]);
+              return {doneKey: done, wordsKey: words ?? []};
+            }
+            final learn = pick('learn');
+            final flashcard = pick('flashcard');
+            final quiz = pick('quiz');
+            final match = pick('match');
+            final lCompletedWords = (lp['completedWords'] as List?) ?? [];
+            final merged = {
+              ...learn, ...flashcard, ...quiz, ...match,
+              'completedAt': lp['completedAt'] ?? cp['completedAt'],
+              'completedWords': lCompletedWords.isNotEmpty ? lCompletedWords : (cp['completedWords'] ?? []),
+            };
+            if (jsonEncode(merged) != jsonEncode(lp)) {
+              localMyProgress[entry.key] = merged;
+              changed = true;
+            }
+          }
+        }
+        if (changed) await prefs.setString('my_unit_progress', jsonEncode(localMyProgress));
       }
 
       // review_log (object: wordKey → [intervals]), union merge

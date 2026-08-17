@@ -95,9 +95,8 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
       ),
     );
     if (confirm == true) {
-      for (final word in _selected) {
-        await StorageService.deleteImportedWord(word, widget.collectionName, folderName: widget.folderName);
-      }
+      await StorageService.deleteImportedWords(_selected, widget.collectionName, folderName: widget.folderName);
+      if (!mounted) return;
       setState(() {
         _selected.clear();
         _selectMode = false;

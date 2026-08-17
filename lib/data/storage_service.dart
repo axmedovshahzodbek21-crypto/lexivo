@@ -2393,6 +2393,30 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     SyncService.pushLists();
   }
 
+  // Same tombstoning as deleteImportedWord, but for many words in one local
+  // mutation and one push instead of looping deleteImportedWord() per word.
+  // Looping fired one un-awaited pushLists() (a full user_data upsert) per
+  // word; concurrent requests can land out of order, so an earlier (staler)
+  // push landing after a later one would silently reintroduce words that had
+  // already been deleted by then.
+  static Future<void> deleteImportedWords(
+    Set<String> words,
+    String collectionName, {
+    String? folderName,
+  }) async {
+    if (words.isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final raw = await getImportedWordsRaw();
+    final updated = raw.map((w) =>
+      (words.contains(w.word) && w.collectionName == collectionName && w.folderName == folderName)
+        ? w.copyWith(deletedAt: now)
+        : w
+    ).toList();
+    await prefs.setString(_importedKey, jsonEncode(updated.map((e) => e.toJson()).toList()));
+    SyncService.pushLists();
+  }
+
   static Future<void> deleteImportedCollection(String collectionName, {String? folderName}) async {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now().millisecondsSinceEpoch;

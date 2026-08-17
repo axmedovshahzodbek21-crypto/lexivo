@@ -26,6 +26,9 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
   String? _completedAt;
   MyUnitProgress _progress = const MyUnitProgress();
   List<String> _pendingNewWords = [];
+  Map<String, List<String>> _pendingByActivity = const {
+    'learn': [], 'flashcard': [], 'quiz': [], 'match': [],
+  };
 
   @override
   void initState() {
@@ -35,9 +38,19 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
 
   Future<void> _loadProgress(List<ImportedWord> words) async {
     final p = await StorageService.getMyUnitProgress(widget.folderName, widget.collectionName);
-    final pending = await StorageService.getMyUnitPendingNewWords(
-      widget.folderName, widget.collectionName, words.map((w) => w.word).toList());
-    if (mounted) setState(() { _completedAt = p.completedAt; _progress = p; _pendingNewWords = pending; });
+    final wordList = words.map((w) => w.word).toList();
+    final pending = await StorageService.getMyUnitPendingNewWords(widget.folderName, widget.collectionName, wordList);
+    final byActivity = {
+      for (final activity in const ['learn', 'flashcard', 'quiz', 'match'])
+        activity: await StorageService.getMyActivityPendingNewWords(
+          widget.folderName, widget.collectionName, activity, wordList),
+    };
+    if (mounted) setState(() {
+      _completedAt = p.completedAt;
+      _progress = p;
+      _pendingNewWords = pending;
+      _pendingByActivity = byActivity;
+    });
   }
 
   void _toggleSelectMode() {
@@ -97,18 +110,17 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
     await _loadProgress(words);
   }
 
-  WordDay get _wordDay => WordDay(
-    dayNumber: 0,
-    topic: widget.collectionName,
-    words: _words.map((w) => w.toWordItem()).toList(),
-  );
-
-  WordDay get _newWordsWordDay {
-    final pendingSet = _pendingNewWords.toSet();
+  // Builds the WordDay for a study session. Pass null (activity not done, or
+  // done with nothing pending) for the full current word list; pass a
+  // pending-words list (activity done, has new words) to scope the session
+  // to just those words.
+  WordDay _wordDayFor(List<String>? onlyWords) {
+    final filter = onlyWords?.toSet();
+    final words = filter == null ? _words : _words.where((w) => filter.contains(w.word)).toList();
     return WordDay(
       dayNumber: 0,
       topic: widget.collectionName,
-      words: _words.where((w) => pendingSet.contains(w.word)).map((w) => w.toWordItem()).toList(),
+      words: words.map((w) => w.toWordItem()).toList(),
     );
   }
 
@@ -352,77 +364,11 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
             ),
           ),
 
-        // ── Study new words only (shown when unit was completed and grew) ──
-        if (!_selectMode && _pendingNewWords.isNotEmpty) ...[
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Text('Study ${_pendingNewWords.length} new word${_pendingNewWords.length == 1 ? '' : 's'}',
-              style: TextStyle(color: context.successColor, fontWeight: FontWeight.bold, fontSize: 13)),
-          ),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            childAspectRatio: 2.2,
-            children: [
-              _StudyButton(
-                icon: '📖', label: 'Learn',
-                color: context.successColor,
-                onTap: () => Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => LearningScreen(
-                    wordDay: _newWordsWordDay,
-                    userProfile: 'worker',
-                    collectionName: widget.collectionName,
-                    onSessionComplete: _onLearnDone,
-                  ),
-                )),
-              ),
-              _StudyButton(
-                icon: '🃏', label: 'Flashcards',
-                color: context.successColor,
-                onTap: () => Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => FlashcardSettingsScreen(
-                    wordDay: _newWordsWordDay,
-                    userProfile: 'worker',
-                    collectionName: widget.collectionName,
-                    onSessionComplete: _onFlashcardDone,
-                  ),
-                )),
-              ),
-              _StudyButton(
-                icon: '❓', label: 'Quiz',
-                color: context.successColor,
-                onTap: () => Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => QuizSettingsScreen(
-                    wordDay: _newWordsWordDay,
-                    userProfile: 'worker',
-                    collectionName: widget.collectionName,
-                    onSessionComplete: _onQuizDone,
-                  ),
-                )),
-              ),
-              _StudyButton(
-                icon: '🔗', label: 'Match',
-                color: context.successColor,
-                onTap: () => Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => MatchingScreen(
-                    wordDay: _newWordsWordDay,
-                    collectionName: widget.collectionName,
-                    onSessionComplete: _onMatchDone,
-                  ),
-                )),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text('Study all words',
-            style: TextStyle(color: context.textMuted, fontWeight: FontWeight.bold, fontSize: 13)),
-          const SizedBox(height: 8),
-        ],
-
         // ── Study buttons ─────────────────────────────────────────────────
+        // Each button is aware of its own "new words since I was last done"
+        // count, independent of the other three activities. When done and
+        // there are pending new words, tapping jumps straight into a session
+        // with just those words instead of the full set.
         if (!_selectMode)
         GridView.count(
           crossAxisCount: 2,
@@ -436,9 +382,10 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
               icon: '📖', label: 'Learn',
               color: const Color(0xFF6C63FF),
               done: _progress.learnDone,
+              pendingNew: _pendingByActivity['learn']!.length,
               onTap: () => Navigator.push(context, MaterialPageRoute(
                 builder: (_) => LearningScreen(
-                  wordDay: _wordDay,
+                  wordDay: _wordDayFor(_progress.learnDone && _pendingByActivity['learn']!.isNotEmpty ? _pendingByActivity['learn']! : null),
                   userProfile: 'worker',
                   collectionName: widget.collectionName,
                   onSessionComplete: _onLearnDone,
@@ -451,9 +398,10 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
               icon: '🃏', label: 'Flashcards',
               color: const Color(0xFFFF6B35),
               done: _progress.flashcardDone,
+              pendingNew: _pendingByActivity['flashcard']!.length,
               onTap: () => Navigator.push(context, MaterialPageRoute(
                 builder: (_) => FlashcardSettingsScreen(
-                  wordDay: _wordDay,
+                  wordDay: _wordDayFor(_progress.flashcardDone && _pendingByActivity['flashcard']!.isNotEmpty ? _pendingByActivity['flashcard']! : null),
                   userProfile: 'worker',
                   collectionName: widget.collectionName,
                   onSessionComplete: _onFlashcardDone,
@@ -466,9 +414,10 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
               icon: '❓', label: 'Quiz',
               color: const Color(0xFFF59E0B),
               done: _progress.quizDone,
+              pendingNew: _pendingByActivity['quiz']!.length,
               onTap: () => Navigator.push(context, MaterialPageRoute(
                 builder: (_) => QuizSettingsScreen(
-                  wordDay: _wordDay,
+                  wordDay: _wordDayFor(_progress.quizDone && _pendingByActivity['quiz']!.isNotEmpty ? _pendingByActivity['quiz']! : null),
                   userProfile: 'worker',
                   collectionName: widget.collectionName,
                   onSessionComplete: _onQuizDone,
@@ -480,9 +429,10 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
               icon: '🔗', label: 'Match',
               color: const Color(0xFF10B981),
               done: _progress.matchDone,
+              pendingNew: _pendingByActivity['match']!.length,
               onTap: () => Navigator.push(context, MaterialPageRoute(
                 builder: (_) => MatchingScreen(
-                  wordDay: _wordDay,
+                  wordDay: _wordDayFor(_progress.matchDone && _pendingByActivity['match']!.isNotEmpty ? _pendingByActivity['match']! : null),
                   collectionName: widget.collectionName,
                   onSessionComplete: _onMatchDone,
                 ),
@@ -538,8 +488,16 @@ class _StudyButton extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
   final bool done;
+  final int pendingNew;
 
-  const _StudyButton({required this.icon, required this.label, required this.color, required this.onTap, this.done = false});
+  const _StudyButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+    this.done = false,
+    this.pendingNew = 0,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -552,6 +510,7 @@ class _StudyButton extends StatelessWidget {
           border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
         ),
         child: Stack(
+          clipBehavior: Clip.none,
           children: [
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -565,6 +524,19 @@ class _StudyButton extends StatelessWidget {
               const Positioned(
                 top: 6, right: 6,
                 child: Text('✅', style: TextStyle(fontSize: 14)),
+              ),
+            if (done && pendingNew > 0)
+              Positioned(
+                top: -6, left: -6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: context.successColor,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text('$pendingNew new',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10)),
+                ),
               ),
           ],
         ),

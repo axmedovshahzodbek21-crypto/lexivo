@@ -538,6 +538,13 @@ class MyUnitProgress {
   final bool flashcardDone;
   final bool quizDone;
   final bool matchDone;
+  // Snapshot of the word list at the moment each activity was marked done —
+  // independent per activity, so "new word" detection works even when only
+  // some activities have ever been run (unit never fully completed).
+  final List<String> learnWords;
+  final List<String> flashcardWords;
+  final List<String> quizWords;
+  final List<String> matchWords;
   final String? completedAt;
   final List<String> completedWords;
 
@@ -546,6 +553,10 @@ class MyUnitProgress {
     this.flashcardDone = false,
     this.quizDone = false,
     this.matchDone = false,
+    this.learnWords = const [],
+    this.flashcardWords = const [],
+    this.quizWords = const [],
+    this.matchWords = const [],
     this.completedAt,
     this.completedWords = const [],
   });
@@ -555,6 +566,10 @@ class MyUnitProgress {
     bool? flashcardDone,
     bool? quizDone,
     bool? matchDone,
+    List<String>? learnWords,
+    List<String>? flashcardWords,
+    List<String>? quizWords,
+    List<String>? matchWords,
     String? completedAt,
     List<String>? completedWords,
   }) => MyUnitProgress(
@@ -562,6 +577,10 @@ class MyUnitProgress {
     flashcardDone: flashcardDone ?? this.flashcardDone,
     quizDone: quizDone ?? this.quizDone,
     matchDone: matchDone ?? this.matchDone,
+    learnWords: learnWords ?? this.learnWords,
+    flashcardWords: flashcardWords ?? this.flashcardWords,
+    quizWords: quizWords ?? this.quizWords,
+    matchWords: matchWords ?? this.matchWords,
     completedAt: completedAt ?? this.completedAt,
     completedWords: completedWords ?? this.completedWords,
   );
@@ -571,6 +590,10 @@ class MyUnitProgress {
     'flashcardDone': flashcardDone,
     'quizDone': quizDone,
     'matchDone': matchDone,
+    'learnWords': learnWords,
+    'flashcardWords': flashcardWords,
+    'quizWords': quizWords,
+    'matchWords': matchWords,
     if (completedAt != null) 'completedAt': completedAt,
     'completedWords': completedWords,
   };
@@ -580,6 +603,10 @@ class MyUnitProgress {
     flashcardDone: json['flashcardDone'] ?? false,
     quizDone: json['quizDone'] ?? false,
     matchDone: json['matchDone'] ?? false,
+    learnWords: List<String>.from(json['learnWords'] as List? ?? []),
+    flashcardWords: List<String>.from(json['flashcardWords'] as List? ?? []),
+    quizWords: List<String>.from(json['quizWords'] as List? ?? []),
+    matchWords: List<String>.from(json['matchWords'] as List? ?? []),
     completedAt: json['completedAt'] as String?,
     completedWords: List<String>.from(json['completedWords'] as List? ?? []),
   );
@@ -919,19 +946,25 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
   // Returns true when this call is what just brought the unit to full
   // completion (all four activities done), so callers can fire a one-time
   // celebration — not true on every call, and not true again on redos.
+  //
+  // Snapshots the current word list into that activity's own word-list field
+  // every time (not just when the whole unit completes), so
+  // getMyActivityPendingNewWords can detect new words for that activity
+  // alone, independent of whether the other three have ever run.
   static Future<bool> _markMyUnitActivityComplete(
     String? folderName,
     String collectionName,
-    MyUnitProgress Function(MyUnitProgress current) apply,
+    MyUnitProgress Function(MyUnitProgress current, List<String> currentWords) apply,
   ) async {
     final current = await getMyUnitProgress(folderName, collectionName);
     final wasComplete = current.learnDone && current.flashcardDone && current.quizDone && current.matchDone;
-    var updated = apply(current);
+    final words = await getImportedWordsByCollection(collectionName, folderName: folderName);
+    final currentWords = words.map((w) => w.word).toList();
+    var updated = apply(current, currentWords);
     final nowComplete = updated.learnDone && updated.flashcardDone && updated.quizDone && updated.matchDone;
     if (nowComplete) {
-      final words = await getImportedWordsByCollection(collectionName, folderName: folderName);
       updated = updated.copyWith(
-        completedWords: words.map((w) => w.word).toList(),
+        completedWords: currentWords,
         completedAt: DateTime.now().toUtc().toIso8601String(),
       );
     }
@@ -940,28 +973,71 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
   }
 
   static Future<bool> markMyLearnComplete(String? folderName, String collectionName) =>
-      _markMyUnitActivityComplete(folderName, collectionName, (c) => c.copyWith(learnDone: true));
+      _markMyUnitActivityComplete(folderName, collectionName,
+          (c, words) => c.copyWith(learnDone: true, learnWords: words));
 
   static Future<bool> markMyFlashcardComplete(String? folderName, String collectionName) =>
-      _markMyUnitActivityComplete(folderName, collectionName, (c) => c.copyWith(flashcardDone: true));
+      _markMyUnitActivityComplete(folderName, collectionName,
+          (c, words) => c.copyWith(flashcardDone: true, flashcardWords: words));
 
   static Future<bool> markMyQuizComplete(String? folderName, String collectionName) =>
-      _markMyUnitActivityComplete(folderName, collectionName, (c) => c.copyWith(quizDone: true));
+      _markMyUnitActivityComplete(folderName, collectionName,
+          (c, words) => c.copyWith(quizDone: true, quizWords: words));
 
   static Future<bool> markMyMatchComplete(String? folderName, String collectionName) =>
-      _markMyUnitActivityComplete(folderName, collectionName, (c) => c.copyWith(matchDone: true));
+      _markMyUnitActivityComplete(folderName, collectionName,
+          (c, words) => c.copyWith(matchDone: true, matchWords: words));
 
-  // Words in this unit not yet covered by the last full completion. Empty
-  // whenever the unit has never been completed at all.
+  // Words not yet covered by this specific activity's last snapshot. Empty
+  // whenever the activity has never been done — its next run naturally
+  // includes everything, so there's nothing to flag as "new" ahead of time.
+  //
+  // Migration note: units marked done before per-activity snapshots existed
+  // have an empty e.g. learnWords even though learnDone is true. We fall
+  // back to completedWords (the old whole-unit snapshot) when available, so
+  // pre-existing fully-completed units don't suddenly show every word as
+  // "new". Units with only some activities done (never fully completed)
+  // predate this feature entirely with no snapshot to fall back on — they
+  // start tracking correctly from the next time that activity runs.
+  static Future<List<String>> getMyActivityPendingNewWords(
+    String? folderName,
+    String collectionName,
+    String activity, // 'learn' | 'flashcard' | 'quiz' | 'match'
+    List<String> currentWords,
+  ) async {
+    final p = await getMyUnitProgress(folderName, collectionName);
+    final done = switch (activity) {
+      'learn' => p.learnDone,
+      'flashcard' => p.flashcardDone,
+      'quiz' => p.quizDone,
+      'match' => p.matchDone,
+      _ => false,
+    };
+    if (!done) return [];
+    var snapshot = switch (activity) {
+      'learn' => p.learnWords,
+      'flashcard' => p.flashcardWords,
+      'quiz' => p.quizWords,
+      'match' => p.matchWords,
+      _ => const <String>[],
+    };
+    if (snapshot.isEmpty && p.completedWords.isNotEmpty) snapshot = p.completedWords;
+    final snapshotSet = snapshot.toSet();
+    return currentWords.where((w) => !snapshotSet.contains(w)).toList();
+  }
+
+  // Union of words pending for any activity that's actually done — used for
+  // the unit-level "Completed · N new words to learn" banner text.
   static Future<List<String>> getMyUnitPendingNewWords(
     String? folderName,
     String collectionName,
     List<String> currentWords,
   ) async {
-    final p = await getMyUnitProgress(folderName, collectionName);
-    if (p.completedAt == null) return [];
-    final completedSet = p.completedWords.toSet();
-    return currentWords.where((w) => !completedSet.contains(w)).toList();
+    final pending = <String>{};
+    for (final activity in const ['learn', 'flashcard', 'quiz', 'match']) {
+      pending.addAll(await getMyActivityPendingNewWords(folderName, collectionName, activity, currentWords));
+    }
+    return currentWords.where((w) => pending.contains(w)).toList();
   }
 
   // ── Daily Word Limit ───────────────────────
@@ -2139,14 +2215,10 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
         .toList();
     raw.addAll(fresh);
     await prefs.setString(_importedKey, jsonEncode(raw.map((e) => e.toJson()).toList()));
-    if (fresh.isNotEmpty) {
-      final progress = await getMyUnitProgress(folderName, collectionName);
-      if (progress.completedAt != null) {
-        await _saveMyUnitProgress(folderName, collectionName, progress.copyWith(
-          learnDone: false, flashcardDone: false, quizDone: false, matchDone: false,
-        ));
-      }
-    }
+    // No longer resetting the four done-flags here: per-activity word
+    // snapshots (see getMyActivityPendingNewWords) now detect exactly which
+    // words are new for each activity, so there's no need to force a full
+    // redo — the existing ✅ badges stay, with a "N new" indicator alongside.
     SyncService.pushLists();
   }
 

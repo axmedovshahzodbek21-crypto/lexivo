@@ -50,7 +50,11 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
     return range <= 0 ? 1.0 : ((widget.xp - _curMinXP) / range).clamp(0.0, 1.0);
   }
 
-  int get _xpToNext => _isMaxLevel ? 0 : (_nextXP - widget.xp).clamp(0, 9999);
+  // Display-only, so the upper bound just needs to exceed the largest
+  // possible level gap (Starter→Legend is 100000 raw) — 9999 was smaller
+  // than several real level ranges (e.g. Intermediate alone is 11000),
+  // silently capping the shown "XP to next level" for users in those levels.
+  int get _xpToNext => _isMaxLevel ? 0 : (_nextXP - widget.xp).clamp(0, 999999);
 
   @override
   void initState() {
@@ -290,7 +294,7 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
           final isCurrent = StorageService.getLevelName(widget.xp) == name;
           final isFuture  = !isPast && !isCurrent;
           final isPeeked  = _peekedLevel == name;
-          final xpNeeded  = (minXp - widget.xp).clamp(0, 9999);
+          final xpNeeded  = (minXp - widget.xp).clamp(0, 999999);
 
           return Column(
             children: [

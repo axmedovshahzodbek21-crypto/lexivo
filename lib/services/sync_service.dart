@@ -172,6 +172,18 @@ class SyncService {
     if (uid == null) return;
     try {
       final prefs = await SharedPreferences.getInstance();
+
+      // Merge in whatever's currently in the cloud row before overwriting it —
+      // otherwise a device pushing after being offline (or racing another
+      // device's own push) would silently discard the other side's data
+      // instead of just adding to it.
+      try {
+        final cloudRow = await _sb.from('user_data')
+            .select('learned_words, srs_words, starred_words, hard_words, study_days, review_days, word_goal_days, unit_done_days, xp_history, unit_progress, my_unit_progress, review_log, achievements, imported_words')
+            .eq('id', uid).maybeSingle();
+        if (cloudRow != null) await _mergeListsFromCloudRow(cloudRow, prefs);
+      } catch (_) {}
+
       final ts = _now();
 
       List<dynamic> arr(String key) {
@@ -379,8 +391,18 @@ class SyncService {
         await prefs.setString('profile_image_url', row['avatar_url'] as String);
       }
 
-      // ── Lists (always union-merge) ──────────────────────────────────────────
+      await _mergeListsFromCloudRow(row, prefs);
+    } catch (_) {}
+  }
 
+  // Merges every list-type field from a cloud `user_data` row into local
+  // SharedPreferences (additive union-merge / tombstone-aware last-write-wins,
+  // depending on the field — see comments per field below). Shared by
+  // pullAll() and by pushLists(), which calls this immediately before
+  // building its push payload so a push can never silently discard data
+  // another device already synced — without this, pushLists() overwrote the
+  // whole row with only-local state.
+  static Future<void> _mergeListsFromCloudRow(Map<String, dynamic> row, SharedPreferences prefs) async {
       // learned_words
       final cloudLearned = (row['learned_words'] as List? ?? []).cast<Map<String, dynamic>>();
       if (cloudLearned.isNotEmpty) {
@@ -648,6 +670,5 @@ class SyncService {
         }
         if (changed) await prefs.setString('imported_words', jsonEncode(byKey.values.toList()));
       }
-    } catch (_) {}
   }
 }

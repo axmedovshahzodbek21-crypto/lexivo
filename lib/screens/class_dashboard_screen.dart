@@ -489,6 +489,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             const Tab(text: '📡 Radar'),
             const Tab(text: '🗺 Heatmap'),
             const Tab(text: '📚 SRS'),
+            const Tab(text: '🔄 Review Pattern'),
             const Tab(text: '📋 Curriculum'),
           ],
         ),
@@ -503,6 +504,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
                   _buildRadarTab(),
                   _buildHeatmapTab(),
                   _buildSRSTab(),
+                  _buildReviewPatternTab(),
                   ClassCurriculumTab(
                     classId: widget.classId,
                     className: widget.className,
@@ -1167,6 +1169,112 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       ],
     );
   }
+
+  // ── Review Pattern tab ─────────────────────────────────────────────────────
+
+  Widget _buildReviewPatternTab() {
+    if (_reviewLoading) return Center(child: CircularProgressIndicator(color: context.primary));
+
+    if (_students.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('🔄', style: TextStyle(fontSize: 48)),
+            const SizedBox(height: 14),
+            Text('No students yet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+          ]),
+        ),
+      );
+    }
+
+    final today = _ymd(DateTime.now());
+    final entriesByStudent = <String, List<DateTime>>{};
+    for (final e in _reviewEntries) {
+      final uid = e['user_id'] as String;
+      final created = DateTime.parse(e['created_at'] as String).toLocal();
+      entriesByStudent.putIfAbsent(uid, () => []).add(created);
+    }
+    final overdueByStudent = <String, int>{};
+    for (final r in _reviewSrsRows) {
+      final nextDue = r['next_due'] as String;
+      final stage = (r['stage'] as num).toInt();
+      if (nextDue.compareTo(today) < 0 && stage < 5) {
+        final uid = r['user_id'] as String;
+        overdueByStudent[uid] = (overdueByStudent[uid] ?? 0) + 1;
+      }
+    }
+
+    final rows = _students.map((s) {
+      final entries = entriesByStudent[s.studentId] ?? const <DateTime>[];
+      final overdue = overdueByStudent[s.studentId] ?? 0;
+      final c = _classifyReview(entries, overdue);
+      return (student: s, overdue: overdue, classification: c);
+    }).toList();
+
+    const order = [ReviewLabel.inactive, ReviewLabel.bursty, ReviewLabel.never, ReviewLabel.mostly, ReviewLabel.daily];
+    rows.sort((a, b) {
+      final ai = order.indexOf(a.classification.label), bi = order.indexOf(b.classification.label);
+      if (ai != bi) return ai.compareTo(bi);
+      return b.classification.coverage.compareTo(a.classification.coverage);
+    });
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+      children: [
+        Text(
+          'Classified from each student\'s SRS Review activity over the last $_reviewWindowDays days. Sorted with students needing attention first.',
+          style: TextStyle(fontSize: 12, color: context.textMuted),
+        ),
+        const SizedBox(height: 14),
+        ...rows.map((r) {
+          final meta = _reviewLabelMeta[r.classification.label]!;
+          final c = r.classification;
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: context.surface,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: context.cardShadow,
+              border: Border(left: BorderSide(color: meta.color, width: 3)),
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(r.student.name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: context.appText)),
+                  const SizedBox(height: 2),
+                  Text('${meta.emoji} ${meta.text}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: meta.color)),
+                ])),
+                if (r.overdue > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(color: context.dangerColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+                    child: Text('${r.overdue} overdue', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: context.dangerColor)),
+                  ),
+              ]),
+              const SizedBox(height: 8),
+              Text(meta.blurb, style: TextStyle(fontSize: 11, color: context.textMuted)),
+              const SizedBox(height: 8),
+              Wrap(spacing: 14, runSpacing: 4, children: [
+                _reviewStat('${c.daysReviewed}', '/$_reviewWindowDays days reviewed'),
+                _reviewStat('${c.streak}', ' day streak'),
+                _reviewStat('${c.longestGap}', 'd longest gap'),
+                if (c.totalReviews > 0) _reviewStat(c.avgPerActiveDay.toStringAsFixed(1), ' words/active day'),
+              ]),
+            ]),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _reviewStat(String value, String suffix) => RichText(
+    text: TextSpan(children: [
+      TextSpan(text: value, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: context.appText)),
+      TextSpan(text: suffix, style: TextStyle(fontSize: 10, color: context.textMuted)),
+    ]),
+  );
 
   // ── Modals ─────────────────────────────────────────────────────────────────
 

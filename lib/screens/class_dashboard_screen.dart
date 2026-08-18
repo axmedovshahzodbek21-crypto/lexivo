@@ -1196,20 +1196,22 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       entriesByStudent.putIfAbsent(uid, () => []).add(created);
     }
     final overdueByStudent = <String, int>{};
+    final dueByStudent = <String, int>{};
     for (final r in _reviewSrsRows) {
       final nextDue = r['next_due'] as String;
       final stage = (r['stage'] as num).toInt();
-      if (nextDue.compareTo(today) < 0 && stage < 5) {
-        final uid = r['user_id'] as String;
-        overdueByStudent[uid] = (overdueByStudent[uid] ?? 0) + 1;
-      }
+      if (stage >= 5) continue;
+      final uid = r['user_id'] as String;
+      if (nextDue.compareTo(today) <= 0) dueByStudent[uid] = (dueByStudent[uid] ?? 0) + 1;
+      if (nextDue.compareTo(today) < 0) overdueByStudent[uid] = (overdueByStudent[uid] ?? 0) + 1;
     }
 
     final rows = _students.map((s) {
       final entries = entriesByStudent[s.studentId] ?? const <DateTime>[];
       final overdue = overdueByStudent[s.studentId] ?? 0;
+      final due = dueByStudent[s.studentId] ?? 0;
       final c = _classifyReview(entries, overdue);
-      return (student: s, overdue: overdue, classification: c);
+      return (student: s, overdue: overdue, due: due, classification: c);
     }).toList();
 
     const order = [ReviewLabel.inactive, ReviewLabel.bursty, ReviewLabel.never, ReviewLabel.mostly, ReviewLabel.daily];
@@ -1251,6 +1253,12 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(color: context.dangerColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
                     child: Text('${r.overdue} overdue', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: context.dangerColor)),
+                  )
+                else if (r.due > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(color: const Color(0xFFF59E0B).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+                    child: Text('${r.due} due', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFF59E0B))),
                   ),
               ]),
               const SizedBox(height: 8),

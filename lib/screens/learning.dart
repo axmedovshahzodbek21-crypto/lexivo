@@ -312,20 +312,16 @@ class _LearningScreenState extends State<LearningScreen> {
     _next();
   }
 
-  Future<void> _markLearned() async {
-    final word = _currentWord;
-    setState(() {
-      _learnedIndices.add(_currentIndex);
-      _skippedIndices.remove(_currentIndex);
-      _hardIndices.remove(_currentIndex);
-    });
-    _perWordData.add({
-      'word': word.word,
-      'outcome': 'learned',
-      'seconds_to_mark': DateTime.now().difference(_wordStart).inSeconds,
-      'gate_attempts': _wordGateAttempts,
-      'gate_correct_first': _wordGateCorrectFirst,
-    });
+  // Shared by both "Got it" and "Too Hard" — a word marked Too Hard earns the
+  // same XP and goes into SRS exactly like a word marked Learned. This is
+  // deliberate: if Too Hard didn't reward like Learned, students under peer
+  // pressure (leaderboards, streaks) would just mark everything Learned to
+  // avoid losing out, making the app's difficulty signal to teachers
+  // useless. Too Hard's only difference is it *also* lands in the separate
+  // Hard Words list (addMarkedHardWord, called by the caller) so the
+  // student and their teacher can still see which words were a genuine
+  // struggle.
+  Future<void> _grantLearnReward(WordItem word) async {
     if (widget.classId != null) {
       // Class mode: SRS lives in Supabase. Skip personal learned list.
       final user = currentUser;
@@ -354,6 +350,23 @@ class _LearningScreenState extends State<LearningScreen> {
         _sessionXP += xp;
       }
     }
+  }
+
+  Future<void> _markLearned() async {
+    final word = _currentWord;
+    setState(() {
+      _learnedIndices.add(_currentIndex);
+      _skippedIndices.remove(_currentIndex);
+      _hardIndices.remove(_currentIndex);
+    });
+    _perWordData.add({
+      'word': word.word,
+      'outcome': 'learned',
+      'seconds_to_mark': DateTime.now().difference(_wordStart).inSeconds,
+      'gate_attempts': _wordGateAttempts,
+      'gate_correct_first': _wordGateCorrectFirst,
+    });
+    await _grantLearnReward(word);
     _next();
   }
 
@@ -372,6 +385,7 @@ class _LearningScreenState extends State<LearningScreen> {
       'gate_correct_first': true,
     });
     await StorageService.addMarkedHardWord(word.word);
+    await _grantLearnReward(word);
     _next();
   }
 

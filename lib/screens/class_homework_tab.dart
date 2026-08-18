@@ -8,6 +8,7 @@ import '../data/word_data.dart';
 import '../data/a1_collection.dart';
 import '../data/a2_collection.dart';
 import '../data/b1_collection.dart';
+import '../data/reading_data.dart';
 
 List<Color> _hwGradColors(String id) {
   const grads = <List<Color>>[
@@ -141,6 +142,23 @@ class _CollHW {
   );
 }
 
+// ── Reading passage homework models ─────────────────────────────────────────
+
+class _PassageHW {
+  final String homeworkId;
+  final int passageId;
+  final String title, topic;
+  final List<String> hwModes;
+  final String? hwDue;
+  const _PassageHW({required this.homeworkId, required this.passageId, required this.title, required this.topic, required this.hwModes, this.hwDue});
+  Map<String, dynamic> toJson() => {'homeworkId': homeworkId, 'passageId': passageId, 'title': title, 'topic': topic, 'hwModes': hwModes, 'hwDue': hwDue};
+  static _PassageHW fromJson(Map<String, dynamic> m) => _PassageHW(
+    homeworkId: m['homeworkId'] as String, passageId: m['passageId'] as int,
+    title: m['title'] as String, topic: m['topic'] as String,
+    hwModes: List<String>.from(m['hwModes'] as List), hwDue: m['hwDue'] as String?,
+  );
+}
+
 WordCollection? _collectionByName(String name) {
   switch (name) {
     case '30 Days of Powerful Words': return thirtyDaysCollection;
@@ -159,10 +177,11 @@ class _HwCache {
   final List<_AssignedFolder> folders;
   final List<_CWUnit> cwUnits;
   final List<_CollHW> collHwItems;
+  final List<_PassageHW> passageItems;
   final Map<String, Set<String>> completedModes;
   final int totalAssigned;
   final int totalDone;
-  const _HwCache({required this.folders, required this.cwUnits, required this.collHwItems, required this.completedModes, required this.totalAssigned, required this.totalDone});
+  const _HwCache({required this.folders, required this.cwUnits, required this.collHwItems, required this.passageItems, required this.completedModes, required this.totalAssigned, required this.totalDone});
 }
 
 // ── Widget ─────────────────────────────────────────────────────────────────
@@ -185,6 +204,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   List<_AssignedFolder> _folders = [];
   List<_CWUnit> _cwUnits = [];
   List<_CollHW> _collHwItems = [];
+  List<_PassageHW> _passageItems = [];
   Map<String, Set<String>> _completedModes = {};
   int _totalAssigned = 0;
   int _totalDone = 0;
@@ -205,6 +225,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
     _folders = c.folders.map((f) => _AssignedFolder(id: f.id, assignmentId: f.assignmentId, name: f.name, units: List.from(f.units))).toList();
     _cwUnits = c.cwUnits;
     _collHwItems = c.collHwItems;
+    _passageItems = c.passageItems;
     _completedModes = c.completedModes.map((k, v) => MapEntry(k, Set<String>.from(v)));
     _totalAssigned = c.totalAssigned;
     _totalDone = c.totalDone;
@@ -221,6 +242,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
           folders: (m['folders'] as List).map((e) => _AssignedFolder.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
           cwUnits: (m['cwUnits'] as List).map((e) => _CWUnit.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
           collHwItems: (m['collHwItems'] as List).map((e) => _CollHW.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
+          passageItems: ((m['passageItems'] as List?) ?? []).map((e) => _PassageHW.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
           completedModes: (m['completedModes'] as Map).map((k, v) => MapEntry(k as String, Set<String>.from(v as List))),
           totalAssigned: m['totalAssigned'] as int? ?? 0,
           totalDone: m['totalDone'] as int? ?? 0,
@@ -241,6 +263,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
         'folders': c.folders.map((f) => f.toJson()).toList(),
         'cwUnits': c.cwUnits.map((u) => u.toJson()).toList(),
         'collHwItems': c.collHwItems.map((h) => h.toJson()).toList(),
+        'passageItems': c.passageItems.map((h) => h.toJson()).toList(),
         'completedModes': c.completedModes.map((k, v) => MapEntry(k, v.toList())),
         'totalAssigned': c.totalAssigned,
         'totalDone': c.totalDone,
@@ -267,7 +290,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
             .order('created_at'),
         supabase
             .from('class_homework')
-            .select('id, unit_id, class_unit_id, collection_name, day_number, modes, due_date, student_ids')
+            .select('id, unit_id, class_unit_id, collection_name, day_number, passage_id, modes, due_date, student_ids')
             .eq('class_id', widget.classId),
       ]);
 
@@ -318,13 +341,16 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
       final hwByLibUnit = <String, Map>{};
       final hwByCWUnit = <String, Map>{};
       final collHwRows = <Map>[];
+      final passageHwRows = <Map>[];
       for (final h in applicableHw) {
         final uid = (h as Map)['unit_id'] as String?;
         final cwid = h['class_unit_id'] as String?;
         final collName = h['collection_name'] as String?;
+        final passageId = h['passage_id'] as int?;
         if (uid != null) { hwByLibUnit[uid] = h; }
         else if (cwid != null) { hwByCWUnit[cwid] = h; }
         else if (collName != null) { collHwRows.add(h); }
+        else if (passageId != null) { passageHwRows.add(h); }
       }
 
       // ── 7. Build library folder list ────────────────────────────────────
@@ -383,6 +409,22 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
         ));
       }
 
+      // ── 9b. Build reading passage HW items ──────────────────────────────
+      final passageItems = <_PassageHW>[];
+      for (final h in passageHwRows) {
+        final passageId = h['passage_id'] as int;
+        ReadingPassage? found;
+        for (final p in readingPassages) { if (p.id == passageId) { found = p; break; } }
+        passageItems.add(_PassageHW(
+          homeworkId: h['id'] as String,
+          passageId: passageId,
+          title: found?.title ?? 'Reading Passage',
+          topic: found?.topic ?? '',
+          hwModes: List<String>.from(h['modes'] as List? ?? ['read']),
+          hwDue: h['due_date'] as String?,
+        ));
+      }
+
       // ── 10. Totals ──────────────────────────────────────────────────────
       int assigned = 0, done = 0;
       for (final f in folders) {
@@ -408,11 +450,17 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
         final completed = completedModes[h.homeworkId] ?? {};
         if (h.hwModes.isNotEmpty && h.hwModes.every(completed.contains)) done++;
       }
+      for (final h in passageItems) {
+        assigned++;
+        final completed = completedModes[h.homeworkId] ?? {};
+        if (h.hwModes.isNotEmpty && h.hwModes.every(completed.contains)) done++;
+      }
 
       if (mounted) { setState(() {
         _folders = folders;
         _cwUnits = cwUnits;
         _collHwItems = collHwItems;
+        _passageItems = passageItems;
         _completedModes = completedModes;
         _totalAssigned = assigned;
         _totalDone = done;
@@ -420,7 +468,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
       }); }
 
       final cache = _HwCache(
-        folders: folders, cwUnits: cwUnits, collHwItems: collHwItems,
+        folders: folders, cwUnits: cwUnits, collHwItems: collHwItems, passageItems: passageItems,
         completedModes: completedModes, totalAssigned: assigned, totalDone: done,
       );
       _memCache[widget.classId] = cache;
@@ -451,7 +499,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
       );
     }
 
-    final hasAny = _folders.isNotEmpty || _cwUnits.any((u) => u.hasHomework) || _collHwItems.isNotEmpty;
+    final hasAny = _folders.isNotEmpty || _cwUnits.any((u) => u.hasHomework) || _collHwItems.isNotEmpty || _passageItems.isNotEmpty;
 
     return Column(children: [
       _hwHero(widget.classId, widget.className),
@@ -542,6 +590,21 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 children: _collHwItems.map((h) => _buildCollectionCard(h)).toList(),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // ── Reading section ──────────────────────────────────────────
+            if (_passageItems.isNotEmpty) ...[
+              _sectionHeader('📚 Reading'),
+              GridView.count(
+                crossAxisCount: 3,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: 0.86,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                children: _passageItems.map((h) => _buildPassageCard(h)).toList(),
               ),
               const SizedBox(height: 16),
             ],
@@ -801,6 +864,72 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
                     child: Text(modeIcons[m] ?? m, style: TextStyle(fontSize: 12,
                       color: completed.contains(m) ? null : context.textMuted.withValues(alpha: 0.3))),
                   )).toList()),
+                ]),
+              )),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPassageCard(_PassageHW h) {
+    final completed = _completedModes[h.homeworkId] ?? {};
+    final allDone = h.hwModes.isNotEmpty && h.hwModes.every(completed.contains);
+    final due = _hwDueText(h.hwDue);
+    final isOverdue = due?.startsWith('Overdue') == true;
+    const passageColor = Color(0xFFF59E0B);
+    final accent = allDone
+        ? const LinearGradient(colors: [Color(0xFF22c55e), Color(0xFF4ade80)])
+        : const LinearGradient(colors: [Color(0xFFF59E0B), Color(0xFFF97316)]);
+
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.push(context, MaterialPageRoute(
+          builder: (_) => LibraryUnitStudyScreen(
+            classId: widget.classId, className: widget.className, unitId: '', unitName: h.title,
+            homeworkId: h.homeworkId, modes: h.hwModes, passageId: h.passageId,
+          ),
+        ));
+        _load();
+      },
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(
+            color: allDone ? Colors.green.withValues(alpha: 0.18) : Colors.black.withValues(alpha: 0.07),
+            offset: const Offset(0, 4), blurRadius: 12,
+          )],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            decoration: BoxDecoration(
+              color: context.surface,
+              border: Border.all(color: allDone ? Colors.green.shade300 : context.border, width: 1.5),
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Container(height: 3, decoration: BoxDecoration(gradient: accent)),
+              Expanded(child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    if (allDone) const Icon(Icons.check_circle_rounded, color: Colors.green, size: 14)
+                    else const Text('📚', style: TextStyle(fontSize: 12)),
+                    const Spacer(),
+                    if (isOverdue && !allDone) const Text('⚠️', style: TextStyle(fontSize: 10)),
+                  ]),
+                  const SizedBox(height: 5),
+                  Expanded(child: Text(h.title,
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold,
+                      color: allDone ? Colors.green.shade700 : context.appText, height: 1.3),
+                    maxLines: 3, overflow: TextOverflow.ellipsis)),
+                  const SizedBox(height: 4),
+                  Text(h.topic, style: TextStyle(fontSize: 9, color: context.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 5),
+                  Text(allDone ? '✓ Read' : 'Tap to read',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700,
+                      color: allDone ? Colors.green : passageColor)),
                 ]),
               )),
             ]),

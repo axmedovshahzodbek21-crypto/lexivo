@@ -287,6 +287,9 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   List<Map<String, dynamic>> _activeStudents = [];
   Timer? _activeStudentsTimer;
 
+  // Speed-flag detection (rushing through Learn sessions)
+  List<Map<String, dynamic>> _analyticsData = [];
+
   @override
   void initState() {
     super.initState();
@@ -307,6 +310,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     _load();
     _loadActiveStudents();
     _activeStudentsTimer = Timer.periodic(const Duration(seconds: 30), (_) => _loadActiveStudents());
+    _loadAnalytics();
   }
 
   @override
@@ -324,6 +328,17 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       if (mounted) setState(() => _activeStudents = rows);
     } catch (_) {}
   }
+
+  Future<void> _loadAnalytics() async {
+    try {
+      final data = await supabase.rpc('get_class_analytics', params: {'p_class_id': widget.classId});
+      final rows = (data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      if (mounted) setState(() => _analyticsData = rows);
+    } catch (_) {}
+  }
+
+  List<Map<String, dynamic>> get _speedFlagged =>
+    _analyticsData.where((r) => ((r['speed_flag_sessions'] as num?)?.toInt() ?? 0) > 0).toList();
 
   void _onLang() { if (mounted) setState(() {}); }
 
@@ -547,6 +562,12 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
           _buildStudyingNow(),
           const SizedBox(height: 12),
 
+          // Speed flags (rushing detection)
+          if (_speedFlagged.isNotEmpty) ...[
+            _buildSpeedFlags(),
+            const SizedBox(height: 12),
+          ],
+
           // Stats bar
           _buildStatsBar(),
           const SizedBox(height: 12),
@@ -622,6 +643,38 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             ]),
           );
         }).toList()),
+    ]);
+  }
+
+  Widget _buildSpeedFlags() {
+    final nameById = {for (final s in _students) s.studentId: s.name};
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('⚡ SPEED FLAGS (>10 WORDS/MIN)',
+        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
+      const SizedBox(height: 8),
+      ..._speedFlagged.map((r) {
+        final uid = r['student_id'] as String;
+        final count = (r['speed_flag_sessions'] as num).toInt();
+        final mastery = (r['genuine_mastery_pct'] as num?)?.toInt();
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(color: context.dangerColor.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
+          child: Row(children: [
+            const Text('⚠️', style: TextStyle(fontSize: 18)),
+            const SizedBox(width: 10),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(nameById[uid] ?? 'Student', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: context.appText)),
+              Text('$count flagged session${count > 1 ? 's' : ''} · possible rushing', style: TextStyle(fontSize: 10, color: context.textMuted)),
+            ])),
+            if (mastery != null)
+              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                Text('$mastery%', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: mastery < 60 ? context.dangerColor : context.successColor)),
+                Text('gate accuracy', style: TextStyle(fontSize: 8, color: context.textMuted)),
+              ]),
+          ]),
+        );
+      }),
     ]);
   }
 

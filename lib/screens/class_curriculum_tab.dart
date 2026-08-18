@@ -768,6 +768,165 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
     ),
   );
 
+  // ── Reading passage actions ────────────────────────────────────────────────
+
+  Future<void> _pickAndAssignPassage() async {
+    final searchCtrl = TextEditingController();
+    await showModalBottomSheet(
+      context: context, isScrollControlled: true,
+      backgroundColor: context.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          final q = searchCtrl.text.trim().toLowerCase();
+          final results = q.isEmpty
+              ? readingPassages
+              : readingPassages.where((p) => p.title.toLowerCase().contains(q) || p.topic.toLowerCase().contains(q)).toList();
+          return DraggableScrollableSheet(
+            initialChildSize: 0.7, minChildSize: 0.4, maxChildSize: 0.92, expand: false,
+            builder: (_, scrollCtrl) => Column(children: [
+              const SizedBox(height: 12),
+              Container(width: 36, height: 4, decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(2))),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
+                child: Text('Assign a Reading Passage', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: TextField(
+                  controller: searchCtrl,
+                  autofocus: true,
+                  onChanged: (_) => setSheet(() {}),
+                  decoration: InputDecoration(
+                    hintText: 'Search by title or topic…', hintStyle: TextStyle(color: context.textMuted),
+                    filled: true, fillColor: context.surface2,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    prefixIcon: Icon(Icons.search, color: context.textMuted, size: 20),
+                  ),
+                  style: TextStyle(color: context.appText),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: ListView.builder(
+                  controller: scrollCtrl,
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  itemCount: results.length,
+                  itemBuilder: (_, i) {
+                    final p = results[i];
+                    final alreadyAssigned = _homework.any((h) => h.passageId == p.id);
+                    return ListTile(
+                      enabled: !alreadyAssigned,
+                      leading: const Text('📚', style: TextStyle(fontSize: 20)),
+                      title: Text(p.title, style: TextStyle(color: context.appText, fontWeight: FontWeight.w600, fontSize: 13)),
+                      subtitle: Text(alreadyAssigned ? '${p.topic} · Assigned ✓' : p.topic,
+                          style: TextStyle(color: context.textMuted, fontSize: 11)),
+                      onTap: alreadyAssigned ? null : () { Navigator.pop(ctx); _showAssignPassageHomework(p); },
+                    );
+                  },
+                ),
+              ),
+            ]),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _showAssignPassageHomework(ReadingPassage passage) async {
+    final user = currentUser;
+    if (user == null) return;
+
+    String assignedTo = 'class';
+    final selectedStudents = <String>{};
+    DateTime? dueDate;
+
+    await showModalBottomSheet(
+      context: context, isScrollControlled: true,
+      backgroundColor: context.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => Padding(
+          padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+          child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Center(child: Container(width: 36, height: 4, margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(2)))),
+            Text('Assign as Homework', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: context.appText)),
+            const SizedBox(height: 4),
+            Text('📚 ${passage.title}  ·  ${passage.topic}',
+                style: TextStyle(fontSize: 13, color: context.textMuted)),
+            const SizedBox(height: 20),
+            Text('Due Date', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.8)),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () async {
+                final picked = await showDatePicker(context: ctx,
+                    initialDate: DateTime.now().add(const Duration(days: 7)),
+                    firstDate: DateTime.now(), lastDate: DateTime.now().add(const Duration(days: 365)));
+                if (picked != null) setSheet(() => dueDate = picked);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(12)),
+                child: Row(children: [
+                  const Text('📅', style: TextStyle(fontSize: 16)), const SizedBox(width: 8),
+                  Text(dueDate == null ? 'No due date (optional)' : dueDate!.toIso8601String().substring(0, 10),
+                      style: TextStyle(fontSize: 13, color: dueDate == null ? context.textMuted : context.appText, fontWeight: FontWeight.w500)),
+                  if (dueDate != null) ...[
+                    const Spacer(),
+                    GestureDetector(onTap: () => setSheet(() => dueDate = null), child: Text('✕', style: TextStyle(color: context.textMuted))),
+                  ],
+                ]),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text('Assign to', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.8)),
+            const SizedBox(height: 8),
+            Row(children: [
+              Expanded(child: _choiceBtn('Whole Class', assignedTo == 'class', () => setSheet(() { assignedTo = 'class'; selectedStudents.clear(); }))),
+              const SizedBox(width: 8),
+              Expanded(child: _choiceBtn('Specific Students', assignedTo == 'specific', () => setSheet(() => assignedTo = 'specific'))),
+            ]),
+            if (assignedTo == 'specific') ...[
+              const SizedBox(height: 10),
+              Container(
+                constraints: const BoxConstraints(maxHeight: 180),
+                decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(12)),
+                child: ListView(shrinkWrap: true, children: _students.map((s) {
+                  final on = selectedStudents.contains(s.studentId);
+                  return CheckboxListTile(
+                    dense: true, value: on,
+                    onChanged: (v) => setSheet(() { v == true ? selectedStudents.add(s.studentId) : selectedStudents.remove(s.studentId); }),
+                    title: Text(s.name, style: TextStyle(fontSize: 13, color: context.appText)),
+                    activeColor: context.primary,
+                  );
+                }).toList()),
+              ),
+            ],
+            const SizedBox(height: 20),
+            SizedBox(width: double.infinity, child: ElevatedButton(
+              onPressed: () async {
+                await supabase.from('class_homework').insert({
+                  'class_id': widget.classId,
+                  'passage_id': passage.id,
+                  'modes': ['read'],
+                  if (dueDate != null) 'due_date': dueDate!.toIso8601String().substring(0, 10),
+                  if (assignedTo == 'specific') 'student_ids': selectedStudents.toList(),
+                });
+                if (ctx.mounted) Navigator.pop(ctx);
+                _load();
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF59E0B), foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  padding: const EdgeInsets.symmetric(vertical: 14)),
+              child: const Text('Assign Homework', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            )),
+          ])),
+        ),
+      ),
+    );
+  }
+
   // ── Homework detail ────────────────────────────────────────────────────────
 
   void _showHomeworkDetail(_Homework hw) async {
@@ -1171,7 +1330,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 4),
                                 child: Row(children: [
-                                  SizedBox(width: 60, child: Text('${{'learn':'📖','flashcard':'🃏','quiz':'🧠','match':'🎯'}[mode] ?? ''} ${mode[0].toUpperCase()}${mode.substring(1)}',
+                                  SizedBox(width: 60, child: Text('${{'learn':'📖','flashcard':'🃏','quiz':'🧠','match':'🎯','read':'📚'}[mode] ?? ''} ${mode[0].toUpperCase()}${mode.substring(1)}',
                                       style: TextStyle(fontSize: 11, color: color))),
                                   Expanded(child: ClipRRect(
                                     borderRadius: BorderRadius.circular(4),
@@ -1191,6 +1350,32 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
               );
             }).toList());
           }),
+
+          const SizedBox(height: 20),
+
+          // ── 📚 Reading Passages section ─────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16)),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Text('📚 Reading Passages', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+                const Spacer(),
+                GestureDetector(onTap: _pickAndAssignPassage,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(color: context.primaryBg, borderRadius: BorderRadius.circular(20)),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.add, size: 14, color: context.primary), const SizedBox(width: 4),
+                      Text('Assign', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.primary)),
+                    ]),
+                  )),
+              ]),
+              const SizedBox(height: 6),
+              Text('Assign one of the ${readingPassages.length} curated Ideas passages as reading homework.',
+                  style: TextStyle(fontSize: 12, color: context.textMuted)),
+            ]),
+          ),
 
           const SizedBox(height: 20),
 
@@ -1255,7 +1440,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                     const SizedBox(height: 8),
                     ...hw.modes.map((mode) {
                       final count = hw.completionCounts[mode] ?? 0;
-                      final emoji = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯'}[mode] ?? '';
+                      final emoji = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯', 'read': '📚'}[mode] ?? '';
                       final color = {'learn': const Color(0xFF6366F1), 'flashcard': const Color(0xFF8B5CF6), 'quiz': const Color(0xFFEC4899), 'match': const Color(0xFF14B8A6)}[mode] ?? context.primary;
                       final pct = totalStudents == 0 ? 0.0 : count / totalStudents;
                       return Padding(

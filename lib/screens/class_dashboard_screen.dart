@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
@@ -282,6 +283,10 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   bool _reviewLoading = false;
   bool _reviewLoaded = false;
 
+  // "Studying now" live presence
+  List<Map<String, dynamic>> _activeStudents = [];
+  Timer? _activeStudentsTimer;
+
   @override
   void initState() {
     super.initState();
@@ -300,13 +305,24 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       _loading = false;
     }
     _load();
+    _loadActiveStudents();
+    _activeStudentsTimer = Timer.periodic(const Duration(seconds: 30), (_) => _loadActiveStudents());
   }
 
   @override
   void dispose() {
     _tabs.dispose();
+    _activeStudentsTimer?.cancel();
     appLangNotifier.removeListener(_onLang);
     super.dispose();
+  }
+
+  Future<void> _loadActiveStudents() async {
+    try {
+      final data = await supabase.rpc('get_active_students', params: {'p_class_id': widget.classId});
+      final rows = (data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      if (mounted) setState(() => _activeStudents = rows);
+    } catch (_) {}
   }
 
   void _onLang() { if (mounted) setState(() {}); }
@@ -527,6 +543,10 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
         children: [
+          // Studying now (live presence)
+          _buildStudyingNow(),
+          const SizedBox(height: 12),
+
           // Stats bar
           _buildStatsBar(),
           const SizedBox(height: 12),

@@ -6,10 +6,13 @@ import '../data/word_data.dart';
 import '../data/a1_collection.dart';
 import '../data/a2_collection.dart';
 import '../data/b1_collection.dart';
+import '../data/reading_data.dart';
 import 'learning.dart';
 import 'flashcard.dart';
 import 'quiz_screen.dart';
 import 'matching_screen.dart';
+
+const _kPassageXP = 15;
 
 WordCollection? _collectionByName(String name) {
   switch (name) {
@@ -33,6 +36,7 @@ class LibraryUnitStudyScreen extends StatefulWidget {
   final bool isClassWords;
   final String? collectionName;
   final int? dayNumber;
+  final int? passageId;
 
   const LibraryUnitStudyScreen({
     super.key,
@@ -45,6 +49,7 @@ class LibraryUnitStudyScreen extends StatefulWidget {
     this.isClassWords = false,
     this.collectionName,
     this.dayNumber,
+    this.passageId,
   });
 
   @override
@@ -54,6 +59,8 @@ class LibraryUnitStudyScreen extends StatefulWidget {
 class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
   bool _loading = true;
   WordDay? _wordDay;
+  ReadingPassage? _passage;
+  bool _markingRead = false;
   Set<String> _completedModes = {};
 
   static const _modeIcon  = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯'};
@@ -101,6 +108,21 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
         .eq('homework_id', widget.homeworkId)
         .eq('student_id', user.id);
     final completed = (progRaw as List).map((e) => (e as Map)['mode'] as String).toSet();
+
+    if (widget.passageId != null) {
+      ReadingPassage? found;
+      for (final p in readingPassages) {
+        if (p.id == widget.passageId) { found = p; break; }
+      }
+      if (mounted) {
+        setState(() {
+          _passage = found;
+          _completedModes = completed;
+          _loading = false;
+        });
+      }
+      return;
+    }
 
     List<WordItem> wordItems;
 
@@ -195,6 +217,39 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
     }
   }
 
+  Future<void> _markPassageRead() async {
+    final user = currentUser;
+    if (user == null || _markingRead || _completedModes.contains('read')) return;
+    setState(() => _markingRead = true);
+    try {
+      final existing = await supabase
+          .from('class_homework_progress')
+          .select('mode')
+          .eq('homework_id', widget.homeworkId)
+          .eq('student_id', user.id)
+          .eq('mode', 'read')
+          .maybeSingle();
+      if (existing == null) {
+        await supabase.from('class_homework_progress').insert({
+          'homework_id': widget.homeworkId,
+          'student_id': user.id,
+          'mode': 'read',
+        });
+        await recordClassActivity(user.id, widget.classId, xp: _kPassageXP, reason: 'Reading');
+      }
+      if (mounted) setState(() => _completedModes.add('read'));
+      WidgetService.refreshFromSupabase();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not save progress: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _markingRead = false);
+    }
+  }
+
   Future<void> _studyMode(String mode) async {
     final wd = _wordDay;
     if (wd == null || wd.words.isEmpty) return;
@@ -242,6 +297,10 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
       );
     }
 
+    if (widget.passageId != null) {
+      return _buildPassageScreen();
+    }
+
     if (_wordDay == null || _wordDay!.words.isEmpty) {
       return Scaffold(
         backgroundColor: context.bg,
@@ -280,6 +339,89 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
       ),
       body: allDone ? _buildDoneScreen() : _buildContinueScreen(next!, skip),
       bottomNavigationBar: allDone ? null : _buildBottomBar(),
+    );
+  }
+
+  // ── Reading passage ────────────────────────────────────────────────────────────
+
+  Widget _buildPassageScreen() {
+    final passage = _passage;
+    final done = _completedModes.contains('read');
+    const accent = Color(0xFFF59E0B);
+
+    return Scaffold(
+      backgroundColor: context.bg,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_rounded, color: context.primary),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(passage?.title ?? widget.unitName,
+            style: TextStyle(color: context.appText, fontWeight: FontWeight.w900, fontSize: 15),
+            overflow: TextOverflow.ellipsis),
+          Text(widget.className,
+            style: TextStyle(color: context.textMuted, fontSize: 11),
+            overflow: TextOverflow.ellipsis),
+        ]),
+      ),
+      body: passage == null
+        ? Center(child: Text('This passage is no longer available.', style: TextStyle(color: context.textMuted)))
+        : ListView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+            children: [
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(20)),
+                  child: const Text('📚 Reading', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.white)),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(20)),
+                  child: Text(passage.topic, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.textMuted)),
+                ),
+                if (done)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(color: const Color(0xFF10B981).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
+                    child: const Text('✓ Done', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF10B981))),
+                  ),
+              ]),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: context.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: done ? const Color(0xFF10B981).withValues(alpha: 0.35) : context.border),
+                ),
+                child: Text(passage.content,
+                  style: TextStyle(fontSize: 14, height: 1.6, color: context.appText)),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: (_markingRead || done) ? null : _markPassageRead,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: done ? const Color(0xFF10B981).withValues(alpha: 0.15) : accent,
+                    foregroundColor: done ? const Color(0xFF10B981) : Colors.white,
+                    disabledBackgroundColor: done ? const Color(0xFF10B981).withValues(alpha: 0.15) : null,
+                    disabledForegroundColor: done ? const Color(0xFF10B981) : null,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: Text(
+                    done ? '✓ Marked as read' : (_markingRead ? 'Saving…' : 'Mark as Read ✓'),
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ),
+            ],
+          ),
     );
   }
 

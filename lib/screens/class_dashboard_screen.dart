@@ -592,6 +592,39 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     );
   }
 
+  static const _activityIcon = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠'};
+
+  Widget _buildStudyingNow() {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('🟢 STUDYING NOW (${_activeStudents.length})',
+        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
+      const SizedBox(height: 8),
+      if (_activeStudents.isEmpty)
+        Text('No one studying right now', style: TextStyle(fontSize: 12, color: context.textMuted))
+      else
+        Wrap(spacing: 8, runSpacing: 8, children: _activeStudents.map((s) {
+          final activity = s['activity'] as String? ?? 'learn';
+          final collection = s['collection_name'] as String?;
+          final day = (s['day_number'] as num?)?.toInt();
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(12)),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const _PulsingDot(),
+              const SizedBox(width: 7),
+              Text(s['student_name'] as String? ?? 'Student', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: context.appText)),
+              const SizedBox(width: 5),
+              Text(_activityIcon[activity] ?? '📖', style: const TextStyle(fontSize: 11)),
+              if (collection != null) ...[
+                const SizedBox(width: 5),
+                Text('$collection${day != null ? ' U$day' : ''}', style: TextStyle(fontSize: 9, color: context.textMuted)),
+              ],
+            ]),
+          );
+        }).toList()),
+    ]);
+  }
+
   Widget _buildStatsBar() => Container(
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
     decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(14), boxShadow: context.cardShadow),
@@ -1844,6 +1877,46 @@ void _prevMonth() => setState(() {
             ]),
           ),
       ]),
+    );
+  }
+}
+
+// ── Pulsing "live" dot ────────────────────────────────────────────────────────
+
+class _PulsingDot extends StatefulWidget {
+  const _PulsingDot();
+
+  @override
+  State<_PulsingDot> createState() => _PulsingDotState();
+}
+
+class _PulsingDotState extends State<_PulsingDot> with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))..repeat();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 10, height: 10,
+      child: AnimatedBuilder(
+        animation: _ctrl,
+        builder: (_, child) => Stack(alignment: Alignment.center, children: [
+          Opacity(
+            opacity: (1 - _ctrl.value).clamp(0.0, 1.0),
+            child: Container(
+              width: 10 * (1 + _ctrl.value),
+              height: 10 * (1 + _ctrl.value),
+              decoration: const BoxDecoration(color: Color(0xFF4ADE80), shape: BoxShape.circle),
+            ),
+          ),
+          Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFF22C55E), shape: BoxShape.circle)),
+        ]),
+      ),
     );
   }
 }

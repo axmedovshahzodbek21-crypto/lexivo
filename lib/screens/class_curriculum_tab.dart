@@ -798,7 +798,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
             Row(children: [
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  Flexible(child: Text('${hw.source == 'library' ? '📖' : '📝'} ${hw.unitName}',
+                  Flexible(child: Text('${hw.source == 'library' ? '📖' : hw.source == 'passage' ? '📚' : '📝'} ${hw.unitName}',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText),
                       overflow: TextOverflow.ellipsis)),
                   const SizedBox(width: 6),
@@ -809,14 +809,16 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                           ? context.primaryBg
                           : hw.source == 'class'
                               ? const Color(0xFFF59E0B).withValues(alpha: 0.15)
-                              : const Color(0xFF22C55E).withValues(alpha: 0.12),
+                              : hw.source == 'passage'
+                                  ? const Color(0xFFF59E0B).withValues(alpha: 0.15)
+                                  : const Color(0xFF22C55E).withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      hw.source == 'library' ? 'Library' : hw.source == 'class' ? 'Class Words' : '📗 Collection',
+                      hw.source == 'library' ? 'Library' : hw.source == 'class' ? 'Class Words' : hw.source == 'passage' ? '📚 Reading' : '📗 Collection',
                       style: TextStyle(
                         fontSize: 9, fontWeight: FontWeight.bold,
-                        color: hw.source == 'library' ? context.primary : hw.source == 'class' ? const Color(0xFFF59E0B) : const Color(0xFF16A34A),
+                        color: hw.source == 'library' ? context.primary : hw.source == 'class' || hw.source == 'passage' ? const Color(0xFFF59E0B) : const Color(0xFF16A34A),
                       ),
                     ),
                   ),
@@ -851,7 +853,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
             const SizedBox(height: 8),
             Wrap(spacing: 6, children: hw.modes.map((mode) {
               final count = hw.completionCounts[mode] ?? 0;
-              final emoji = {'learn': '📖', 'flashcard': '🃏', 'quiz': '❓', 'match': '🔗'}[mode]!;
+              final emoji = {'learn': '📖', 'flashcard': '🃏', 'quiz': '❓', 'match': '🔗', 'read': '📚'}[mode]!;
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(20)),
@@ -876,7 +878,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                   Expanded(child: Text(s.name, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.appText))),
                   ...hw.modes.map((mode) {
                     final done = s.completedModes.contains(mode);
-                    final emoji = {'learn': '📖', 'flashcard': '🃏', 'quiz': '❓', 'match': '🔗'}[mode]!;
+                    final emoji = {'learn': '📖', 'flashcard': '🃏', 'quiz': '❓', 'match': '🔗', 'read': '📚'}[mode]!;
                     return Padding(padding: const EdgeInsets.only(left: 6),
                         child: Text(done ? emoji : '○',
                             style: TextStyle(fontSize: done ? 14 : 12, color: done ? null : context.textMuted.withValues(alpha: 0.3))));
@@ -1223,7 +1225,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Row(children: [
                       Expanded(child: Text(
-                        '${hw.source == 'collection' ? '📗' : hw.source == 'library' ? '📖' : '📝'} ${hw.unitName}',
+                        '${hw.source == 'collection' ? '📗' : hw.source == 'library' ? '📖' : hw.source == 'passage' ? '📚' : '📝'} ${hw.unitName}',
                         style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: context.appText),
                       )),
                       if (hw.source == 'class')
@@ -1239,6 +1241,13 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                           margin: const EdgeInsets.only(right: 6),
                           decoration: BoxDecoration(color: const Color(0xFF22C55E).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
                           child: const Text('Collection', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF16A34A))),
+                        ),
+                      if (hw.source == 'passage')
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          margin: const EdgeInsets.only(right: 6),
+                          decoration: BoxDecoration(color: const Color(0xFFF59E0B).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
+                          child: const Text('Reading', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFFF59E0B))),
                         ),
                       Text(hw.dueDate == null ? '' : (hw.isOverdue ? '⚠️ Overdue' : 'Due ${hw.dueDate}'),
                           style: TextStyle(fontSize: 11, color: hw.isOverdue ? const Color(0xFFEF4444) : context.textMuted, fontWeight: FontWeight.w600)),

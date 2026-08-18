@@ -290,6 +290,9 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   // Speed-flag detection (rushing through Learn sessions)
   List<Map<String, dynamic>> _analyticsData = [];
 
+  // 30-day words-learned trend
+  List<Map<String, dynamic>> _progressPoints = [];
+
   @override
   void initState() {
     super.initState();
@@ -311,6 +314,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     _loadActiveStudents();
     _activeStudentsTimer = Timer.periodic(const Duration(seconds: 30), (_) => _loadActiveStudents());
     _loadAnalytics();
+    _loadProgressOverTime();
   }
 
   @override
@@ -339,6 +343,40 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
 
   List<Map<String, dynamic>> get _speedFlagged =>
     _analyticsData.where((r) => ((r['speed_flag_sessions'] as num?)?.toInt() ?? 0) > 0).toList();
+
+  Future<void> _loadProgressOverTime() async {
+    try {
+      final data = await supabase.rpc('get_class_progress_over_time', params: {'p_class_id': widget.classId, 'p_days': 30});
+      final rows = (data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      if (mounted) setState(() => _progressPoints = rows);
+    } catch (_) {}
+  }
+
+  // Slowest words: derived client-side from each student's per_word_data_all
+  // (same source & logic as web's AnalyticsTab) — average seconds-to-mark per
+  // word across every 'learned' outcome, top 10 slowest.
+  List<({String word, double avg})> get _slowestWords {
+    final byWord = <String, List<double>>{};
+    for (final row in _analyticsData) {
+      final sessions = row['per_word_data_all'] as List? ?? const [];
+      for (final session in sessions) {
+        final words = session as List? ?? const [];
+        for (final w in words) {
+          final m = Map<String, dynamic>.from(w as Map);
+          if (m['outcome'] != 'learned') continue;
+          final word = m['word'] as String? ?? '';
+          final seconds = (m['seconds_to_mark'] as num?)?.toDouble() ?? 0;
+          if (word.isEmpty) continue;
+          byWord.putIfAbsent(word, () => []).add(seconds);
+        }
+      }
+    }
+    final stats = byWord.entries
+      .map((e) => (word: e.key, avg: e.value.reduce((a, b) => a + b) / e.value.length))
+      .toList()
+      ..sort((a, b) => b.avg.compareTo(a.avg));
+    return stats.take(10).toList();
+  }
 
   void _onLang() { if (mounted) setState(() {}); }
 
@@ -568,6 +606,18 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             const SizedBox(height: 12),
           ],
 
+          // 30-day words-learned trend
+          if (_progressPoints.length > 1) ...[
+            _buildProgressChart(),
+            const SizedBox(height: 12),
+          ],
+
+          // Slowest words
+          if (_slowestWords.isNotEmpty) ...[
+            _buildSlowestWords(),
+            const SizedBox(height: 12),
+          ],
+
           // Stats bar
           _buildStatsBar(),
           const SizedBox(height: 12),
@@ -675,6 +725,67 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
           ]),
         );
       }),
+    ]);
+  }
+
+  Widget _buildProgressChart() {
+    final points = _progressPoints.map((p) => ((p['words_learned'] as num?)?.toDouble() ?? 0)).toList();
+    final total = points.fold(0.0, (a, b) => a + b).round();
+    final firstDate = _progressPoints.first['study_date'] as String? ?? '';
+    final lastDate = _progressPoints.last['study_date'] as String? ?? '';
+    String shortDate(String d) => d.length >= 10 ? d.substring(5) : d;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('📈 WORDS LEARNED (LAST 30 DAYS)',
+        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
+      const SizedBox(height: 8),
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(14), boxShadow: context.cardShadow),
+        child: Column(children: [
+          SizedBox(
+            height: 88,
+            width: double.infinity,
+            child: CustomPaint(painter: _LineChartPainter(points: points, color: context.primary)),
+          ),
+          const SizedBox(height: 6),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Text(shortDate(firstDate), style: TextStyle(fontSize: 9, color: context.textMuted)),
+            Text('Total: $total words', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.textMuted)),
+            Text(shortDate(lastDate), style: TextStyle(fontSize: 9, color: context.textMuted)),
+          ]),
+        ]),
+      ),
+    ]);
+  }
+
+  Widget _buildSlowestWords() {
+    final stats = _slowestWords;
+    final maxAvg = stats.isEmpty ? 1.0 : stats.first.avg;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('⏱ SLOWEST WORDS (AVG SECONDS TO MARK)',
+        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
+      const SizedBox(height: 8),
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(14), boxShadow: context.cardShadow),
+        child: Column(children: stats.map((s) {
+          final pct = maxAvg == 0 ? 0.0 : (s.avg / maxAvg).clamp(0.0, 1.0);
+          final color = s.avg > 30 ? context.dangerColor : s.avg > 15 ? const Color(0xFFF97316) : context.successColor;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(children: [
+              SizedBox(width: 84, child: Text(s.word, style: TextStyle(fontSize: 12, color: context.appText), overflow: TextOverflow.ellipsis)),
+              const SizedBox(width: 8),
+              Expanded(child: ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(value: pct, minHeight: 8, backgroundColor: context.border, valueColor: AlwaysStoppedAnimation(color)),
+              )),
+              const SizedBox(width: 8),
+              SizedBox(width: 32, child: Text('${s.avg.round()}s', style: TextStyle(fontSize: 10, color: context.textMuted), textAlign: TextAlign.right)),
+            ]),
+          );
+        }).toList()),
+      ),
     ]);
   }
 
@@ -1932,6 +2043,62 @@ void _prevMonth() => setState(() {
       ]),
     );
   }
+}
+
+// ── Words-learned trend line chart ────────────────────────────────────────────
+// Mirrors web's inline SVG LineChart (app/classes/[id]/page.tsx): a gradient-
+// filled area under a stroked line with a dot per day.
+
+class _LineChartPainter extends CustomPainter {
+  final List<double> points;
+  final Color color;
+  const _LineChartPainter({required this.points, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (points.length < 2) return;
+    const pad = 4.0;
+    final w = size.width - pad * 2;
+    final h = size.height - pad * 2;
+    final maxY = points.reduce((a, b) => a > b ? a : b).clamp(1.0, double.infinity);
+
+    double sx(int i) => pad + (i / (points.length - 1)) * w;
+    double sy(double y) => pad + h - (y / maxY) * h;
+
+    final linePath = Path()..moveTo(sx(0), sy(points[0]));
+    for (int i = 1; i < points.length; i++) {
+      linePath.lineTo(sx(i), sy(points[i]));
+    }
+
+    final fillPath = Path.from(linePath)
+      ..lineTo(sx(points.length - 1), pad + h)
+      ..lineTo(sx(0), pad + h)
+      ..close();
+
+    final fillPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter, end: Alignment.bottomCenter,
+        colors: [color.withValues(alpha: 0.3), color.withValues(alpha: 0)],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+    canvas.drawPath(fillPath, fillPaint);
+
+    final linePaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(linePath, linePaint);
+
+    final dotPaint = Paint()..color = color;
+    for (int i = 0; i < points.length; i++) {
+      canvas.drawCircle(Offset(sx(i), sy(points[i])), 3, dotPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _LineChartPainter oldDelegate) =>
+    oldDelegate.points != points || oldDelegate.color != color;
 }
 
 // ── Pulsing "live" dot ────────────────────────────────────────────────────────

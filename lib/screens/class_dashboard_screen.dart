@@ -66,6 +66,79 @@ class ActivityRow {
   );
 }
 
+// ── Review pattern classification ────────────────────────────────────────────
+// Classifies a student's SRS Review behavior from their timestamped
+// class_xp_history entries (reason = 'SRS Review') — no new tracking needed,
+// purely derived from data already recorded on every review action. Mirrors
+// lib/reviewPattern.ts on the web app so both agree on the same labels.
+
+enum ReviewLabel { daily, mostly, bursty, inactive, never }
+
+class ReviewLabelMeta {
+  final String emoji, text, blurb;
+  final Color color;
+  const ReviewLabelMeta(this.emoji, this.text, this.color, this.blurb);
+}
+
+const _reviewLabelMeta = <ReviewLabel, ReviewLabelMeta>{
+  ReviewLabel.daily:    ReviewLabelMeta('🟢', 'Daily',           Color(0xFF22C55E), 'Reviews on nearly every day — small, steady sessions.'),
+  ReviewLabel.mostly:   ReviewLabelMeta('🟡', 'Mostly daily',    Color(0xFFEAB308), 'Reviews most days, with the occasional gap.'),
+  ReviewLabel.bursty:   ReviewLabelMeta('🟠', 'Bursty catch-up', Color(0xFFF97316), 'Reviews rarely, but does a lot at once when they do.'),
+  ReviewLabel.inactive: ReviewLabelMeta('🔴', 'Inactive',        Color(0xFFEF4444), 'Little to no review activity, and words are piling up.'),
+  ReviewLabel.never:    ReviewLabelMeta('⚪', 'Never reviewed',  Color(0xFF94A3B8), "Hasn't done a single SRS review yet."),
+};
+
+const _reviewWindowDays = 30;
+
+typedef ReviewClassification = ({
+  int daysReviewed, double coverage, int streak, int longestGap,
+  int totalReviews, double avgPerActiveDay, ReviewLabel label,
+});
+
+String _ymd(DateTime d) => '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+ReviewClassification _classifyReview(List<DateTime> entryDates, int overdueCount) {
+  final byDay = <String, int>{};
+  for (final d in entryDates) {
+    final key = _ymd(d);
+    byDay[key] = (byDay[key] ?? 0) + 1;
+  }
+  final today = DateTime.now();
+  final days = List.generate(_reviewWindowDays, (i) => _ymd(today.subtract(Duration(days: _reviewWindowDays - 1 - i))));
+
+  final daysReviewed = days.where(byDay.containsKey).length;
+  final coverage = daysReviewed / _reviewWindowDays;
+
+  int streak = 0;
+  for (int i = days.length - 1; i >= 0; i--) {
+    if (byDay.containsKey(days[i])) { streak++; } else { break; }
+  }
+
+  int longestGap = 0, curGap = 0;
+  for (final d in days) {
+    if (byDay.containsKey(d)) { curGap = 0; } else { curGap++; if (curGap > longestGap) longestGap = curGap; }
+  }
+
+  final totalReviews = entryDates.length;
+  final avgPerActiveDay = daysReviewed > 0 ? totalReviews / daysReviewed : 0.0;
+
+  final ReviewLabel label;
+  if (totalReviews == 0) {
+    label = ReviewLabel.never;
+  } else if (coverage >= 0.8) {
+    label = ReviewLabel.daily;
+  } else if (coverage >= 0.4) {
+    label = ReviewLabel.mostly;
+  } else if (daysReviewed <= 2 && overdueCount > 0) {
+    label = ReviewLabel.inactive;
+  } else {
+    label = ReviewLabel.bursty;
+  }
+
+  return (daysReviewed: daysReviewed, coverage: coverage, streak: streak, longestGap: longestGap,
+    totalReviews: totalReviews, avgPerActiveDay: avgPerActiveDay, label: label);
+}
+
 String _timeAgo(String iso) {
   final diff = DateTime.now().difference(DateTime.parse(iso));
   if (diff.inMinutes < 1) return 'just now';
@@ -203,11 +276,20 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   bool _srsLoading = false;
   bool _srsLoaded = false;
 
+  // Review Pattern tab
+  List<Map<String, dynamic>> _reviewEntries = [];
+  List<Map<String, dynamic>> _reviewSrsRows = [];
+  bool _reviewLoading = false;
+  bool _reviewLoaded = false;
+
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 6, vsync: this);
-    _tabs.addListener(() { if (_tabs.index == 4 && !_srsLoaded && !_srsLoading) _loadSRS(); });
+    _tabs = TabController(length: 7, vsync: this);
+    _tabs.addListener(() {
+      if (_tabs.index == 4 && !_srsLoaded && !_srsLoading) _loadSRS();
+      if (_tabs.index == 5 && !_reviewLoaded && !_reviewLoading) _loadReviewPattern();
+    });
     appLangNotifier.addListener(_onLang);
     final cached = _dashboardCache[widget.classId];
     if (cached != null) {
@@ -298,6 +380,29 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       }
     } catch (_) {
       if (mounted) setState(() => _srsLoading = false);
+    }
+  }
+
+  Future<void> _loadReviewPattern() async {
+    if (!mounted) return;
+    setState(() => _reviewLoading = true);
+    try {
+      final results = await Future.wait<dynamic>([
+        supabase.from('class_xp_history').select('user_id, created_at').eq('class_id', widget.classId).eq('reason', 'SRS Review'),
+        supabase.from('class_srs_states').select('user_id, word, translation, stage, next_due').eq('class_id', widget.classId),
+      ]);
+      final entries = (results[0] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      final srsRows = (results[1] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      if (mounted) {
+        setState(() {
+          _reviewEntries = entries;
+          _reviewSrsRows = srsRows;
+          _reviewLoading = false;
+          _reviewLoaded = true;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _reviewLoading = false);
     }
   }
 

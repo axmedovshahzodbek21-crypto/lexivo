@@ -618,6 +618,12 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             const SizedBox(height: 12),
           ],
 
+          // Per-student mastery pie charts
+          if (_analyticsData.isNotEmpty) ...[
+            _buildPerStudentOverview(),
+            const SizedBox(height: 12),
+          ],
+
           // Stats bar
           _buildStatsBar(),
           const SizedBox(height: 12),
@@ -786,6 +792,61 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
           );
         }).toList()),
       ),
+    ]);
+  }
+
+  Widget _buildPerStudentOverview() {
+    final nameById = {for (final s in _students) s.studentId: s.name};
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('👤 PER-STUDENT OVERVIEW',
+        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
+      const SizedBox(height: 8),
+      ..._analyticsData.map((r) {
+        final uid = r['student_id'] as String;
+        final sessions = (r['per_word_data_all'] as List? ?? const []).expand((s) => (s as List? ?? const []));
+        int learned = 0, skipped = 0, hard = 0;
+        for (final w in sessions) {
+          final outcome = (Map<String, dynamic>.from(w as Map))['outcome'];
+          if (outcome == 'learned') { learned++; }
+          else if (outcome == 'skipped') { skipped++; }
+          else if (outcome == 'too-hard') { hard++; }
+        }
+        final totalSessions = (r['total_sessions'] as num?)?.toInt() ?? 0;
+        final mastery = (r['genuine_mastery_pct'] as num?)?.toInt();
+        final speedFlags = (r['speed_flag_sessions'] as num?)?.toInt() ?? 0;
+        final masteryColor = mastery == null ? context.textMuted
+          : mastery >= 80 ? context.successColor : mastery >= 60 ? const Color(0xFFF97316) : context.dangerColor;
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(14), boxShadow: context.cardShadow),
+          child: Row(children: [
+            _MiniPie(learned: learned, skipped: skipped, hard: hard, size: 44),
+            const SizedBox(width: 12),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(nameById[uid] ?? 'Student', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: context.appText), overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 3),
+              Wrap(spacing: 4, children: [
+                Text('$learned✓', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF22C55E))),
+                Text('·', style: TextStyle(fontSize: 10, color: context.textMuted)),
+                Text('$skipped⏭', style: const TextStyle(fontSize: 10, color: Color(0xFFF97316))),
+                Text('·', style: TextStyle(fontSize: 10, color: context.textMuted)),
+                Text('$hard😤', style: const TextStyle(fontSize: 10, color: Color(0xFFEF4444))),
+                Text('· $totalSessions session${totalSessions != 1 ? 's' : ''}', style: TextStyle(fontSize: 10, color: context.textMuted)),
+              ]),
+            ])),
+            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              if (mastery != null) ...[
+                Text('$mastery%', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: masteryColor)),
+                Text('mastery', style: TextStyle(fontSize: 9, color: context.textMuted)),
+              ] else
+                Text('no gate data', style: TextStyle(fontSize: 10, color: context.textMuted)),
+              if (speedFlags > 0)
+                Text('⚡ $speedFlags flags', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.dangerColor)),
+            ]),
+          ]),
+        );
+      }),
     ]);
   }
 
@@ -2043,6 +2104,57 @@ void _prevMonth() => setState(() {
       ]),
     );
   }
+}
+
+// ── Per-student mastery mini pie ──────────────────────────────────────────────
+// Mirrors web's MiniPie (conic-gradient div): three segments — learned
+// (green), skipped (orange), too-hard (red) — proportional to word count.
+
+class _MiniPie extends StatelessWidget {
+  final int learned, skipped, hard;
+  final double size;
+  const _MiniPie({required this.learned, required this.skipped, required this.hard, this.size = 44});
+
+  @override
+  Widget build(BuildContext context) {
+    final total = learned + skipped + hard;
+    if (total == 0) {
+      return Container(width: size, height: size, decoration: BoxDecoration(shape: BoxShape.circle, color: context.border));
+    }
+    return SizedBox(
+      width: size, height: size,
+      child: CustomPaint(painter: _MiniPiePainter(learned: learned, skipped: skipped, hard: hard)),
+    );
+  }
+}
+
+class _MiniPiePainter extends CustomPainter {
+  final int learned, skipped, hard;
+  const _MiniPiePainter({required this.learned, required this.skipped, required this.hard});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final total = learned + skipped + hard;
+    if (total == 0) return;
+    final rect = Offset.zero & size;
+    const start = -3.14159265 / 2; // 12 o'clock, matches conic-gradient's 0deg reference
+    final segments = [
+      (learned, const Color(0xFF22C55E)),
+      (skipped, const Color(0xFFF97316)),
+      (hard, const Color(0xFFEF4444)),
+    ];
+    double angle = start;
+    for (final (count, color) in segments) {
+      if (count == 0) continue;
+      final sweep = (count / total) * 2 * 3.14159265;
+      canvas.drawArc(rect, angle, sweep, true, Paint()..color = color);
+      angle += sweep;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _MiniPiePainter oldDelegate) =>
+    oldDelegate.learned != learned || oldDelegate.skipped != skipped || oldDelegate.hard != hard;
 }
 
 // ── Words-learned trend line chart ────────────────────────────────────────────

@@ -83,50 +83,34 @@ class SyncService {
       final streak = max(prefs.getInt('streak') ?? 0, ((cloudRow?['streak'] as num?) ?? 0).toInt());
       final freezes = prefs.getInt('streak_freezes') ?? 0;
 
-      await Future.wait([
-        _sb.from('user_data').upsert({
-          'id': uid,
-          'total_xp':            xp,
-          'streak':              streak,
-          'streak_freezes':      freezes,
-          'last_study_date':     prefs.getString('last_study_date'),
-          'last_freeze_week':    prefs.getString('last_freeze_week'),
-          if (prefs.getString('last_xp_date') == todayStr) ...{
-            'today_xp':      prefs.getInt('today_xp') ?? 0,
-            'today_xp_date': prefs.getString('last_xp_date'),
-          },
-          if (prefs.getString('daily_words_date') == todayStr) ...{
-            'daily_words_learned': prefs.getInt('daily_words_learned') ?? 0,
-            'daily_words_date':    prefs.getString('daily_words_date'),
-          },
-          // xp_history was previously only pushed by pushLists(), which fires
-          // on a decoupled trigger (word imports, list changes) — so earning
-          // XP updated the total immediately but the per-entry log could sit
-          // unsynced indefinitely. addXP() calls pushStats(), so include it
-          // here too.
-          'xp_history':          arr('xp_history'),
-          'stats_updated_at':    ts,
-        }),
-        _sb.from('user_stats').upsert({
-          'id':               uid,
-          'xp':               xp,
-          'streak':           streak,
-          'freezes':          freezes,
-          'last_study_date':  prefs.getString('last_study_date'),
-          'last_freeze_week': prefs.getString('last_freeze_week'),
-          'total_days':       studyDays.length,
-          'study_days':       studyDays,
-          if (prefs.getString('last_xp_date') == todayStr) ...{
-            'today_xp':      prefs.getInt('today_xp') ?? 0,
-            'today_xp_date': prefs.getString('last_xp_date'),
-          },
-          if (prefs.getString('daily_words_date') == todayStr) ...{
-            'today_count':      prefs.getInt('daily_words_learned') ?? 0,
-            'today_count_date': prefs.getString('daily_words_date'),
-          },
-          'xp_updated_at':    ts,
-        }),
-      ]);
+      // user_stats (the leaderboard's read source) is no longer written
+      // directly — a trigger on user_data derives it in the same transaction,
+      // so the two can't diverge on a partial failure the way two separate
+      // client upserts could.
+      await _sb.from('user_data').upsert({
+        'id': uid,
+        'total_xp':            xp,
+        'streak':              streak,
+        'streak_freezes':      freezes,
+        'last_study_date':     prefs.getString('last_study_date'),
+        'last_freeze_week':    prefs.getString('last_freeze_week'),
+        'study_days':          studyDays,
+        if (prefs.getString('last_xp_date') == todayStr) ...{
+          'today_xp':      prefs.getInt('today_xp') ?? 0,
+          'today_xp_date': prefs.getString('last_xp_date'),
+        },
+        if (prefs.getString('daily_words_date') == todayStr) ...{
+          'daily_words_learned': prefs.getInt('daily_words_learned') ?? 0,
+          'daily_words_date':    prefs.getString('daily_words_date'),
+        },
+        // xp_history was previously only pushed by pushLists(), which fires
+        // on a decoupled trigger (word imports, list changes) — so earning
+        // XP updated the total immediately but the per-entry log could sit
+        // unsynced indefinitely. addXP() calls pushStats(), so include it
+        // here too.
+        'xp_history':          arr('xp_history'),
+        'stats_updated_at':    ts,
+      });
       await prefs.setInt('total_xp', xp);
       await prefs.setInt('streak', streak);
       await prefs.setInt('streak_freezes', freezes);
@@ -227,33 +211,26 @@ class SyncService {
           .map((k) => {'id': k.substring('ach_date_'.length), 'date': prefs.getString(k)!})
           .toList();
 
-      final reviewDays = days('review_days');
-      final wordGoalDays = days('word_goal_days');
-      await Future.wait([
-        _sb.from('user_data').upsert({
-          'id': uid,
-          'learned_words':    arr('learned_words'),
-          'srs_words':        combinedSrs,
-          'starred_words':    starredNames,
-          'hard_words':       arr('marked_hard_words'), // includes tombstones (removedAt) so unmarking propagates
-          'study_days':       days('study_days'),
-          'review_days':      reviewDays,
-          'word_goal_days':   wordGoalDays,
-          'unit_done_days':   days('unit_done_days'),
-          'xp_history':       arr('xp_history'),
-          'unit_progress':    obj('unit_progress'),
-          'my_unit_progress': obj('my_unit_progress'),
-          'review_log':       obj('srs_review_log'),
-          'imported_words':   arr('imported_words'),
-          'achievements':     achievementEntries,
-          'lists_updated_at': ts,
-        }),
-        _sb.from('user_stats').upsert({
-          'id':             uid,
-          'review_days':    reviewDays,
-          'word_goal_days': wordGoalDays,
-        }),
-      ]);
+      // review_days/word_goal_days reach user_stats via the user_data trigger
+      // (see pushStats) rather than a second direct upsert here.
+      await _sb.from('user_data').upsert({
+        'id': uid,
+        'learned_words':    arr('learned_words'),
+        'srs_words':        combinedSrs,
+        'starred_words':    starredNames,
+        'hard_words':       arr('marked_hard_words'), // includes tombstones (removedAt) so unmarking propagates
+        'study_days':       days('study_days'),
+        'review_days':      days('review_days'),
+        'word_goal_days':   days('word_goal_days'),
+        'unit_done_days':   days('unit_done_days'),
+        'xp_history':       arr('xp_history'),
+        'unit_progress':    obj('unit_progress'),
+        'my_unit_progress': obj('my_unit_progress'),
+        'review_log':       obj('srs_review_log'),
+        'imported_words':   arr('imported_words'),
+        'achievements':     achievementEntries,
+        'lists_updated_at': ts,
+      });
       await prefs.setString('sync_lists_ts', ts);
     } catch (_) {}
   }

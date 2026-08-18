@@ -73,8 +73,6 @@ class SRSWord {
   final String learnedAt;
   final int? deletedAt; // tombstone: set instead of removing, so unlearning syncs across devices
 
-  static const List<int> _intervals = [1, 3, 7, 14, 30];
-
   SRSWord({
     required this.word,
     required this.translation,
@@ -130,14 +128,14 @@ class SRSWord {
     }
   }
 
-  SRSWord _copyWith({required int reviewStage, required String nextReviewDate}) => SRSWord(
-    word: word, translation: translation, definition: definition,
-    example1: example1, example2: example2, example3: example3,
-    partOfSpeech: partOfSpeech, pronunciation: pronunciation,
-    collectionName: collectionName, unitTopic: unitTopic, dayNumber: dayNumber,
-    reviewStage: reviewStage, nextReviewDate: nextReviewDate, learnedAt: learnedAt,
-    deletedAt: deletedAt,
-  );
+  // reviewStage/nextReviewDate are no longer mutated after construction —
+  // the review log (markIntervalDone/getDueWords/checkAndUnlearn) is the
+  // sole source of truth for review progress. There used to be dropStage/
+  // advanceStage/hardStage methods that updated these fields directly; they
+  // were only ever called from a code path unreachable in practice (every
+  // word actually routed through reviewSRSWord came from getDueWords(),
+  // which never took it), so removing them doesn't change behavior — it
+  // just stops the fields from looking mutable when they aren't anymore.
 
   SRSWord copyWith({int? deletedAt}) => SRSWord(
     word: word, translation: translation, definition: definition,
@@ -147,25 +145,6 @@ class SRSWord {
     reviewStage: reviewStage, nextReviewDate: nextReviewDate, learnedAt: learnedAt,
     deletedAt: deletedAt ?? this.deletedAt,
   );
-
-  SRSWord dropStage() {
-    final newStage = (reviewStage - 1).clamp(0, 3);
-    return _copyWith(reviewStage: newStage, nextReviewDate: _nextDateFromNow(_intervals[newStage]));
-  }
-
-  SRSWord advanceStage() {
-    final newStage = reviewStage + 1;
-    return newStage >= 5
-        ? _copyWith(reviewStage: 5, nextReviewDate: '9999-12-31')
-        : _copyWith(reviewStage: newStage, nextReviewDate: _nextDateFromNow(_intervals[newStage]));
-  }
-
-  SRSWord hardStage() {
-    final newStage = reviewStage + 1;
-    if (newStage >= 5) return _copyWith(reviewStage: 5, nextReviewDate: '9999-12-31');
-    final days = (_intervals[newStage] / 2).ceil();
-    return _copyWith(reviewStage: newStage, nextReviewDate: _nextDateFromNow(days));
-  }
 
   Map<String, dynamic> toJson() => {
     'word': word,
@@ -1380,24 +1359,6 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     );
   }
 
-  static Future<void> updateSRSWord(SRSWord updated) async {
-    final prefs = await SharedPreferences.getInstance();
-    final existing = await _getSRSWordsRaw();
-    final idx = existing.indexWhere(
-      (e) => e.deletedAt == null &&
-          e.word == updated.word && e.collectionName == updated.collectionName,
-    );
-    if (idx >= 0) {
-      existing[idx] = updated;
-    } else {
-      existing.add(updated);
-    }
-    await prefs.setString(
-      _srsKey,
-      jsonEncode(existing.map((e) => e.toJson()).toList()),
-    );
-  }
-
   // ── Interval completion ───────────────────────────────────────────────────
 
   static Future<void> markIntervalDone(String wordKey, String learnedAt, int interval) async {
@@ -1516,29 +1477,38 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     await saveReviewLog(newLog);
   }
 
+  // The review log (markIntervalDone/getDueWords/checkAndUnlearn) is the only
+  // source of truth for review progress — reviewStage/nextReviewDate are
+  // legacy fields kept on SRSWord for backward-compat JSON shape only. A
+  // word not obtained via getDueWords() (so not a DueSRSWord) still has its
+  // next-due interval derived from the log here, rather than falling back
+  // to those legacy fields, so every review completion is reflected in
+  // due-count/unlearn logic regardless of how the word reached this call.
+  static Future<int> _nextUncompletedInterval(SRSWord word) async {
+    const intervals = [1, 3, 7, 14, 30];
+    final wordKey = '${word.collectionName}::${word.word}';
+    final log = await getReviewLog();
+    final completed = log[wordKey] ?? [];
+    return intervals.firstWhere((i) => !completed.contains(i), orElse: () => intervals.last);
+  }
+
   static Future<bool> reviewSRSWord(SRSWord word) async {
-    if (word is DueSRSWord) {
-      final wordKey = '${word.collectionName}::${word.word}';
-      await markIntervalDone(wordKey, word.learnedAt, word.dueInterval);
-      return addXP(reviewXP(word.dueInterval), reason: 'SRS Review');
-    } else {
-      final updated = word.advanceStage();
-      await updateSRSWord(updated);
-      return addXP(reviewXP(1), reason: 'SRS Review');
-    }
+    final interval = word is DueSRSWord ? word.dueInterval : await _nextUncompletedInterval(word);
+    final wordKey = '${word.collectionName}::${word.word}';
+    await markIntervalDone(wordKey, word.learnedAt, interval);
+    return addXP(reviewXP(interval), reason: 'SRS Review');
   }
 
   static Future<void> failSRSWord(SRSWord word) async {
-    if (word is! DueSRSWord) {
-      final updated = word.dropStage();
-      await updateSRSWord(updated);
-    }
-    // DueSRSWord: no-op — interval stays uncompleted, word is due again next session
+    // No-op: the interval stays uncompleted in the review log, so the word
+    // is due again next session — matches the DueSRSWord behavior above,
+    // now unconditionally (reviewStage/dropStage are no longer consulted).
   }
 
   static Future<void> hardSRSWord(SRSWord word) async {
-    final updated = word.hardStage();
-    await updateSRSWord(updated);
+    // Same as reviewSRSWord: the log has no "hard" weighting, so a hard
+    // review still completes the current interval.
+    await reviewSRSWord(word);
   }
 
   static Future<List<HardWord>> getHardWords() async {

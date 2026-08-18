@@ -12,8 +12,6 @@ import 'flashcard.dart';
 import 'quiz_screen.dart';
 import 'matching_screen.dart';
 
-const _kPassageXP = 15;
-
 WordCollection? _collectionByName(String name) {
   switch (name) {
     case '30 Days of Powerful Words': return thirtyDaysCollection;
@@ -181,31 +179,19 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
     }
   }
 
+  // Progress + XP are recorded server-side via record_class_homework_progress,
+  // which re-derives eligibility and word counts and is the only writer
+  // class_homework_progress accepts now — a direct client insert/select here
+  // would let a crafted call mark any mode done and fabricate XP.
   Future<void> _recordProgress(String mode) async {
     final user = currentUser;
     if (user == null) return;
     try {
-      final existing = await supabase
-          .from('class_homework_progress')
-          .select('mode')
-          .eq('homework_id', widget.homeworkId)
-          .eq('student_id', user.id)
-          .eq('mode', mode)
-          .maybeSingle();
-      if (existing == null) {
-        await supabase.from('class_homework_progress').insert({
-          'homework_id': widget.homeworkId,
-          'student_id': user.id,
-          'mode': mode,
-        });
-        if (mode != 'learn') {
-          const modeXP     = {'flashcard': 3, 'quiz': 5, 'match': 4};
-          const modeReason = {'flashcard': 'Cards', 'quiz': 'Quiz', 'match': 'Match'};
-          final xpPerWord = modeXP[mode] ?? 3;
-          final wordCount = _wordDay?.words.length ?? 0;
-          await recordClassActivity(user.id, widget.classId, xp: wordCount * xpPerWord, reason: modeReason[mode] ?? mode);
-        }
-      }
+      await supabase.rpc('record_class_homework_progress', params: {
+        'p_homework_id': widget.homeworkId,
+        'p_mode': mode,
+        'p_client_word_count': _wordDay?.words.length,
+      });
       if (mounted) setState(() => _completedModes.add(mode));
       WidgetService.refreshFromSupabase();
     } catch (e) {
@@ -222,21 +208,10 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
     if (user == null || _markingRead || _completedModes.contains('read')) return;
     setState(() => _markingRead = true);
     try {
-      final existing = await supabase
-          .from('class_homework_progress')
-          .select('mode')
-          .eq('homework_id', widget.homeworkId)
-          .eq('student_id', user.id)
-          .eq('mode', 'read')
-          .maybeSingle();
-      if (existing == null) {
-        await supabase.from('class_homework_progress').insert({
-          'homework_id': widget.homeworkId,
-          'student_id': user.id,
-          'mode': 'read',
-        });
-        await recordClassActivity(user.id, widget.classId, xp: _kPassageXP, reason: 'Reading');
-      }
+      await supabase.rpc('record_class_homework_progress', params: {
+        'p_homework_id': widget.homeworkId,
+        'p_mode': 'read',
+      });
       if (mounted) setState(() => _completedModes.add('read'));
       WidgetService.refreshFromSupabase();
     } catch (e) {

@@ -189,6 +189,7 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
                         final entries = byDate[dateStr] ?? [];
                         final hasXp = entries.isNotEmpty;
                         final dayXp = _dayTotal(entries);
+                        final hasReview = entries.any((e) => e['reason'] == 'SRS Review');
 
                         return GestureDetector(
                           onTap: isFuture || !hasXp ? null : () => _showDaySheet(context, dateStr, entries, color),
@@ -223,6 +224,20 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
                                             style: const TextStyle(fontSize: 7, color: Colors.white70, fontWeight: FontWeight.w600)),
                                       ],
                                     )),
+                                    if (hasReview)
+                                      Positioned(
+                                        top: 0, right: 0,
+                                        child: Container(
+                                          width: 13, height: 13,
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF06B6D4),
+                                            shape: BoxShape.circle,
+                                            border: Border.all(color: context.bg, width: 1.5),
+                                          ),
+                                          alignment: Alignment.center,
+                                          child: const Text('🔄', style: TextStyle(fontSize: 7)),
+                                        ),
+                                      ),
                                   ]),
                                 ),
                               ),
@@ -235,10 +250,17 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
                     // Legend
                     Padding(
                       padding: const EdgeInsets.only(top: 12),
-                      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        ClipOval(child: Container(width: 12, height: 12, color: color)),
-                        const SizedBox(width: 6),
-                        Text('XP earned', style: TextStyle(fontSize: 11, color: context.textMuted)),
+                      child: Wrap(alignment: WrapAlignment.center, spacing: 14, runSpacing: 6, children: [
+                        Row(mainAxisSize: MainAxisSize.min, children: [
+                          ClipOval(child: Container(width: 12, height: 12, color: color)),
+                          const SizedBox(width: 6),
+                          Text('XP earned', style: TextStyle(fontSize: 11, color: context.textMuted)),
+                        ]),
+                        Row(mainAxisSize: MainAxisSize.min, children: [
+                          const Text('🔄', style: TextStyle(fontSize: 12)),
+                          const SizedBox(width: 6),
+                          Text('Did Review', style: TextStyle(fontSize: 11, color: context.textMuted)),
+                        ]),
                       ]),
                     ),
                   ]),

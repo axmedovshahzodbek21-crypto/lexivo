@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../services/supabase_service.dart';
 import '../data/storage_service.dart';
 import '../app_theme.dart';
@@ -102,6 +105,7 @@ Widget _dashHero(String classId, String className, int studentCount, {
   required VoidCallback onWords,
   required VoidCallback onAnnounce,
   required VoidCallback onRefresh,
+  VoidCallback? onExport,
 }) {
   final cols = _dashGradColors(classId);
   return Container(
@@ -147,6 +151,10 @@ Widget _dashHero(String classId, String className, int studentCount, {
             _heroBtn('📢 Announce', onAnnounce),
             const SizedBox(width: 8),
             _heroBtn('🔄 Refresh', onRefresh),
+            if (onExport != null) ...[
+              const SizedBox(width: 8),
+              _heroBtn('📥 CSV', onExport),
+            ],
           ]),
         ]),
       ),
@@ -312,6 +320,46 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   int get _totalXp => _students.fold(0, (s, e) => s + e.xp);
   int get _avgStreak => _students.isEmpty ? 0 : (_students.fold(0, (s, e) => s + e.streak) / _students.length).round();
 
+  Future<void> _exportCSV() async {
+    final headers = ['Name', 'Last Active', 'XP', 'Streak', 'Words Learned',
+      ..._collections.map((c) => '${c.label} (/${c.totalUnits})')];
+    final rows = _students.map((s) => [
+      s.name, s.lastStudyDate ?? 'Never', s.xp, s.streak, s.totalWords,
+      ..._collections.map((c) => s.progressFor(c.collectionName)),
+    ]);
+    String esc(Object? v) => '"${v.toString().replaceAll('"', '""')}"';
+    final csv = [headers, ...rows].map((row) => row.map(esc).join(',')).join('\n');
+
+    final dir = await getTemporaryDirectory();
+    final safeName = widget.className.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '-');
+    final dateStr = DateTime.now().toIso8601String().substring(0, 10);
+    final file = File('${dir.path}/$safeName-progress-$dateStr.csv');
+    await file.writeAsString(csv);
+    if (!mounted) return;
+    await SharePlus.instance.share(ShareParams(
+      files: [XFile(file.path)],
+      subject: '${widget.className} progress',
+    ));
+  }
+
+  Future<void> _removeStudent(StudentRow s) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Remove student?'),
+        content: Text('Remove ${s.name} from this class? They can rejoin later with the class code.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(tr('cancel'))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text('Remove', style: TextStyle(color: context.dangerColor))),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await supabase.from('class_members').delete().eq('class_id', widget.classId).eq('student_id', s.studentId);
+    _dashboardCache.remove(widget.classId);
+    if (mounted) _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -321,6 +369,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
           onWords: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClassWordsScreen(classId: widget.classId, className: widget.className, isTeacher: true))).then((_) => _load()),
           onAnnounce: _showAnnounceSheet,
           onRefresh: _load,
+          onExport: _students.isNotEmpty ? _exportCSV : null,
         ),
         TabBar(
           controller: _tabs,
@@ -511,6 +560,14 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             style: OutlinedButton.styleFrom(foregroundColor: Colors.amber, side: BorderSide(color: Colors.amber.withValues(alpha: 0.5)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), padding: const EdgeInsets.symmetric(vertical: 7)),
             child: Text('🎯 ${tr('set_target')}', style: const TextStyle(fontSize: 12)),
           )),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () => _removeStudent(s),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
+              child: Text('Remove', style: TextStyle(fontSize: 11, color: context.textMuted)),
+            ),
+          ),
         ]),
       ]),
     );

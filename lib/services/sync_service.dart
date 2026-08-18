@@ -71,13 +71,17 @@ class SyncService {
       // pushing a lower (stale) locally-computed total after another device
       // already pushed a higher one would silently erase the other device's
       // earned XP/streak.
+      //
+      // Freezes are NOT included in this max() — they're spendable, so a
+      // device pushing right after spending one needs its lower local value
+      // to win outright, not lose to max() against a stale higher cloud value.
       Map<String, dynamic>? cloudRow;
       try {
-        cloudRow = await _sb.from('user_data').select('total_xp, streak, streak_freezes').eq('id', uid).maybeSingle();
+        cloudRow = await _sb.from('user_data').select('total_xp, streak').eq('id', uid).maybeSingle();
       } catch (_) {}
       final xp = max(prefs.getInt('total_xp') ?? 0, ((cloudRow?['total_xp'] as num?) ?? 0).toInt());
       final streak = max(prefs.getInt('streak') ?? 0, ((cloudRow?['streak'] as num?) ?? 0).toInt());
-      final freezes = max(prefs.getInt('streak_freezes') ?? 0, ((cloudRow?['streak_freezes'] as num?) ?? 0).toInt());
+      final freezes = prefs.getInt('streak_freezes') ?? 0;
 
       await Future.wait([
         _sb.from('user_data').upsert({
@@ -297,7 +301,10 @@ class SyncService {
       final localStatsTs = prefs.getString('sync_stats_ts') ?? '';
       final cloudStatsNewer = cloudStatsTs.compareTo(localStatsTs) > 0;
 
-      // Accumulators: always take max
+      // Accumulators: always take max. Freezes are NOT one of these — they're
+      // spendable (can legitimately decrease), so max() would resurrect a
+      // freeze that was already spent on another device the moment a stale
+      // higher cloud/local value gets pulled. Merged by timestamp below instead.
       await prefs.setInt('total_xp', max(
         prefs.getInt('total_xp') ?? 0, (row['total_xp'] as num? ?? 0).toInt(),
       ));
@@ -313,9 +320,6 @@ class SyncService {
           await prefs.setString('last_study_date', cloudLastStudyEarly);
         }
       }
-      await prefs.setInt('streak_freezes', max(
-        prefs.getInt('streak_freezes') ?? 0, (row['streak_freezes'] as num? ?? 0).toInt(),
-      ));
 
       // Daily accumulators: always take max regardless of which side has newer timestamp
       final today = _todayStr();
@@ -347,6 +351,9 @@ class SyncService {
 
         if (row['last_freeze_week'] != null) {
           await prefs.setString('last_freeze_week', row['last_freeze_week'] as String);
+        }
+        if (row['streak_freezes'] != null) {
+          await prefs.setInt('streak_freezes', (row['streak_freezes'] as num).toInt());
         }
 
         await prefs.setString('sync_stats_ts', cloudStatsTs);

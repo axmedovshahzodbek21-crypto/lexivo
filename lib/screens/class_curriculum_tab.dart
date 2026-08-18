@@ -6,6 +6,7 @@ import '../data/word_data.dart';
 import '../data/a1_collection.dart';
 import '../data/a2_collection.dart';
 import '../data/b1_collection.dart';
+import '../data/reading_data.dart';
 
 // ── Models ────────────────────────────────────────────────────────────────────
 
@@ -39,6 +40,7 @@ class _Homework {
   final String? classUnitId;      // class words (class_word_units)
   final String? collectionName;   // pre-built collection
   final int? dayNumber;           // day within collection
+  final int? passageId;           // Ideas reading passage
   final String unitName, source;
   final List<String> modes;
   final String? dueDate;
@@ -48,7 +50,7 @@ class _Homework {
   final Map<String, int> completionCounts;
   const _Homework({
     required this.id, this.unitId, this.classUnitId,
-    this.collectionName, this.dayNumber,
+    this.collectionName, this.dayNumber, this.passageId,
     required this.unitName, required this.source,
     required this.modes, this.dueDate, required this.assignedTo,
     required this.studentIds, required this.totalStudents,
@@ -122,7 +124,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
             .select('id, name, class_words(count)')
             .eq('class_id', widget.classId).order('created_at'),
         supabase.from('class_homework')
-            .select('id, unit_id, class_unit_id, collection_name, day_number, modes, due_date, student_ids, teacher_units(name), class_word_units(name)')
+            .select('id, unit_id, class_unit_id, collection_name, day_number, passage_id, modes, due_date, student_ids, teacher_units(name), class_word_units(name)')
             .eq('class_id', widget.classId).order('created_at', ascending: false),
       ]);
 
@@ -186,20 +188,28 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
         final classUnitId = m['class_unit_id'] as String?;
         final collName = m['collection_name'] as String?;
         final dayNum = m['day_number'] as int?;
-        final source = collName != null ? 'collection' : unitId != null ? 'library' : 'class';
+        final passageId = m['passage_id'] as int?;
+        final source = passageId != null ? 'passage' : collName != null ? 'collection' : unitId != null ? 'library' : 'class';
         final tuMap = m['teacher_units'] as Map?;
         final cwMap = m['class_word_units'] as Map?;
-        final unitName = collName != null
-            ? '$collName · Day $dayNum'
-            : unitId != null
-                ? (tuMap?['name'] as String?) ?? 'Unit'
-                : (cwMap?['name'] as String?) ?? 'Unit';
+        String unitName;
+        if (passageId != null) {
+          ReadingPassage? found;
+          for (final p in readingPassages) { if (p.id == passageId) { found = p; break; } }
+          unitName = found?.title ?? 'Reading Passage';
+        } else if (collName != null) {
+          unitName = '$collName · Day $dayNum';
+        } else if (unitId != null) {
+          unitName = (tuMap?['name'] as String?) ?? 'Unit';
+        } else {
+          unitName = (cwMap?['name'] as String?) ?? 'Unit';
+        }
         final rawModes = (m['modes'] as List?)?.map((x) => x as String).toList() ?? ['learn', 'flashcard', 'quiz'];
         final rawStudentIds = (m['student_ids'] as List?)?.map((x) => x as String).toList() ?? [];
         final totalStudents = rawStudentIds.isEmpty ? _students.length : rawStudentIds.length;
         return _Homework(
           id: m['id'] as String, unitId: unitId, classUnitId: classUnitId,
-          collectionName: collName, dayNumber: dayNum,
+          collectionName: collName, dayNumber: dayNum, passageId: passageId,
           unitName: unitName, source: source,
           modes: rawModes, dueDate: m['due_date'] as String?,
           assignedTo: rawStudentIds.isEmpty ? 'class' : 'specific', studentIds: rawStudentIds,

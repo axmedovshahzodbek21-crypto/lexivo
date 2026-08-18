@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/supabase_service.dart';
@@ -293,6 +295,10 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   // 30-day words-learned trend
   List<Map<String, dynamic>> _progressPoints = [];
 
+  // AI weekly digest
+  String _digestText = '';
+  bool _digestLoading = false;
+
   @override
   void initState() {
     super.initState();
@@ -376,6 +382,40 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       .toList()
       ..sort((a, b) => b.avg.compareTo(a.avg));
     return stats.take(10).toList();
+  }
+
+  // Calls the same /api/digest endpoint web's teacher dashboard uses (a
+  // Next.js route on the web deployment that holds the Anthropic API key
+  // server-side) — no Flutter-side secret needed, just the Supabase auth
+  // token proving this caller actually teaches the class.
+  Future<void> _generateDigest() async {
+    if (mounted) setState(() => _digestLoading = true);
+    try {
+      final nameById = {for (final s in _students) s.studentId: s.name};
+      final payload = _analyticsData.map((r) => {
+        'studentName': nameById[r['student_id']] ?? 'Unknown',
+        'totalSessions': r['total_sessions'],
+        'totalWordsLearned': r['total_words_learned'],
+        'avgSessionSeconds': r['avg_session_seconds'],
+        'genuineMasteryPct': r['genuine_mastery_pct'],
+        'speedFlagSessions': r['speed_flag_sessions'],
+      }).toList();
+
+      final token = supabase.auth.currentSession?.accessToken;
+      final res = await http.post(
+        Uri.parse('https://lexivo-web-six.vercel.app/api/digest'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'classId': widget.classId, 'analytics': payload}),
+      );
+      final json = jsonDecode(res.body) as Map<String, dynamic>;
+      if (mounted) setState(() => _digestText = (json['digest'] as String?) ?? (json['error'] as String?) ?? 'Error generating digest');
+    } catch (_) {
+      if (mounted) setState(() => _digestText = 'Error connecting to AI service');
+    }
+    if (mounted) setState(() => _digestLoading = false);
   }
 
   void _onLang() { if (mounted) setState(() {}); }
@@ -624,6 +664,10 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             const SizedBox(height: 12),
           ],
 
+          // AI weekly digest
+          _buildDigest(),
+          const SizedBox(height: 12),
+
           // Stats bar
           _buildStatsBar(),
           const SizedBox(height: 12),
@@ -847,6 +891,36 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
           ]),
         );
       }),
+    ]);
+  }
+
+  Widget _buildDigest() {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('🤖 AI WEEKLY DIGEST',
+        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
+      const SizedBox(height: 8),
+      Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(14), boxShadow: context.cardShadow),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: (_digestLoading || _analyticsData.isEmpty) ? null : _generateDigest,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: context.primary, foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              child: Text(_digestLoading ? '✨ Generating…' : '✨ Generate digest', style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+          if (_digestText.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(_digestText, style: TextStyle(fontSize: 13, height: 1.5, color: context.appText)),
+          ],
+        ]),
+      ),
     ]);
   }
 

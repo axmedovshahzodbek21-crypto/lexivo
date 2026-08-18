@@ -626,7 +626,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
       backgroundColor: context.surface,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => _StudentsSheet(classId: widget.classId, memberCount: _memberCount),
+      builder: (_) => _StudentsSheet(classId: widget.classId, className: widget.className, memberCount: _memberCount, isTeacher: widget.isTeacher),
     );
   }
 
@@ -840,8 +840,10 @@ Color _studentAvatarColor(String id) {
 
 class _StudentsSheet extends StatefulWidget {
   final String classId;
+  final String className;
   final int memberCount;
-  const _StudentsSheet({required this.classId, required this.memberCount});
+  final bool isTeacher;
+  const _StudentsSheet({required this.classId, required this.className, required this.memberCount, required this.isTeacher});
 
   @override
   State<_StudentsSheet> createState() => _StudentsSheetState();
@@ -913,7 +915,7 @@ class _StudentsSheetState extends State<_StudentsSheet> {
                       final streak = (s['streak'] as num?)?.toInt() ?? 0;
                       final lastStudy = s['last_study_date'] as String?;
                       final isActive = lastStudy == today;
-                      return Container(
+                      final row = Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                         decoration: BoxDecoration(
                           color: ctx.surface2,
@@ -954,6 +956,16 @@ class _StudentsSheetState extends State<_StudentsSheet> {
                               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: ctx.primary)),
                           ]),
                         ]),
+                      );
+                      if (!widget.isTeacher) return row;
+                      return GestureDetector(
+                        onTap: () => Navigator.push(context, MaterialPageRoute(
+                          builder: (_) => ClassXpCalendarScreen(
+                            classId: widget.classId, className: widget.className,
+                            totalXpRaw: xp, studentId: sid, studentName: name,
+                          ),
+                        )),
+                        child: row,
                       );
                     },
                   ),

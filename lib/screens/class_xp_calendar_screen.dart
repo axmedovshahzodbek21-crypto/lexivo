@@ -18,12 +18,16 @@ class ClassXpCalendarScreen extends StatefulWidget {
   final String classId;
   final String className;
   final int totalXpRaw; // raw (×10)
+  final String? studentId;   // teacher viewing a specific student; null = viewer's own history
+  final String? studentName;
 
   const ClassXpCalendarScreen({
     super.key,
     required this.classId,
     required this.className,
     required this.totalXpRaw,
+    this.studentId,
+    this.studentName,
   });
 
   @override
@@ -42,7 +46,7 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
   }
 
   Future<void> _load() async {
-    final uid = currentUser?.id;
+    final uid = widget.studentId ?? currentUser?.id;
     if (uid == null) { setState(() => _loading = false); return; }
     try {
       final rows = await supabase
@@ -103,7 +107,7 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
           icon: Icon(Icons.arrow_back_rounded, color: context.primary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('${widget.className} XP',
+        title: Text(widget.studentName != null ? '${widget.studentName} · XP' : '${widget.className} XP',
             style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
       ),
       body: _loading
@@ -129,7 +133,7 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
                       '${(widget.totalXpRaw / 10).toStringAsFixed(1)} XP',
                       style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: color),
                     ),
-                    Text('Total class XP',
+                    Text(widget.studentName != null ? '${widget.studentName}\'s class XP' : 'Total class XP',
                         style: TextStyle(fontSize: 12, color: context.textMuted, fontWeight: FontWeight.w600)),
                   ]),
                 ),
@@ -286,11 +290,14 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
                 final xp = ((e['amount'] as num?)?.toInt() ?? 0);
                 final reason = e['reason'] as String? ?? '';
                 final icon = _reasonIcons[reason] ?? '⚡';
-                final diff = DateTime.now().difference(DateTime.parse(e['created_at'] as String));
+                final createdAt = DateTime.parse(e['created_at'] as String).toLocal();
+                final diff = DateTime.now().difference(createdAt);
                 final ago = diff.inMinutes < 1 ? 'just now'
                     : diff.inMinutes < 60 ? '${diff.inMinutes}m ago'
                     : diff.inHours < 24 ? '${diff.inHours}h ago'
                     : '${diff.inDays}d ago';
+                final hour12 = createdAt.hour % 12 == 0 ? 12 : createdAt.hour % 12;
+                final exactTime = '$hour12:${createdAt.minute.toString().padLeft(2, '0')} ${createdAt.hour < 12 ? 'AM' : 'PM'}';
                 return Container(
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -304,7 +311,7 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(reason, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
                           color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87)),
-                      Text(ago, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                      Text('$exactTime · $ago', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
                     ])),
                     Text('+${(xp / 10).toStringAsFixed(1)} XP',
                         style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: color)),

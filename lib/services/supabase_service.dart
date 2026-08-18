@@ -99,35 +99,22 @@ Future<void> recordClassActivity(
     print('[recordClassActivity] study_days error: $e\n$st');
   }
   if (xp > 0) {
+    // record_class_xp does a single atomic UPDATE (class_xp = class_xp + xp)
+    // instead of a client-side read-then-write, which could otherwise lose
+    // an increment when two XP awards for the same student land close
+    // together — replaces separate class_members/class_xp_history calls.
     try {
-      final row = await supabase
-          .from('class_members')
-          .select('class_xp')
-          .eq('student_id', userId)
-          .eq('class_id', classId)
-          .maybeSingle();
-      final current = (row?['class_xp'] as num?)?.toInt() ?? 0;
-      await supabase
-          .from('class_members')
-          .update({'class_xp': current + xp})
-          .eq('student_id', userId)
-          .eq('class_id', classId);
-      // ignore: avoid_print
-      print('[recordClassActivity] OK class_xp=${current + xp} classId=$classId');
-    } catch (e, st) {
-      // ignore: avoid_print
-      print('[recordClassActivity] class_members error: $e\n$st');
-    }
-    try {
-      await supabase.from('class_xp_history').insert({
-        'user_id': userId,
-        'class_id': classId,
-        'amount': xp,
-        'reason': reason.isNotEmpty ? reason : 'Study',
+      await supabase.rpc('record_class_xp', params: {
+        'p_student_id': userId,
+        'p_class_id': classId,
+        'p_xp': xp,
+        'p_reason': reason.isNotEmpty ? reason : 'Study',
       });
+      // ignore: avoid_print
+      print('[recordClassActivity] OK xp=$xp classId=$classId');
     } catch (e, st) {
       // ignore: avoid_print
-      print('[recordClassActivity] history error: $e\n$st');
+      print('[recordClassActivity] record_class_xp error: $e\n$st');
     }
   }
 }

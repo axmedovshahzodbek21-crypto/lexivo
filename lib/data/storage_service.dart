@@ -187,8 +187,8 @@ class SRSWord {
   };
 
   factory SRSWord.fromJson(Map<String, dynamic> json) => SRSWord(
-    word: json['word'],
-    translation: json['translation'],
+    word: json['word'] ?? '',
+    translation: json['translation'] ?? '',
     definition: json['definition'] ?? '',
     example1: json['example1'] ?? '',
     example2: json['example2'] ?? '',
@@ -199,7 +199,7 @@ class SRSWord {
     unitTopic: json['topic'] ?? json['unitTopic'] ?? '',
     dayNumber: json['dayNumber'] ?? 0,
     reviewStage: json['reviewStage'] ?? 0,
-    nextReviewDate: json['nextReviewDate'],
+    nextReviewDate: json['nextReviewDate'] ?? _todayStr(),
     learnedAt: json['learnedAt'] ?? json['learnedDate'] ?? _todayStr(),
     deletedAt: json['deletedAt'] as int?,
   );
@@ -287,15 +287,15 @@ class HardWord {
   };
 
   factory HardWord.fromJson(Map<String, dynamic> json) => HardWord(
-    word: json['word'],
-    translation: json['translation'],
-    definition: json['definition'],
-    example1: json['example1'],
-    partOfSpeech: json['partOfSpeech'],
-    pronunciation: json['pronunciation'],
+    word: json['word'] ?? '',
+    translation: json['translation'] ?? '',
+    definition: json['definition'] ?? '',
+    example1: json['example1'] ?? '',
+    partOfSpeech: json['partOfSpeech'] ?? '',
+    pronunciation: json['pronunciation'] ?? '',
     collectionName: json['collectionName'] ?? '',
     unitTopic: json['unitTopic'] ?? '',
-    dayNumber: json['dayNumber'],
+    dayNumber: json['dayNumber'] ?? 0,
   );
 
   WordItem toWordItem() => WordItem(

@@ -10,10 +10,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import '../data/word_data.dart';
 import '../data/storage_service.dart';
+import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
-
-const String _googleTtsApiKey = 'AIzaSyDD0_ZvBD0g0KN67Mrh9kjbXpkE0-LpeKM';
 
 enum CardMode { wordToTranslation, wordToDefinition, translationToWord }
 
@@ -734,6 +733,11 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
     await _tts.speak(_currentWord.word);
   }
 
+  // Proxied through our own server (app/api/tts) instead of calling Google
+  // Cloud TTS directly — the API key used to be hardcoded client-side, which
+  // let anyone extract it from the compiled app and run up billing on our
+  // quota with no rate limit or per-user auth.
+  //
   // Uses cloud TTS rather than the device's local engine because local
   // voice packs often don't cover less-common languages reliably.
   Future<void> _speakInLanguage() async {
@@ -742,14 +746,14 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
     if (lang == null) return;
     final word = _currentWord.word;
     try {
+      final token = supabase.auth.currentSession?.accessToken;
       final response = await http.post(
-        Uri.parse('https://texttospeech.googleapis.com/v1/text:synthesize?key=$_googleTtsApiKey'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'input': {'text': word},
-          'voice': {'languageCode': lang, 'ssmlGender': 'FEMALE'},
-          'audioConfig': {'audioEncoding': 'MP3', 'speakingRate': 0.85},
-        }),
+        Uri.parse('https://lexivo-web-six.vercel.app/api/tts'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'text': word, 'languageCode': lang}),
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);

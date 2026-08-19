@@ -74,29 +74,28 @@ int _daysBetween(String fromDateStr, String toDateStr) {
   return b.difference(a).inDays;
 }
 
-// Called when a student marks a class word as learned.
-// ignoreDuplicates: re-learning a word does not reset an existing SRS stage.
-// Returns true if this word was newly inserted (not already learned), so
-// callers can gate XP the same way personal-mode learning does.
-Future<bool> initClassSRSWord({
+// Called when a student marks a class word as learned. Inserts the SRS row
+// and awards XP atomically server-side (record_class_word_learned) so a
+// modified client can't split "was this new" from "award XP" into two
+// separate requests and replay just the XP one. Returns true if the word
+// was newly learned (not already in class_srs_states).
+Future<bool> recordClassWordLearned({
   required String userId,
   required String classId,
   required String word,
   required String translation,
+  required int xp,
 }) async {
-  final inserted = await supabase.from('class_srs_states').upsert(
-    {
-      'user_id': userId,
-      'class_id': classId,
-      'word': word,
-      'translation': translation,
-      'stage': 0,
-      'next_due': _addDays(_intervals[0]),
-    },
-    onConflict: 'user_id,class_id,word',
-    ignoreDuplicates: true,
-  ).select('word');
-  return inserted.isNotEmpty;
+  final isNew = await supabase.rpc('record_class_word_learned', params: {
+    'p_student_id': userId,
+    'p_class_id': classId,
+    'p_word': word,
+    'p_translation': translation,
+    'p_next_due': _addDays(_intervals[0]),
+    'p_xp': xp,
+    'p_reason': 'Learn',
+  });
+  return isNew as bool;
 }
 
 // Cascades every overdue, non-graduated word for this student down through

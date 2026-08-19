@@ -299,6 +299,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
         if (_folderCtrl.text.trim().isNotEmpty) 'folder_name': _folderCtrl.text.trim(),
         if (_groupCtrl.text.trim().isNotEmpty) 'collection_name': _groupCtrl.text.trim(),
       });
+      if (!mounted) return;
       _wordCtrl.clear(); _translationCtrl.clear(); _definitionCtrl.clear();
       _example1Ctrl.clear(); _example1TrCtrl.clear(); _example2Ctrl.clear(); _example2TrCtrl.clear();
       await _loadWords();
@@ -328,6 +329,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
         if (group.isNotEmpty) 'collection_name': group,
       }).toList();
       await supabase.from('class_words').insert(rows);
+      if (!mounted) return;
       _pasteCtrl.clear();
       _wordsInputCtrl.clear();
       setState(() => _parsed = []);

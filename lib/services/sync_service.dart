@@ -78,7 +78,10 @@ class SyncService {
       Map<String, dynamic>? cloudRow;
       try {
         cloudRow = await _sb.from('user_data').select('total_xp, streak').eq('id', uid).maybeSingle();
-      } catch (_) {}
+      } catch (e) {
+        // ignore: avoid_print
+        print('[SyncService.pushStats] cloud fetch for max() merge failed: $e');
+      }
       final xp = max(prefs.getInt('total_xp') ?? 0, ((cloudRow?['total_xp'] as num?) ?? 0).toInt());
       final streak = max(prefs.getInt('streak') ?? 0, ((cloudRow?['streak'] as num?) ?? 0).toInt());
       final freezes = prefs.getInt('streak_freezes') ?? 0;
@@ -115,7 +118,10 @@ class SyncService {
       await prefs.setInt('streak', streak);
       await prefs.setInt('streak_freezes', freezes);
       await prefs.setString('sync_stats_ts', ts);
-    } catch (_) {}
+    } catch (e) {
+      // ignore: avoid_print
+      print('[SyncService.pushStats] failed: $e');
+    }
     WidgetService.pushStats();
   }
 
@@ -152,7 +158,10 @@ class SyncService {
         }),
       ]);
       await prefs.setString('sync_settings_ts', ts);
-    } catch (_) {}
+    } catch (e) {
+      // ignore: avoid_print
+      print('[SyncService.pushSettings] failed: $e');
+    }
   }
 
   static Future<void> pushLists() async {
@@ -170,7 +179,10 @@ class SyncService {
             .select('learned_words, srs_words, starred_words, hard_words, study_days, review_days, word_goal_days, unit_done_days, xp_history, unit_progress, my_unit_progress, review_log, achievements, imported_words')
             .eq('id', uid).maybeSingle();
         if (cloudRow != null) await _mergeListsFromCloudRow(cloudRow, prefs);
-      } catch (_) {}
+      } catch (e) {
+        // ignore: avoid_print
+        print('[SyncService.pushLists] pre-merge cloud fetch failed: $e');
+      }
 
       final ts = _now();
 
@@ -234,7 +246,10 @@ class SyncService {
         'lists_updated_at': ts,
       });
       await prefs.setString('sync_lists_ts', ts);
-    } catch (_) {}
+    } catch (e) {
+      // ignore: avoid_print
+      print('[SyncService.pushLists] failed: $e');
+    }
   }
 
   static Future<void> pushAll() async {
@@ -378,7 +393,10 @@ class SyncService {
       }
 
       await _mergeListsFromCloudRow(row, prefs);
-    } catch (_) {}
+    } catch (e) {
+      // ignore: avoid_print
+      print('[SyncService.pullAll] failed: $e');
+    }
   }
 
   // Merges every list-type field from a cloud `user_data` row into local

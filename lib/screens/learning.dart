@@ -335,19 +335,24 @@ class _LearningScreenState extends State<LearningScreen> {
       final user = currentUser;
       if (user != null) {
         final requestedXp = widget.noXP ? 0 : 10;
-        final isNew = await recordClassWordLearned(
-          userId: user.id,
-          classId: widget.classId!,
-          word: word.word,
-          translation: word.translation,
-          xp: requestedXp,
-        );
-        // Study-day presence only — XP was already awarded atomically above.
-        await recordClassActivity(user.id, widget.classId!, reason: 'Learn');
-        final xp = isNew ? requestedXp : 0;
-        if (xp > 0) {
-          await StorageService.addXP(xp, reason: 'Learn', source: 'Class · ${widget.collectionName}');
-          _sessionXP += xp;
+        try {
+          final isNew = await recordClassWordLearned(
+            userId: user.id,
+            classId: widget.classId!,
+            word: word.word,
+            translation: word.translation,
+            xp: requestedXp,
+          );
+          // Study-day presence only — XP was already awarded atomically above.
+          await recordClassActivity(user.id, widget.classId!, reason: 'Learn');
+          final xp = isNew ? requestedXp : 0;
+          if (xp > 0) {
+            await StorageService.addXP(xp, reason: 'Learn', source: 'Class · ${widget.collectionName}');
+            _sessionXP += xp;
+          }
+        } catch (_) {
+          // Sync failed (network/RPC) — don't strand the student on this
+          // card; the lesson still advances, just without server credit.
         }
       }
     } else {

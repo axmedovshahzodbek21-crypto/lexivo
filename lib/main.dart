@@ -4,6 +4,7 @@ import 'screens/onboarding.dart';
 import 'screens/main_shell.dart';
 import 'screens/login_screen.dart';
 import 'services/notification_service.dart';
+import 'services/onesignal_service.dart';
 import 'services/supabase_service.dart';
 import 'services/content_service.dart';
 import 'services/sync_service.dart';
@@ -22,6 +23,7 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initSupabase();
+  OneSignalService.initialize();
   await WidgetService.init();
   await DeepLinkService.init();
   await ContentService.initialize();
@@ -124,6 +126,15 @@ class _SplashRouterState extends State<SplashRouter> {
     _route();
   }
 
+  Future<void> _relinkPushIfEnabled(String userId) async {
+    try {
+      final res = await supabase.from('profiles').select('push_enabled').eq('id', userId).maybeSingle();
+      if (res?['push_enabled'] == true) {
+        OneSignalService.linkUser(userId);
+      }
+    } catch (_) {}
+  }
+
   Future<void> _route() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
@@ -147,6 +158,7 @@ class _SplashRouterState extends State<SplashRouter> {
       if (!mounted) return;
       WidgetService.refreshFromSupabase();
       WidgetService.pushStats();
+      _relinkPushIfEnabled(currentUser!.id);
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(

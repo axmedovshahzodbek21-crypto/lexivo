@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/notification_service.dart';
+import '../services/onesignal_service.dart';
 import '../services/supabase_service.dart';
 import '../services/sync_service.dart';
 import '../data/storage_service.dart';
@@ -35,6 +36,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _pulseEnabled = true;
   String _pulseSpeed = 'normal'; // 'slow' | 'normal' | 'fast'
   bool _loading = true;
+  bool _pushEnabled = false;
 
   final _nameController = TextEditingController();
   final _bioController = TextEditingController();
@@ -99,12 +101,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final user = currentUser;
     if (user == null) return;
     try {
-      final res = await supabase.from('profiles').select('bio').eq('id', user.id).maybeSingle();
+      final res = await supabase.from('profiles').select('bio, push_enabled').eq('id', user.id).maybeSingle();
       if (res != null && mounted) {
         final fetched = (res['bio'] as String?) ?? '';
         _bioController.text = fetched;
+        setState(() => _pushEnabled = res['push_enabled'] == true);
       }
     } catch (_) {}
+  }
+
+  Future<void> _togglePush(bool value) async {
+    final user = currentUser;
+    if (user == null) return;
+    if (value) {
+      final granted = await OneSignalService.requestPermission();
+      if (!granted) return;
+      await OneSignalService.linkUser(user.id);
+    } else {
+      await OneSignalService.unlinkUser();
+    }
+    try {
+      await supabase.from('profiles').update({'push_enabled': value}).eq('id', user.id);
+    } catch (_) {}
+    if (mounted) setState(() => _pushEnabled = value);
   }
 
   Future<void> _saveBio() async {
@@ -809,6 +828,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ],
 
+                const SizedBox(height: 8),
+                _buildCard(
+                  context,
+                  child: SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      'Class notifications',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: context.appText,
+                      ),
+                    ),
+                    subtitle: const Text(
+                      'Notified when a teacher assigns homework or posts an announcement',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    value: _pushEnabled,
+                    activeThumbColor: context.primary,
+                    onChanged: _togglePush,
+                  ),
+                ),
+
                 const SizedBox(height: 24),
 
                 _buildSectionHeader(context, tr('english_level'), icon: '📊',
@@ -1241,6 +1282,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _signOut() async {
     await StorageService.clearAllProgress();
     ClassProgressScreen.clearCache();
+    await OneSignalService.unlinkUser();
     await Supabase.instance.client.auth.signOut();
     if (!mounted) return;
     Navigator.pushAndRemoveUntil(

@@ -51,6 +51,7 @@ dependencies:
   home_widget: ^0.9.3
   app_links: ^7.2.1
   share_plus: ^13.3.0
+  onesignal_flutter: ^5.3.3
 
 dev_dependencies:
   flutter_test:

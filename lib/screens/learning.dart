@@ -18,8 +18,6 @@ import '../services/class_srs_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 
-const String _googleTtsApiKey = 'AIzaSyDD0_ZvBD0g0KN67Mrh9kjbXpkE0-LpeKM';
-
 class LearningScreen extends StatefulWidget {
   final WordDay wordDay;
   final String userProfile;
@@ -172,16 +170,20 @@ class _LearningScreenState extends State<LearningScreen> {
 
   void _onLangChange() { if (mounted) setState(() {}); }
 
+  // Proxied through our own server (app/api/tts) instead of calling Google
+  // Cloud TTS directly — the API key used to be hardcoded client-side, which
+  // let anyone extract it from the compiled app and run up billing on our
+  // quota with no rate limit or per-user auth.
   Future<void> _speakWithGoogle(String word, String languageCode) async {
     try {
+      final token = supabase.auth.currentSession?.accessToken;
       final response = await http.post(
-        Uri.parse('https://texttospeech.googleapis.com/v1/text:synthesize?key=$_googleTtsApiKey'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'input': {'text': word},
-          'voice': {'languageCode': languageCode, 'ssmlGender': 'FEMALE'},
-          'audioConfig': {'audioEncoding': 'MP3', 'speakingRate': 0.85},
-        }),
+        Uri.parse('https://lexivo-web-six.vercel.app/api/tts'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'text': word, 'languageCode': languageCode}),
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);

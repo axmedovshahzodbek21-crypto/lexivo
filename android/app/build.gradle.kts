@@ -32,6 +32,48 @@ compileOptions {
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
         }
+        debug {
+            applicationIdSuffix = ".debug"
+        }
+    }
+
+    flavorDimensions += "account"
+    productFlavors {
+        create("original") {
+            dimension = "account"
+        }
+        create("clone3") {
+            dimension = "account"
+            applicationIdSuffix = ".clone3"
+        }
+        create("clone4") {
+            dimension = "account"
+            applicationIdSuffix = ".clone4"
+        }
+        create("clone5") {
+            dimension = "account"
+            applicationIdSuffix = ".clone5"
+        }
+        create("clone6") {
+            dimension = "account"
+            applicationIdSuffix = ".clone6"
+        }
+        create("clone7") {
+            dimension = "account"
+            applicationIdSuffix = ".clone7"
+        }
+        create("clone8") {
+            dimension = "account"
+            applicationIdSuffix = ".clone8"
+        }
+        create("clone9") {
+            dimension = "account"
+            applicationIdSuffix = ".clone9"
+        }
+        create("clone10") {
+            dimension = "account"
+            applicationIdSuffix = ".clone10"
+        }
     }
 }
 

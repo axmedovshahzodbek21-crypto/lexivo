@@ -92,7 +92,16 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> {
   Future<void> _createClass(String name) async {
     final user = currentUser;
     if (user == null || name.trim().isEmpty) return;
-    await supabase.from('classes').insert({'name': name.trim(), 'join_code': _generateCode(), 'teacher_id': user.id});
+    try {
+      await supabase.from('classes').insert({'name': name.trim(), 'join_code': _generateCode(), 'teacher_id': user.id});
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to create class')),
+        );
+      }
+      return;
+    }
     _cache.remove(user.id);
     await _load();
   }

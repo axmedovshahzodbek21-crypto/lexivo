@@ -85,8 +85,8 @@ class _ClassesScreenState extends State<ClassesScreen> {
       final m = Map<String, dynamic>.from(cls as Map);
       if (m['teacher_id'] == user.id) { if (mounted) setState(() => _joinError = "Can't join your own class"); return; }
       await supabase.from('class_members').insert({'class_id': m['id'], 'student_id': user.id});
-      _joinCtrl.clear();
       if (!mounted) return;
+      _joinCtrl.clear();
       Navigator.push(context, MaterialPageRoute(builder: (_) => const JoinedClassesScreen()))
           .then((_) => _loadCounts());
     } catch (e) {

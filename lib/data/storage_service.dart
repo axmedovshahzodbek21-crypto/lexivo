@@ -2324,11 +2324,19 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final raw = await getImportedWordsRaw();
-    // Dedupe against live words only — re-importing a word that was
-    // previously deleted (a tombstone) is allowed, so it comes back fresh.
+    // Dedupe against live words in this same collection/folder only — a word
+    // scoped to (word, collectionName, folderName), matching how
+    // deleteImportedWord/deleteImportedWords identify a word. Checking the
+    // word alone across every collection/folder meant importing "apple" into
+    // Folder B silently dropped it if "apple" already existed anywhere else
+    // in My Words, with no indication to the user that it was skipped.
+    // Re-importing a word that was previously deleted (a tombstone) is
+    // still allowed, so it comes back fresh.
     final existingSet = <String>{};
     for (final w in raw) {
-      if (w.deletedAt == null) existingSet.add(w.word.toLowerCase().trim());
+      if (w.deletedAt == null && w.collectionName == collectionName && w.folderName == folderName) {
+        existingSet.add(w.word.toLowerCase().trim());
+      }
     }
     final fresh = words
         .where((w) => !existingSet.contains(w.word.toLowerCase().trim()))

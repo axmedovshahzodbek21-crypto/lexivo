@@ -11,6 +11,7 @@ import '../app_theme.dart';
 import '../l10n.dart';
 import 'class_words_screen.dart';
 import 'class_curriculum_tab.dart';
+import 'class_home_screen.dart';
 
 // ── Models ───────────────────────────────────────────────────────────────────
 
@@ -1650,6 +1651,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         final nav = Navigator.of(ctx);
         final msg = ScaffoldMessenger.of(context);
         await supabase.from('class_announcements').insert({'class_id': widget.classId, 'message': ctrl.text.trim()});
+        ClassHomeScreen.invalidate(widget.classId);
         if (!mounted) return;
         nav.pop();
         msg.showSnackBar(SnackBar(content: Text(tr('announcement_sent')), duration: const Duration(seconds: 2)));
@@ -1734,6 +1736,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
                   final data = {'class_id': widget.classId, 'student_id': s.studentId, 'title': ctrl.text.trim()};
                   if (dueDate != null) data['due_date'] = dueDate!;
                   await supabase.from('class_targets').insert(data);
+                  ClassHomeScreen.invalidate(widget.classId);
                   if (!mounted) return;
                   nav.pop();
                   msg.showSnackBar(SnackBar(content: Text(tr('target_set')), duration: const Duration(seconds: 2)));

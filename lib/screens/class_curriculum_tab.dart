@@ -7,6 +7,7 @@ import '../data/a1_collection.dart';
 import '../data/a2_collection.dart';
 import '../data/b1_collection.dart';
 import '../data/reading_data.dart';
+import 'class_home_screen.dart';
 
 // ── Models ────────────────────────────────────────────────────────────────────
 
@@ -626,6 +627,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                   if (dueDate != null) 'due_date': dueDate!.toIso8601String().substring(0, 10),
                   if (assignedTo == 'specific') 'student_ids': selectedStudents.toList(),
                 });
+                ClassHomeScreen.invalidate(widget.classId);
                 if (ctx.mounted) Navigator.pop(ctx);
                 _load();
               },
@@ -745,6 +747,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                   if (dueDate != null) 'due_date': dueDate!.toIso8601String().substring(0, 10),
                   if (assignedTo == 'specific') 'student_ids': selectedStudents.toList(),
                 });
+                ClassHomeScreen.invalidate(widget.classId);
                 if (ctx.mounted) Navigator.pop(ctx);
                 _load();
               },
@@ -913,6 +916,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                   if (dueDate != null) 'due_date': dueDate!.toIso8601String().substring(0, 10),
                   if (assignedTo == 'specific') 'student_ids': selectedStudents.toList(),
                 });
+                ClassHomeScreen.invalidate(widget.classId);
                 if (ctx.mounted) Navigator.pop(ctx);
                 _load();
               },
@@ -1000,7 +1004,11 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                           child: const Text('Delete')),
                     ],
                   ));
-                  if (ok == true) { await supabase.from('class_homework').delete().eq('id', hw.id); _load(); }
+                  if (ok == true) {
+                    await supabase.from('class_homework').delete().eq('id', hw.id);
+                    ClassHomeScreen.invalidate(widget.classId);
+                    _load();
+                  }
                 },
                 child: Container(
                   padding: const EdgeInsets.all(8),

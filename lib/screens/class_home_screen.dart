@@ -56,6 +56,23 @@ class ClassHomeScreen extends StatefulWidget {
 
   @override
   State<ClassHomeScreen> createState() => _ClassHomeScreenState();
+
+  // ClassShell keeps this screen alive in an IndexedStack across tab
+  // switches, so its initState/cache-hit path only ever runs once — a
+  // mutation made on another tab (posting an announcement, creating a
+  // target, assigning/removing homework) would otherwise never be reflected
+  // here, leaving pending-homework/announcement counts stale for the rest of
+  // the session. Screens that mutate that data call invalidate(classId)
+  // afterwards so any already-alive ClassHomeScreen drops its cache and
+  // refetches.
+  static final Map<String, List<VoidCallback>> _invalidationListeners = {};
+
+  static void invalidate(String classId) {
+    _ClassHomeScreenState._cache.remove(classId);
+    for (final cb in List<VoidCallback>.of(_invalidationListeners[classId] ?? const [])) {
+      cb();
+    }
+  }
 }
 
 class _ClassHomeCache {
@@ -120,6 +137,9 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
   void initState() {
     super.initState();
     appLangNotifier.addListener(_onLang);
+    ClassHomeScreen._invalidationListeners
+        .putIfAbsent(widget.classId, () => [])
+        .add(_onInvalidated);
     final cached = _cache[widget.classId];
     if (cached != null) {
       _applyCache(cached);
@@ -193,10 +213,13 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
   @override
   void dispose() {
     appLangNotifier.removeListener(_onLang);
+    ClassHomeScreen._invalidationListeners[widget.classId]?.remove(_onInvalidated);
     super.dispose();
   }
 
   void _onLang() { if (mounted) setState(() {}); }
+
+  void _onInvalidated() { if (mounted) _load(background: true); }
 
   Future<void> _load({bool background = false}) async {
     if (!background && _announcements.isEmpty && _targets.isEmpty && mounted) setState(() => _loading = true);

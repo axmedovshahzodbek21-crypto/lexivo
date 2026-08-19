@@ -5,6 +5,7 @@ import '../app_theme.dart';
 import '../l10n.dart';
 import 'class_models.dart';
 import 'class_shell.dart';
+import 'class_home_screen.dart';
 
 String _timeAgo(String iso) {
   final diff = DateTime.now().difference(DateTime.parse(iso));
@@ -183,6 +184,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
   Future<void> _toggleTargetDone(ClassTarget t) async {
     final completed = t.completedAt == null ? DateTime.now().toIso8601String() : null;
     await supabase.from('class_targets').update({'completed_at': completed}).eq('id', t.id);
+    ClassHomeScreen.invalidate(t.classId);
     setState(() {
       _classTargets[t.classId] = (_classTargets[t.classId] ?? []).map((x) => x.id != t.id ? x
         : ClassTarget(id: x.id, classId: x.classId, title: x.title, createdAt: x.createdAt, dueDate: x.dueDate, completedAt: completed)).toList();

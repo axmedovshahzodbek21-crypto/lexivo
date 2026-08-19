@@ -324,13 +324,20 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   }
 
   // Guard for each teacher-only write below: returns false (and surfaces an
-  // error) instead of proceeding if the independent verification hasn't
-  // confirmed teacher ownership of this class.
-  bool _checkTeacher() {
+  // error) instead of proceeding if ownership of this class can't be
+  // confirmed. Re-checks fresh rather than trusting the initState-time
+  // _verifiedTeacher flag alone — that flag's own query could still be
+  // in-flight (or have hit a transient error) by the time the teacher taps
+  // Send, which silently blocked every write with no visible feedback.
+  Future<bool> _checkTeacher() async {
     if (_verifiedTeacher) return true;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Not verified as this class\'s teacher')),
-    );
+    await _verifyTeacher();
+    if (_verifiedTeacher) return true;
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Not verified as this class\'s teacher')),
+      );
+    }
     return false;
   }
 
@@ -605,7 +612,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       ),
     );
     if (confirmed != true) return;
-    if (!_checkTeacher()) return;
+    if (!await _checkTeacher()) return;
     await supabase.from('class_members').delete().eq('class_id', widget.classId).eq('student_id', s.studentId);
     _dashboardCache.remove(widget.classId);
     if (mounted) _load();
@@ -1681,9 +1688,9 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
       builder: (ctx) => _bottomSheet(ctx, '📢 ${tr('send_announcement')}', ctrl, tr('announcement_hint'), () async {
         if (ctrl.text.trim().isEmpty) return;
-        if (!_checkTeacher()) return;
         final nav = Navigator.of(ctx);
         final msg = ScaffoldMessenger.of(context);
+        if (!await _checkTeacher()) return;
         await supabase.from('class_announcements').insert({'class_id': widget.classId, 'message': ctrl.text.trim()});
         ClassHomeScreen.invalidate(widget.classId);
         if (!mounted) return;
@@ -1699,9 +1706,9 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
       builder: (ctx) => _bottomSheet(ctx, '✉️ ${tr('note_to')} ${s.name}', ctrl, tr('note_hint'), () async {
         if (ctrl.text.trim().isEmpty) return;
-        if (!_checkTeacher()) return;
         final nav = Navigator.of(ctx);
         final msg = ScaffoldMessenger.of(context);
+        if (!await _checkTeacher()) return;
         await supabase.from('class_notes').insert({'class_id': widget.classId, 'student_id': s.studentId, 'message': ctrl.text.trim()});
         if (!mounted) return;
         nav.pop();
@@ -1766,9 +1773,9 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
               Expanded(child: ElevatedButton(
                 onPressed: () async {
                   if (ctrl.text.trim().isEmpty) return;
-                  if (!_checkTeacher()) return;
                   final nav = Navigator.of(ctx2);
                   final msg = ScaffoldMessenger.of(context);
+                  if (!await _checkTeacher()) return;
                   final data = {'class_id': widget.classId, 'student_id': s.studentId, 'title': ctrl.text.trim()};
                   if (dueDate != null) data['due_date'] = dueDate!;
                   await supabase.from('class_targets').insert(data);

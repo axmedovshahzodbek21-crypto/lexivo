@@ -361,7 +361,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('notif_time', formatted);
     await NotificationService.saveTime(formatted);
-    setState(() => _notifTime = formatted);
+    if (mounted) setState(() => _notifTime = formatted);
     if (_notificationsEnabled) {
       final streak = await StorageService.getStreak();
       final userName = prefs.getString('user_name') ?? '';

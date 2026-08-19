@@ -33,6 +33,29 @@ compileOptions {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    flavorDimensions += "account"
+    productFlavors {
+        create("original") {
+            dimension = "account"
+        }
+        create("clone3") {
+            dimension = "account"
+            applicationIdSuffix = ".clone3"
+        }
+        create("clone4") {
+            dimension = "account"
+            applicationIdSuffix = ".clone4"
+        }
+        create("clone5") {
+            dimension = "account"
+            applicationIdSuffix = ".clone5"
+        }
+        create("clone6") {
+            dimension = "account"
+            applicationIdSuffix = ".clone6"
+        }
+    }
 }
 
 kotlin {

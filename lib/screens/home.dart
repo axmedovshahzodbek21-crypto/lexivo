@@ -202,6 +202,7 @@ class _HomeScreenState extends State<HomeScreen>
     final userName = prefs.getString('user_name') ?? '';
     final profileImagePath = prefs.getString('profile_image_path');
     final profileImageUrl = prefs.getString('profile_image_url');
+    if (!mounted) return;
     setState(() {
       _wordsLearned = learned.length + skippedCount;
       _streak = streak;

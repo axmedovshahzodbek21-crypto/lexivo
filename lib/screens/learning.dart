@@ -372,6 +372,7 @@ class _LearningScreenState extends State<LearningScreen> {
       'gate_correct_first': _wordGateCorrectFirst,
     });
     await _grantLearnReward(word);
+    if (!mounted) return;
     _next();
   }
 
@@ -391,6 +392,7 @@ class _LearningScreenState extends State<LearningScreen> {
     });
     await StorageService.addMarkedHardWord(word.word);
     await _grantLearnReward(word);
+    if (!mounted) return;
     _next();
   }
 

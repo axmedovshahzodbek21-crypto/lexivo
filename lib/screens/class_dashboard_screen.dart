@@ -1691,7 +1691,15 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         final nav = Navigator.of(ctx);
         final msg = ScaffoldMessenger.of(context);
         if (!await _checkTeacher()) return;
-        await supabase.from('class_announcements').insert({'class_id': widget.classId, 'message': ctrl.text.trim()});
+        // Previously unguarded: an insert failure (RLS, trigger error, no
+        // network) threw with no try/catch, so the sheet just sat there
+        // with no feedback — looked like the button did nothing.
+        try {
+          await supabase.from('class_announcements').insert({'class_id': widget.classId, 'message': ctrl.text.trim()});
+        } catch (e) {
+          if (mounted) msg.showSnackBar(SnackBar(content: Text('Failed to send: $e')));
+          return;
+        }
         ClassHomeScreen.invalidate(widget.classId);
         if (!mounted) return;
         nav.pop();

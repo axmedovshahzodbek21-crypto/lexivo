@@ -2561,17 +2561,48 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     }
   }
 
+  // The exact set of "progress" keys a Reset Progress clears — shared with
+  // SyncService's cross-device reset-propagation path (_clearProgress) so
+  // the two can't drift apart. Previously this device's own reset deleted
+  // every pref except a 4-key allowlist (settings included, by accident),
+  // while the propagated version on another device only cleared a smaller
+  // hand-maintained list that was missing custom_lists/visited passages/
+  // completion flags — and wrongly included imported_words, which a reset
+  // is supposed to preserve. Settings (name, notifications, theme, etc.)
+  // and imported/My Words vocabulary are deliberately excluded here; a
+  // progress reset shouldn't touch either.
+  static const List<String> progressResetKeys = [
+    _learnedKey, _srsKey, _studyDaysKey, _markedHardKey, _streakKey,
+    _lastStudyKey, _freezesKey, _lastFreezeWeekKey, _xpKey, _todayXpKey,
+    _lastXpDateKey, _xpHistoryKey, _dailyLimitKey, _dailyLimitDateKey,
+    _unitProgressKey, _myUnitProgressKey, _hasCompletedQuizKey,
+    _hasPerfectQuizKey, _hasCompletedFlashcardKey, _hasCompletedSRSKey,
+    _unitDoneDaysKey, _reviewDaysKey, _wordGoalDaysKey, _srsLockedDaysKey,
+    _reviewLogKey, _masteredSRSKey, _starredKey, _visitedPassagesKey,
+    _customListsKey,
+    'sync_stats_ts', 'sync_settings_ts', 'sync_lists_ts',
+  ];
+
+  // Prefixes covering per-unit/per-day progress keys that progressResetKeys
+  // can't list by exact name.
+  static const List<String> progressResetKeyPrefixes = [
+    'learn_progress_', 'learn_marks_', 'flashcard_progress_', 'leveled_session_', 'ach_date_',
+  ];
+
   // Same as clearAllProgress(), but preserves the user's My Words
-  // folders/words. "Reset Progress" is about undoing learning progress
-  // (XP, streaks, completion), not deleting vocabulary the user typed in
-  // themselves — that's what the dedicated My Words reset (progress only,
-  // see resetMyWordsProgress()) already handles narrowly. Sign-out and
-  // delete-account still use the fully nuclear clearAllProgress().
+  // folders/words and settings. "Reset Progress" is about undoing learning
+  // progress (XP, streaks, completion), not deleting vocabulary the user
+  // typed in themselves — that's what the dedicated My Words reset
+  // (progress only, see resetMyWordsProgress()) already handles narrowly.
+  // Sign-out and delete-account still use the fully nuclear
+  // clearAllProgress().
   static Future<void> resetProgressKeepingImportedWords() async {
     final prefs = await SharedPreferences.getInstance();
-    const keepKeys = {'ui_language', 'text_scale', 'theme_mode', 'reduce_motion', _importedKey};
-    final toRemove = prefs.getKeys().where((k) => !keepKeys.contains(k)).toList();
-    for (final key in toRemove) {
+    for (final key in progressResetKeys) {
+      await prefs.remove(key);
+    }
+    for (final key in prefs.getKeys().where(
+        (k) => progressResetKeyPrefixes.any((p) => k.startsWith(p)))) {
       await prefs.remove(key);
     }
   }

@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../data/storage_service.dart';
 import 'widget_service.dart';
 
 /// Push-on-change + pull-on-login sync against the single `user_data` table.
@@ -20,27 +21,19 @@ class SyncService {
     return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
   }
 
+  // Uses the same key set as StorageService.resetProgressKeepingImportedWords()
+  // (this device's own "Reset Progress") so a reset performed on another
+  // device and propagated here can't leave this device in a partially-reset
+  // state — a hand-maintained duplicate list here previously drifted out of
+  // sync (missing custom lists/completion flags, and wrongly clearing
+  // imported_words, which a reset is supposed to preserve).
   static Future<void> _clearProgress(SharedPreferences prefs) async {
-    await prefs.setString('srs_words', '[]');
-    await prefs.setString('learned_words', '[]');
-    await prefs.setStringList('starred_words', []);
-    await prefs.setInt('total_xp', 0);
-    await prefs.setInt('today_xp', 0);
-    await prefs.setInt('streak', 0);
-    await prefs.setInt('daily_words_learned', 0);
-    await prefs.setInt('streak_freezes', 0);
-    for (final k in [
-      'unit_progress', 'my_unit_progress', 'unit_done_days', 'review_days', 'word_goal_days',
-      'study_days', 'xp_history', 'srs_review_log', 'marked_hard_words',
-      'mastered_srs_words', 'last_xp_date', 'last_study_date',
-      'daily_words_date', 'last_freeze_week', 'imported_words',
-      'sync_stats_ts', 'sync_settings_ts', 'sync_lists_ts',
-    ]) { await prefs.remove(k); }
-    for (final k in prefs.getKeys().where((k) =>
-        k.startsWith('learn_progress_') || k.startsWith('learn_marks_') ||
-        k.startsWith('flashcard_progress_') || k.startsWith('leveled_session_') ||
-        k.startsWith('ach_date_'))) {
-      await prefs.remove(k);
+    for (final key in StorageService.progressResetKeys) {
+      await prefs.remove(key);
+    }
+    for (final key in prefs.getKeys().where((k) =>
+        StorageService.progressResetKeyPrefixes.any((p) => k.startsWith(p)))) {
+      await prefs.remove(key);
     }
   }
 

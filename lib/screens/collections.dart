@@ -89,6 +89,7 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
         widget.collection.days,
       );
     }
+    if (!mounted) return;
     setState(() {
       _progressMap = map;
       _storyUnlockMap = storyMap;

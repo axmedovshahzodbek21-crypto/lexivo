@@ -82,6 +82,7 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
         .toList();
 
     if (_learnedToday >= _dailyLimit) {
+      if (!mounted) return;
       setState(() {
         _limitReached = true;
         _loading = false;
@@ -109,6 +110,7 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _checkAndShowLevelComplete();
       });
+      if (!mounted) return;
       setState(() {
         _todayWords = [];
         _loading = false;
@@ -119,6 +121,7 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
     final savedIndex = prefs.getInt(_sessionKey) ?? 0;
     final startIndex = savedIndex < unlearned.length ? savedIndex : 0;
 
+    if (!mounted) return;
     setState(() {
       _todayWords = unlearned;
       _currentIndex = startIndex;

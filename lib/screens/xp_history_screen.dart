@@ -23,6 +23,7 @@ class _XpHistoryScreenState extends State<XpHistoryScreen> {
 
   Future<void> _load() async {
     final history = await StorageService.getXPHistory();
+    if (!mounted) return;
     setState(() {
       _entries = history;
       _loading = false;

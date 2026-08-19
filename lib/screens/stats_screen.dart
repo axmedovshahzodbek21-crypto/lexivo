@@ -78,6 +78,7 @@ class _StatsScreenState extends State<StatsScreen> {
       if (progress.isComplete) b1Done++;
     }
 
+    if (!mounted) return;
     setState(() {
       _totalWords = words.length;
       _totalDays = days;

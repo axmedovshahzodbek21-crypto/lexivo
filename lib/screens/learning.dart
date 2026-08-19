@@ -73,8 +73,13 @@ class _LearningScreenState extends State<LearningScreen> {
   bool _showEx3Translation = false;
   bool _showUzDefinition = false;
 
-  double _cardDragDx = 0;
-  double _cardDragDy = 0;
+  // A ValueNotifier instead of setState-backed fields: the horizontal/
+  // vertical drag handlers fire on nearly every frame of a swipe, and
+  // setState() at this level rebuilt the whole screen — segmented progress
+  // bar, AppBar nav, example cards — none of which depend on drag
+  // position. Only the ValueListenableBuilder around the card's Transform/
+  // swipe-hint below rebuilds now.
+  final ValueNotifier<Offset> _cardDrag = ValueNotifier(Offset.zero);
 
   // Anti-cheat state
   bool _revealed = false;
@@ -165,6 +170,7 @@ class _LearningScreenState extends State<LearningScreen> {
     appLangNotifier.removeListener(_onLangChange);
     _audioPlayer.dispose();
     _scrollController.dispose();
+    _cardDrag.dispose();
     super.dispose();
   }
 
@@ -402,14 +408,14 @@ class _LearningScreenState extends State<LearningScreen> {
   }
 
   void _onHorizontalDragUpdate(DragUpdateDetails d) {
-    setState(() => _cardDragDx += d.delta.dx);
+    _cardDrag.value += Offset(d.delta.dx, 0);
   }
 
   void _onHorizontalDragEnd(DragEndDetails d) {
-    if (_inQuizGate || _inSpotCheck) { setState(() => _cardDragDx = 0); return; }
+    if (_inQuizGate || _inSpotCheck) { _cardDrag.value = Offset(0, _cardDrag.value.dy); return; }
     final vel = d.velocity.pixelsPerSecond.dx;
-    final dx = _cardDragDx;
-    setState(() => _cardDragDx = 0);
+    final dx = _cardDrag.value.dx;
+    _cardDrag.value = Offset(0, _cardDrag.value.dy);
     if (vel > 400 || dx > 80) {
       _tryMarkLearned();
     } else if (vel < -400 || dx < -80) {
@@ -698,9 +704,6 @@ class _LearningScreenState extends State<LearningScreen> {
     final isLearned = _learnedIndices.contains(_currentIndex);
     final isSkipped = _skippedIndices.contains(_currentIndex);
     final isHard    = _hardIndices.contains(_currentIndex);
-    final swipeRight = _cardDragDx > 30;
-    final swipeLeft  = _cardDragDx < -30;
-    final swipeUp    = _cardDragDy < -30;
     final isStarred  = _starredIndices.contains(_currentIndex);
 
     return PopScope(
@@ -814,197 +817,211 @@ class _LearningScreenState extends State<LearningScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Word card — tilt + swipe-down-to-skip + swipe-up-to-star
-                        GestureDetector(
-                          onVerticalDragUpdate: (d) => setState(() => _cardDragDy += d.delta.dy),
-                          onVerticalDragEnd: (d) {
-                            if (_inQuizGate || _inSpotCheck) { setState(() => _cardDragDy = 0); return; }
-                            final vel = d.velocity.pixelsPerSecond.dy;
-                            final dy = _cardDragDy;
-                            setState(() => _cardDragDy = 0);
-                            if (vel > 600 || dy > 80) { _skipWord(); }
-                            else if (vel < -600 || dy < -80) { _toggleStar(); }
-                          },
-                          onVerticalDragCancel: () => setState(() => _cardDragDy = 0),
-                          child: Transform.translate(
-                            offset: Offset(_cardDragDx * 0.35, 0),
-                            child: Transform.rotate(
-                              angle: _cardDragDx * 0.002,
-                              child: Stack(
-                                children: [
-                                  Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.all(24),
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: isLearned
-                                            ? const [Color(0xFF4ADE80), Color(0xFF22C55E), Color(0xFF15803D)]
-                                            : isHard
-                                                ? const [Color(0xFFF87171), Color(0xFFEF4444), Color(0xFFB91C1C)]
-                                                : isSkipped
-                                                    ? const [Color(0xFFFCD34D), Color(0xFFF59E0B), Color(0xFFB45309)]
-                                                    : const [Color(0xFFA78BFA), Color(0xFF6C63FF), Color(0xFF4C1D95)],
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
+                        // Word card — tilt + swipe-down-to-skip + swipe-up-to-star.
+                        // The gradient card content below doesn't depend on drag
+                        // position at all — only the Transform wrapper and the
+                        // swipe-hint overlay do. Passing it through as `child`
+                        // means it's built once per word/reveal state instead of
+                        // reconstructed on every drag pixel.
+                        ValueListenableBuilder<Offset>(
+                          valueListenable: _cardDrag,
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: isLearned
+                                    ? const [Color(0xFF4ADE80), Color(0xFF22C55E), Color(0xFF15803D)]
+                                    : isHard
+                                        ? const [Color(0xFFF87171), Color(0xFFEF4444), Color(0xFFB91C1C)]
+                                        : isSkipped
+                                            ? const [Color(0xFFFCD34D), Color(0xFFF59E0B), Color(0xFFB45309)]
+                                            : const [Color(0xFFA78BFA), Color(0xFF6C63FF), Color(0xFF4C1D95)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: isLearned
+                                      ? const Color(0xFF14532D)
+                                      : isHard
+                                          ? const Color(0xFF7F1D1D)
+                                          : isSkipped
+                                              ? const Color(0xFF92400E)
+                                              : const Color(0xFF3D37B3),
+                                  offset: const Offset(0, 4),
+                                  blurRadius: 0,
+                                ),
+                                BoxShadow(
+                                  color: (isLearned
+                                      ? const Color(0xFF22C55E)
+                                      : isHard
+                                          ? const Color(0xFFEF4444)
+                                          : isSkipped
+                                              ? const Color(0xFFF59E0B)
+                                              : const Color(0xFF6C63FF)).withValues(alpha: 0.4),
+                                  blurRadius: 18,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (isLearned || isSkipped || isHard)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 10),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(alpha: 0.25),
+                                        borderRadius: BorderRadius.circular(20),
                                       ),
-                                      borderRadius: BorderRadius.circular(20),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: isLearned
-                                              ? const Color(0xFF14532D)
-                                              : isHard
-                                                  ? const Color(0xFF7F1D1D)
-                                                  : isSkipped
-                                                      ? const Color(0xFF92400E)
-                                                      : const Color(0xFF3D37B3),
-                                          offset: const Offset(0, 4),
-                                          blurRadius: 0,
+                                      child: Text(
+                                        isLearned
+                                            ? tr('already_learned')
+                                            : isHard
+                                                ? tr('too_hard_badge')
+                                                : tr('skipped_counts'),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
                                         ),
-                                        BoxShadow(
-                                          color: (isLearned
-                                              ? const Color(0xFF22C55E)
-                                              : isHard
-                                                  ? const Color(0xFFEF4444)
-                                                  : isSkipped
-                                                      ? const Color(0xFFF59E0B)
-                                                      : const Color(0xFF6C63FF)).withValues(alpha: 0.4),
-                                          blurRadius: 18,
-                                          offset: const Offset(0, 8),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        if (isLearned || isSkipped || isHard)
-                                          Padding(
-                                            padding: const EdgeInsets.only(bottom: 10),
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                              decoration: BoxDecoration(
-                                                color: Colors.white.withValues(alpha: 0.25),
-                                                borderRadius: BorderRadius.circular(20),
-                                              ),
-                                              child: Text(
-                                                isLearned
-                                                    ? tr('already_learned')
-                                                    : isHard
-                                                        ? tr('too_hard_badge')
-                                                        : tr('skipped_counts'),
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        Text(
-                                          _currentWord.word,
-                                          style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        if (_currentWord.partOfSpeech.isNotEmpty || _currentWord.pronunciation.isNotEmpty) ...[
-                                          Text(
-                                            '${_currentWord.partOfSpeech} • ${_currentWord.pronunciation}',
-                                            style: const TextStyle(fontSize: 13, color: Colors.white70),
-                                          ),
-                                          const SizedBox(height: 12),
-                                        ],
-                                        if (_currentWord.language != null && !_currentWord.language!.startsWith('en'))
-                                          Row(
-                                            children: [
-                                              _buildPronounceButton('Listen', () => _speakInLanguage(_currentWord.word, _currentWord.language!)),
-                                            ],
-                                          )
-                                        else
-                                          Row(
-                                            children: [
-                                              _buildPronounceButton(tr('american'), () => _speakAmerican(_currentWord.word)),
-                                              const SizedBox(width: 8),
-                                              _buildPronounceButton(tr('british'), () => _speakBritish(_currentWord.word)),
-                                            ],
-                                          ),
-                                        const SizedBox(height: 12),
-                                        if (_revealed) ...[
-                                          Text(_currentWord.definition, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: Colors.white, height: 1.5)),
-                                          const SizedBox(height: 8),
-                                          Text(_currentWord.translation, style: const TextStyle(fontSize: 14, color: Colors.white70)),
-                                          if (_currentWord.definitionUz.isNotEmpty) ...[
-                                            const SizedBox(height: 10),
-                                            GestureDetector(
-                                              onTap: () => setState(() => _showUzDefinition = !_showUzDefinition),
-                                              child: Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white.withValues(alpha: 0.2),
-                                                  borderRadius: BorderRadius.circular(8),
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                    const Text('🇺🇿', style: TextStyle(fontSize: 14)),
-                                                    const SizedBox(width: 6),
-                                                    Text(
-                                                      _showUzDefinition ? "Yopish" : "O'zbekcha tushuntirish",
-                                                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                            if (_showUzDefinition) ...[
-                                              const SizedBox(height: 8),
-                                              Text(_currentWord.definitionUz, style: const TextStyle(fontSize: 14, color: Colors.white70, height: 1.5)),
-                                            ],
-                                          ],
-                                        ] else ...[
-                                          GestureDetector(
-                                            onTap: _reveal,
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                              decoration: BoxDecoration(
-                                                color: Colors.white.withValues(alpha: 0.2),
-                                                borderRadius: BorderRadius.circular(12),
-                                              ),
-                                              child: const Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Icon(Icons.visibility_outlined, color: Colors.white, size: 16),
-                                                  SizedBox(width: 8),
-                                                  Text('Tap to reveal', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ],
+                                      ),
                                     ),
                                   ),
-                                  // Swipe overlay hint
-                                  if (swipeRight || swipeLeft || swipeUp)
-                                    Positioned.fill(
+                                Text(
+                                  _currentWord.word,
+                                  style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
+                                ),
+                                const SizedBox(height: 4),
+                                if (_currentWord.partOfSpeech.isNotEmpty || _currentWord.pronunciation.isNotEmpty) ...[
+                                  Text(
+                                    '${_currentWord.partOfSpeech} • ${_currentWord.pronunciation}',
+                                    style: const TextStyle(fontSize: 13, color: Colors.white70),
+                                  ),
+                                  const SizedBox(height: 12),
+                                ],
+                                if (_currentWord.language != null && !_currentWord.language!.startsWith('en'))
+                                  Row(
+                                    children: [
+                                      _buildPronounceButton('Listen', () => _speakInLanguage(_currentWord.word, _currentWord.language!)),
+                                    ],
+                                  )
+                                else
+                                  Row(
+                                    children: [
+                                      _buildPronounceButton(tr('american'), () => _speakAmerican(_currentWord.word)),
+                                      const SizedBox(width: 8),
+                                      _buildPronounceButton(tr('british'), () => _speakBritish(_currentWord.word)),
+                                    ],
+                                  ),
+                                const SizedBox(height: 12),
+                                if (_revealed) ...[
+                                  Text(_currentWord.definition, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: Colors.white, height: 1.5)),
+                                  const SizedBox(height: 8),
+                                  Text(_currentWord.translation, style: const TextStyle(fontSize: 14, color: Colors.white70)),
+                                  if (_currentWord.definitionUz.isNotEmpty) ...[
+                                    const SizedBox(height: 10),
+                                    GestureDetector(
+                                      onTap: () => setState(() => _showUzDefinition = !_showUzDefinition),
                                       child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                         decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(20),
-                                          color: swipeUp
-                                              ? Colors.amber.withValues(alpha: 0.35)
-                                              : swipeRight
-                                              ? const Color(0xFF2ECC71).withValues(alpha: 0.35)
-                                              : const Color(0xFFE74C3C).withValues(alpha: 0.35),
+                                          color: Colors.white.withValues(alpha: 0.2),
+                                          borderRadius: BorderRadius.circular(8),
                                         ),
-                                        child: Center(
-                                          child: Text(
-                                            swipeUp ? '⭐' : swipeRight ? '✓' : '😤',
-                                            style: const TextStyle(fontSize: 48),
-                                          ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Text('🇺🇿', style: TextStyle(fontSize: 14)),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              _showUzDefinition ? "Yopish" : "O'zbekcha tushuntirish",
+                                              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ),
+                                    if (_showUzDefinition) ...[
+                                      const SizedBox(height: 8),
+                                      Text(_currentWord.definitionUz, style: const TextStyle(fontSize: 14, color: Colors.white70, height: 1.5)),
+                                    ],
+                                  ],
+                                ] else ...[
+                                  GestureDetector(
+                                    onTap: _reveal,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(alpha: 0.2),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.visibility_outlined, color: Colors.white, size: 16),
+                                          SizedBox(width: 8),
+                                          Text('Tap to reveal', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                                 ],
-                              ),
+                              ],
                             ),
                           ),
+                          builder: (context, drag, cardContent) {
+                            final swipeRight = drag.dx > 30;
+                            final swipeLeft  = drag.dx < -30;
+                            final swipeUp    = drag.dy < -30;
+                            return GestureDetector(
+                              onVerticalDragUpdate: (d) => _cardDrag.value += Offset(0, d.delta.dy),
+                              onVerticalDragEnd: (d) {
+                                if (_inQuizGate || _inSpotCheck) { _cardDrag.value = Offset(_cardDrag.value.dx, 0); return; }
+                                final vel = d.velocity.pixelsPerSecond.dy;
+                                final dy = _cardDrag.value.dy;
+                                _cardDrag.value = Offset(_cardDrag.value.dx, 0);
+                                if (vel > 600 || dy > 80) { _skipWord(); }
+                                else if (vel < -600 || dy < -80) { _toggleStar(); }
+                              },
+                              onVerticalDragCancel: () => _cardDrag.value = Offset(_cardDrag.value.dx, 0),
+                              child: Transform.translate(
+                                offset: Offset(drag.dx * 0.35, 0),
+                                child: Transform.rotate(
+                                  angle: drag.dx * 0.002,
+                                  child: Stack(
+                                    children: [
+                                      cardContent!,
+                                      // Swipe overlay hint
+                                      if (swipeRight || swipeLeft || swipeUp)
+                                        Positioned.fill(
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              borderRadius: BorderRadius.circular(20),
+                                              color: swipeUp
+                                                  ? Colors.amber.withValues(alpha: 0.35)
+                                                  : swipeRight
+                                                  ? const Color(0xFF2ECC71).withValues(alpha: 0.35)
+                                                  : const Color(0xFFE74C3C).withValues(alpha: 0.35),
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                swipeUp ? '⭐' : swipeRight ? '✓' : '😤',
+                                                style: const TextStyle(fontSize: 48),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
                         ),
                         if (_revealed) ...[
                           const SizedBox(height: 16),
@@ -1042,7 +1059,7 @@ class _LearningScreenState extends State<LearningScreen> {
                       behavior: HitTestBehavior.translucent,
                       onHorizontalDragUpdate: _onHorizontalDragUpdate,
                       onHorizontalDragEnd: _onHorizontalDragEnd,
-                      onHorizontalDragCancel: () => setState(() => _cardDragDx = 0),
+                      onHorizontalDragCancel: () => _cardDrag.value = Offset(0, _cardDrag.value.dy),
                     ),
                   ),
                 ],

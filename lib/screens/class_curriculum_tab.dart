@@ -297,7 +297,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
       ],
     ));
     if (ok != true) return;
-    await supabase.from('class_library_assignments').delete().eq('id', folder.assignmentId);
+    await supabase.from('class_library_assignments').delete().eq('id', folder.assignmentId).eq('class_id', widget.classId);
     _load();
   }
 
@@ -368,7 +368,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
       ],
     ));
     if (ok != true) return;
-    await supabase.from('class_word_units').delete().eq('id', unit.id);
+    await supabase.from('class_word_units').delete().eq('id', unit.id).eq('class_id', widget.classId);
     _load();
   }
 
@@ -1005,7 +1005,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                     ],
                   ));
                   if (ok == true) {
-                    await supabase.from('class_homework').delete().eq('id', hw.id);
+                    await supabase.from('class_homework').delete().eq('id', hw.id).eq('class_id', widget.classId);
                     ClassHomeScreen.invalidate(widget.classId);
                     _load();
                   }

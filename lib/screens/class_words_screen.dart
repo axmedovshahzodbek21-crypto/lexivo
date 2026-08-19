@@ -358,7 +358,11 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
   }
 
   Future<void> _deleteWord(String id) async {
-    await supabase.from('class_words').delete().eq('id', id);
+    // class_id scopes the delete to this class as defense-in-depth — RLS is
+    // the real backstop, but a bare .eq('id', id) here would let a
+    // misconfigured policy delete any class_words row by id regardless of
+    // which class it belongs to.
+    await supabase.from('class_words').delete().eq('id', id).eq('class_id', widget.classId);
     if (mounted) setState(() => _words.removeWhere((w) => w.id == id));
   }
 

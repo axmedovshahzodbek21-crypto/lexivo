@@ -100,6 +100,11 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
     if (name == null || name.isEmpty) return;
     final user = currentUser;
     if (user == null) return;
+    // Defense-in-depth: confirm this folder is actually the caller's before
+    // creating a unit inside it — RLS is the real backstop, but nothing here
+    // previously stopped an arbitrary folderId from being trusted outright.
+    final folder = await supabase.from('teacher_folders').select('teacher_id').eq('id', widget.folderId).maybeSingle();
+    if (folder == null || folder['teacher_id'] != user.id) return;
     await supabase.from('teacher_units').insert({
       'folder_id': widget.folderId,
       'teacher_id': user.id,
@@ -139,7 +144,9 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
       ),
     );
     if (name == null || name.isEmpty || name == unit.name) return;
-    await supabase.from('teacher_units').update({'name': name}).eq('id', unit.id);
+    final user = currentUser;
+    if (user == null) return;
+    await supabase.from('teacher_units').update({'name': name}).eq('id', unit.id).eq('teacher_id', user.id);
     _load();
   }
 
@@ -163,7 +170,9 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
       ),
     );
     if (ok != true) return;
-    await supabase.from('teacher_units').delete().eq('id', unit.id);
+    final user = currentUser;
+    if (user == null) return;
+    await supabase.from('teacher_units').delete().eq('id', unit.id).eq('teacher_id', user.id);
     _load();
   }
 

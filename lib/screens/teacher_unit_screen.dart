@@ -195,9 +195,18 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
     setState(() => _importing = true);
     try {
       final user = currentUser;
+      if (user == null) { if (mounted) setState(() => _importing = false); return; }
+      // Defense-in-depth: confirm this unit is actually the caller's before
+      // importing words into it — RLS is the real backstop, but nothing here
+      // previously stopped an arbitrary unitId from being trusted outright.
+      final unit = await supabase.from('teacher_units').select('teacher_id').eq('id', widget.unitId).maybeSingle();
+      if (unit == null || unit['teacher_id'] != user.id) {
+        if (mounted) setState(() => _importing = false);
+        return;
+      }
       final rows = _parsed.map((w) => {
         'unit_id': widget.unitId,
-        'teacher_id': user?.id,
+        'teacher_id': user.id,
         'word': w.word,
         'translation': w.translation,
         if (w.definition.isNotEmpty) 'definition': w.definition,
@@ -222,7 +231,9 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
   }
 
   Future<void> _deleteWord(String id) async {
-    await supabase.from('teacher_unit_words').delete().eq('id', id);
+    final user = currentUser;
+    if (user == null) return;
+    await supabase.from('teacher_unit_words').delete().eq('id', id).eq('teacher_id', user.id);
     if (mounted) setState(() => _words.removeWhere((w) => w.id == id));
     _cache[widget.unitId] = _words;
   }
@@ -270,7 +281,9 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
       ),
     );
     if (confirm == true) {
-      await supabase.from('teacher_unit_words').delete().inFilter('id', _selected.toList());
+      final user = currentUser;
+      if (user == null) return;
+      await supabase.from('teacher_unit_words').delete().inFilter('id', _selected.toList()).eq('teacher_id', user.id);
       if (mounted) {
         setState(() {
           _words.removeWhere((w) => _selected.contains(w.id));

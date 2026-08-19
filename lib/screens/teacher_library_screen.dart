@@ -176,7 +176,9 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
       ),
     );
     if (name == null || name.isEmpty || name == folder.name) return;
-    await supabase.from('teacher_folders').update({'name': name}).eq('id', folder.id);
+    final user = currentUser;
+    if (user == null) return;
+    await supabase.from('teacher_folders').update({'name': name}).eq('id', folder.id).eq('teacher_id', user.id);
     _load();
   }
 
@@ -200,7 +202,9 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
       ),
     );
     if (ok != true) return;
-    await supabase.from('teacher_folders').delete().eq('id', folder.id);
+    final user = currentUser;
+    if (user == null) return;
+    await supabase.from('teacher_folders').delete().eq('id', folder.id).eq('teacher_id', user.id);
     _load();
   }
 

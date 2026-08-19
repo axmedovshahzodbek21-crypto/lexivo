@@ -138,7 +138,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final url = supabase.storage.from('avatars').getPublicUrl('${user.id}/avatar.jpg');
         final urlWithBust = '$url?t=${DateTime.now().millisecondsSinceEpoch}';
         await prefs.setString('profile_image_url', urlWithBust);
-        await supabase.from('profiles').upsert({'id': user.id, 'avatar_url': urlWithBust});
+        // Atomic RPC writes both user_data and profiles together — see
+        // SyncService.pushSettings. A separate direct profiles-only upsert
+        // here previously left a window where profiles had the new avatar
+        // but user_data (this account's own devices) didn't.
         SyncService.pushSettings();
         if (mounted) setState(() => _profileImageUrl = urlWithBust);
       } catch (_) {}
@@ -271,7 +274,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     if (user != null) {
                       try {
                         await supabase.storage.from('avatars').remove(['${user.id}/avatar.jpg']);
-                        await supabase.from('profiles').upsert({'id': user.id, 'avatar_url': null});
+                        // clearAvatar: true clears both tables atomically — a
+                        // plain profiles-only null previously never touched
+                        // user_data.avatar_url at all.
+                        await SyncService.pushSettings(clearAvatar: true);
                       } catch (_) {}
                     }
                     if (mounted) setState(() { _profileImagePath = null; _profileImageUrl = null; });

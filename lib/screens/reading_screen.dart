@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../app_theme.dart';
 import '../data/reading_data.dart';
 import '../data/storage_service.dart';
+import '../services/supabase_service.dart';
 import 'reading_passage_screen.dart';
 
 const _kTopicColors = [
@@ -34,6 +35,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
   int? _lastSurprisePassageId;
   bool _shuffling = false;
   ReadingPassage? _shown;
+  List<String> _classIds = [];
 
   @override
   void initState() {
@@ -41,6 +43,26 @@ class _ReadingScreenState extends State<ReadingScreen> {
     StorageService.getVisitedPassageIds().then((ids) {
       if (mounted) setState(() => _visited = ids);
     });
+    final user = currentUser;
+    if (user != null) {
+      supabase.from('class_members').select('class_id').eq('student_id', user.id).then((rows) {
+        if (mounted) setState(() => _classIds = rows.map((r) => r['class_id'] as String).toList());
+      }).catchError((_) {});
+    }
+  }
+
+  // Free-browse reads aren't tied to a specific homework assignment, so they
+  // can't show up in the teacher's per-passage checklist — that requires a
+  // real class_homework row. This just credits the student's classes with
+  // activity/XP so they don't look inactive, same as Learn/SRS Review.
+  void _recordClassReadActivity(ReadingPassage passage) {
+    final user = currentUser;
+    if (user == null || _classIds.isEmpty) return;
+    const xp = 3;
+    for (final classId in _classIds) {
+      recordClassActivity(user.id, classId, xp: xp, reason: 'Reading: ${passage.title}');
+    }
+    StorageService.addXP(xp, reason: 'Reading', source: passage.title);
   }
 
   ReadingPassage _pickRandom(List<ReadingPassage> pool, [int? avoidId]) {
@@ -53,8 +75,10 @@ class _ReadingScreenState extends State<ReadingScreen> {
   }
 
   Future<void> _openPassage(ReadingPassage passage) async {
+    final isNew = !_visited.contains(passage.id);
     setState(() => _visited = {..._visited, passage.id});
     await StorageService.markPassageVisited(passage.id);
+    if (isNew) _recordClassReadActivity(passage);
     if (!mounted) return;
     Navigator.push(
       context,

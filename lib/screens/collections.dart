@@ -139,6 +139,9 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
   Widget build(BuildContext context) {
     final crossAxisCount = _isDesktop ? 5 : 3;
     final childAspectRatio = _isDesktop ? 1.1 : 0.86;
+    // Units with no words yet are unfinished content, not real units —
+    // showing them lets a tap crash Flashcards/Quiz on an empty word list.
+    final nonEmptyDays = widget.collection.days.where((d) => d.words.isNotEmpty).toList();
 
     return Scaffold(
       backgroundColor: context.bg,
@@ -169,9 +172,9 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Builder(builder: (context) {
-                  final totalWords = widget.collection.days.fold(0, (s, d) => s + d.words.length);
+                  final totalWords = nonEmptyDays.fold(0, (s, d) => s + d.words.length);
                   final completedUnits = _progressMap.values.where((p) => p.isComplete).length;
-                  final progressPct = widget.collection.days.isEmpty ? 0.0 : completedUnits / widget.collection.days.length;
+                  final progressPct = nonEmptyDays.isEmpty ? 0.0 : completedUnits / nonEmptyDays.length;
                   return Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
@@ -211,7 +214,7 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
                           spacing: 6,
                           runSpacing: 6,
                           children: [
-                            _statPill('${widget.collection.days.length} units'),
+                            _statPill('${nonEmptyDays.length} units'),
                             _statPill('$totalWords words'),
                             _statPill('$completedUnits done'),
                           ],
@@ -238,11 +241,11 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
 
                 Builder(builder: (context) {
                   final visibleDays = widget.showOnlyCompleted
-                      ? widget.collection.days.where((d) {
+                      ? nonEmptyDays.where((d) {
                           final p = _progressMap[d.dayNumber] ?? const UnitProgress();
                           return p.isComplete;
                         }).toList()
-                      : widget.collection.days;
+                      : nonEmptyDays;
                   if (visibleDays.isEmpty && widget.showOnlyCompleted) {
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 32),

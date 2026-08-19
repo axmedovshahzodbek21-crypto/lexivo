@@ -14,10 +14,19 @@
 --
 -- avatar_url and language_level: passing NULL preserves the existing
 -- column value (COALESCE) for avatar_url, matching the client's current
--- "omit the key if not set locally" behavior for that field. language_level
--- has no such fallback client-side today (a null local value already
--- overwrites both tables with null), so it's applied directly — not a
--- behavior change, just moved server-side.
+-- "omit the key if not set locally" behavior for that field — this is what
+-- stops a second device's first pushSettings() (before it has pulled the
+-- cloud avatar into its own local prefs yet) from wiping out an avatar set
+-- on another device. language_level has no such fallback client-side today
+-- (a null local value already overwrites both tables with null), so it's
+-- applied directly — not a behavior change, just moved server-side.
+--
+-- p_clear_avatar is the one case that *should* force avatar_url to NULL:
+-- the user explicitly removing their photo. Without it, an intentional
+-- removal (which also passes p_avatar_url = NULL) would look identical to
+-- "no avatar set locally yet" and the COALESCE would silently keep the old
+-- photo forever — see settings_screen.dart's remove-photo flow / web's
+-- handleRemovePhoto, which both pass p_clear_avatar = true.
 --
 -- Run this in the Supabase SQL editor.
 
@@ -32,7 +41,8 @@ create or replace function sync_profile_settings(
   p_user_name text,
   p_language_level text,
   p_avatar_url text,
-  p_settings_updated_at text
+  p_settings_updated_at text,
+  p_clear_avatar boolean default false
 ) returns void
 language plpgsql
 security definer
@@ -58,7 +68,8 @@ begin
     notif_time              = excluded.notif_time,
     user_name               = excluded.user_name,
     language_level          = excluded.language_level,
-    avatar_url              = coalesce(excluded.avatar_url, user_data.avatar_url),
+    avatar_url              = case when p_clear_avatar then null
+                                    else coalesce(excluded.avatar_url, user_data.avatar_url) end,
     settings_updated_at     = excluded.settings_updated_at;
 
   insert into profiles (id, name, show_on_leaderboard, language_level, avatar_url)
@@ -67,10 +78,11 @@ begin
     name                 = excluded.name,
     show_on_leaderboard  = excluded.show_on_leaderboard,
     language_level       = excluded.language_level,
-    avatar_url           = coalesce(excluded.avatar_url, profiles.avatar_url);
+    avatar_url           = case when p_clear_avatar then null
+                                 else coalesce(excluded.avatar_url, profiles.avatar_url) end;
 end;
 $$;
 
 grant execute on function sync_profile_settings(
-  uuid, int, text, boolean, boolean, boolean, text, text, text, text, text
+  uuid, int, text, boolean, boolean, boolean, text, text, text, text, text, boolean
 ) to authenticated;

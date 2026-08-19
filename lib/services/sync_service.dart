@@ -125,7 +125,10 @@ class SyncService {
     WidgetService.pushStats();
   }
 
-  static Future<void> pushSettings() async {
+  // clearAvatar forces avatar_url to NULL in both tables (the user
+  // explicitly removed their photo) instead of the default "NULL means
+  // leave the existing column alone" — see the RPC's p_clear_avatar comment.
+  static Future<void> pushSettings({bool clearAvatar = false}) async {
     final uid = _uid;
     if (uid == null) return;
     try {
@@ -154,6 +157,7 @@ class SyncService {
         'p_language_level': languageLevel,
         'p_avatar_url': avatarUrl,
         'p_settings_updated_at': ts,
+        'p_clear_avatar': clearAvatar,
       });
       await prefs.setString('sync_settings_ts', ts);
     } catch (e) {

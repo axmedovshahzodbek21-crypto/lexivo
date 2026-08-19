@@ -135,28 +135,26 @@ class SyncService {
       final userName = prefs.getString('user_name') ?? '';
       final languageLevel = prefs.getString('language_level');
       final avatarUrl = prefs.getString('profile_image_url');
-      await Future.wait([
-        _sb.from('user_data').upsert({
-          'id': uid,
-          'daily_word_goal':       prefs.getInt('daily_word_goal') ?? 15,
-          'quiz_direction':        prefs.getString('quiz_direction') ?? 'word-to-uz',
-          'reduce_motion':         prefs.getBool('reduce_motion') ?? false,
-          'show_on_leaderboard':   showOnLeaderboard,
-          'notifications_enabled': prefs.getBool('notifications_enabled') ?? true,
-          'notif_time':            prefs.getString('notif_time') ?? '20:00',
-          'user_name':             userName,
-          'language_level':        languageLevel,
-          'avatar_url':            ?avatarUrl,
-          'settings_updated_at':   ts,
-        }),
-        _sb.from('profiles').upsert({
-          'id':                  uid,
-          'name':                userName,
-          'show_on_leaderboard': showOnLeaderboard,
-          'language_level':      languageLevel,
-          'avatar_url':          ?avatarUrl,
-        }),
-      ]);
+      // Single atomic RPC instead of two independent upserts (user_data +
+      // profiles): if one upsert succeeded and the other failed, the two
+      // tables would diverge permanently — this account's own devices read
+      // user_data, but other users (leaderboard, class roster) read
+      // profiles, so a partial failure meant a silently different avatar/
+      // name/language-level depending on who's looking. See
+      // supabase/migrations/2026-08-19_sync_profile_settings.sql.
+      await _sb.rpc('sync_profile_settings', params: {
+        'p_user_id': uid,
+        'p_daily_word_goal': prefs.getInt('daily_word_goal') ?? 15,
+        'p_quiz_direction': prefs.getString('quiz_direction') ?? 'word-to-uz',
+        'p_reduce_motion': prefs.getBool('reduce_motion') ?? false,
+        'p_show_on_leaderboard': showOnLeaderboard,
+        'p_notifications_enabled': prefs.getBool('notifications_enabled') ?? true,
+        'p_notif_time': prefs.getString('notif_time') ?? '20:00',
+        'p_user_name': userName,
+        'p_language_level': languageLevel,
+        'p_avatar_url': avatarUrl,
+        'p_settings_updated_at': ts,
+      });
       await prefs.setString('sync_settings_ts', ts);
     } catch (e) {
       // ignore: avoid_print

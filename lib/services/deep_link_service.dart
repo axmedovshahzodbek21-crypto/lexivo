@@ -11,9 +11,15 @@ class DeepLinkService {
   static StreamSubscription<Uri>? _sub;
 
   static Future<void> init() async {
-    // Cold start: app was closed when widget was tapped
+    // Cold start: app was closed when widget was tapped. This runs before
+    // runApp() (see main.dart), so navigatorKey.currentState is still null
+    // here — fetching the link is fine this early, but handling it (which
+    // pushes a route) has to wait until the first frame, once MaterialApp's
+    // Navigator actually exists.
     final initial = await _appLinks.getInitialLink();
-    if (initial != null) _handleUri(initial);
+    if (initial != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _handleUri(initial));
+    }
 
     // Warm start: app already running, widget tapped
     _sub = _appLinks.uriLinkStream.listen(_handleUri);

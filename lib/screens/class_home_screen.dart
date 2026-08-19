@@ -932,7 +932,7 @@ class _StudentsSheetState extends State<_StudentsSheet> {
                           Container(
                             width: 36, height: 36,
                             decoration: BoxDecoration(color: _studentAvatarColor(sid), shape: BoxShape.circle),
-                            child: Center(child: Text(name[0].toUpperCase(),
+                            child: Center(child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
                               style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14))),
                           ),
                           const SizedBox(width: 10),

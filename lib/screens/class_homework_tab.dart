@@ -294,9 +294,16 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
             .eq('class_id', widget.classId),
       ]);
 
-      final assignsRaw = phase1[0] as List;
       final cwUnitsRaw = phase1[1] as List;
       final hwRaw = phase1[2] as List;
+
+      // teacher_folders is a joined row that can come back null (e.g. the
+      // referenced folder was deleted but this assignment row wasn't cleaned
+      // up) — skip that one malformed row instead of crashing the whole
+      // batch and blanking the tab for every other valid assignment.
+      final assignsRaw = (phase1[0] as List)
+          .where((a) => (a as Map)['teacher_folders'] is Map)
+          .toList();
 
       final folderIds = assignsRaw
           .map((a) => ((a as Map)['teacher_folders'] as Map)['id'] as String)
@@ -474,6 +481,11 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
       _memCache[widget.classId] = cache;
       _saveToPrefs(cache);
     } catch (_) {
+      // _folders/_cwUnits/etc. are only ever reassigned above on a full
+      // success, so on error they still hold whatever was showing before
+      // this call (cached data for a background refresh, or the initial
+      // empty state for a true first load) — just stop the spinner rather
+      // than clearing anything.
       if (mounted) setState(() => _loading = false);
     }
   }

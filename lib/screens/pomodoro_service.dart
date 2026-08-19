@@ -146,9 +146,16 @@ class PomodoroService extends ChangeNotifier {
     );
   }
 
-  @override
-  void dispose() {
+  // Not named dispose()/not an override on purpose — this is a singleton
+  // shared for the whole app session, not a per-screen ChangeNotifier. A
+  // screen that followed the normal pattern of disposing a listened-to
+  // ChangeNotifier in its own dispose() would otherwise permanently disable
+  // this instance: ChangeNotifier.dispose() sets an internal "disposed" flag
+  // with no way to undo it, so every later notifyListeners() call (from any
+  // other screen still using the timer) would throw in debug for the rest
+  // of the app session. Only the timer — this instance's own resource —
+  // ever needs cleanup here.
+  void cancelTimer() {
     _timer?.cancel();
-    super.dispose();
   }
 }

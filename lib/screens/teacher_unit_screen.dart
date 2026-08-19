@@ -207,6 +207,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
         if (w.examples.isNotEmpty) 'examples': w.examples,
       }).toList();
       await supabase.from('teacher_unit_words').insert(rows);
+      if (!mounted) return;
       _pasteCtrl.clear();
       _wordsInputCtrl.clear();
       setState(() => _parsed = []);

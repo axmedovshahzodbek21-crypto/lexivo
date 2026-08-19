@@ -1245,10 +1245,12 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     ).toList();
     await prefs.setString(_srsKey, jsonEncode(updatedSRS.map((w) => w.toJson()).toList()));
 
+    // Scoped to collectionName::word, not just word — the same word can
+    // appear in more than one collection/unit, and only this one's copy
+    // went stale.
     final rawLearned = await _getLearnedWordsRaw();
-    final unlearnedWords = toUnlearn.map((w) => w.word).toSet();
     final updatedLearned = rawLearned.map((w) =>
-      unlearnedWords.contains(w.word) ? w.copyWith(deletedAt: now) : w
+      unlearnKeys.contains('${w.collectionName}::${w.word}') ? w.copyWith(deletedAt: now) : w
     ).toList();
     await prefs.setString(_learnedKey, jsonEncode(updatedLearned.map((w) => w.toJson()).toList()));
 
@@ -1261,11 +1263,20 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     for (final w in toUnlearn) { updatedLog.remove('${w.collectionName}::${w.word}'); }
     await prefs.setString(_reviewLogKey, jsonEncode(updatedLog));
 
-    // Reset unit progress so the user can re-learn the affected units
+    // Demote a unit's learnDone only if it's actually missing a word now —
+    // not every unit any stale word happened to share a learn date with.
+    // updatedSRS (not the pre-tombstone `words`) is the source of truth here
+    // since it reflects the tombstones just written above.
     final allProgress = await _getAllUnitProgress();
-    final unitKeys = toUnlearn.map((w) => _unitKey(w.collectionName, w.dayNumber)).toSet();
-    for (final key in unitKeys) {
-      allProgress[key] = const UnitProgress();
+    final unitsToCheck = toUnlearn.map((w) => (w.collectionName, w.dayNumber)).toSet();
+    for (final (collectionName, dayNumber) in unitsToCheck) {
+      final key = _unitKey(collectionName, dayNumber);
+      final progress = allProgress[key] ?? const UnitProgress();
+      if (!progress.learnDone) continue; // already not-done, nothing to demote
+      final stillMissingAWord = updatedSRS.any((w) =>
+        w.collectionName == collectionName && w.dayNumber == dayNumber && w.deletedAt != null
+      );
+      if (stillMissingAWord) allProgress[key] = const UnitProgress();
     }
     await prefs.setString(
       _unitProgressKey,

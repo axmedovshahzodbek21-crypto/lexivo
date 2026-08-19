@@ -303,6 +303,37 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   String _digestText = '';
   bool _digestLoading = false;
 
+  // ClassShell only ever constructs this screen once its own server-verified
+  // _isTeacher check passes, so in normal use every write below is already
+  // gated. But that gate lives entirely in the caller — this file has no
+  // check of its own, so a bug there (or a future new caller) would silently
+  // let a non-teacher post announcements/notes/targets for a class they
+  // don't teach. Re-verified independently here, defense-in-depth, the same
+  // way ClassShell._verifyRole() does it.
+  bool _verifiedTeacher = false;
+
+  Future<void> _verifyTeacher() async {
+    final user = currentUser;
+    if (user == null) return;
+    try {
+      final cls = await supabase.from('classes').select('teacher_id').eq('id', widget.classId).maybeSingle();
+      if (mounted) setState(() => _verifiedTeacher = cls != null && cls['teacher_id'] == user.id);
+    } catch (_) {
+      if (mounted) setState(() => _verifiedTeacher = false);
+    }
+  }
+
+  // Guard for each teacher-only write below: returns false (and surfaces an
+  // error) instead of proceeding if the independent verification hasn't
+  // confirmed teacher ownership of this class.
+  bool _checkTeacher() {
+    if (_verifiedTeacher) return true;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Not verified as this class\'s teacher')),
+    );
+    return false;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -312,6 +343,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       if (_tabs.index == 5 && !_reviewLoaded && !_reviewLoading) _loadReviewPattern();
     });
     appLangNotifier.addListener(_onLang);
+    _verifyTeacher();
     final cached = _dashboardCache[widget.classId];
     if (cached != null) {
       _students = cached.students;
@@ -573,6 +605,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       ),
     );
     if (confirmed != true) return;
+    if (!_checkTeacher()) return;
     await supabase.from('class_members').delete().eq('class_id', widget.classId).eq('student_id', s.studentId);
     _dashboardCache.remove(widget.classId);
     if (mounted) _load();
@@ -1648,6 +1681,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
       builder: (ctx) => _bottomSheet(ctx, '📢 ${tr('send_announcement')}', ctrl, tr('announcement_hint'), () async {
         if (ctrl.text.trim().isEmpty) return;
+        if (!_checkTeacher()) return;
         final nav = Navigator.of(ctx);
         final msg = ScaffoldMessenger.of(context);
         await supabase.from('class_announcements').insert({'class_id': widget.classId, 'message': ctrl.text.trim()});
@@ -1665,6 +1699,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
       builder: (ctx) => _bottomSheet(ctx, '✉️ ${tr('note_to')} ${s.name}', ctrl, tr('note_hint'), () async {
         if (ctrl.text.trim().isEmpty) return;
+        if (!_checkTeacher()) return;
         final nav = Navigator.of(ctx);
         final msg = ScaffoldMessenger.of(context);
         await supabase.from('class_notes').insert({'class_id': widget.classId, 'student_id': s.studentId, 'message': ctrl.text.trim()});
@@ -1731,6 +1766,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
               Expanded(child: ElevatedButton(
                 onPressed: () async {
                   if (ctrl.text.trim().isEmpty) return;
+                  if (!_checkTeacher()) return;
                   final nav = Navigator.of(ctx2);
                   final msg = ScaffoldMessenger.of(context);
                   final data = {'class_id': widget.classId, 'student_id': s.studentId, 'title': ctrl.text.trim()};

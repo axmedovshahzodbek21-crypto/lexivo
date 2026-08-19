@@ -476,7 +476,10 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
     final col = _getCollectionByName(pickedMeta.name);
     if (col == null || !mounted) return;
 
-    // Step 2: Pick day
+    // Step 2: Pick day. Units with no words yet are unfinished content —
+    // assigning one as homework would crash the student's Flashcards/Quiz
+    // when they open it (see collections.dart's matching filter).
+    final availableDays = col.days.where((d) => d.words.isNotEmpty).toList();
     final assignedDays = _homework
         .where((h) => h.collectionName == pickedMeta.name)
         .map((h) => h.dayNumber)
@@ -497,9 +500,9 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
           ])),
           Divider(height: 1, color: context.border),
           Expanded(child: ListView.builder(
-            controller: ctrl, itemCount: col.days.length,
+            controller: ctrl, itemCount: availableDays.length,
             itemBuilder: (_, i) {
-              final day = col.days[i];
+              final day = availableDays[i];
               final alreadyAssigned = assignedDays.contains(day.dayNumber);
               return ListTile(
                 dense: true,

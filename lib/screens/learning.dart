@@ -328,13 +328,13 @@ class _LearningScreenState extends State<LearningScreen> {
       // Class mode: SRS lives in Supabase. Skip personal learned list.
       final user = currentUser;
       if (user != null) {
-        await initClassSRSWord(
+        final isNew = await initClassSRSWord(
           userId: user.id,
           classId: widget.classId!,
           word: word.word,
           translation: word.translation,
         );
-        final xp = widget.noXP ? 0 : 10;
+        final xp = (widget.noXP || !isNew) ? 0 : 10;
         await recordClassActivity(user.id, widget.classId!, xp: xp, reason: 'Learn');
         if (xp > 0) {
           await StorageService.addXP(xp, reason: 'Learn', source: 'Class · ${widget.collectionName}');

@@ -76,13 +76,15 @@ int _daysBetween(String fromDateStr, String toDateStr) {
 
 // Called when a student marks a class word as learned.
 // ignoreDuplicates: re-learning a word does not reset an existing SRS stage.
-Future<void> initClassSRSWord({
+// Returns true if this word was newly inserted (not already learned), so
+// callers can gate XP the same way personal-mode learning does.
+Future<bool> initClassSRSWord({
   required String userId,
   required String classId,
   required String word,
   required String translation,
 }) async {
-  await supabase.from('class_srs_states').upsert(
+  final inserted = await supabase.from('class_srs_states').upsert(
     {
       'user_id': userId,
       'class_id': classId,
@@ -93,7 +95,8 @@ Future<void> initClassSRSWord({
     },
     onConflict: 'user_id,class_id,word',
     ignoreDuplicates: true,
-  );
+  ).select('word');
+  return inserted.isNotEmpty;
 }
 
 // Cascades every overdue, non-graduated word for this student down through

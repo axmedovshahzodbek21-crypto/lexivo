@@ -1,16 +1,9 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import 'created_classes_screen.dart';
 import 'joined_classes_screen.dart';
-
-String _generateCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  final rand = Random();
-  return 'LEXI-${List.generate(4, (_) => chars[rand.nextInt(chars.length)]).join()}';
-}
 
 class ClassesScreen extends StatefulWidget {
   const ClassesScreen({super.key});
@@ -67,9 +60,7 @@ class _ClassesScreenState extends State<ClassesScreen> {
     final user = currentUser;
     if (user == null || name.trim().isEmpty) return;
     try {
-      await supabase.from('classes').insert({
-        'name': name.trim(), 'join_code': _generateCode(), 'teacher_id': user.id,
-      });
+      await createClass(name: name.trim(), teacherId: user.id);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

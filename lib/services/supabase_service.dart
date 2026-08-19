@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _supabaseUrl = 'https://jzozrqbzhagezlwncktf.supabase.co';
@@ -10,6 +11,33 @@ Future<void> initSupabase() async {
 SupabaseClient get supabase => Supabase.instance.client;
 
 User? get currentUser => supabase.auth.currentUser;
+
+// ── Class creation ────────────────────────────────────────────────────────
+// Single source of truth for join-code generation and class-row creation —
+// previously copy-pasted independently in classes_screen.dart and
+// created_classes_screen.dart (and again in the web app), so a format change
+// meant updating multiple call sites in sync and no code path retried on a
+// join_code collision (classes.join_code has a unique constraint in Postgres).
+
+String generateClassJoinCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  final rand = Random();
+  return 'LEXI-${List.generate(4, (_) => chars[rand.nextInt(chars.length)]).join()}';
+}
+
+Future<void> createClass({required String name, required String teacherId}) async {
+  for (var attempt = 0; attempt < 5; attempt++) {
+    try {
+      await supabase.from('classes').insert({
+        'name': name, 'join_code': generateClassJoinCode(), 'teacher_id': teacherId,
+      });
+      return;
+    } on PostgrestException catch (e) {
+      if (e.code == '23505' && attempt < 4) continue;
+      rethrow;
+    }
+  }
+}
 
 // ── Class activity tracking ───────────────────────────────────────────────────
 

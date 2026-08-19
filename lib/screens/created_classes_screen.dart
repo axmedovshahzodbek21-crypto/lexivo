@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/supabase_service.dart';
@@ -8,12 +7,6 @@ import '../l10n.dart';
 import 'class_models.dart';
 import 'class_shell.dart';
 import 'teacher_library_screen.dart';
-
-String _generateCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  final rand = Random();
-  return 'LEXI-${List.generate(4, (_) => chars[rand.nextInt(chars.length)]).join()}';
-}
 
 const _kGradients = [
   [Color(0xFF6366F1), Color(0xFF8B5CF6)],
@@ -93,7 +86,7 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> {
     final user = currentUser;
     if (user == null || name.trim().isEmpty) return;
     try {
-      await supabase.from('classes').insert({'name': name.trim(), 'join_code': _generateCode(), 'teacher_id': user.id});
+      await createClass(name: name.trim(), teacherId: user.id);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

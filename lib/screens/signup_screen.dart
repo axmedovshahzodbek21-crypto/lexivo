@@ -7,6 +7,12 @@ import '../services/sync_service.dart';
 import 'main_shell.dart';
 import 'onboarding.dart';
 
+// Lightweight shape check only — not a full RFC 5322 validator. Catches
+// "forgot the @" / "no domain" typos before wasting a Supabase round-trip;
+// Supabase itself is still the real validator for anything more subtle.
+final _emailShapeRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+bool _looksLikeEmail(String email) => _emailShapeRegex.hasMatch(email);
+
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
   @override
@@ -44,6 +50,9 @@ class _SignupScreenState extends State<SignupScreen> {
 
     if (email.isEmpty || pass.isEmpty || pass2.isEmpty) {
       setState(() => _error = tr('fill_all_fields')); return;
+    }
+    if (!_looksLikeEmail(email)) {
+      setState(() => _error = tr('invalid_email')); return;
     }
     if (pass.length < 6) {
       setState(() => _error = tr('password_min_chars')); return;

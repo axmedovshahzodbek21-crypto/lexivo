@@ -105,15 +105,21 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
     final user = currentUser;
     final card = _cards[_index];
     if (widget.dueOnly && user != null && card.isSRS) {
-      await advanceClassSRSWord(
-          userId: user.id, classId: widget.classId, word: card.word, knew: knew);
-      if (!knew) {
-        await addClassHardWord(
-            userId: user.id, classId: widget.classId, word: card.word);
+      try {
+        await advanceClassSRSWord(
+            userId: user.id, classId: widget.classId, word: card.word, knew: knew);
+        if (!knew) {
+          await addClassHardWord(
+              userId: user.id, classId: widget.classId, word: card.word);
+        }
+        final xp = knew ? 5 : 2;
+        await recordClassActivity(user.id, widget.classId, xp: xp, reason: 'SRS Review');
+        await StorageService.addXP(xp, reason: 'SRS Review', source: 'Class · ${widget.className}');
+      } catch (_) {
+        // Best-effort — an SRS/XP write failing shouldn't block the student
+        // from continuing their review session.
       }
-      final xp = knew ? 5 : 2;
-      await recordClassActivity(user.id, widget.classId, xp: xp, reason: 'SRS Review');
-      await StorageService.addXP(xp, reason: 'SRS Review', source: 'Class · ${widget.className}');
+      if (!mounted) return;
     }
     setState(() {
       if (knew) { _knew++; } else { _didntKnow++; }

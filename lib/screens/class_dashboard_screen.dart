@@ -221,17 +221,20 @@ Widget _dashHero(String classId, String className, int studentCount, {
             ]),
           ]),
           const SizedBox(height: 12),
-          Row(children: [
-            _heroBtn('📝 Words', onWords),
-            const SizedBox(width: 8),
-            _heroBtn('📢 Announce', onAnnounce),
-            const SizedBox(width: 8),
-            _heroBtn('🔄 Refresh', onRefresh),
-            if (onExport != null) ...[
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(children: [
+              _heroBtn('📝 Words', onWords),
               const SizedBox(width: 8),
-              _heroBtn('📥 CSV', onExport),
-            ],
-          ]),
+              _heroBtn('📢 Announce', onAnnounce),
+              const SizedBox(width: 8),
+              _heroBtn('🔄 Refresh', onRefresh),
+              if (onExport != null) ...[
+                const SizedBox(width: 8),
+                _heroBtn('📥 CSV', onExport),
+              ],
+            ]),
+          ),
         ]),
       ),
     ]),

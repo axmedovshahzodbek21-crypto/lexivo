@@ -14,6 +14,7 @@ import '../app_theme.dart';
 import '../l10n.dart';
 import 'login_screen.dart';
 import 'main_shell.dart';
+import 'class_progress_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -1232,6 +1233,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _signOut() async {
     await StorageService.clearAllProgress();
+    ClassProgressScreen.clearCache();
     await Supabase.instance.client.auth.signOut();
     if (!mounted) return;
     Navigator.pushAndRemoveUntil(
@@ -1297,6 +1299,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       await Supabase.instance.client.rpc('delete_own_account');
       await StorageService.clearAllProgress();
+      ClassProgressScreen.clearCache();
       await Supabase.instance.client.auth.signOut();
       if (!mounted) return;
       navigator.pushAndRemoveUntil(

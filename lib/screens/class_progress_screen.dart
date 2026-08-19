@@ -67,12 +67,21 @@ class ClassProgressScreen extends StatefulWidget {
 
   @override
   State<ClassProgressScreen> createState() => _ClassProgressScreenState();
+
+  // Call on sign-out — the cache is process-lifetime and was previously keyed
+  // only by classId, so signing into a different account on the same device
+  // without a full app restart could briefly paint the previous account's
+  // SRS/starred/hard-word stats before _load() overwrote it.
+  static void clearCache() => _ClassProgressScreenState._cache.clear();
 }
 
 typedef _ProgressCache = ({List<ClassSRSEntry> entries, int starredCount, int hardCount, int totalWords});
 
 class _ClassProgressScreenState extends State<ClassProgressScreen> {
   static final Map<String, _ProgressCache> _cache = {};
+  static const _maxCacheEntries = 20;
+
+  String get _cacheKey => '${currentUser?.id}_${widget.classId}';
 
   bool _loading = true;
   List<ClassSRSEntry> _entries = [];
@@ -89,7 +98,7 @@ class _ClassProgressScreenState extends State<ClassProgressScreen> {
   @override
   void initState() {
     super.initState();
-    final cached = _cache[widget.classId];
+    final cached = _cache[_cacheKey];
     if (cached != null) {
       _entries      = cached.entries;
       _starredCount = cached.starredCount;
@@ -117,7 +126,10 @@ class _ClassProgressScreenState extends State<ClassProgressScreen> {
       final starred  = results[1] as List;
       final hard     = results[2] as List;
       final countRes = results[3] as List;
-      _cache[widget.classId] = (entries: all, starredCount: starred.length, hardCount: hard.length, totalWords: countRes.length);
+      if (_cache.length >= _maxCacheEntries && !_cache.containsKey(_cacheKey)) {
+        _cache.remove(_cache.keys.first);
+      }
+      _cache[_cacheKey] = (entries: all, starredCount: starred.length, hardCount: hard.length, totalWords: countRes.length);
       if (mounted) {
         setState(() {
           _entries      = all;

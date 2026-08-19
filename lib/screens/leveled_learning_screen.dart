@@ -36,8 +36,13 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
 
   List<WordItem> _learnedThisSession = [];
 
-  double _dragOffset = 0;
-  bool _isDragging = false;
+  // A ValueNotifier instead of setState-backed fields: onVerticalDragUpdate
+  // fires on nearly every frame during a swipe, and setState() at this
+  // level rebuilds the whole screen (AppBar, stats, action buttons —
+  // nothing that actually depends on drag position) on every one of those
+  // frames. Only the ValueListenableBuilder around the swipe-reactive card
+  // below rebuilds now; everything else in build() is unaffected by drag.
+  final ValueNotifier<double> _dragOffset = ValueNotifier(0.0);
 
   String get _sessionKey => 'leveled_position_${widget.collection.id}';
   String get _dailyLearnedKey => 'daily_learned_leveled_${_todayString()}';
@@ -60,6 +65,7 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
   void dispose() {
     appLangNotifier.removeListener(_onLangChange);
     _tts.stop();
+    _dragOffset.dispose();
     super.dispose();
   }
 
@@ -632,15 +638,6 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
     final covered =
         _learnedAllTime + _skippedAllTime + _learnedToday + _skippedToday;
 
-    final swipeUp = _isDragging && _dragOffset < -20;
-    final swipeDown = _isDragging && _dragOffset > 20;
-
-    final bgColor = swipeUp
-        ? (context.isDark ? const Color(0xFF0D2E20) : const Color(0xFFE8F8F0))
-        : swipeDown
-        ? (context.isDark ? const Color(0xFF2E1A00) : const Color(0xFFFFF3E0))
-        : context.bg;
-
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
@@ -648,7 +645,7 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
         await _showExitDialog();
       },
       child: Scaffold(
-        backgroundColor: bgColor,
+        backgroundColor: context.bg,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -700,331 +697,346 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
             ),
           ],
         ),
-        body: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onVerticalDragUpdate: (details) {
-            setState(() {
-              _dragOffset += details.delta.dy;
-              _isDragging = true;
-            });
-          },
-          onVerticalDragEnd: (details) {
-            setState(() {
-              _isDragging = false;
-              _dragOffset = 0;
-            });
-            if (details.primaryVelocity! > 300) {
-              _skipWordPermanently();
-            } else if (details.primaryVelocity! < -300) {
-              _onWordLearned();
-            }
-          },
-          onVerticalDragCancel: () {
-            setState(() {
-              _isDragging = false;
-              _dragOffset = 0;
-            });
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AnimatedOpacity(
-                  opacity: swipeUp ? 1.0 : 0.3,
-                  duration: const Duration(milliseconds: 100),
-                  child: Center(
-                    child: Text(
-                      '↑ ✓ Learned',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: swipeUp
-                            ? const Color(0xFF2ECC71)
-                            : context.textMuted,
+        body: ValueListenableBuilder<double>(
+          valueListenable: _dragOffset,
+          // The action buttons never depend on drag position — building
+          // this once via `child` means the per-frame drag rebuild below
+          // reuses this same widget instance instead of reconstructing it.
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _skipWordPermanently,
+                      icon: const Text('↓', style: TextStyle(fontSize: 16)),
+                      label: Text(
+                        'Skip  $_skippedToday',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFFF8C42),
+                        side: const BorderSide(color: Color(0xFFFF8C42)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: context.surface,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: swipeUp
-                            ? const Color(0xFF2ECC71).withValues(alpha: 0.15)
-                            : swipeDown
-                            ? const Color(0xFFFF8C42).withValues(alpha: 0.15)
-                            : const Color(0xFF6C63FF).withValues(alpha: 0.08),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _onWordLearned,
+                      icon: const Text('✓', style: TextStyle(fontSize: 16)),
+                      label: Text(
+                        'Learned  $_learnedToday',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                    ],
-                    border: swipeUp
-                        ? Border.all(
-                            color: const Color(
-                              0xFF2ECC71,
-                            ).withValues(alpha: 0.4),
-                            width: 1.5,
-                          )
-                        : swipeDown
-                        ? Border.all(
-                            color: const Color(
-                              0xFFFF8C42,
-                            ).withValues(alpha: 0.4),
-                            width: 1.5,
-                          )
-                        : null,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              word.word,
-                              style: TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                color: context.appText,
-                              ),
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () => _speak(word.word, 'en-US'),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: context.primaryBg,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.volume_up,
-                                    color: context.primary,
-                                    size: 14,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  const Text(
-                                    '🇺🇸',
-                                    style: TextStyle(fontSize: 12),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: () => _speak(word.word, 'en-GB'),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: context.primaryBg,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.volume_up,
-                                    color: context.primary,
-                                    size: 14,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  const Text(
-                                    '🇬🇧',
-                                    style: TextStyle(fontSize: 12),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        word.pronunciation,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: context.textMuted,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2ECC71),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: context.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          word.partOfSpeech,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: context.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        word.translation,
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF2ECC71),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        word.definition,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: context.textMuted,
-                          height: 1.4,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        word.example1,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: context.textMuted,
-                          fontStyle: FontStyle.italic,
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                AnimatedOpacity(
-                  opacity: swipeDown ? 1.0 : 0.3,
-                  duration: const Duration(milliseconds: 100),
-                  child: Center(
-                    child: Text(
-                      '↓ Skip',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: swipeDown
-                            ? const Color(0xFFFF8C42)
-                            : context.textMuted,
                       ),
                     ),
                   ),
-                ),
-                const Spacer(),
-                Row(
-                  children: [
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  if (_currentIndex > 0)
                     Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _skipWordPermanently,
-                        icon: const Text('↓', style: TextStyle(fontSize: 16)),
-                        label: Text(
-                          'Skip  $_skippedToday',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
+                      child: OutlinedButton(
+                        onPressed: () {
+                          setState(() => _currentIndex--);
+                          _savePosition();
+                        },
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFFFF8C42),
-                          side: const BorderSide(color: Color(0xFFFF8C42)),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _onWordLearned,
-                        icon: const Text('✓', style: TextStyle(fontSize: 16)),
-                        label: Text(
-                          'Learned  $_learnedToday',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2ECC71),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    if (_currentIndex > 0)
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {
-                            setState(() => _currentIndex--);
-                            _savePosition();
-                          },
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: context.primary,
-                            side: BorderSide(color: context.primary),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: const Text(
-                            'Previous',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (_currentIndex > 0) const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: _onWordLearned,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: context.primary,
-                          foregroundColor: Colors.white,
+                          foregroundColor: context.primary,
+                          side: BorderSide(color: context.primary),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                        child: Text(
-                          _currentIndex + 1 >= _todayWords.length
-                              ? 'Finish Session'
-                              : 'Next Word',
-                          style: const TextStyle(
+                        child: const Text(
+                          'Previous',
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-              ],
-            ),
+                  if (_currentIndex > 0) const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _onWordLearned,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: context.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: Text(
+                        _currentIndex + 1 >= _todayWords.length
+                            ? 'Finish Session'
+                            : 'Next Word',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+            ],
           ),
+          builder: (context, dragOffset, actionButtons) {
+            final swipeUp = dragOffset < -20;
+            final swipeDown = dragOffset > 20;
+            final bgColor = swipeUp
+                ? (context.isDark ? const Color(0xFF0D2E20) : const Color(0xFFE8F8F0))
+                : swipeDown
+                ? (context.isDark ? const Color(0xFF2E1A00) : const Color(0xFFFFF3E0))
+                : context.bg;
+
+            return GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onVerticalDragUpdate: (details) =>
+                  _dragOffset.value += details.delta.dy,
+              onVerticalDragEnd: (details) {
+                final velocity = details.primaryVelocity!;
+                _dragOffset.value = 0;
+                if (velocity > 300) {
+                  _skipWordPermanently();
+                } else if (velocity < -300) {
+                  _onWordLearned();
+                }
+              },
+              onVerticalDragCancel: () => _dragOffset.value = 0,
+              child: Container(
+                width: double.infinity,
+                height: double.infinity,
+                color: bgColor,
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AnimatedOpacity(
+                        opacity: swipeUp ? 1.0 : 0.3,
+                        duration: const Duration(milliseconds: 100),
+                        child: Center(
+                          child: Text(
+                            '↑ ✓ Learned',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: swipeUp
+                                  ? const Color(0xFF2ECC71)
+                                  : context.textMuted,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: context.surface,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: swipeUp
+                                  ? const Color(0xFF2ECC71).withValues(alpha: 0.15)
+                                  : swipeDown
+                                  ? const Color(0xFFFF8C42).withValues(alpha: 0.15)
+                                  : const Color(0xFF6C63FF).withValues(alpha: 0.08),
+                              blurRadius: 16,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                          border: swipeUp
+                              ? Border.all(
+                                  color: const Color(
+                                    0xFF2ECC71,
+                                  ).withValues(alpha: 0.4),
+                                  width: 1.5,
+                                )
+                              : swipeDown
+                              ? Border.all(
+                                  color: const Color(
+                                    0xFFFF8C42,
+                                  ).withValues(alpha: 0.4),
+                                  width: 1.5,
+                                )
+                              : null,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    word.word,
+                                    style: TextStyle(
+                                      fontSize: 32,
+                                      fontWeight: FontWeight.bold,
+                                      color: context.appText,
+                                    ),
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: () => _speak(word.word, 'en-US'),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: context.primaryBg,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.volume_up,
+                                          color: context.primary,
+                                          size: 14,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        const Text(
+                                          '🇺🇸',
+                                          style: TextStyle(fontSize: 12),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                GestureDetector(
+                                  onTap: () => _speak(word.word, 'en-GB'),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: context.primaryBg,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.volume_up,
+                                          color: context.primary,
+                                          size: 14,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        const Text(
+                                          '🇬🇧',
+                                          style: TextStyle(fontSize: 12),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              word.pronunciation,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: context.textMuted,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: context.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                word.partOfSpeech,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: context.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              word.translation,
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF2ECC71),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              word.definition,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: context.textMuted,
+                                height: 1.4,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              word.example1,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: context.textMuted,
+                                fontStyle: FontStyle.italic,
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      AnimatedOpacity(
+                        opacity: swipeDown ? 1.0 : 0.3,
+                        duration: const Duration(milliseconds: 100),
+                        child: Center(
+                          child: Text(
+                            '↓ Skip',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: swipeDown
+                                  ? const Color(0xFFFF8C42)
+                                  : context.textMuted,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      actionButtons!,
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );

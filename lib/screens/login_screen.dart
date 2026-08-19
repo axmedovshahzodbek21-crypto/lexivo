@@ -11,6 +11,12 @@ import 'signup_screen.dart';
 
 const _webClientId = '500337949373-naol002agngd9hva6dsccda5t82ofk29.apps.googleusercontent.com';
 
+// Lightweight shape check only — not a full RFC 5322 validator. Catches
+// "forgot the @" / "no domain" typos before wasting a Supabase round-trip;
+// Supabase itself is still the real validator for anything more subtle.
+final _emailShapeRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+bool _looksLikeEmail(String email) => _emailShapeRegex.hasMatch(email);
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
   @override
@@ -46,6 +52,10 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _passwordCtrl.text;
     if (email.isEmpty || password.isEmpty) {
       setState(() => _error = tr('fill_all_fields'));
+      return;
+    }
+    if (!_looksLikeEmail(email)) {
+      setState(() => _error = tr('invalid_email'));
       return;
     }
     setState(() { _loading = true; _error = null; });
@@ -146,6 +156,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: _resetLoading ? null : () async {
                       final email = emailCtrl.text.trim();
                       if (email.isEmpty) { setS(() => dialogError = tr('enter_email')); return; }
+                      if (!_looksLikeEmail(email)) { setS(() => dialogError = tr('invalid_email')); return; }
                       setS(() { _resetLoading = true; dialogError = null; });
                       try {
                         await Supabase.instance.client.auth.resetPasswordForEmail(

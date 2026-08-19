@@ -515,18 +515,24 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
   }
 
   Future<void> _markEasy() async {
+    // Reached via a 300ms Future.delayed from a swipe — the controller this
+    // touches (through _nextCard) can already be disposed if the user
+    // navigated away before the delay elapsed.
+    if (!mounted) return;
     if (!_hasWords) return;
     _easyWords.add(_currentWord);
     await _nextCard();
   }
 
   Future<void> _markHard() async {
+    if (!mounted) return;
     if (!_hasWords) return;
     _hardWords.add(_currentWord);
     await _nextCard();
   }
 
   Future<void> _skipCard() async {
+    if (!mounted) return;
     if (!_hasWords) return;
     _flipController.reset();
     final skipped = _sessionWords.removeAt(_currentIndex);
@@ -702,6 +708,7 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
 
   // FIX 6: toggleStar now resets flip state if card was flipped
   void _toggleStar() {
+    if (!mounted) return;
     if (!_hasWords) return;
     final isNowStarred = !_starred[_currentIndex];
     setState(() => _starred[_currentIndex] = isNowStarred);

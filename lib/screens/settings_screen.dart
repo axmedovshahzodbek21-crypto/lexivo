@@ -955,7 +955,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           textScaleNotifier.value = value;
                           final prefs = await SharedPreferences.getInstance();
                           await prefs.setDouble('text_scale', value);
-                          setState(() {});
+                          if (mounted) setState(() {});
                         },
                       ),
                       Row(

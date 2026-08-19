@@ -485,9 +485,11 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_dailyLearnedKey, _learnedToday);
       await _saveLearnedWordsToPrefs();
+      if (!mounted) return;
 
       if (_learnedToday == _dailyLimit) {
         await _savePosition();
+        if (!mounted) return;
         setState(() => _limitReached = true);
         _showLimitDialog();
         return;
@@ -511,6 +513,7 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
       final skippedWords = await StorageService.getSkippedWords(
         widget.collection.id,
       );
+      if (!mounted) return;
       final allCovered = widget.collection.words.every(
         (w) => learnedWords.contains(w.word) || skippedWords.contains(w.word),
       );

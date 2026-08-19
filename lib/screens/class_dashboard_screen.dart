@@ -613,7 +613,24 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     );
     if (confirmed != true) return;
     if (!await _checkTeacher()) return;
-    await supabase.from('class_members').delete().eq('class_id', widget.classId).eq('student_id', s.studentId);
+    List deleted;
+    try {
+      deleted = await supabase.from('class_members')
+          .delete()
+          .eq('class_id', widget.classId)
+          .eq('student_id', s.studentId)
+          .select();
+    } catch (_) {
+      deleted = const [];
+    }
+    if (deleted.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to remove student')),
+        );
+      }
+      return;
+    }
     _dashboardCache.remove(widget.classId);
     if (mounted) _load();
   }

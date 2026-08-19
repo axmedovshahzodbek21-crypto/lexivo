@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
 import '../services/class_srs_service.dart';
 import '../app_theme.dart';
+import '../data/storage_service.dart';
 
 class ClassReviewScreen extends StatefulWidget {
   final String classId;
@@ -103,7 +104,9 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
         await addClassHardWord(
             userId: user.id, classId: widget.classId, word: card.word);
       }
-      await recordClassActivity(user.id, widget.classId, xp: knew ? 5 : 2, reason: 'SRS Review');
+      final xp = knew ? 5 : 2;
+      await recordClassActivity(user.id, widget.classId, xp: xp, reason: 'SRS Review');
+      await StorageService.addXP(xp, reason: 'SRS Review', source: 'Class · ${widget.className}');
     }
     setState(() {
       if (knew) { _knew++; } else { _didntKnow++; }

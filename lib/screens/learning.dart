@@ -332,7 +332,12 @@ class _LearningScreenState extends State<LearningScreen> {
           word: word.word,
           translation: word.translation,
         );
-        await recordClassActivity(user.id, widget.classId!, xp: widget.noXP ? 0 : 10, reason: 'Learn');
+        final xp = widget.noXP ? 0 : 10;
+        await recordClassActivity(user.id, widget.classId!, xp: xp, reason: 'Learn');
+        if (xp > 0) {
+          await StorageService.addXP(xp, reason: 'Learn', source: 'Class · ${widget.collectionName}');
+          _sessionXP += xp;
+        }
       }
     } else {
       final existing = await StorageService.getLearnedWords();

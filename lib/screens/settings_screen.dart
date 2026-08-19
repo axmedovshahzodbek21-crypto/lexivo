@@ -60,6 +60,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() {
       _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
       _notifTime = prefs.getString('notif_time') ?? '20:00';
@@ -86,7 +87,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_name', name);
     await prefs.setString('name_updated_at', DateTime.now().toUtc().toIso8601String());
-    setState(() => _userName = name);
+    if (mounted) setState(() => _userName = name);
     SyncService.pushSettings();
     final user = currentUser;
     if (user != null && name.trim().isNotEmpty) {
@@ -123,7 +124,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('profile_image_path', picked.path);
-    setState(() => _profileImagePath = picked.path);
+    if (mounted) setState(() => _profileImagePath = picked.path);
 
     final user = currentUser;
     if (user != null) {
@@ -335,7 +336,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _toggleNotifications(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('notifications_enabled', value);
-    setState(() => _notificationsEnabled = value);
+    if (mounted) setState(() => _notificationsEnabled = value);
     final streak = await StorageService.getStreak();
     final userName = prefs.getString('user_name') ?? '';
     await NotificationService.scheduleReminder(
@@ -378,11 +379,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     if (enabled != null) {
       await prefs.setBool('pulse_enabled', enabled);
-      setState(() => _pulseEnabled = enabled);
+      if (mounted) setState(() => _pulseEnabled = enabled);
     }
     if (speed != null) {
       await prefs.setString('pulse_speed', speed);
-      setState(() => _pulseSpeed = speed);
+      if (mounted) setState(() => _pulseSpeed = speed);
     }
     pulseNotifier.value = _pulseEnabled ? _pulseSpeed : 'off';
   }
@@ -390,7 +391,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _setThemeMode(String mode) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('theme_mode', mode);
-    setState(() => _themeMode = mode);
+    if (mounted) setState(() => _themeMode = mode);
     themeModeNotifier.value = mode == 'dark'
         ? ThemeMode.dark
         : mode == 'light'
@@ -403,13 +404,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await prefs.setString('english_level', level);
     await prefs.setString('language_level', level);
     await prefs.setString('language_level_updated_at', DateTime.now().toIso8601String());
-    setState(() => _englishLevel = level);
+    if (mounted) setState(() => _englishLevel = level);
   }
 
   Future<void> _setDailyGoal(int goal) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('daily_word_goal', goal);
-    setState(() => _dailyWordGoal = goal);
+    if (mounted) setState(() => _dailyWordGoal = goal);
     SyncService.pushSettings();
   }
 

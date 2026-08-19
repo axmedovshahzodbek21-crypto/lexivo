@@ -108,20 +108,16 @@ Future<void> recordClassActivity(
 }) async {
   try {
     final today = _dateStr(DateTime.now());
-    final exists = await supabase
-        .from('class_study_days')
-        .select('student_id')
-        .eq('student_id', userId)
-        .eq('class_id', classId)
-        .eq('study_date', today)
-        .maybeSingle();
-    if (exists == null) {
-      await supabase.from('class_study_days').insert({
-        'student_id': userId,
-        'class_id': classId,
-        'study_date': today,
-      });
-    }
+    // Atomic upsert instead of select-then-insert: two near-simultaneous
+    // calls (e.g. finishing two homework modes back to back) could otherwise
+    // both see "not exists" and both attempt insert, one hitting a
+    // duplicate-key violation. Matches recordClassStudyDay's upsert in the
+    // web app (lib/class-xp.ts) for the same table.
+    await supabase.from('class_study_days').upsert(
+      {'student_id': userId, 'class_id': classId, 'study_date': today},
+      onConflict: 'student_id,class_id,study_date',
+      ignoreDuplicates: true,
+    );
   } catch (e, st) {
     // ignore: avoid_print
     print('[recordClassActivity] study_days error: $e\n$st');

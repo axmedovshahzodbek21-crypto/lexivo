@@ -192,12 +192,14 @@ class SyncService {
         try { return (jsonDecode(raw) as List).cast<String>(); } catch (_) { return []; }
       }
 
-      // starred_words: extract word names from Flutter's JSON strings
+      // starred_words: full records (word, translation, definition, etc.),
+      // not just names — otherwise a word starred on another device pulls in
+      // with every detail field blank until it happens to be re-starred here.
       final starredRaw = prefs.getStringList('starred_words') ?? [];
-      final starredNames = starredRaw.map((s) {
-        try { return (jsonDecode(s) as Map<String, dynamic>)['word'] as String?; }
+      final starredRecords = starredRaw.map((s) {
+        try { return jsonDecode(s) as Map<String, dynamic>; }
         catch (_) { return null; }
-      }).whereType<String>().toList();
+      }).whereType<Map<String, dynamic>>().toList();
 
       // srs_words: combine active + mastered so web sees the full set
       final srsActive = arr('srs_words').cast<Map<String, dynamic>>();
@@ -217,7 +219,7 @@ class SyncService {
         'id': uid,
         'learned_words':    arr('learned_words'),
         'srs_words':        combinedSrs,
-        'starred_words':    starredNames,
+        'starred_words':    starredRecords,
         'hard_words':       arr('marked_hard_words'), // includes tombstones (removedAt) so unmarking propagates
         'study_days':       days('study_days'),
         'review_days':      days('review_days'),
@@ -465,23 +467,33 @@ class SyncService {
         }
       }
 
-      // starred_words: cloud sends word names; Flutter stores JSON strings
-      final cloudStarred = (row['starred_words'] as List? ?? []).cast<String>();
+      // starred_words: full records now, keyed by word+collectionName
+      // (matching StorageService.saveStarredWord/removeStarredWord) so a
+      // word starred elsewhere pulls in with its real translation/
+      // definition/examples instead of blank placeholders. A raw string
+      // entry (from an older app version's push, mid-rollout) is still
+      // accepted and filled in with blanks, same as the old behavior,
+      // instead of crashing the whole pull.
+      final cloudStarred = (row['starred_words'] as List? ?? []).map((e) {
+        if (e is Map) return e.cast<String, dynamic>();
+        return <String, dynamic>{
+          'word': e as String, 'translation': '', 'definition': '', 'example1': '',
+          'partOfSpeech': '', 'pronunciation': '', 'collectionName': '',
+        };
+      }).toList();
       if (cloudStarred.isNotEmpty) {
         final localStarred = prefs.getStringList('starred_words') ?? [];
-        final localWords = <String>{};
+        String keyOf(Map<String, dynamic> w) => '${w['word']}::${w['collectionName']}';
+        final localKeys = <String>{};
         for (final s in localStarred) {
-          try { localWords.add((jsonDecode(s) as Map<String, dynamic>)['word'] as String); }
+          try { localKeys.add(keyOf(jsonDecode(s) as Map<String, dynamic>)); }
           catch (_) {}
         }
         bool changed = false;
         final merged = [...localStarred];
-        for (final word in cloudStarred) {
-          if (!localWords.contains(word)) {
-            merged.add(jsonEncode({
-              'word': word, 'translation': '', 'definition': '', 'example1': '',
-              'partOfSpeech': '', 'pronunciation': '', 'collectionName': '',
-            }));
+        for (final w in cloudStarred) {
+          if (!localKeys.contains(keyOf(w))) {
+            merged.add(jsonEncode(w));
             changed = true;
           }
         }

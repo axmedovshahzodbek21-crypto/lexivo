@@ -24,6 +24,15 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initSupabase();
   OneSignalService.initialize();
+  OneSignalService.onNotificationClick((data) {
+    final classId = data['class_id'] as String?;
+    if (classId == null || classId.isEmpty) return;
+    DeepLinkService.navigateToClass(
+      classId: classId,
+      className: data['class_name'] as String? ?? 'Class',
+      isTeacher: data['is_teacher'] == true,
+    );
+  });
   await WidgetService.init();
   await DeepLinkService.init();
   await ContentService.initialize();

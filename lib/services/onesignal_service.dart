@@ -15,4 +15,14 @@ class OneSignalService {
       OneSignal.Notifications.requestPermission(true);
 
   static bool get isPermissionGranted => OneSignal.Notifications.permission;
+
+  // Fires when the user taps a push notification (cold start, background,
+  // or foreground) — see send-push/index.ts, which attaches class_id/
+  // class_name/is_teacher as the notification's `data` so the app can jump
+  // straight to that class instead of just opening to Home.
+  static void onNotificationClick(void Function(Map<String, dynamic> data) handler) {
+    OneSignal.Notifications.addClickListener((event) {
+      handler(event.notification.additionalData ?? {});
+    });
+  }
 }

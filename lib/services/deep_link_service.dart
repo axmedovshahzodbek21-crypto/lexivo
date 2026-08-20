@@ -34,13 +34,30 @@ class DeepLinkService {
     final className = uri.queryParameters['name'] ?? 'Class';
     if (classId == null || classId.isEmpty) return;
 
-    // Push to the class, replacing any existing class screen on the stack
+    final isTeacher = uri.queryParameters['isTeacher'] == 'true';
+    navigateToClass(classId: classId, className: className, isTeacher: isTeacher);
+  }
+
+  // Shared by the widget-tap deep link above and OneSignalService's
+  // notification-click handler (main.dart) — both ultimately just need to
+  // land on the right ClassShell.
+  static void navigateToClass({
+    required String classId,
+    required String className,
+    bool isTeacher = false,
+  }) {
     final nav = navigatorKey.currentState;
-    if (nav == null) return;
+    if (nav == null) {
+      // Cold start (app was closed when the notification/widget was
+      // tapped): the Navigator may not exist yet at this exact moment.
+      // Retry after the first frame instead of silently dropping it.
+      WidgetsBinding.instance.addPostFrameCallback((_) =>
+          navigateToClass(classId: classId, className: className, isTeacher: isTeacher));
+      return;
+    }
 
     // Pop back to root first so we don't stack duplicate class screens
     nav.popUntil((route) => route.isFirst);
-    final isTeacher = uri.queryParameters['isTeacher'] == 'true';
     nav.push(MaterialPageRoute(
       builder: (_) => ClassShell(
         classId: classId,

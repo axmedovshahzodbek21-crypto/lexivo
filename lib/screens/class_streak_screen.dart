@@ -105,6 +105,12 @@ class _ClassStreakScreenState extends State<ClassStreakScreen> {
     for (final d in days) {
       if (prev.isNotEmpty) {
         final diff = DateTime.parse(d).difference(DateTime.parse(prev)).inDays;
+        // A duplicate date (diff == 0) isn't a break in the streak — it's
+        // the same day counted twice (e.g. a legacy row predating a unique
+        // constraint). Treating it as `diff != 1` used to reset `current`
+        // to 1 mid-run, understating the longest streak whenever the DB
+        // ever contained a dupe.
+        if (diff == 0) continue;
         current = diff == 1 ? current + 1 : 1;
       } else {
         current = 1;

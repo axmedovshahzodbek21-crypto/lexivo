@@ -258,10 +258,11 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
         final dueF     = getClassDueWords(userId: user.id, classId: widget.classId);
         final allF     = getClassSRSAll(userId: user.id, classId: widget.classId);
         final hardF    = supabase.from('class_hard_words').select('id').eq('user_id', user.id).eq('class_id', widget.classId);
+        final starredF = getClassStarredWordIds(userId: user.id, classId: widget.classId);
         final due      = await dueF;
         final all      = await allF;
         final hard     = await hardF as List;
-        final starred  = await getClassStarredWordIds(userId: user.id, classId: widget.classId);
+        final starred  = await starredF;
         if (mounted) {
           setState(() {
             _dueCount     = due.length;

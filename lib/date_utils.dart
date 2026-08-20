@@ -44,6 +44,22 @@ String todayForStreaks() => formatStreakDate(streakAdjustedNow());
 bool isHomeworkOverdue(String? due) =>
     due != null && due.compareTo(formatStreakDate(DateTime.now())) < 0;
 
+// ── Relative time labels ────────────────────────────────────────────────────
+
+/// "just now" / "5m ago" / "3h ago" / "2d ago" / "1w ago" for an ISO
+/// timestamp. Previously duplicated identically in class_dashboard_screen.dart
+/// and class_home_screen.dart.
+String timeAgo(String iso) {
+  final parsed = DateTime.tryParse(iso);
+  if (parsed == null) return '';
+  final diff = DateTime.now().difference(parsed);
+  if (diff.inMinutes < 1) return 'just now';
+  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+  if (diff.inHours < 24) return '${diff.inHours}h ago';
+  if (diff.inDays < 7) return '${diff.inDays}d ago';
+  return '${(diff.inDays / 7).floor()}w ago';
+}
+
 /// Human label for [due] (a YYYY-MM-DD date string, or null for "no due
 /// date"): "Overdue · `date`", "Due today", "Due tomorrow", or "Due `date`".
 /// Returns null when [due] is null, so callers can decide their own

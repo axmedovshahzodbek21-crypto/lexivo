@@ -20,15 +20,6 @@ Color _classColor(String classId) {
   return colors[idx];
 }
 
-String _timeAgo(String iso) {
-  final diff = DateTime.now().difference(DateTime.parse(iso));
-  if (diff.inMinutes < 1) return 'just now';
-  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-  if (diff.inHours < 24) return '${diff.inHours}h ago';
-  if (diff.inDays < 7) return '${diff.inDays}d ago';
-  return '${(diff.inDays / 7).floor()}w ago';
-}
-
 class ClassHomeScreen extends StatefulWidget {
   final String classId;
   final String className;
@@ -816,7 +807,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(a.message, style: TextStyle(fontSize: 13, color: context.appText)),
           const SizedBox(height: 2),
-          Text(_timeAgo(a.createdAt), style: TextStyle(fontSize: 11, color: context.textMuted)),
+          Text(timeAgo(a.createdAt), style: TextStyle(fontSize: 11, color: context.textMuted)),
         ])),
         if (widget.isTeacher)
           Container(

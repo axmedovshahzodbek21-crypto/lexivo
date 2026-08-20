@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/supabase_service.dart';
 import '../data/storage_service.dart';
+import '../date_utils.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import 'class_words_screen.dart';
@@ -20,31 +21,38 @@ class CollectionMeta {
   final int totalUnits, displayOrder;
   const CollectionMeta({required this.collectionName, required this.label, required this.totalUnits, required this.displayOrder, required this.colorHex, required this.groupName});
   factory CollectionMeta.fromMap(Map<String, dynamic> m) => CollectionMeta(
-    collectionName: m['collection_name'] as String,
-    label: m['label'] as String,
-    totalUnits: (m['total_units'] as num).toInt(),
-    displayOrder: (m['display_order'] as num).toInt(),
-    colorHex: m['color_hex'] as String,
-    groupName: m['group_name'] as String,
+    collectionName: m['collection_name'] as String? ?? '',
+    label: m['label'] as String? ?? '',
+    totalUnits: (m['total_units'] as num?)?.toInt() ?? 0,
+    displayOrder: (m['display_order'] as num?)?.toInt() ?? 0,
+    colorHex: m['color_hex'] as String? ?? '#6366F1',
+    groupName: m['group_name'] as String? ?? '',
   );
-  Color get color => Color(int.parse(colorHex.replaceFirst('#', '0xFF')));
+  // A malformed hex string (missing '#', wrong length, non-hex chars) used
+  // to be silently misparsed as a plain decimal via int.parse — no crash,
+  // just a bogus (often near-invisible, alpha-0) color with no indication
+  // anything was wrong. Now falls back to a real color on any bad input.
+  Color get color {
+    final hex = colorHex.replaceFirst('#', '');
+    if (!RegExp(r'^[0-9a-fA-F]{6}$').hasMatch(hex)) return const Color(0xFF6366F1);
+    return Color(int.parse('FF$hex', radix: 16));
+  }
 }
 
 class StudentRow {
   final String studentId, name;
-  final int xp, streak, totalWords, totalUnitsSum;
+  final int xp, streak, totalWords;
   final Map<String, int> collectionProgress;
   final String? lastStudyDate;
-  const StudentRow({required this.studentId, required this.name, required this.xp, required this.streak, required this.totalWords, required this.totalUnitsSum, required this.collectionProgress, this.lastStudyDate});
+  const StudentRow({required this.studentId, required this.name, required this.xp, required this.streak, required this.totalWords, required this.collectionProgress, this.lastStudyDate});
   factory StudentRow.fromMap(Map<String, dynamic> m) => StudentRow(
-    studentId: m['student_id'] as String? ?? m['id'] as String,
+    studentId: m['student_id'] as String? ?? m['id'] as String? ?? '',
     name: m['name'] as String? ?? 'Student',
     xp: (m['xp'] as num?)?.toInt() ?? 0,
     streak: (m['streak'] as num?)?.toInt() ?? 0,
     totalWords: (m['total_words'] as num?)?.toInt() ?? 0,
-    totalUnitsSum: (m['total_units_sum'] as num?)?.toInt() ?? 0,
     collectionProgress: Map<String, int>.from(
-      ((m['collection_progress'] as Map?) ?? {}).map((k, v) => MapEntry(k as String, (v as num).toInt())),
+      ((m['collection_progress'] as Map?) ?? {}).map((k, v) => MapEntry(k as String, (v as num?)?.toInt() ?? 0)),
     ),
     lastStudyDate: m['last_study_date'] as String?,
   );
@@ -64,7 +72,7 @@ class ActivityRow {
   factory ActivityRow.fromMap(Map<String, dynamic> m) => ActivityRow(
     studentName: m['student_name'] as String? ?? 'Student',
     completionType: m['completion_type'] as String? ?? '',
-    completedAt: m['completed_at'] as String,
+    completedAt: m['completed_at'] as String? ?? '',
     collectionName: m['collection_name'] as String?,
     dayNumber: (m['day_number'] as num?)?.toInt(),
   );
@@ -141,15 +149,6 @@ ReviewClassification _classifyReview(List<DateTime> entryDates, int overdueCount
 
   return (daysReviewed: daysReviewed, coverage: coverage, streak: streak, longestGap: longestGap,
     totalReviews: totalReviews, avgPerActiveDay: avgPerActiveDay, label: label);
-}
-
-String _timeAgo(String iso) {
-  final diff = DateTime.now().difference(DateTime.parse(iso));
-  if (diff.inMinutes < 1) return 'just now';
-  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-  if (diff.inHours < 24) return '${diff.inHours}h ago';
-  if (diff.inDays < 7) return '${diff.inDays}d ago';
-  return '${(diff.inDays / 7).floor()}w ago';
 }
 
 // ── In-memory cache (lives for the app session) ──────────────────────────────
@@ -1260,7 +1259,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
                 TextSpan(text: detail, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: context.primary)),
               ])),
               const SizedBox(height: 2),
-              Text(_timeAgo(a.completedAt), style: TextStyle(fontSize: 10, color: context.textMuted)),
+              Text(timeAgo(a.completedAt), style: TextStyle(fontSize: 10, color: context.textMuted)),
             ])),
           ]),
         );
@@ -1425,14 +1424,20 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             ),
           );
         }),
-        // Legend
+        // Legend — must mirror cellColor()'s actual buckets exactly. This
+        // previously omitted the 25-49% (orange) bucket entirely and
+        // labeled the others as single points ("50%"/"75%") rather than the
+        // ranges they actually cover, so a teacher reading it couldn't tell
+        // what an orange cell meant and could misread yellow/lime as exact
+        // thresholds instead of ranges.
         Wrap(
           spacing: 12, runSpacing: 6,
           children: [
             (Colors.grey.shade300, '0%'),
-            (const Color(0xFFef4444), '<25%'),
-            (const Color(0xFFeab308), '50%'),
-            (const Color(0xFF84cc16), '75%'),
+            (const Color(0xFFef4444), '1-24%'),
+            (const Color(0xFFf97316), '25-49%'),
+            (const Color(0xFFeab308), '50-74%'),
+            (const Color(0xFF84cc16), '75-89%'),
             (const Color(0xFF22c55e), '90%+'),
           ].map((e) => Row(mainAxisSize: MainAxisSize.min, children: [
             Container(width: 10, height: 10, decoration: BoxDecoration(color: e.$1, borderRadius: BorderRadius.circular(3))),

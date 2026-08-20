@@ -5,9 +5,6 @@ import '../app_theme.dart';
 import 'class_models.dart';
 import 'teacher_library_screen.dart';
 import '../data/word_data.dart';
-import '../data/a1_collection.dart';
-import '../data/a2_collection.dart';
-import '../data/b1_collection.dart';
 import '../data/reading_data.dart';
 import 'class_home_screen.dart';
 
@@ -425,14 +422,27 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
               TextButton(
                 onPressed: () async {
                   Navigator.pop(ctx);
-                  for (final e in pending.entries) {
-                    final w = allWords.firstWhere((w) => w.id == e.key);
-                    if (e.value && w.unitId != unit.id) {
-                      await supabase.from('class_words').update({'unit_id': unit.id}).eq('id', e.key);
-                    } else if (!e.value && w.unitId == unit.id) {
-                      await supabase.from('class_words').update({'unit_id': null}).eq('id', e.key);
+                  final toAdd = <String>[];
+                  final toRemove = <String>[];
+                  for (final w in allWords) {
+                    final shouldBe = pending[w.id] ?? false;
+                    final isMember = w.unitId == unit.id;
+                    if (shouldBe && !isMember) {
+                      toAdd.add(w.id);
+                    } else if (!shouldBe && isMember) {
+                      toRemove.add(w.id);
                     }
                   }
+                  // Batched into at most 2 queries instead of one update per
+                  // changed word, matching the web app's saveManageWords.
+                  final futures = <Future<void>>[];
+                  if (toAdd.isNotEmpty) {
+                    futures.add(supabase.from('class_words').update({'unit_id': unit.id}).inFilter('id', toAdd));
+                  }
+                  if (toRemove.isNotEmpty) {
+                    futures.add(supabase.from('class_words').update({'unit_id': null}).inFilter('id', toRemove));
+                  }
+                  await Future.wait(futures);
                   _load();
                 },
                 child: Text('Save', style: TextStyle(color: context.primary, fontWeight: FontWeight.bold)),
@@ -456,20 +466,6 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
         ),
       ),
     );
-  }
-
-  // ── Collection helpers ─────────────────────────────────────────────────────
-
-  WordCollection? _getCollectionByName(String name) {
-    switch (name) {
-      case '30 Days of Powerful Words': return thirtyDaysCollection;
-      case '24 Vocabulary Challenge':   return vocabularyChallengeCollection;
-      case 'Word Mastery':              return wordMasteryCollection;
-      case 'A1':                        return a1Collection;
-      case 'A2':                        return a2Collection;
-      case 'B1':                        return b1Collection;
-      default: return null;
-    }
   }
 
   Future<void> _pickCollectionDay() async {
@@ -497,7 +493,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
     );
     if (pickedMeta == null || !mounted) return;
 
-    final col = _getCollectionByName(pickedMeta.name);
+    final col = collectionByName(pickedMeta.name);
     if (col == null || !mounted) return;
 
     // Step 2: Pick day. Units with no words yet are unfinished content —

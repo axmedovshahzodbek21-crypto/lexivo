@@ -226,7 +226,12 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
           SnackBar(content: Text('${rows.length} words added!'), duration: const Duration(seconds: 2)));
         _tabs.animateTo(0);
       }
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to add words: $e'), duration: const Duration(seconds: 3)));
+      }
+    }
     if (mounted) setState(() => _importing = false);
   }
 

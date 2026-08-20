@@ -7,9 +7,6 @@ import '../app_theme.dart';
 import 'class_models.dart';
 import 'library_unit_study_screen.dart';
 import '../data/word_data.dart';
-import '../data/a1_collection.dart';
-import '../data/a2_collection.dart';
-import '../data/b1_collection.dart';
 import '../data/reading_data.dart';
 
 List<Color> _hwGradColors(String id) {
@@ -149,18 +146,6 @@ class _PassageHW {
     title: m['title'] as String, topic: m['topic'] as String,
     hwModes: List<String>.from(m['hwModes'] as List), hwDue: m['hwDue'] as String?,
   );
-}
-
-WordCollection? _collectionByName(String name) {
-  switch (name) {
-    case '30 Days of Powerful Words': return thirtyDaysCollection;
-    case '24 Vocabulary Challenge':   return vocabularyChallengeCollection;
-    case 'Word Mastery':              return wordMasteryCollection;
-    case 'A1':                        return a1Collection;
-    case 'A2':                        return a2Collection;
-    case 'B1':                        return b1Collection;
-    default: return null;
-  }
 }
 
 // ── Cache ──────────────────────────────────────────────────────────────────
@@ -380,7 +365,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
                 id: uid, name: um['name'] as String,
                 wordCount: countList?.isNotEmpty == true ? (countList![0] as Map)['count'] as int? ?? 0 : 0,
                 homeworkId: hw?['id'] as String?,
-                hwModes: hw != null ? List<String>.from(hw['modes'] as List) : null,
+                hwModes: hw != null ? (hw['modes'] as List?)?.map((x) => x as String).toList() ?? ['learn', 'flashcard', 'quiz'] : null,
                 hwDue: hw?['due_date'] as String?,
               );
             }).toList();
@@ -397,7 +382,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
           id: uid, name: um['name'] as String,
           wordCount: countList?.isNotEmpty == true ? (countList![0] as Map)['count'] as int? ?? 0 : 0,
           homeworkId: hw?['id'] as String?,
-          hwModes: hw != null ? List<String>.from(hw['modes'] as List) : null,
+          hwModes: hw != null ? (hw['modes'] as List?)?.map((x) => x as String).toList() ?? ['learn', 'flashcard', 'quiz'] : null,
           hwDue: hw?['due_date'] as String?,
         );
       }).toList();
@@ -407,7 +392,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
       for (final h in collHwRows) {
         final name = h['collection_name'] as String;
         final dayNum = (h['day_number'] as num).toInt();
-        final col = _collectionByName(name);
+        final col = collectionByName(name);
         final day = col?.days.firstWhere((d) => d.dayNumber == dayNum, orElse: () => WordDay(dayNumber: dayNum, topic: 'Day $dayNum', words: []));
         collHwItems.add(_CollHW(
           homeworkId: h['id'] as String,

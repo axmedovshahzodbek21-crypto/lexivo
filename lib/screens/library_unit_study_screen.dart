@@ -3,26 +3,12 @@ import '../services/supabase_service.dart';
 import '../services/widget_service.dart';
 import '../app_theme.dart';
 import '../data/word_data.dart';
-import '../data/a1_collection.dart';
-import '../data/a2_collection.dart';
-import '../data/b1_collection.dart';
 import '../data/reading_data.dart';
+import 'class_models.dart';
 import 'learning.dart';
 import 'flashcard.dart';
 import 'quiz_screen.dart';
 import 'matching_screen.dart';
-
-WordCollection? _collectionByName(String name) {
-  switch (name) {
-    case '30 Days of Powerful Words': return thirtyDaysCollection;
-    case '24 Vocabulary Challenge':   return vocabularyChallengeCollection;
-    case 'Word Mastery':              return wordMasteryCollection;
-    case 'A1':                        return a1Collection;
-    case 'A2':                        return a2Collection;
-    case 'B1':                        return b1Collection;
-    default: return null;
-  }
-}
 
 class LibraryUnitStudyScreen extends StatefulWidget {
   final String classId;
@@ -132,7 +118,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
     List<WordItem> wordItems;
 
     if (widget.collectionName != null) {
-      final col = _collectionByName(widget.collectionName!);
+      final col = collectionByName(widget.collectionName!);
       final day = col?.days.firstWhere(
         (d) => d.dayNumber == widget.dayNumber,
         orElse: () => WordDay(dayNumber: widget.dayNumber ?? 0, topic: widget.unitName, words: []),

@@ -1,3 +1,26 @@
+import '../data/word_data.dart';
+import '../data/a1_collection.dart';
+import '../data/a2_collection.dart';
+import '../data/b1_collection.dart';
+
+/// Looks up one of the six built-in word collections by its exact display
+/// name, as stored in class_homework.collection_name. Previously
+/// reimplemented identically in 3 Flutter files (class_curriculum_tab.dart,
+/// class_homework_tab.dart, library_unit_study_screen.dart) — renaming a
+/// collection required updating every copy in lockstep, or homework
+/// silently fell back to whatever the caller did on a null return.
+WordCollection? collectionByName(String name) {
+  switch (name) {
+    case '30 Days of Powerful Words': return thirtyDaysCollection;
+    case '24 Vocabulary Challenge':   return vocabularyChallengeCollection;
+    case 'Word Mastery':              return wordMasteryCollection;
+    case 'A1':                        return a1Collection;
+    case 'A2':                        return a2Collection;
+    case 'B1':                        return b1Collection;
+    default: return null;
+  }
+}
+
 // "Fully done" for a homework assignment: every assigned mode has a
 // matching entry in the student's completed-modes set. Previously
 // reimplemented independently 9+ times across class_homework_tab.dart,

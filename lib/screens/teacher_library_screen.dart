@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import 'teacher_folder_screen.dart';
@@ -11,17 +10,15 @@ class _Folder {
   const _Folder({required this.id, required this.name, required this.unitCount});
 }
 
-const _exampleSeededKey = 'library_example_seeded';
-
 // One-time real example (folder → unit → word) so a first-time teacher sees
-// the actual structure, not an empty page. Guarded by a local flag so it
-// never reappears even if they delete it — this is a courtesy seed, not a
-// permanent fixture.
+// the actual structure, not an empty page. Guarded server-side (does this
+// teacher have zero folders at all?) rather than a local flag — a local
+// SharedPreferences flag only guards the one device, so a teacher signing in
+// on a second device would get a second copy of "Vocabulary 101" seeded.
 Future<bool> _seedExampleFolder(String teacherId) async {
-  final prefs = await SharedPreferences.getInstance();
-  if (prefs.getBool(_exampleSeededKey) ?? false) return false;
-  await prefs.setBool(_exampleSeededKey, true);
   try {
+    final existing = await supabase.from('teacher_folders').select('id').eq('teacher_id', teacherId).limit(1);
+    if ((existing as List).isNotEmpty) return false;
     final folder = await supabase
         .from('teacher_folders')
         .insert({'teacher_id': teacherId, 'name': 'Vocabulary 101'})

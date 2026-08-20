@@ -63,11 +63,9 @@ class _RealEnglishVideoScreenState extends State<RealEnglishVideoScreen> {
   }
 
   Future<void> _loadProgress(WordCollection col) async {
-    final Map<int, UnitProgress> progress = {};
-    for (final day in col.days) {
-      progress[day.dayNumber] = await StorageService.getUnitProgress(col.name, day.dayNumber);
-    }
-    if (mounted) setState(() => _progressMap = progress);
+    final results = await Future.wait(col.days.map((day) async =>
+        MapEntry(day.dayNumber, await StorageService.getUnitProgress(col.name, day.dayNumber))));
+    if (mounted) setState(() => _progressMap = Map.fromEntries(results));
   }
 
   Future<void> _reload() async {

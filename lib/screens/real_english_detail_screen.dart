@@ -37,20 +37,26 @@ class _RealEnglishDetailScreenState extends State<RealEnglishDetailScreen> {
   }
 
   Future<void> _loadWordCounts() async {
-    for (final video in widget.set.videos) {
+    // Loads run concurrently (not one-await-per-video in a for loop) and a
+    // single setState applies all results once every load settles, instead
+    // of both awaiting sequentially and rebuilding the whole screen once per
+    // video as each one resolved.
+    Future<MapEntry<String, int>> loadOne(String videoId) async {
       try {
-        final raw = await rootBundle.loadString('assets/real_english/${video.id}.json');
+        final raw = await rootBundle.loadString('assets/real_english/$videoId.json');
         final data = jsonDecode(raw) as Map<String, dynamic>;
         final days = data['days'] as List<dynamic>;
         final count = days.fold<int>(
           0,
           (s, d) => s + ((d as Map<String, dynamic>)['words'] as List).length,
         );
-        if (mounted) setState(() => _wordCounts[video.id] = count);
+        return MapEntry(videoId, count);
       } catch (_) {
-        if (mounted) setState(() => _wordCounts[video.id] = 0);
+        return MapEntry(videoId, 0);
       }
     }
+    final entries = await Future.wait(widget.set.videos.map((v) => loadOne(v.id)));
+    if (mounted) setState(() => _wordCounts.addAll(Map.fromEntries(entries)));
   }
 
   @override

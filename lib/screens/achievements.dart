@@ -219,18 +219,20 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
       quizPerfect: quizPerfect, flashFirst: flashFirst,
     );
 
-    // Save dates + award XP for newly unlocked achievements
+    // Award XP + record the unlock date for newly unlocked achievements
+    // (one atomic call per unlocked id — avoids both a read-then-write race
+    // and the redundant extra getAchievementDate() call this used to make),
+    // then batch-read the rest in a single SharedPreferences fetch instead
+    // of one getAchievementDate() round trip per definition.
     final Map<String, String?> dates = {};
     for (final d in _allAchs) {
       if (_isUnlocked(d, stats)) {
-        final existingDate = await StorageService.getAchievementDate(d.id);
-        if (existingDate == null) {
-          // First time detected as unlocked — award XP
-          await StorageService.addXP(d.xp * 10, reason: 'Achievement', source: d.title);
-        }
-        await StorageService.saveAchievementDate(d.id);
+        dates[d.id] = await StorageService.checkAndUnlockAchievement(d.id, d.xp * 10, d.title);
       }
-      dates[d.id] = await StorageService.getAchievementDate(d.id);
+    }
+    final lockedIds = _allAchs.where((d) => !dates.containsKey(d.id)).map((d) => d.id).toList();
+    if (lockedIds.isNotEmpty) {
+      dates.addAll(await StorageService.getAchievementDatesBatch(lockedIds));
     }
 
     if (mounted) setState(() { _stats = stats; _dates = dates; });

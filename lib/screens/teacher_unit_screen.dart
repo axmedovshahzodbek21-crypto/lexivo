@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/supabase_service.dart';
 import '../app_theme.dart';
+import '../ai_import_samples.dart';
 
 class _Word {
   final String id, word, translation;
@@ -170,7 +171,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
   void _copyPrompt(BuildContext context, {required bool hasTranslations}) {
     final input = _wordsInputCtrl.text.trim();
     final words = input.isEmpty
-        ? (hasTranslations ? 'apple - olma\nbook - kitob' : 'apple, book, water')
+        ? (hasTranslations ? kSampleWordsWithTranslations : kSampleWordsPlain)
         : input;
     final prompt = _buildPrompt(_wordLang, _translationLang, words, hasTranslations: hasTranslations);
     Clipboard.setData(ClipboardData(text: prompt));
@@ -601,7 +602,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
             maxLines: 4,
             style: TextStyle(color: context.appText, fontSize: 13),
             decoration: InputDecoration(
-              hintText: 'apple, book, water\nor one per line\nor already-translated pairs like: apple - olma',
+              hintText: kSampleWordsHint,
               hintStyle: TextStyle(color: context.textMuted, fontSize: 13),
               filled: true, fillColor: context.surface2,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),

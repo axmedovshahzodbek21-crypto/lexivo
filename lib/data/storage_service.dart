@@ -1763,6 +1763,38 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     }
   }
 
+  // Reads every requested achievement's unlock date off a single
+  // SharedPreferences instance instead of one getAchievementDate() call
+  // (and its own getInstance()/getString() round trip) per id — with
+  // ~180 achievement definitions, achievements.dart's _load() previously
+  // did up to ~360 sequential async reads/writes before its first frame.
+  static Future<Map<String, String?>> getAchievementDatesBatch(List<String> ids) async {
+    final prefs = await SharedPreferences.getInstance();
+    return { for (final id in ids) id: prefs.getString('ach_date_$id') };
+  }
+
+  static final _achievementMutex = _Mutex();
+
+  // Atomically checks whether [id] is already unlocked and, if not, awards
+  // its XP and records the unlock date — both under the same mutex-guarded
+  // read-modify-write. achievements.dart's _load() previously did this as
+  // separate getAchievementDate() → addXP() → saveAchievementDate() calls
+  // with no lock between them, so two concurrent _load() calls (e.g. a fast
+  // double-navigation into this screen) could both read "not yet unlocked"
+  // and both award XP for the same achievement. Returns the (possibly
+  // pre-existing) unlock date.
+  static Future<String> checkAndUnlockAchievement(String id, int xpReward, String source) {
+    return _achievementMutex.run(() async {
+      final prefs = await SharedPreferences.getInstance();
+      final existing = prefs.getString('ach_date_$id');
+      if (existing != null) return existing;
+      if (xpReward > 0) await addXP(xpReward, reason: 'Achievement', source: source);
+      final now = DateTime.now().toIso8601String();
+      await prefs.setString('ach_date_$id', now);
+      return now;
+    });
+  }
+
   // ── One-time flashcard / quiz XP per unit ─────────────────────────────────
 
   static Future<bool> hasFlashcardXPAwarded(String collectionName, int dayNumber) async {

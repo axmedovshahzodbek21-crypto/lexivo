@@ -30,15 +30,38 @@ class _SignupScreenState extends State<SignupScreen> {
   void initState() {
     super.initState();
     appLangNotifier.addListener(_onLangChange);
+    _passwordCtrl.addListener(_onPasswordChange);
   }
 
   @override
   void dispose() {
     appLangNotifier.removeListener(_onLangChange);
+    _passwordCtrl.removeListener(_onPasswordChange);
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     _password2Ctrl.dispose();
     super.dispose();
+  }
+
+  void _onPasswordChange() { if (mounted) setState(() {}); }
+
+  // Simple heuristic (length + character variety), not a full policy —
+  // signup only enforces an 8-character minimum below; this is feedback to
+  // nudge toward a stronger password, not a hard gate.
+  (double, String) _passwordStrength(String pass) {
+    if (pass.isEmpty) return (0, '');
+    var score = 0;
+    if (pass.length >= 8) score++;
+    if (pass.length >= 12) score++;
+    if (RegExp(r'[A-Z]').hasMatch(pass) && RegExp(r'[a-z]').hasMatch(pass)) score++;
+    if (RegExp(r'[0-9]').hasMatch(pass)) score++;
+    if (RegExp(r'[^A-Za-z0-9]').hasMatch(pass)) score++;
+    switch (score) {
+      case 0: case 1: return (0.25, tr('password_strength_weak'));
+      case 2: return (0.5, tr('password_strength_fair'));
+      case 3: case 4: return (0.75, tr('password_strength_good'));
+      default: return (1.0, tr('password_strength_strong'));
+    }
   }
 
   void _onLangChange() { if (mounted) setState(() {}); }
@@ -54,7 +77,7 @@ class _SignupScreenState extends State<SignupScreen> {
     if (!_looksLikeEmail(email)) {
       setState(() => _error = tr('invalid_email')); return;
     }
-    if (pass.length < 6) {
+    if (pass.length < 8) {
       setState(() => _error = tr('password_min_chars')); return;
     }
     if (pass != pass2) {
@@ -64,7 +87,6 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       await Supabase.instance.client.auth.signUp(email: email, password: pass);
-      if (!mounted) return;
       if (!mounted) return;
       _goToApp();
     } on AuthException catch (e) {
@@ -124,6 +146,34 @@ class _SignupScreenState extends State<SignupScreen> {
                 _AuthField(controller: _emailCtrl, label: tr('email'), hint: 'you@example.com', keyboardType: TextInputType.emailAddress),
                 const SizedBox(height: 12),
                 _AuthField(controller: _passwordCtrl, label: tr('password'), hint: tr('password_hint'), obscure: true),
+                if (_passwordCtrl.text.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Builder(builder: (_) {
+                    final (strength, label) = _passwordStrength(_passwordCtrl.text);
+                    final color = strength <= 0.25
+                        ? context.dangerColor
+                        : strength <= 0.5
+                            ? const Color(0xFFF59E0B)
+                            : strength <= 0.75
+                                ? const Color(0xFF3B82F6)
+                                : const Color(0xFF22C55E);
+                    return Row(children: [
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: strength,
+                            minHeight: 5,
+                            backgroundColor: context.border,
+                            valueColor: AlwaysStoppedAnimation(color),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color)),
+                    ]);
+                  }),
+                ],
                 const SizedBox(height: 12),
                 _AuthField(controller: _password2Ctrl, label: tr('confirm_password'), hint: '••••••••', obscure: true, onSubmit: _signUp),
                 const SizedBox(height: 16),

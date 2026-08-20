@@ -4,20 +4,6 @@ import '../app_theme.dart';
 import '../l10n.dart';
 import 'personal_xp_calendar_screen.dart';
 
-// All levels in order: [name, minXP stored, maxXP stored (-1 = infinity)]
-const _kLevels = [
-  ('Starter',            0,      1499),
-  ('Beginner',           1500,   3999),
-  ('Elementary',         4000,   7999),
-  ('Pre-Intermediate',   8000,   13999),
-  ('Intermediate',       14000,  24999),
-  ('Upper-Intermediate', 25000,  39999),
-  ('Advanced',           40000,  59999),
-  ('Expert',             60000,  84999),
-  ('Master',             85000,  99999),
-  ('Legend',             100000, -1),
-];
-
 void showXpLevelSheet(BuildContext context, int xp) {
   showModalBottomSheet(
     context: context,
@@ -233,7 +219,7 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
     }
 
     // Find next level name
-    final nextName = _kLevels.firstWhere(
+    final nextName = StorageService.levels.firstWhere(
       (l) => l.$2 == _nextXP,
       orElse: () => ('Master', 3000, -1),
     ).$1;
@@ -288,8 +274,8 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
           style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.textMuted, letterSpacing: 1),
         ),
         const SizedBox(height: 10),
-        ...List.generate(_kLevels.length, (i) {
-          final (name, minXp, maxXp) = _kLevels[i];
+        ...List.generate(StorageService.levels.length, (i) {
+          final (name, minXp, maxXp) = StorageService.levels[i];
           final isPast    = maxXp != -1 && widget.xp >= maxXp;
           final isCurrent = StorageService.getLevelName(widget.xp) == name;
           final isFuture  = !isPast && !isCurrent;

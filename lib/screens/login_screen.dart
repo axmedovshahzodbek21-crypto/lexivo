@@ -64,7 +64,6 @@ class _LoginScreenState extends State<LoginScreen> {
         email: email, password: password,
       );
       if (!mounted) return;
-      if (!mounted) return;
       _goToApp();
     } on AuthException catch (e) {
       setState(() => _error = e.message);
@@ -94,7 +93,6 @@ class _LoginScreenState extends State<LoginScreen> {
         idToken: idToken,
         accessToken: googleAuth.accessToken,
       );
-      if (!mounted) return;
       if (!mounted) return;
       _goToApp();
     } on AuthException catch (e) {

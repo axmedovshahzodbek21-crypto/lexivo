@@ -463,9 +463,13 @@ const Map<String, Map<String, String>> _t = {
     'free_forever': 'Free forever · no credit card',
     'create_account': 'Create Account',
     'confirm_password': 'Confirm Password',
-    'password_hint': 'At least 6 characters',
-    'password_min_chars': 'Password must be at least 6 characters.',
+    'password_hint': 'At least 8 characters',
+    'password_min_chars': 'Password must be at least 8 characters.',
     'passwords_no_match': 'Passwords do not match.',
+    'password_strength_weak': 'Weak',
+    'password_strength_fair': 'Fair',
+    'password_strength_good': 'Good',
+    'password_strength_strong': 'Strong',
 
     // ── Leveled Learning / XP / Break ────────────────────────────────────────────
     'keep_going_btn': 'Keep Going',
@@ -1083,9 +1087,13 @@ const Map<String, Map<String, String>> _t = {
     'free_forever': 'Doimo bepul · kredit karta shart emas',
     'create_account': 'Hisob yaratish',
     'confirm_password': 'Parolni tasdiqlang',
-    'password_hint': 'Kamida 6 ta belgi',
-    'password_min_chars': 'Parol kamida 6 ta belgidan iborat bo\'lishi kerak.',
+    'password_hint': 'Kamida 8 ta belgi',
+    'password_min_chars': 'Parol kamida 8 ta belgidan iborat bo\'lishi kerak.',
     'passwords_no_match': 'Parollar mos kelmadi.',
+    'password_strength_weak': 'Zaif',
+    'password_strength_fair': "O'rtacha",
+    'password_strength_good': 'Yaxshi',
+    'password_strength_strong': 'Kuchli',
 
     // ── Leveled Learning / XP / Break ────────────────────────────────────────────
     'keep_going_btn': 'Davom etish',

@@ -22,6 +22,9 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
   List<ImportedWord> _words = [];
   bool _loading = true;
   bool _selectMode = false;
+  // Keyed by ImportedWord.id, not the word text — two cards can otherwise
+  // share the same displayed word (see ImportedWord.id's own doc comment),
+  // and matching by text would select/delete all of them at once.
   final Set<String> _selected = {};
   String? _completedAt;
   MyUnitProgress _progress = const MyUnitProgress();
@@ -62,12 +65,12 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
     });
   }
 
-  void _toggleSelected(String word) {
+  void _toggleSelected(String id) {
     setState(() {
-      if (_selected.contains(word)) {
-        _selected.remove(word);
+      if (_selected.contains(id)) {
+        _selected.remove(id);
       } else {
-        _selected.add(word);
+        _selected.add(id);
       }
     });
   }
@@ -205,7 +208,7 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
       ),
     );
     if (confirm == true) {
-      await StorageService.deleteImportedWord(word.word, widget.collectionName, folderName: widget.folderName);
+      await StorageService.deleteImportedWord(word.id, widget.collectionName, folderName: widget.folderName);
       _load();
     }
   }
@@ -449,8 +452,8 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
           word: w,
           onDelete: () => _deleteWord(w),
           selectMode: _selectMode,
-          selected: _selected.contains(w.word),
-          onToggleSelected: () => _toggleSelected(w.word),
+          selected: _selected.contains(w.id),
+          onToggleSelected: () => _toggleSelected(w.id),
         )),
 
         const SizedBox(height: 12),

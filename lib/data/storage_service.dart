@@ -373,7 +373,17 @@ class ImportedWordExample {
   );
 }
 
+int _importedWordIdCounter = 0;
+
 class ImportedWord {
+  // Stable across the word's lifetime — selection/delete matching used to
+  // key off the raw word string, so if the (word, collectionName,
+  // folderName) dedupe invariant was ever violated, selecting or deleting
+  // one card could silently affect every card with the same text. A
+  // microsecond timestamp plus a monotonic counter (not just the timestamp
+  // alone) guarantees uniqueness even for words added synchronously in the
+  // same microsecond, e.g. within a single parsed-import batch.
+  final String id;
   final String word;
   final String? partOfSpeech;
   final String? pronunciation;
@@ -387,7 +397,10 @@ class ImportedWord {
   final String? folderName;
   final int? deletedAt; // tombstone: set instead of removing, so deletion syncs across devices
 
+  static String generateId() => '${DateTime.now().microsecondsSinceEpoch}_${_importedWordIdCounter++}';
+
   ImportedWord({
+    String? id,
     required this.word,
     this.partOfSpeech,
     this.pronunciation,
@@ -400,9 +413,10 @@ class ImportedWord {
     required this.collectionName,
     this.folderName,
     this.deletedAt,
-  });
+  }) : id = id ?? generateId();
 
   ImportedWord copyWith({int? deletedAt}) => ImportedWord(
+    id: id,
     word: word,
     partOfSpeech: partOfSpeech,
     pronunciation: pronunciation,
@@ -418,6 +432,7 @@ class ImportedWord {
   );
 
   Map<String, dynamic> toJson() => {
+    'id': id,
     'word': word,
     if (partOfSpeech != null) 'partOfSpeech': partOfSpeech,
     if (pronunciation != null) 'pronunciation': pronunciation,
@@ -451,6 +466,12 @@ class ImportedWord {
       }
     }
     return ImportedWord(
+      // Records stored before this field existed have no 'id' — falling
+      // back to a composite of fields that were already treated as this
+      // record's identity (word/collection/folder/addedAt) keeps their id
+      // stable across reloads instead of assigning a new random one every
+      // time the same stored JSON is decoded.
+      id: json['id'] as String? ?? '${json['addedAt'] ?? 0}_${json['word'] ?? ''}_${json['collectionName'] ?? ''}_${json['folderName'] ?? ''}',
       word: json['word'] ?? '',
       partOfSpeech: json['partOfSpeech'] as String?,
       pronunciation: json['pronunciation'] as String?,
@@ -2013,8 +2034,12 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     return map[intervalDays] ?? 2;
   }
 
-  // 10-level system; stored ×10 (displayed = min ÷ 10)
-  static const _levels = [
+  // 10-level system; stored ×10 (displayed = min ÷ 10). Public so UI (e.g.
+  // xp_level_sheet.dart) can render the full ladder from this single table
+  // instead of hand-duplicating it — a past edit here missing that copy
+  // would otherwise silently desync the progress bar/ladder display from
+  // the actual level computation below.
+  static const levels = [
     ('Starter',            0,      1499),
     ('Beginner',           1500,   3999),
     ('Elementary',         4000,   7999),
@@ -2028,18 +2053,18 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
   ];
 
   static String getLevelName(int xp) =>
-      _levels.lastWhere((l) => xp >= l.$2, orElse: () => _levels.first).$1;
+      levels.lastWhere((l) => xp >= l.$2, orElse: () => levels.first).$1;
 
   static int getNextLevelXP(int xp) {
-    final idx = _levels.lastIndexWhere((l) => xp >= l.$2);
-    if (idx < 0 || idx >= _levels.length - 1) return _levels.last.$2;
-    return _levels[idx + 1].$2;
+    final idx = levels.lastIndexWhere((l) => xp >= l.$2);
+    if (idx < 0 || idx >= levels.length - 1) return levels.last.$2;
+    return levels[idx + 1].$2;
   }
 
   static int getCurrentLevelMinXP(int xp) =>
-      _levels.lastWhere((l) => xp >= l.$2, orElse: () => _levels.first).$2;
+      levels.lastWhere((l) => xp >= l.$2, orElse: () => levels.first).$2;
 
-  static bool isMaxLevel(int xp) => xp >= _levels.last.$2;
+  static bool isMaxLevel(int xp) => xp >= levels.last.$2;
 
   static String _todayString() => todayForStreaks();
 
@@ -2346,6 +2371,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     final fresh = words
         .where((w) => !existingSet.contains(w.word.toLowerCase().trim()))
         .map((w) => ImportedWord(
+          id: w.id,
           word: w.word,
           partOfSpeech: w.partOfSpeech,
           pronunciation: w.pronunciation,
@@ -2370,8 +2396,11 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
 
   // Soft-delete: mark with a tombstone timestamp instead of removing
   // outright, so the deletion syncs to (and takes effect on) other devices.
+  // Matches by id, not word text — two cards can share the same displayed
+  // word (see ImportedWord.id's doc comment), and matching by text would
+  // delete every card with that text instead of just the one selected.
   static Future<void> deleteImportedWord(
-    String word,
+    String id,
     String collectionName, {
     String? folderName,
   }) async {
@@ -2379,7 +2408,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     final now = DateTime.now().millisecondsSinceEpoch;
     final raw = await getImportedWordsRaw();
     final updated = raw.map((w) =>
-      (w.word == word && w.collectionName == collectionName && w.folderName == folderName)
+      (w.id == id && w.collectionName == collectionName && w.folderName == folderName)
         ? w.copyWith(deletedAt: now)
         : w
     ).toList();
@@ -2394,16 +2423,16 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
   // push landing after a later one would silently reintroduce words that had
   // already been deleted by then.
   static Future<void> deleteImportedWords(
-    Set<String> words,
+    Set<String> ids,
     String collectionName, {
     String? folderName,
   }) async {
-    if (words.isEmpty) return;
+    if (ids.isEmpty) return;
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now().millisecondsSinceEpoch;
     final raw = await getImportedWordsRaw();
     final updated = raw.map((w) =>
-      (words.contains(w.word) && w.collectionName == collectionName && w.folderName == folderName)
+      (ids.contains(w.id) && w.collectionName == collectionName && w.folderName == folderName)
         ? w.copyWith(deletedAt: now)
         : w
     ).toList();

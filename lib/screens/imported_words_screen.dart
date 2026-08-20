@@ -10,11 +10,12 @@ const _exampleSeededKey = 'mywords_example_seeded';
 // One-time real example (folder → collection → word) so a first-time user
 // sees the actual structure, not an empty page. Guarded by a local flag so
 // it never reappears even if they delete it — this is a courtesy seed, not
-// a permanent fixture.
+// a permanent fixture. The flag is set only after the seed word is actually
+// added, not before, so a failure partway through doesn't permanently lock
+// out a retry (same fix as teacher_library_screen.dart's example seed).
 Future<bool> _seedExampleFolder() async {
   final prefs = await SharedPreferences.getInstance();
   if (prefs.getBool(_exampleSeededKey) ?? false) return false;
-  await prefs.setBool(_exampleSeededKey, true);
   await StorageService.addImportedWords(
     [
       ImportedWord(
@@ -33,6 +34,7 @@ Future<bool> _seedExampleFolder() async {
     'Unit 1',
     folderName: 'Vocabulary 101',
   );
+  await prefs.setBool(_exampleSeededKey, true);
   return true;
 }
 

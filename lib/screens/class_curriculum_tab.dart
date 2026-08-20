@@ -505,10 +505,16 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
     // assigning one as homework would crash the student's Flashcards/Quiz
     // when they open it (see collections.dart's matching filter).
     final availableDays = col.days.where((d) => d.words.isNotEmpty).toList();
-    final assignedDays = _homework
-        .where((h) => h.collectionName == pickedMeta.name)
-        .map((h) => h.dayNumber)
-        .toSet();
+    // Scoped to who each existing assignment actually covers, not just
+    // whether *a* row exists for the day — a day assigned to one specific
+    // student must not block assigning it to the rest of the class.
+    final allStudentIds = _students.map((s) => s.studentId).toSet();
+    final dayCoverage = <int, Set<String>>{};
+    for (final h in _homework) {
+      if (h.collectionName != pickedMeta.name || h.dayNumber == null) continue;
+      final covered = h.assignedTo == 'class' ? allStudentIds : h.studentIds.toSet();
+      (dayCoverage[h.dayNumber!] ??= {}).addAll(covered);
+    }
 
     final pickedDay = await showModalBottomSheet<WordDay>(
       context: context, isScrollControlled: true,
@@ -528,7 +534,14 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
             controller: ctrl, itemCount: availableDays.length,
             itemBuilder: (_, i) {
               final day = availableDays[i];
-              final alreadyAssigned = assignedDays.contains(day.dayNumber);
+              final coverage = dayCoverage[day.dayNumber] ?? const {};
+              // Fully assigned only when every current student is covered
+              // (or there's an assignment and the class has no students to
+              // compare against) — a partially-covered day stays pickable
+              // so the teacher can assign the rest of the class.
+              final alreadyAssigned = allStudentIds.isEmpty
+                  ? coverage.isNotEmpty
+                  : allStudentIds.difference(coverage).isEmpty;
               return ListTile(
                 dense: true,
                 leading: Container(
@@ -556,12 +569,17 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
     if (pickedDay == null || !mounted) return;
 
     // Show homework assignment modal with collection info
-    await _showAssignCollectionHomework(user.id, pickedMeta.name, pickedDay);
+    await _showAssignCollectionHomework(user.id, pickedMeta.name, pickedDay,
+        preAssignedStudentIds: dayCoverage[pickedDay.dayNumber] ?? const {});
   }
 
-  Future<void> _showAssignCollectionHomework(String userId, String collName, WordDay day) async {
+  Future<void> _showAssignCollectionHomework(String userId, String collName, WordDay day,
+      {Set<String> preAssignedStudentIds = const {}}) async {
     final selectedModes = {'learn': true, 'flashcard': true, 'quiz': true, 'match': false};
-    String assignedTo = 'class';
+    // If some (but not all) students already have this day, "Whole Class"
+    // would duplicate their assignment — default to "Specific Students"
+    // with those already covered excluded from selection.
+    String assignedTo = preAssignedStudentIds.isEmpty ? 'class' : 'specific';
     final selectedStudents = <String>{};
     DateTime? dueDate;
 
@@ -623,9 +641,17 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
             const SizedBox(height: 16),
             Text('Assign to', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.8)),
             const SizedBox(height: 8),
+            if (preAssignedStudentIds.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text('Some students already have this day assigned — pick who else should get it.',
+                    style: TextStyle(fontSize: 11, color: context.textMuted)),
+              ),
             Row(children: [
-              Expanded(child: _choiceBtn('Whole Class', assignedTo == 'class', () => setSheet(() { assignedTo = 'class'; selectedStudents.clear(); }))),
-              const SizedBox(width: 8),
+              if (preAssignedStudentIds.isEmpty) ...[
+                Expanded(child: _choiceBtn('Whole Class', assignedTo == 'class', () => setSheet(() { assignedTo = 'class'; selectedStudents.clear(); }))),
+                const SizedBox(width: 8),
+              ],
               Expanded(child: _choiceBtn('Specific Students', assignedTo == 'specific', () => setSheet(() => assignedTo = 'specific'))),
             ]),
             if (assignedTo == 'specific') ...[
@@ -634,11 +660,13 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                 constraints: const BoxConstraints(maxHeight: 180),
                 decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(12)),
                 child: ListView(shrinkWrap: true, children: _students.map((s) {
+                  final covered = preAssignedStudentIds.contains(s.studentId);
                   final on = selectedStudents.contains(s.studentId);
                   return CheckboxListTile(
-                    dense: true, value: on,
-                    onChanged: (v) => setSheet(() { v == true ? selectedStudents.add(s.studentId) : selectedStudents.remove(s.studentId); }),
-                    title: Text(s.name, style: TextStyle(fontSize: 13, color: context.appText)),
+                    dense: true, value: covered ? true : on,
+                    onChanged: covered ? null : (v) => setSheet(() { v == true ? selectedStudents.add(s.studentId) : selectedStudents.remove(s.studentId); }),
+                    title: Text(s.name, style: TextStyle(fontSize: 13, color: covered ? context.textMuted : context.appText)),
+                    subtitle: covered ? Text('Already assigned', style: TextStyle(fontSize: 11, color: context.textMuted)) : null,
                     activeColor: context.primary,
                   );
                 }).toList()),

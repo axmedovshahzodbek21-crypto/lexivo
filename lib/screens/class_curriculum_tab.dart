@@ -621,7 +621,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
             ],
             const SizedBox(height: 20),
             SizedBox(width: double.infinity, child: ElevatedButton(
-              onPressed: () async {
+              onPressed: (assignedTo == 'specific' && selectedStudents.isEmpty) ? null : () async {
                 final modes = selectedModes.entries.where((e) => e.value).map((e) => e.key).toList();
                 await supabase.from('class_homework').insert({
                   'class_id': widget.classId,
@@ -740,7 +740,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
             ],
             const SizedBox(height: 20),
             SizedBox(width: double.infinity, child: ElevatedButton(
-              onPressed: () async {
+              onPressed: (assignedTo == 'specific' && selectedStudents.isEmpty) ? null : () async {
                 final modes = selectedModes.entries.where((e) => e.value).map((e) => e.key).toList();
                 await supabase.from('class_homework').insert({
                   'class_id': widget.classId,
@@ -911,7 +911,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
             ],
             const SizedBox(height: 20),
             SizedBox(width: double.infinity, child: ElevatedButton(
-              onPressed: () async {
+              onPressed: (assignedTo == 'specific' && selectedStudents.isEmpty) ? null : () async {
                 await supabase.from('class_homework').insert({
                   'class_id': widget.classId,
                   'passage_id': passage.id,

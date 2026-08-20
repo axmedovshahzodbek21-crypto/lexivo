@@ -149,6 +149,7 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
     );
     if (confirm == true) {
       await StorageService.deleteImportedFolder(folderName);
+      MyWordsFolderScreen.invalidate(folderName);
       _load();
     }
   }

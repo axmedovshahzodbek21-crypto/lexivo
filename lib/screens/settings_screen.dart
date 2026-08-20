@@ -16,6 +16,7 @@ import '../l10n.dart';
 import 'login_screen.dart';
 import 'main_shell.dart';
 import 'class_progress_screen.dart';
+import 'my_words_folder_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -1282,6 +1283,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _signOut() async {
     await StorageService.clearAllProgress();
     ClassProgressScreen.clearCache();
+    MyWordsFolderScreen.clearCache();
     await OneSignalService.unlinkUser();
     await Supabase.instance.client.auth.signOut();
     if (!mounted) return;

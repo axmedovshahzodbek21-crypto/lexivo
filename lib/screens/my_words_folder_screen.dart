@@ -11,6 +11,18 @@ class MyWordsFolderScreen extends StatefulWidget {
 
   @override
   State<MyWordsFolderScreen> createState() => _MyWordsFolderScreenState();
+
+  // Call when a folder is deleted/renamed elsewhere (imported_words_screen.dart)
+  // — the cache would otherwise keep showing that folder's stale collection
+  // list if the same folder name is reused, or (for a rename) keep serving
+  // the old name's now-orphaned cache entry forever.
+  static void invalidate(String folderName) => _MyWordsFolderScreenState._cache.remove(folderName);
+
+  // Call on sign-out — the cache is process-lifetime and keyed only by
+  // folder name, so signing into a different account on the same device
+  // without a full app restart could briefly paint the previous account's
+  // cached collections before _load() overwrote it.
+  static void clearCache() => _MyWordsFolderScreenState._cache.clear();
 }
 
 class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {

@@ -799,28 +799,18 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
     );
   }
 
-  Widget _buildCollectionCard(_CollHW h) {
-    final completed = _completedModes[h.homeworkId] ?? {};
-    final allDone = isHomeworkFullyDone(h.hwModes, completed);
-    final due = homeworkDueLabel(h.hwDue);
-    final isOverdue = due?.startsWith('Overdue') == true;
-    const modeIcons = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯'};
-    const collColor = Color(0xFF16A34A);
-    final accent = allDone
-        ? const LinearGradient(colors: [Color(0xFF22c55e), Color(0xFF4ade80)])
-        : const LinearGradient(colors: [Color(0xFF22C55E), Color(0xFF16A34A)]);
-
+  // Shared card chrome (shadow, rounded corners, accent gradient bar,
+  // "done" border/shadow tint) for the grid of homework cards below —
+  // _buildCollectionCard and _buildPassageCard used to duplicate this ~30
+  // lines of shell each, differing only in accent color and inner content.
+  Widget _cardShell({
+    required bool allDone,
+    required Gradient accent,
+    required VoidCallback onTap,
+    required Widget child,
+  }) {
     return GestureDetector(
-      onTap: () async {
-        await Navigator.push(context, MaterialPageRoute(
-          builder: (_) => LibraryUnitStudyScreen(
-            classId: widget.classId, className: widget.className, unitId: '', unitName: '${h.collectionName} · Day ${h.dayNumber}',
-            homeworkId: h.homeworkId, modes: h.hwModes,
-            collectionName: h.collectionName, dayNumber: h.dayNumber,
-          ),
-        ));
-        if (mounted) _load();
-      },
+      onTap: onTap,
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
@@ -840,54 +830,82 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
               Container(height: 3, decoration: BoxDecoration(gradient: accent)),
               Expanded(child: Padding(
                 padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: allDone ? Colors.green : collColor,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text('${completed.length}/${h.hwModes.length}',
-                        style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900)),
-                    ),
-                    const Spacer(),
-                    if (allDone) const Icon(Icons.check_circle_rounded, color: Colors.green, size: 14)
-                    else if (isOverdue) const Text('⚠️', style: TextStyle(fontSize: 10)),
-                  ]),
-                  const SizedBox(height: 5),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Day ${h.dayNumber}',
-                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700,
-                        color: allDone ? Colors.green : collColor)),
-                    const SizedBox(height: 2),
-                    Expanded(child: Text(h.topic,
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold,
-                        color: allDone ? Colors.green.shade700 : context.appText, height: 1.3),
-                      maxLines: 2, overflow: TextOverflow.ellipsis)),
-                  ])),
-                  const SizedBox(height: 6),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(3),
-                    child: LinearProgressIndicator(
-                      value: h.hwModes.isEmpty ? 0 : completed.length / h.hwModes.length,
-                      minHeight: 4,
-                      backgroundColor: context.border,
-                      valueColor: AlwaysStoppedAnimation<Color>(allDone ? Colors.green : collColor),
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  Row(children: h.hwModes.map((m) => Padding(
-                    padding: const EdgeInsets.only(right: 3),
-                    child: Text(modeIcons[m] ?? m, style: TextStyle(fontSize: 12,
-                      color: completed.contains(m) ? null : context.textMuted.withValues(alpha: 0.3))),
-                  )).toList()),
-                ]),
+                child: child,
               )),
             ]),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildCollectionCard(_CollHW h) {
+    final completed = _completedModes[h.homeworkId] ?? {};
+    final allDone = isHomeworkFullyDone(h.hwModes, completed);
+    final due = homeworkDueLabel(h.hwDue);
+    final isOverdue = due?.startsWith('Overdue') == true;
+    const modeIcons = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯'};
+    const collColor = Color(0xFF16A34A);
+    final accent = allDone
+        ? const LinearGradient(colors: [Color(0xFF22c55e), Color(0xFF4ade80)])
+        : const LinearGradient(colors: [Color(0xFF22C55E), Color(0xFF16A34A)]);
+
+    return _cardShell(
+      allDone: allDone,
+      accent: accent,
+      onTap: () async {
+        await Navigator.push(context, MaterialPageRoute(
+          builder: (_) => LibraryUnitStudyScreen(
+            classId: widget.classId, className: widget.className, unitId: '', unitName: '${h.collectionName} · Day ${h.dayNumber}',
+            homeworkId: h.homeworkId, modes: h.hwModes,
+            collectionName: h.collectionName, dayNumber: h.dayNumber,
+          ),
+        ));
+        if (mounted) _load();
+      },
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: allDone ? Colors.green : collColor,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text('${completed.length}/${h.hwModes.length}',
+              style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900)),
+          ),
+          const Spacer(),
+          if (allDone) const Icon(Icons.check_circle_rounded, color: Colors.green, size: 14)
+          else if (isOverdue) const Text('⚠️', style: TextStyle(fontSize: 10)),
+        ]),
+        const SizedBox(height: 5),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Day ${h.dayNumber}',
+            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700,
+              color: allDone ? Colors.green : collColor)),
+          const SizedBox(height: 2),
+          Expanded(child: Text(h.topic,
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold,
+              color: allDone ? Colors.green.shade700 : context.appText, height: 1.3),
+            maxLines: 2, overflow: TextOverflow.ellipsis)),
+        ])),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(3),
+          child: LinearProgressIndicator(
+            value: h.hwModes.isEmpty ? 0 : completed.length / h.hwModes.length,
+            minHeight: 4,
+            backgroundColor: context.border,
+            valueColor: AlwaysStoppedAnimation<Color>(allDone ? Colors.green : collColor),
+          ),
+        ),
+        const SizedBox(height: 5),
+        Row(children: h.hwModes.map((m) => Padding(
+          padding: const EdgeInsets.only(right: 3),
+          child: Text(modeIcons[m] ?? m, style: TextStyle(fontSize: 12,
+            color: completed.contains(m) ? null : context.textMuted.withValues(alpha: 0.3))),
+        )).toList()),
+      ]),
     );
   }
 
@@ -901,7 +919,9 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
         ? const LinearGradient(colors: [Color(0xFF22c55e), Color(0xFF4ade80)])
         : const LinearGradient(colors: [Color(0xFFF59E0B), Color(0xFFF97316)]);
 
-    return GestureDetector(
+    return _cardShell(
+      allDone: allDone,
+      accent: accent,
       onTap: () async {
         await Navigator.push(context, MaterialPageRoute(
           builder: (_) => LibraryUnitStudyScreen(
@@ -911,49 +931,25 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
         ));
         if (mounted) _load();
       },
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(
-            color: allDone ? Colors.green.withValues(alpha: 0.18) : Colors.black.withValues(alpha: 0.07),
-            offset: const Offset(0, 4), blurRadius: 12,
-          )],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            decoration: BoxDecoration(
-              color: context.surface,
-              border: Border.all(color: allDone ? Colors.green.shade300 : context.border, width: 1.5),
-            ),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Container(height: 3, decoration: BoxDecoration(gradient: accent)),
-              Expanded(child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    if (allDone) const Icon(Icons.check_circle_rounded, color: Colors.green, size: 14)
-                    else const Text('📚', style: TextStyle(fontSize: 12)),
-                    const Spacer(),
-                    if (isOverdue && !allDone) const Text('⚠️', style: TextStyle(fontSize: 10)),
-                  ]),
-                  const SizedBox(height: 5),
-                  Expanded(child: Text(h.title,
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold,
-                      color: allDone ? Colors.green.shade700 : context.appText, height: 1.3),
-                    maxLines: 3, overflow: TextOverflow.ellipsis)),
-                  const SizedBox(height: 4),
-                  Text(h.topic, style: TextStyle(fontSize: 9, color: context.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 5),
-                  Text(allDone ? '✓ Read' : 'Tap to read',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700,
-                      color: allDone ? Colors.green : passageColor)),
-                ]),
-              )),
-            ]),
-          ),
-        ),
-      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          if (allDone) const Icon(Icons.check_circle_rounded, color: Colors.green, size: 14)
+          else const Text('📚', style: TextStyle(fontSize: 12)),
+          const Spacer(),
+          if (isOverdue && !allDone) const Text('⚠️', style: TextStyle(fontSize: 10)),
+        ]),
+        const SizedBox(height: 5),
+        Expanded(child: Text(h.title,
+          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold,
+            color: allDone ? Colors.green.shade700 : context.appText, height: 1.3),
+          maxLines: 3, overflow: TextOverflow.ellipsis)),
+        const SizedBox(height: 4),
+        Text(h.topic, style: TextStyle(fontSize: 9, color: context.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+        const SizedBox(height: 5),
+        Text(allDone ? '✓ Read' : 'Tap to read',
+          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700,
+            color: allDone ? Colors.green : passageColor)),
+      ]),
     );
   }
 }

@@ -1,3 +1,13 @@
+// "Fully done" for a homework assignment: every assigned mode has a
+// matching entry in the student's completed-modes set. Previously
+// reimplemented independently 9+ times across class_homework_tab.dart,
+// class_curriculum_tab.dart, and class_home_screen.dart — consistent today
+// (every real assignment has at least one mode; `modes` is never actually
+// empty via the assign-homework UI, which always requires 'learn'), but with
+// no single place to fix if that definition ever changes.
+bool isHomeworkFullyDone(List<String> modes, Set<String> completedModes) =>
+    modes.isNotEmpty && modes.every(completedModes.contains);
+
 class ClassRow {
   final String id, name, joinCode, teacherId;
   final int memberCount;

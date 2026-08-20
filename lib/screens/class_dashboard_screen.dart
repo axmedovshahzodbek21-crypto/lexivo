@@ -159,8 +159,17 @@ typedef _CachedDashboard = ({
   List<ActivityRow> activity,
   List<CollectionMeta> collections,
   List<Map<String, dynamic>> hardWords,
+  DateTime cachedAt,
 });
 final _dashboardCache = <String, _CachedDashboard>{};
+
+// Nothing outside this screen ever invalidates _dashboardCache when a
+// teacher edits homework/words/students elsewhere, so a TTL is the backstop
+// against showing arbitrarily stale data on remount — _load() below always
+// still runs and overwrites it, this just stops the cached copy from being
+// trusted as "good enough" once it's old enough that a background refresh
+// finishing late would leave stale data on screen for a while.
+const _dashboardCacheTtl = Duration(minutes: 5);
 
 // ── Gradient hero helpers ─────────────────────────────────────────────────────
 
@@ -272,6 +281,9 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   List<CollectionMeta> _collections = [];
   List<Map<String, dynamic>> _hardWords = [];
   bool _loading = true;
+  // Distinct from "no students yet" — set only when a load genuinely fails,
+  // so a network error doesn't render identically to a real empty class.
+  String? _error;
   String _sort = 'xp';
   String _filter = 'all';
 
@@ -282,12 +294,14 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   Map<String, String> _srsNames = {};
   bool _srsLoading = false;
   bool _srsLoaded = false;
+  String? _srsError;
 
   // Review Pattern tab
   List<Map<String, dynamic>> _reviewEntries = [];
   List<Map<String, dynamic>> _reviewSrsRows = [];
   bool _reviewLoading = false;
   bool _reviewLoaded = false;
+  String? _reviewError;
 
   // "Studying now" live presence
   List<Map<String, dynamic>> _activeStudents = [];
@@ -352,7 +366,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     appLangNotifier.addListener(_onLang);
     _verifyTeacher();
     final cached = _dashboardCache[widget.classId];
-    if (cached != null) {
+    if (cached != null && DateTime.now().difference(cached.cachedAt) < _dashboardCacheTtl) {
       _students = cached.students;
       _activity = cached.activity;
       _collections = cached.collections;
@@ -463,9 +477,24 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
 
   void _onLang() { if (mounted) setState(() {}); }
 
+  // The refresh button/pull-to-refresh only ever called _load(), which
+  // covers the Students/Activity/Radar/Heatmap tabs. The SRS and Review
+  // Pattern tabs load once (gated by _srsLoaded/_reviewLoaded, see the
+  // TabController listener in initState) and were never re-fetched, so a
+  // teacher pulling to refresh while on the SRS tab kept seeing whatever it
+  // showed on first visit no matter how stale.
+  Future<void> _refresh() async {
+    _srsLoaded = false;
+    _reviewLoaded = false;
+    final futures = <Future<void>>[_load()];
+    if (_tabs.index == 4) futures.add(_loadSRS());
+    if (_tabs.index == 5) futures.add(_loadReviewPattern());
+    await Future.wait(futures);
+  }
+
   Future<void> _load() async {
     final hasCached = _dashboardCache.containsKey(widget.classId);
-    if (mounted && !hasCached) setState(() => _loading = true);
+    if (mounted) setState(() { if (!hasCached) _loading = true; _error = null; });
     try {
       final results = await Future.wait<dynamic>([
         supabase.rpc('get_class_dashboard', params: {'p_class_id': widget.classId}),
@@ -492,16 +521,26 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         activity: activity,
         collections: collections,
         hardWords: hardWords,
+        cachedAt: DateTime.now(),
       );
-      if (mounted) setState(() { _students = students; _activity = activity; _collections = collections; _hardWords = hardWords; _loading = false; });
+      if (mounted) setState(() { _students = students; _activity = activity; _collections = collections; _hardWords = hardWords; _loading = false; _error = null; });
     } catch (_) {
-      if (mounted && !hasCached) setState(() => _loading = false);
+      // A failed refresh of data that's already on screen (cache hit) just
+      // leaves the stale data showing rather than replacing it with a full
+      // error screen — only surface the error state when there's nothing to
+      // fall back on.
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          if (!hasCached) _error = 'Could not load class data';
+        });
+      }
     }
   }
 
   Future<void> _loadSRS() async {
     if (!mounted) return;
-    setState(() => _srsLoading = true);
+    setState(() { _srsLoading = true; _srsError = null; });
     try {
       final results = await Future.wait<dynamic>([
         supabase.from('class_srs_states').select('user_id, word, translation, stage, next_due').eq('class_id', widget.classId),
@@ -531,13 +570,13 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _srsLoading = false);
+      if (mounted) setState(() { _srsLoading = false; _srsError = 'Could not load SRS data'; });
     }
   }
 
   Future<void> _loadReviewPattern() async {
     if (!mounted) return;
-    setState(() => _reviewLoading = true);
+    setState(() { _reviewLoading = true; _reviewError = null; });
     try {
       final results = await Future.wait<dynamic>([
         supabase.from('class_xp_history').select('user_id, created_at').eq('class_id', widget.classId).eq('reason', 'SRS Review'),
@@ -554,7 +593,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _reviewLoading = false);
+      if (mounted) setState(() { _reviewLoading = false; _reviewError = 'Could not load review pattern data'; });
     }
   }
 
@@ -643,7 +682,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         _dashHero(widget.classId, widget.className, _students.length,
           onWords: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClassWordsScreen(classId: widget.classId, className: widget.className, isTeacher: true))).then((_) => _load()),
           onAnnounce: _showAnnounceSheet,
-          onRefresh: _load,
+          onRefresh: _refresh,
           onExport: _students.isNotEmpty ? _exportCSV : null,
         ),
         TabBar(
@@ -666,6 +705,8 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         Expanded(
           child: _loading
             ? Center(child: CircularProgressIndicator(color: context.primary))
+            : _error != null
+            ? _buildErrorState(_error!, _load)
             : TabBarView(
                 controller: _tabs,
                 children: [
@@ -687,13 +728,29 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     );
   }
 
+  // Distinct from an empty-state message — used wherever a load's catch
+  // block sets an error string, so a genuine failure doesn't look like
+  // "this class just has no data yet."
+  Widget _buildErrorState(String message, Future<void> Function() onRetry) => Center(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text('⚠️', style: TextStyle(fontSize: 48)),
+        const SizedBox(height: 12),
+        Text(message, style: TextStyle(fontSize: 13, color: context.textMuted)),
+        const SizedBox(height: 16),
+        ElevatedButton(onPressed: onRetry, child: Text(tr('try_again'))),
+      ],
+    ),
+  );
+
   // ── Students tab ───────────────────────────────────────────────────────────
 
   Widget _buildStudentsTab() {
     final sorted = _sortedStudents;
     return RefreshIndicator(
       color: context.primary,
-      onRefresh: _load,
+      onRefresh: _refresh,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
         children: [
@@ -1395,8 +1452,15 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   ];
   static const _srsLabels = ['New', '+1d', '+3d', '+7d', '+14d', '✓'];
 
+  // SRS stage values come straight from the DB (class_srs_states.stage) and
+  // are only guaranteed to be 0-5 by application logic, not a DB constraint
+  // — clamping here is what keeps a future out-of-range stage from throwing
+  // a RangeError when used to index _srsColors/_srsLabels below.
+  static int _clampSrsStage(dynamic raw) => ((raw as num).toInt()).clamp(0, 5);
+
   Widget _buildSRSTab() {
     if (_srsLoading) return Center(child: CircularProgressIndicator(color: context.primary));
+    if (_srsError != null) return _buildErrorState(_srsError!, _loadSRS);
 
     final today = DateTime.now().toIso8601String().substring(0, 10);
     final studentIds = _srsStates.map((e) => e['user_id'] as String).toSet().toList();
@@ -1430,9 +1494,9 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         else
           ...studentIds.map((uid) {
             final entries = _srsStates.where((e) => e['user_id'] == uid).toList();
-            final dueToday  = entries.where((e) => (e['next_due'] as String).compareTo(today) <= 0 && (e['stage'] as num).toInt() < 5).length;
-            final overdue   = entries.where((e) => (e['next_due'] as String).compareTo(today) <  0 && (e['stage'] as num).toInt() < 5).length;
-            final stageCounts = List.generate(6, (s) => entries.where((e) => (e['stage'] as num).toInt() == s).length);
+            final dueToday  = entries.where((e) => (e['next_due'] as String).compareTo(today) <= 0 && _clampSrsStage(e['stage']) < 5).length;
+            final overdue   = entries.where((e) => (e['next_due'] as String).compareTo(today) <  0 && _clampSrsStage(e['stage']) < 5).length;
+            final stageCounts = List.generate(6, (s) => entries.where((e) => _clampSrsStage(e['stage']) == s).length);
             final total = entries.length;
             return Container(
               margin: const EdgeInsets.only(bottom: 8),
@@ -1494,7 +1558,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
                   final word = w['word'] as String;
                   final stageByUser = <String, int>{};
                   for (final r in _srsStates.where((e) => e['word'] == word)) {
-                    stageByUser[r['user_id'] as String] = (r['stage'] as num).toInt();
+                    stageByUser[r['user_id'] as String] = _clampSrsStage(r['stage']);
                   }
                   return DataRow(cells: [
                     DataCell(Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1587,6 +1651,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
 
   Widget _buildReviewPatternTab() {
     if (_reviewLoading) return Center(child: CircularProgressIndicator(color: context.primary));
+    if (_reviewError != null) return _buildErrorState(_reviewError!, _loadReviewPattern);
 
     if (_students.isEmpty) {
       return Center(
@@ -1612,7 +1677,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     final dueByStudent = <String, int>{};
     for (final r in _reviewSrsRows) {
       final nextDue = r['next_due'] as String;
-      final stage = (r['stage'] as num).toInt();
+      final stage = _clampSrsStage(r['stage']);
       if (stage >= 5) continue;
       final uid = r['user_id'] as String;
       if (nextDue.compareTo(today) <= 0) dueByStudent[uid] = (dueByStudent[uid] ?? 0) + 1;
@@ -1729,7 +1794,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         nav.pop();
         msg.showSnackBar(SnackBar(content: Text(tr('announcement_sent')), duration: const Duration(seconds: 2)));
       }),
-    );
+    ).whenComplete(ctrl.dispose);
   }
 
   void _showNoteSheet(StudentRow s) {
@@ -1758,7 +1823,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         nav.pop();
         msg.showSnackBar(SnackBar(content: Text(tr('note_sent')), duration: const Duration(seconds: 2)));
       }),
-    );
+    ).whenComplete(ctrl.dispose);
   }
 
   void _showTargetSheet(StudentRow s) {
@@ -1848,7 +1913,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
           ]),
         ),
       )),
-    );
+    ).whenComplete(ctrl.dispose);
   }
 
   Widget _bottomSheet(BuildContext ctx, String title, TextEditingController ctrl, String hint, VoidCallback onSend) => Padding(

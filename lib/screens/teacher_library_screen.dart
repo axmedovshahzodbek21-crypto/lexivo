@@ -75,7 +75,10 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
 
   Future<void> _load() async {
     final user = currentUser;
-    if (user == null) return;
+    if (user == null) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
     if (_folders.isEmpty && mounted) setState(() => _loading = true);
     try {
       final data = await supabase

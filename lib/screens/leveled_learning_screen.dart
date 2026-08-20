@@ -137,9 +137,15 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
     StorageService.isLevelCompletedViaTest(widget.collection.id).then((
       viaTest,
     ) {
+      if (!mounted) return;
       if (!viaTest) {
         StorageService.markLevelCompletedViaTest(widget.collection.id);
         _showLevelCompleteScreen();
+      } else {
+        // Already celebrated on a prior visit — replaying the trophy screen
+        // every time the user reopens a finished level would be annoying, so
+        // pop back instead of leaving them stuck on the spinner screen.
+        Navigator.pop(context);
       }
     });
   }

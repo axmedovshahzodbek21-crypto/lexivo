@@ -342,6 +342,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
             child: const Text('Create')),
       ],
     ));
+    ctrl.dispose();
     if (name == null || name.isEmpty) return;
     await supabase.from('class_word_units').insert({'class_id': widget.classId, 'teacher_id': user.id, 'name': name});
     _load();
@@ -366,6 +367,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
             child: const Text('Save')),
       ],
     ));
+    ctrl.dispose();
     if (name == null || name.isEmpty || name == unit.name) return;
     await supabase.from('class_word_units').update({'name': name}).eq('id', unit.id);
     _load();
@@ -621,6 +623,10 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
     String assignedTo = preAssignedStudentIds.isEmpty ? 'class' : 'specific';
     final selectedStudents = <String>{};
     DateTime? dueDate;
+    // The submit button stayed enabled through the whole insert await — a
+    // double-tap fired the insert twice, creating duplicate homework
+    // assignments.
+    var submitting = false;
 
     await showModalBottomSheet(
       context: context, isScrollControlled: true,
@@ -714,11 +720,13 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
             ],
             const SizedBox(height: 20),
             SizedBox(width: double.infinity, child: ElevatedButton(
-              onPressed: (assignedTo == 'specific' && selectedStudents.isEmpty) ? null : () async {
+              onPressed: (submitting || (assignedTo == 'specific' && selectedStudents.isEmpty)) ? null : () async {
+                setSheet(() => submitting = true);
                 final modes = selectedModes.entries.where((e) => e.value).map((e) => e.key).toList();
                 try {
                   await supabase.from('class_homework').insert(buildInsert(modes, assignedTo, selectedStudents, dueDate));
                 } catch (e) {
+                  if (ctx.mounted) setSheet(() => submitting = false);
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Failed to assign: $e'), duration: const Duration(seconds: 3)));
@@ -732,7 +740,9 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
               style: ElevatedButton.styleFrom(backgroundColor: buttonColor, foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   padding: const EdgeInsets.symmetric(vertical: 14)),
-              child: const Text('Assign Homework', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              child: submitting
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Assign Homework', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
             )),
           ])),
         ),
@@ -833,6 +843,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
         },
       ),
     );
+    searchCtrl.dispose();
   }
 
   Future<void> _showAssignPassageHomework(ReadingPassage passage) async {

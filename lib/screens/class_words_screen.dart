@@ -175,6 +175,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
   late TabController _tabs;
   List<_WordEntry> _words = [];
   bool _loading = true;
+  bool _loadError = false;
   bool _saving = false;
 
   // Stats (SRS hub)
@@ -244,7 +245,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
   void _onFolderGroupChange() { if (mounted) setState(() {}); }
 
   Future<void> _loadWords() async {
-    if (_words.isEmpty && mounted) setState(() => _loading = true);
+    if (_words.isEmpty && mounted) setState(() { _loading = true; _loadError = false; });
     try {
       final data = await supabase.from('class_words')
         .select('id, word, translation, definition, example1, example1_translation, example2, example2_translation, examples, folder_name, collection_name')
@@ -271,8 +272,13 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
           });
         }
       }
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
+    } catch (e) {
+      // ignore: avoid_print
+      print('[ClassWordsScreen._loadWords] failed: $e');
+      // Previously left _words at whatever it was (empty on first load) with
+      // no way to tell "this class genuinely has no words" apart from
+      // "the fetch failed" — both rendered the identical empty state.
+      if (mounted) setState(() { _loading = false; _loadError = true; });
     }
   }
 
@@ -1083,6 +1089,18 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
 
   Widget _buildWordList() {
     if (_loading) return Center(child: CircularProgressIndicator(color: context.primary));
+    if (_loadError) {
+      return Center(child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text('⚠️ Couldn\'t load words', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Text('Check your connection and try again.', textAlign: TextAlign.center, style: TextStyle(color: context.textMuted)),
+          const SizedBox(height: 16),
+          ElevatedButton(onPressed: _loadWords, child: const Text('Retry')),
+        ]),
+      ));
+    }
     if (_words.isEmpty) return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(tr('no_words_yet'), style: TextStyle(color: context.textMuted))));
 
     // Group by folder → collection

@@ -4,6 +4,8 @@ import '../data/storage_service.dart';
 import '../l10n.dart';
 import 'list_detail_screen.dart';
 
+final _wordMap = buildWordMap();
+
 class CustomListsScreen extends StatefulWidget {
   const CustomListsScreen({super.key});
 
@@ -191,6 +193,7 @@ class _CustomListsScreenState extends State<CustomListsScreen> {
 
   Widget _buildListRow(CustomList list) {
     final created = _formatDate(list.createdAt);
+    final studyableCount = list.words.where((w) => _wordMap.containsKey(w.toLowerCase())).length;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
@@ -216,7 +219,7 @@ class _CustomListsScreenState extends State<CustomListsScreen> {
         ),
         title: Text(list.name, style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
         subtitle: Text(
-          '${list.words.length} ${list.words.length == 1 ? 'word' : 'words'} · $created',
+          '$studyableCount ${studyableCount == 1 ? 'word' : 'words'} · $created',
           style: TextStyle(fontSize: 12, color: context.textMuted),
         ),
         trailing: Row(

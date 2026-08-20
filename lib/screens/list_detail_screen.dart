@@ -2,14 +2,26 @@ import 'package:flutter/material.dart';
 import '../app_theme.dart';
 import '../data/storage_service.dart';
 import '../data/word_data.dart';
+import '../data/a1_collection.dart';
+import '../data/a2_collection.dart';
+import '../data/b1_collection.dart';
+import '../data/advanced_collection.dart';
 import '../l10n.dart';
 import 'flashcard.dart';
 import 'quiz_screen.dart';
 import 'matching_screen.dart';
 
-Map<String, WordItem> _buildWordMap() {
+Map<String, WordItem> buildWordMap() {
   final map = <String, WordItem>{};
-  for (final col in [thirtyDaysCollection, vocabularyChallengeCollection, wordMasteryCollection]) {
+  for (final col in [
+    thirtyDaysCollection,
+    vocabularyChallengeCollection,
+    wordMasteryCollection,
+    a1Collection,
+    a2Collection,
+    b1Collection,
+    advancedCollection,
+  ]) {
     for (final day in col.days) {
       for (final w in day.words) {
         map[w.word.toLowerCase()] = w;
@@ -29,7 +41,7 @@ class ListDetailScreen extends StatefulWidget {
 
 class _ListDetailScreenState extends State<ListDetailScreen> {
   CustomList? _list;
-  final _wordMap = _buildWordMap();
+  final _wordMap = buildWordMap();
   final _searchController = TextEditingController();
   List<WordItem> _searchResults = [];
   bool _showSearch = false;

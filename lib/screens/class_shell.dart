@@ -94,7 +94,11 @@ class _ClassShellState extends State<ClassShell> {
       ClassWordsScreen(classId: widget.classId, className: widget.className, isTeacher: _isTeacher, onGoHome: () => setState(() => _tab = 0)),
       if (!_isTeacher)
         ClassReviewScreen(classId: widget.classId, className: widget.className, embedded: true),
-      ClassLeaderboardScreen(classId: widget.classId, className: widget.className, isVisible: true),
+      // isVisible is patched in per-build by _screensForTab below — always
+      // constructing it true here defeated the widget's own lazy-load and
+      // replay-animation logic tied to that flag, and fired its ranking RPC
+      // immediately regardless of which tab was actually open.
+      ClassLeaderboardScreen(classId: widget.classId, className: widget.className),
       if (_isTeacher)
         ClassCurriculumTab(classId: widget.classId, className: widget.className)
       else
@@ -104,6 +108,22 @@ class _ClassShellState extends State<ClassShell> {
       else
         ClassProgressScreen(classId: widget.classId, className: widget.className, onGoHome: () => setState(() => _tab = 0)),
     ];
+  }
+
+  // _screens is built once (after role verification) and otherwise cached
+  // to avoid rebuilding every tab's whole widget subtree on every unrelated
+  // ClassShell setState — but ClassLeaderboardScreen's isVisible needs to
+  // track the *current* tab, so its slot is swapped for a fresh instance on
+  // every build instead of living in the cached list.
+  List<Widget> get _screensForTab {
+    final screens = List<Widget>.from(_screens!);
+    final lbIndex = screens.indexWhere((w) => w is ClassLeaderboardScreen);
+    if (lbIndex != -1) {
+      screens[lbIndex] = ClassLeaderboardScreen(
+        classId: widget.classId, className: widget.className, isVisible: _tab == lbIndex,
+      );
+    }
+    return screens;
   }
 
   Future<void> _loadDueCount() async {
@@ -254,7 +274,7 @@ class _ClassShellState extends State<ClassShell> {
           }
           await _confirmExit();
         },
-        child: IndexedStack(index: _tab, children: _screens!),
+        child: IndexedStack(index: _tab, children: _screensForTab),
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _tab,

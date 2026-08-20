@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../app_theme.dart';
 import '../data/storage_service.dart';
 import '../services/sync_service.dart';
+import '../widgets/my_words_shared.dart';
 import 'my_words_folder_screen.dart';
 
 const _exampleSeededKey = 'mywords_example_seeded';
@@ -37,39 +38,6 @@ Future<bool> _seedExampleFolder() async {
   await prefs.setBool(_exampleSeededKey, true);
   return true;
 }
-
-class _HeartbeatCard extends StatefulWidget {
-  final Widget child;
-  const _HeartbeatCard({required this.child});
-  @override
-  State<_HeartbeatCard> createState() => _HeartbeatCardState();
-}
-
-class _HeartbeatCardState extends State<_HeartbeatCard> with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _scale;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))
-      ..repeat(reverse: true);
-    _scale = Tween<double>(begin: 1.0, end: 1.015)
-        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
-  }
-
-  @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
-
-  @override
-  Widget build(BuildContext context) => ScaleTransition(scale: _scale, child: widget.child);
-}
-
-const _cardColors = [
-  Color(0xFF5B8AF0), Color(0xFFFF6B6B), Color(0xFF06D6A0), Color(0xFFFFD166),
-  Color(0xFFA78BFA), Color(0xFFFF9F43), Color(0xFFF72585), Color(0xFF4ECDC4),
-  Color(0xFF3D8BFF), Color(0xFFFF5E57), Color(0xFF00C9A7), Color(0xFFFFC75F),
-];
 
 class ImportedWordsScreen extends StatefulWidget {
   const ImportedWordsScreen({super.key});
@@ -318,9 +286,9 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
           crossAxisAlignment: WrapCrossAlignment.center,
           spacing: 8, runSpacing: 8,
           children: [
-            _exampleChip('FOLDER', '📁 Vocabulary 101', _cardColors[0]),
+            _exampleChip('FOLDER', '📁 Vocabulary 101', myWordsCardColors[0]),
             Icon(Icons.arrow_forward, size: 14, color: context.textMuted),
-            _exampleChip('UNIT', '📖 Unit 1', _cardColors[1]),
+            _exampleChip('UNIT', '📖 Unit 1', myWordsCardColors[1]),
             Icon(Icons.arrow_forward, size: 14, color: context.textMuted),
             _exampleChip('WORDS', 'apple · book · water', null),
           ],
@@ -354,10 +322,10 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
       itemCount: _folders.length + 1,
       itemBuilder: (context, i) {
         if (i == _folders.length) {
-          return _AddTile(label: 'New Folder', onTap: _startCreating);
+          return AddTile(label: 'New Folder', onTap: _startCreating);
         }
         final folder = _folders[i];
-        final color = _cardColors[i % _cardColors.length];
+        final color = myWordsCardColors[i % myWordsCardColors.length];
         return GestureDetector(
           onTap: () async {
             await Navigator.push(context, MaterialPageRoute(
@@ -366,7 +334,7 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
             _load();
           },
           onLongPress: () => _deleteFolder(folder.name),
-          child: _HeartbeatCard(
+          child: HeartbeatCard(
             child: Container(
               decoration: BoxDecoration(
                 color: color,
@@ -398,36 +366,6 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
           ),
         );
       },
-    );
-  }
-}
-
-// A dashed-look "+ New X" tile appended to a folder/unit grid so adding one
-// is as visible as the existing items, not just a small AppBar icon.
-class _AddTile extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-  const _AddTile({required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: context.primary.withValues(alpha: 0.4), width: 2),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.add_circle_outline, color: context.primary, size: 26),
-            const SizedBox(height: 6),
-            Text(label, textAlign: TextAlign.center, style: TextStyle(color: context.primary, fontWeight: FontWeight.bold, fontSize: 11)),
-          ],
-        ),
-      ),
     );
   }
 }

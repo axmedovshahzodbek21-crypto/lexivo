@@ -163,11 +163,15 @@ class _SetCard extends StatelessWidget {
 class _HowItWorksCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    // A "watch the video, unlock via SRS review" step used to be advertised
+    // here, but there's no video URL/player anywhere in this feature (the
+    // RealEnglishVideo model only carries a title and duration) — the copy
+    // was describing a step that was never built. Left to 3 steps that
+    // match what actually happens today.
     const steps = [
       ('📖', 'Learn the words from a real video'),
       ('🔄', 'Review them with SRS over ~11 days'),
-      ('🔓', 'Complete the +7 day review to unlock'),
-      ('🎬', 'Watch the video and understand every word'),
+      ('🧠', 'Understand every word next time you watch'),
     ];
     const lineColor = Color(0xFF5B8AF0);
     return Container(

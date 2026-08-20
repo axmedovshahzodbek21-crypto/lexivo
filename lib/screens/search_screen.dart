@@ -5,6 +5,12 @@ import 'learning.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 
+// Module-level singleton — WordDetailScreen is a StatelessWidget rebuilt on
+// every parent update, so a FlutterTts() created inside build() was being
+// silently leaked (a new platform-channel-backed instance per rebuild, never
+// disposed) instead of reused.
+final _wordDetailTts = FlutterTts();
+
 class SearchScreen extends StatefulWidget {
   final String userProfile;
   const SearchScreen({super.key, required this.userProfile});
@@ -295,7 +301,7 @@ class WordDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tts = FlutterTts();
+    final tts = _wordDetailTts;
     return Scaffold(
       backgroundColor: context.bg,
       appBar: AppBar(

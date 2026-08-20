@@ -18458,7 +18458,7 @@ final vocabularyChallengeCollection = WordCollection(
   days: [
     WordDay(
       dayNumber: 1,
-      topic: ' ',
+      topic: 'Day 1',
       words: [
         WordItem(
           word: 'Come to do something',
@@ -19562,7 +19562,7 @@ final vocabularyChallengeCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 2,
-      topic: '',
+      topic: 'Day 2',
       words: [
         WordItem(
           word: 'Commence',
@@ -20642,7 +20642,7 @@ final vocabularyChallengeCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 3,
-      topic: ' ',
+      topic: 'Day 3',
       words: [
         WordItem(
           word: 'Reach a consensus',
@@ -21789,7 +21789,7 @@ final vocabularyChallengeCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 4,
-      topic: ' ',
+      topic: 'Day 4',
       words: [
         WordItem(
           word: 'Keep your fingers crossed',
@@ -22879,7 +22879,7 @@ final vocabularyChallengeCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 5,
-      topic: '',
+      topic: 'Day 5',
       words: [
         WordItem(
           word: 'Force into exile',
@@ -24026,7 +24026,7 @@ final vocabularyChallengeCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 6,
-      topic: '',
+      topic: 'Day 6',
       words: [
         WordItem(
           word: 'Extravagant',
@@ -25260,7 +25260,7 @@ final vocabularyChallengeCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 7,
-      topic: '',
+      topic: 'Day 7',
       words: [
         WordItem(
           word: 'Drag on for months',
@@ -26495,7 +26495,7 @@ final vocabularyChallengeCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 8,
-      topic: '',
+      topic: 'Day 8',
       words: [
         WordItem(
           word: 'money will go down the drain',
@@ -27695,7 +27695,7 @@ final vocabularyChallengeCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 9,
-      topic: '',
+      topic: 'Day 9',
       words: [
         WordItem(
           word: 'Have a faraway look',
@@ -28818,7 +28818,7 @@ final vocabularyChallengeCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 10,
-      topic: '',
+      topic: 'Day 10',
       words: [
         WordItem(
           word: 'In favour of',
@@ -29875,7 +29875,7 @@ final vocabularyChallengeCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 11,
-      topic: '',
+      topic: 'Day 11',
       words: [
         WordItem(
           word: 'Innate talent',
@@ -31009,7 +31009,7 @@ final vocabularyChallengeCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 12,
-      topic: '',
+      topic: 'Day 12',
       words: [
         WordItem(
           word: 'Inconsiderate',
@@ -32093,7 +32093,7 @@ final vocabularyChallengeCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 13,
-      topic: '',
+      topic: 'Day 13',
       words: [
         WordItem(
           word: 'Follow suit',
@@ -33169,7 +33169,7 @@ final vocabularyChallengeCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 14,
-      topic: '',
+      topic: 'Day 14',
       words: [
         WordItem(
           word: 'Play with fire',
@@ -34267,7 +34267,7 @@ final vocabularyChallengeCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 15,
-      topic: '',
+      topic: 'Day 15',
       words: [
         WordItem(
           word: 'Hierarchical',
@@ -35307,7 +35307,7 @@ final vocabularyChallengeCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 16,
-      topic: '',
+      topic: 'Day 16',
       words: [
         WordItem(
           word: 'Make a racket',
@@ -36363,7 +36363,7 @@ final vocabularyChallengeCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 17,
-      topic: '',
+      topic: 'Day 17',
       words: [
         WordItem(
           word: 'A good read',
@@ -37429,7 +37429,7 @@ final vocabularyChallengeCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 18,
-      topic: '',
+      topic: 'Day 18',
       words: [
         WordItem(
           word: 'To be meant to do something',
@@ -38490,7 +38490,7 @@ final vocabularyChallengeCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 19,
-      topic: '',
+      topic: 'Day 19',
       words: [
         WordItem(
           word: 'Leaked to the press',
@@ -39535,7 +39535,7 @@ final vocabularyChallengeCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 20,
-      topic: '',
+      topic: 'Day 20',
       words: [
         WordItem(
           word: 'Teach someone a lesson',
@@ -40586,7 +40586,7 @@ final vocabularyChallengeCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 21,
-      topic: ' ',
+      topic: 'Day 21',
       words: [
         WordItem(
           word: 'Rocky relationship',
@@ -41642,7 +41642,7 @@ final vocabularyChallengeCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 22,
-      topic: '',
+      topic: 'Day 22',
       words: [
         WordItem(
           word: 'Misinterpret',
@@ -42696,7 +42696,7 @@ final vocabularyChallengeCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 23,
-      topic: '',
+      topic: 'Day 23',
       words: [
         WordItem(
           word: 'Thread a needle',
@@ -43736,7 +43736,7 @@ final vocabularyChallengeCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 24,
-      topic: '',
+      topic: 'Day 24',
       words: [
         WordItem(
           word: 'obsessive behavior',

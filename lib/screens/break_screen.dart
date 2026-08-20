@@ -58,122 +58,151 @@ class _BreakOverlayState extends State<BreakOverlay>
   Widget build(BuildContext context) {
     final service = PomodoroService();
 
+    // The outer ListenableBuilder only decides show/hide — its `child` is
+    // built once and reused across every per-second tick notification
+    // instead of reconstructing the blur, breathing animation, tip card and
+    // skip button on every tick just to update a timer string. Only the
+    // countdown/pomodoro-count text below has its own small ListenableBuilder
+    // to pick up the per-second changes.
     return ListenableBuilder(
       listenable: service,
-      builder: (context, _) {
+      child: _BreakContent(breatheAnim: _breatheAnim, tips: _tips, tipIndex: _tipIndex),
+      builder: (context, child) {
         if (!service.isOnBreak) return const SizedBox.shrink();
-
-        return Stack(
-          children: [
-            // Blur background
-            BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-              child: Container(color: Colors.black.withValues(alpha: 0.7)),
-            ),
-
-            // Content
-            SafeArea(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Breathing animation
-                  ScaleTransition(
-                    scale: _breatheAnim,
-                    child: Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.green.withValues(alpha: 0.3),
-                        border: Border.all(
-                          color: Colors.green.shade300,
-                          width: 3,
-                        ),
-                      ),
-                      child: const Center(
-                        child: Text('☕', style: TextStyle(fontSize: 48)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-
-                  const Text(
-                    'Break Time',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    service.timeDisplay,
-                    style: TextStyle(
-                      fontSize: 48,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green.shade300,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '🍅 ${service.pomodorosCompleted} Pomodoro${service.pomodorosCompleted != 1 ? 's' : ''} completed',
-                    style: const TextStyle(fontSize: 14, color: Colors.white60),
-                  ),
-                  const SizedBox(height: 40),
-
-                  // Tip card
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 500),
-                    child: Container(
-                      key: ValueKey(_tipIndex),
-                      margin: const EdgeInsets.symmetric(horizontal: 32),
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.2),
-                        ),
-                      ),
-                      child: Text(
-                        _tips[_tipIndex],
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          color: Colors.white,
-                          height: 1.6,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-
-                  // Skip break button
-                  TextButton(
-                    onPressed: () => PomodoroService().skipBreak(),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.4),
-                        ),
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      child: const Text(
-                        'Skip Break →',
-                        style: TextStyle(color: Colors.white70, fontSize: 14),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        );
+        return child!;
       },
+    );
+  }
+}
+
+class _BreakContent extends StatelessWidget {
+  final Animation<double> breatheAnim;
+  final List<String> tips;
+  final int tipIndex;
+
+  const _BreakContent({required this.breatheAnim, required this.tips, required this.tipIndex});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        // Blur background
+        BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Container(color: Colors.black.withValues(alpha: 0.7)),
+        ),
+
+        // Content
+        SafeArea(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Breathing animation
+              ScaleTransition(
+                scale: breatheAnim,
+                child: Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.green.withValues(alpha: 0.3),
+                    border: Border.all(
+                      color: Colors.green.shade300,
+                      width: 3,
+                    ),
+                  ),
+                  child: const Center(
+                    child: Text('☕', style: TextStyle(fontSize: 48)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              const Text(
+                'Break Time',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Only these two lines need to update every second — scoped
+              // to their own ListenableBuilder instead of the whole overlay.
+              ListenableBuilder(
+                listenable: PomodoroService(),
+                builder: (context, _) {
+                  final service = PomodoroService();
+                  return Column(children: [
+                    Text(
+                      service.timeDisplay,
+                      style: TextStyle(
+                        fontSize: 48,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green.shade300,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '🍅 ${service.pomodorosCompleted} Pomodoro${service.pomodorosCompleted != 1 ? 's' : ''} completed',
+                      style: const TextStyle(fontSize: 14, color: Colors.white60),
+                    ),
+                  ]);
+                },
+              ),
+              const SizedBox(height: 40),
+
+              // Tip card
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 500),
+                child: Container(
+                  key: ValueKey(tipIndex),
+                  margin: const EdgeInsets.symmetric(horizontal: 32),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Text(
+                    tips[tipIndex],
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: Colors.white,
+                      height: 1.6,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 40),
+
+              // Skip break button
+              TextButton(
+                onPressed: () => PomodoroService().skipBreak(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.4),
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: const Text(
+                    'Skip Break →',
+                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

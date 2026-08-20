@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../app_theme.dart';
 import '../data/storage_service.dart';
+import '../ai_import_samples.dart';
 import 'import_collection_detail_screen.dart';
 
 const _languages = [
@@ -152,7 +153,6 @@ class _ImportScreenState extends State<ImportScreen> {
       _collectionCtrl.text = widget.prefilledCollection!;
     }
     _pasteCtrl.addListener(_onPasteChanged);
-    _wordsInputCtrl.addListener(() { if (mounted) setState(() {}); });
     _showTutorialIfNeeded();
   }
 
@@ -189,7 +189,7 @@ class _ImportScreenState extends State<ImportScreen> {
   void _copyPrompt({required bool hasTranslations}) {
     final input = _wordsInputCtrl.text.trim();
     final words = input.isEmpty
-        ? (hasTranslations ? 'apple - olma\nbook - kitob' : 'apple, book, water')
+        ? (hasTranslations ? kSampleWordsWithTranslations : kSampleWordsPlain)
         : input;
     final prompt = hasTranslations
         ? _buildPrompt2(_wordLang, _transLang, words)
@@ -334,7 +334,7 @@ class _ImportScreenState extends State<ImportScreen> {
                   maxLines: 4,
                   style: TextStyle(color: context.appText, fontSize: 13),
                   decoration: InputDecoration(
-                    hintText: 'apple, book, water\nor one per line\nor already-translated pairs like: apple - olma',
+                    hintText: kSampleWordsHint,
                     hintStyle: TextStyle(color: context.textMuted, fontSize: 13),
                     filled: true, fillColor: context.surface2,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),

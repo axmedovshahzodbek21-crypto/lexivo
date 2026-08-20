@@ -248,7 +248,12 @@ class _HomeScreenState extends State<HomeScreen>
     }
 
     // Always fetch fresh data from network
-    final cards = await getHomeClassCards(user.id);
+    List<HomeClassCard> cards;
+    try {
+      cards = await getHomeClassCards(user.id);
+    } catch (_) {
+      return;
+    }
     if (mounted) setState(() => _homeClasses = cards);
 
     // Persist for next cold start

@@ -219,8 +219,15 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
     if (ok != true) return;
     final user = currentUser;
     if (user == null) return;
-    await supabase.from('teacher_folders').delete().eq('id', folder.id).eq('teacher_id', user.id);
-    _load();
+    try {
+      await supabase.from('teacher_folders').delete().eq('id', folder.id).eq('teacher_id', user.id);
+      if (mounted) _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete: $e'), duration: const Duration(seconds: 3)));
+      }
+    }
   }
 
   void _showFolderOptions(_Folder folder) {

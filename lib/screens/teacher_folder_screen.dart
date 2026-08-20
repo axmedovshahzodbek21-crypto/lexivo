@@ -183,8 +183,15 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
     if (ok != true) return;
     final user = currentUser;
     if (user == null) return;
-    await supabase.from('teacher_units').delete().eq('id', unit.id).eq('teacher_id', user.id);
-    _load();
+    try {
+      await supabase.from('teacher_units').delete().eq('id', unit.id).eq('teacher_id', user.id);
+      if (mounted) _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete: $e'), duration: const Duration(seconds: 3)));
+      }
+    }
   }
 
   void _showUnitOptions(_Unit unit) {

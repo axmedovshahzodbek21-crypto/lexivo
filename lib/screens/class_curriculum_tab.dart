@@ -297,8 +297,15 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
       ],
     ));
     if (ok != true) return;
-    await supabase.from('class_library_assignments').delete().eq('id', folder.assignmentId).eq('class_id', widget.classId);
-    _load();
+    try {
+      await supabase.from('class_library_assignments').delete().eq('id', folder.assignmentId).eq('class_id', widget.classId);
+      if (mounted) _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to remove: $e'), duration: const Duration(seconds: 3)));
+      }
+    }
   }
 
   // ── Class word unit actions ────────────────────────────────────────────────
@@ -379,8 +386,15 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
       ],
     ));
     if (ok != true) return;
-    await supabase.from('class_word_units').delete().eq('id', unit.id).eq('class_id', widget.classId);
-    _load();
+    try {
+      await supabase.from('class_word_units').delete().eq('id', unit.id).eq('class_id', widget.classId);
+      if (mounted) _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete: $e'), duration: const Duration(seconds: 3)));
+      }
+    }
   }
 
   Future<void> _manageUnitWords(_ClassWordUnit unit) async {
@@ -634,13 +648,21 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
             SizedBox(width: double.infinity, child: ElevatedButton(
               onPressed: (assignedTo == 'specific' && selectedStudents.isEmpty) ? null : () async {
                 final modes = selectedModes.entries.where((e) => e.value).map((e) => e.key).toList();
-                await supabase.from('class_homework').insert({
-                  'class_id': widget.classId,
-                  'collection_name': collName, 'day_number': day.dayNumber,
-                  'modes': modes,
-                  if (dueDate != null) 'due_date': dueDate!.toIso8601String().substring(0, 10),
-                  if (assignedTo == 'specific') 'student_ids': selectedStudents.toList(),
-                });
+                try {
+                  await supabase.from('class_homework').insert({
+                    'class_id': widget.classId,
+                    'collection_name': collName, 'day_number': day.dayNumber,
+                    'modes': modes,
+                    if (dueDate != null) 'due_date': dueDate!.toIso8601String().substring(0, 10),
+                    if (assignedTo == 'specific') 'student_ids': selectedStudents.toList(),
+                  });
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to assign: $e'), duration: const Duration(seconds: 3)));
+                  }
+                  return;
+                }
                 ClassHomeScreen.invalidate(widget.classId);
                 if (ctx.mounted) Navigator.pop(ctx);
                 _load();
@@ -753,14 +775,22 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
             SizedBox(width: double.infinity, child: ElevatedButton(
               onPressed: (assignedTo == 'specific' && selectedStudents.isEmpty) ? null : () async {
                 final modes = selectedModes.entries.where((e) => e.value).map((e) => e.key).toList();
-                await supabase.from('class_homework').insert({
-                  'class_id': widget.classId,
-                  if (!unit.isClassWords) 'unit_id': unit.id,
-                  if (unit.isClassWords) 'class_unit_id': unit.id,
-                  'modes': modes,
-                  if (dueDate != null) 'due_date': dueDate!.toIso8601String().substring(0, 10),
-                  if (assignedTo == 'specific') 'student_ids': selectedStudents.toList(),
-                });
+                try {
+                  await supabase.from('class_homework').insert({
+                    'class_id': widget.classId,
+                    if (!unit.isClassWords) 'unit_id': unit.id,
+                    if (unit.isClassWords) 'class_unit_id': unit.id,
+                    'modes': modes,
+                    if (dueDate != null) 'due_date': dueDate!.toIso8601String().substring(0, 10),
+                    if (assignedTo == 'specific') 'student_ids': selectedStudents.toList(),
+                  });
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to assign: $e'), duration: const Duration(seconds: 3)));
+                  }
+                  return;
+                }
                 ClassHomeScreen.invalidate(widget.classId);
                 if (ctx.mounted) Navigator.pop(ctx);
                 _load();
@@ -923,13 +953,21 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
             const SizedBox(height: 20),
             SizedBox(width: double.infinity, child: ElevatedButton(
               onPressed: (assignedTo == 'specific' && selectedStudents.isEmpty) ? null : () async {
-                await supabase.from('class_homework').insert({
-                  'class_id': widget.classId,
-                  'passage_id': passage.id,
-                  'modes': ['read'],
-                  if (dueDate != null) 'due_date': dueDate!.toIso8601String().substring(0, 10),
-                  if (assignedTo == 'specific') 'student_ids': selectedStudents.toList(),
-                });
+                try {
+                  await supabase.from('class_homework').insert({
+                    'class_id': widget.classId,
+                    'passage_id': passage.id,
+                    'modes': ['read'],
+                    if (dueDate != null) 'due_date': dueDate!.toIso8601String().substring(0, 10),
+                    if (assignedTo == 'specific') 'student_ids': selectedStudents.toList(),
+                  });
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to assign: $e'), duration: const Duration(seconds: 3)));
+                  }
+                  return;
+                }
                 ClassHomeScreen.invalidate(widget.classId);
                 if (ctx.mounted) Navigator.pop(ctx);
                 _load();

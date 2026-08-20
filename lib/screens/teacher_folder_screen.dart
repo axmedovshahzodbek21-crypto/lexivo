@@ -20,6 +20,16 @@ class TeacherFolderScreen extends StatefulWidget {
 
 class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
   static final Map<String, List<_Unit>> _cache = {};
+  // Unbounded otherwise — one entry per folder ever visited, for the app's
+  // entire lifetime. Evict the oldest (Map preserves insertion order) once
+  // over the cap instead of growing forever.
+  static const _cacheCap = 20;
+  static void _cachePut(String key, List<_Unit> value) {
+    _cache[key] = value;
+    while (_cache.length > _cacheCap) {
+      _cache.remove(_cache.keys.first);
+    }
+  }
 
   List<_Unit> _units = [];
   bool _loading = true;
@@ -58,7 +68,7 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
           wordCount: words?.isNotEmpty == true ? (words![0]['count'] as num?)?.toInt() ?? 0 : 0,
         );
       }).toList();
-      _cache[widget.folderId] = units;
+      _cachePut(widget.folderId, units);
       if (mounted) setState(() { _units = units; _loading = false; });
     } catch (_) {
       if (mounted) setState(() => _loading = false);

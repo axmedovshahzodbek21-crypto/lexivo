@@ -41,6 +41,13 @@ typedef _HwNotif = ({String title, String? dueDate, String className});
 
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
+  // Tabs are built lazily — only once actually visited — instead of all 9
+  // being constructed on the very first frame. A tab, once visited, stays
+  // in the IndexedStack (so scroll position/state survives switching away
+  // and back) but is wrapped in TickerMode below so its animations/timers
+  // pause while it isn't the active tab, instead of running for the app's
+  // entire lifetime in the background.
+  final Set<int> _visitedIndices = {0};
   int _reviewsDue = 0;
   _HwNotif? _hwToast;
   final Map<String, String> _classNames = {};
@@ -177,25 +184,45 @@ class _MainShellState extends State<MainShell> {
     if (mounted) setState(() => _reviewsDue = due.length);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final screens = [
-      HomeScreen(
+  void _selectTab(int index) {
+    setState(() { _currentIndex = index; _visitedIndices.add(index); });
+    _loadReviewCount();
+  }
+
+  Widget _buildScreen(int index) {
+    switch (index) {
+      case 0: return HomeScreen(
         wordSource: widget.wordSource,
         exampleStyle: widget.exampleStyle,
         userProfile: widget.userProfile,
         languageLevel: widget.languageLevel,
         dailyWordGoal: widget.dailyWordGoal,
-      ),
-      SearchScreen(userProfile: widget.userProfile),
-      ReviewsDueScreen(userProfile: widget.userProfile),
-      StatsScreen(),
-      const LeaderboardScreen(),
-      const ClassesScreen(),
-      const ImportedWordsScreen(),
-      const ReadingScreen(),
-      RealEnglishScreen(userProfile: widget.userProfile),
-    ];
+      );
+      case 1: return SearchScreen(userProfile: widget.userProfile);
+      case 2: return ReviewsDueScreen(userProfile: widget.userProfile);
+      case 3: return StatsScreen();
+      case 4: return const LeaderboardScreen();
+      case 5: return const ClassesScreen();
+      case 6: return const ImportedWordsScreen();
+      case 7: return const ReadingScreen();
+      case 8: return RealEnglishScreen(userProfile: widget.userProfile);
+      default: throw ArgumentError('No tab at index $index');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Only build a tab once it's actually been visited — previously all 9
+    // were constructed on the very first frame and kept fully alive inside
+    // IndexedStack for the app's entire lifetime. TickerMode additionally
+    // pauses each visited-but-inactive tab's animations/timers (a
+    // Ticker/AnimationController check, not a rebuild trigger, so it
+    // doesn't fight the "keep state alive while switching tabs" behavior
+    // IndexedStack is there for in the first place).
+    final screens = List.generate(9, (i) {
+      if (!_visitedIndices.contains(i)) return const SizedBox.shrink();
+      return TickerMode(enabled: i == _currentIndex, child: _buildScreen(i));
+    });
 
     return PopScope(
       canPop: false,
@@ -303,10 +330,7 @@ class _MainShellState extends State<MainShell> {
     final isSelected = _currentIndex == index;
     final nc = _navAccents[index];
     return GestureDetector(
-      onTap: () {
-        setState(() => _currentIndex = index);
-        _loadReviewCount();
-      },
+      onTap: () => _selectTab(index),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -334,10 +358,7 @@ class _MainShellState extends State<MainShell> {
     final isSelected = _currentIndex == index;
     final nc = _navAccents[index];
     return GestureDetector(
-      onTap: () {
-        setState(() => _currentIndex = index);
-        _loadReviewCount();
-      },
+      onTap: () => _selectTab(index),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

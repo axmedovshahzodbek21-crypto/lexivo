@@ -117,6 +117,16 @@ class TeacherUnitScreen extends StatefulWidget {
 
 class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTickerProviderStateMixin {
   static final Map<String, List<_Word>> _cache = {};
+  // Unbounded otherwise — one entry per unit ever visited, for the app's
+  // entire lifetime. Evict the oldest (Map preserves insertion order) once
+  // over the cap instead of growing forever.
+  static const _cacheCap = 20;
+  static void _cachePut(String key, List<_Word> value) {
+    _cache[key] = value;
+    while (_cache.length > _cacheCap) {
+      _cache.remove(_cache.keys.first);
+    }
+  }
 
   late TabController _tabs;
   List<_Word> _words = [];
@@ -178,7 +188,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
           .order('position')
           .order('created_at');
       final words = (data as List).map((e) => _Word.fromMap(Map<String, dynamic>.from(e as Map))).toList();
-      _cache[widget.unitId] = words;
+      _cachePut(widget.unitId, words);
       if (mounted) {
         setState(() {
           _words = words;
@@ -240,7 +250,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
     if (user == null) return;
     await supabase.from('teacher_unit_words').delete().eq('id', id).eq('teacher_id', user.id);
     if (mounted) setState(() => _words.removeWhere((w) => w.id == id));
-    _cache[widget.unitId] = _words;
+    _cachePut(widget.unitId, _words);
   }
 
   bool _selectMode = false;
@@ -296,7 +306,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
           _selectMode = false;
         });
       }
-      _cache[widget.unitId] = _words;
+      _cachePut(widget.unitId, _words);
     }
   }
 

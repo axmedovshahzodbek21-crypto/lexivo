@@ -176,6 +176,16 @@ class ClassHomeworkTab extends StatefulWidget {
 class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   static final _memCache = <String, _HwCache>{};
   static const _prefsPrefix = 'class_hw_v1_';
+  // Unbounded otherwise — one entry per (user, class) ever visited, for the
+  // app's entire lifetime. Evict the oldest (Map preserves insertion order)
+  // once over the cap instead of growing forever.
+  static const _memCacheCap = 20;
+  static void _cachePut(String key, _HwCache value) {
+    _memCache[key] = value;
+    while (_memCache.length > _memCacheCap) {
+      _memCache.remove(_memCache.keys.first);
+    }
+  }
 
   // Scoped by user id, not just class id — otherwise switching accounts on
   // a shared classroom device could briefly show the previous student's
@@ -234,7 +244,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
           totalAssigned: m['totalAssigned'] as int? ?? 0,
           totalDone: m['totalDone'] as int? ?? 0,
         );
-        _memCache[key] = cache;
+        _cachePut(key, cache);
         if (mounted) setState(() => _applyCache(cache));
         _load(background: true);
         return;
@@ -474,7 +484,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
         folders: folders, cwUnits: cwUnits, collHwItems: collHwItems, passageItems: passageItems,
         completedModes: completedModes, totalAssigned: assigned, totalDone: done,
       );
-      if (_cacheKey != null) _memCache[_cacheKey!] = cache;
+      if (_cacheKey != null) _cachePut(_cacheKey!, cache);
       _saveToPrefs(cache);
     } catch (_) {
       // _folders/_cwUnits/etc. are only ever reassigned above on a full

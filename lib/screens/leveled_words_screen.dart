@@ -4,6 +4,7 @@ import 'package:lexivo/services/content_service.dart';
 import 'package:lexivo/screens/collections.dart';
 import '../data/word_data.dart';
 import '../app_theme.dart';
+import '../services/supabase_service.dart';
 
 // ─── Hub Screen ───────────────────────────────────────────────────────────────
 
@@ -486,11 +487,17 @@ class WordsLibraryScreen extends StatefulWidget {
 
 class _WordsLibraryScreenState extends State<WordsLibraryScreen>
     with SingleTickerProviderStateMixin {
+  // Keyed by user id so switching accounts within the same app session
+  // (no restart needed) can't show the previous account's learned words
+  // during the loading flash — a plain static cache doesn't know it's
+  // stale until _loadWords() overwrites it moments later.
   static List<Map<String, String>>? _cache;
+  static String? _cacheUserId;
+  static bool get _cacheValid => _cache != null && _cacheUserId == currentUser?.id;
 
   late TabController _tabController;
-  List<Map<String, String>> _learnedWords = _cache ?? [];
-  bool _loading = _cache == null;
+  List<Map<String, String>> _learnedWords = _cacheValid ? _cache! : [];
+  bool _loading = !_cacheValid;
 
   @override
   void initState() {
@@ -524,6 +531,7 @@ class _WordsLibraryScreenState extends State<WordsLibraryScreen>
         .toList();
 
     _cache = leveledLearned;
+    _cacheUserId = currentUser?.id;
     setState(() {
       _learnedWords = leveledLearned;
       _loading = false;

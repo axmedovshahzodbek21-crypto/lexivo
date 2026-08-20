@@ -397,7 +397,19 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
     // the real backstop, but a bare .eq('id', id) here would let a
     // misconfigured policy delete any class_words row by id regardless of
     // which class it belongs to.
-    await supabase.from('class_words').delete().eq('id', id).eq('class_id', widget.classId);
+    try {
+      await supabase.from('class_words').delete().eq('id', id).eq('class_id', widget.classId);
+    } catch (e) {
+      // Previously unawaited by its caller with no try/catch here either —
+      // a failed delete became an unhandled Future rejection with zero
+      // feedback, and the word silently stayed in the list with no
+      // explanation why "deleting" it appeared to do nothing.
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete: $e')));
+      }
+      return;
+    }
     if (mounted) setState(() => _words.removeWhere((w) => w.id == id));
   }
 

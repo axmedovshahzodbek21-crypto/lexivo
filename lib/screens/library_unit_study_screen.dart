@@ -82,10 +82,17 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
     if (next == null) return null;
     final idx = widget.modes.indexOf(next);
     for (int i = idx + 1; i < widget.modes.length; i++) {
-      if (!_completedModes.contains(widget.modes[i])) return widget.modes[i];
+      final m = widget.modes[i];
+      if (!_completedModes.contains(m) && !_gatedByLearn(m)) return m;
     }
     return null;
   }
+
+  // Matches the web app's gating rule (homework/[hwId]/page.tsx's
+  // gatedByLearn) so the same homework behaves the same on both platforms:
+  // if Learn is assigned, every other mode stays locked until it's done.
+  bool _gatedByLearn(String mode) =>
+      mode != 'learn' && widget.modes.contains('learn') && !_completedModes.contains('learn');
 
   @override
   void initState() {
@@ -228,6 +235,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
   Future<void> _studyMode(String mode) async {
     final wd = _wordDay;
     if (wd == null || wd.words.isEmpty) return;
+    if (_gatedByLearn(mode)) return;
     void onCompleted() => _recordProgress(mode);
     switch (mode) {
       case 'learn':
@@ -594,25 +602,26 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
       child: Row(
         children: widget.modes.map((m) {
           final done = _completedModes.contains(m);
+          final locked = _gatedByLearn(m);
           final color = _modeColor[m] ?? context.primary;
           return Expanded(
             child: GestureDetector(
-              onTap: () => _studyMode(m),
+              onTap: locked ? null : () => _studyMode(m),
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 3),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color: done ? color.withValues(alpha: 0.15) : color,
+                  color: locked ? context.surface2 : done ? color.withValues(alpha: 0.15) : color,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Text(_modeIcon[m] ?? '📖', style: const TextStyle(fontSize: 16)),
+                  Text(locked ? '🔒' : (_modeIcon[m] ?? '📖'), style: const TextStyle(fontSize: 16)),
                   const SizedBox(height: 3),
                   Text(_modeLabel[m] ?? m,
                     style: TextStyle(
                       fontSize: 9,
                       fontWeight: FontWeight.w700,
-                      color: done ? color : Colors.white,
+                      color: locked ? context.textMuted : done ? color : Colors.white,
                     )),
                   if (done)
                     Icon(Icons.check_rounded, color: color, size: 10),

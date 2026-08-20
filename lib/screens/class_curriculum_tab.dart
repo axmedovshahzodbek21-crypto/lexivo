@@ -574,11 +574,41 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
   }
 
   Future<void> _showAssignCollectionHomework(String userId, String collName, WordDay day,
-      {Set<String> preAssignedStudentIds = const {}}) async {
+      {Set<String> preAssignedStudentIds = const {}}) {
+    return _showAssignHomeworkSheet(
+      subtitle: '📗 $collName · Day ${day.dayNumber}: ${day.topic}  ·  ${day.words.length} words',
+      buttonColor: const Color(0xFF22C55E),
+      preAssignedStudentIds: preAssignedStudentIds,
+      buildInsert: (modes, assignedTo, selectedStudents, dueDate) => {
+        'class_id': widget.classId,
+        'collection_name': collName, 'day_number': day.dayNumber,
+        'modes': modes,
+        if (dueDate != null) 'due_date': dueDate.toIso8601String().substring(0, 10),
+        if (assignedTo == 'specific') 'student_ids': selectedStudents.toList(),
+      },
+    );
+  }
+
+  // ── Shared homework assignment modal ───────────────────────────────────────
+  //
+  // The three "assign as homework" entry points (collection day, library/
+  // class unit, reading passage) differ only in: the subtitle line, the
+  // insert payload's content-source fields, the submit button color, and
+  // whether a mode picker applies at all (passages are always 'read'-only).
+  // Everything else — modes chips, due-date picker, whole-class/specific-
+  // students toggle with the already-covered-student exclusion, error
+  // handling — is identical, so it lives here once.
+  Future<void> _showAssignHomeworkSheet({
+    required String subtitle,
+    required Color buttonColor,
+    bool showModes = true,
+    Set<String> preAssignedStudentIds = const {},
+    required Map<String, dynamic> Function(List<String> modes, String assignedTo, Set<String> selectedStudents, DateTime? dueDate) buildInsert,
+  }) async {
     final selectedModes = {'learn': true, 'flashcard': true, 'quiz': true, 'match': false};
-    // If some (but not all) students already have this day, "Whole Class"
-    // would duplicate their assignment — default to "Specific Students"
-    // with those already covered excluded from selection.
+    // If some (but not all) students already have this assigned, "Whole
+    // Class" would duplicate their assignment — default to "Specific
+    // Students" with those already covered excluded from selection.
     String assignedTo = preAssignedStudentIds.isEmpty ? 'class' : 'specific';
     final selectedStudents = <String>{};
     DateTime? dueDate;
@@ -595,26 +625,27 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                 decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(2)))),
             Text('Assign as Homework', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: context.appText)),
             const SizedBox(height: 4),
-            Text('📗 $collName · Day ${day.dayNumber}: ${day.topic}  ·  ${day.words.length} words',
-                style: TextStyle(fontSize: 13, color: context.textMuted)),
+            Text(subtitle, style: TextStyle(fontSize: 13, color: context.textMuted)),
             const SizedBox(height: 20),
-            Text('Modes', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.8)),
-            const SizedBox(height: 8),
-            Wrap(spacing: 8, children: ['learn', 'flashcard', 'quiz', 'match'].map((mode) {
-              final emoji = {'learn': '📖', 'flashcard': '🃏', 'quiz': '❓', 'match': '🔗'}[mode]!;
-              final label = {'learn': 'Learn', 'flashcard': 'Flashcard', 'quiz': 'Quiz', 'match': 'Match'}[mode]!;
-              final required = mode != 'match';
-              final on = selectedModes[mode]!;
-              return FilterChip(
-                label: Text('$emoji $label${required ? '' : ' (optional)'}',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: on ? Colors.white : context.textMuted)),
-                selected: on,
-                onSelected: required ? null : (v) => setSheet(() => selectedModes[mode] = v),
-                selectedColor: context.primary, backgroundColor: context.surface2,
-                disabledColor: context.primary.withValues(alpha: 0.8), checkmarkColor: Colors.white, side: BorderSide.none,
-              );
-            }).toList()),
-            const SizedBox(height: 16),
+            if (showModes) ...[
+              Text('Modes', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.8)),
+              const SizedBox(height: 8),
+              Wrap(spacing: 8, children: ['learn', 'flashcard', 'quiz', 'match'].map((mode) {
+                final emoji = {'learn': '📖', 'flashcard': '🃏', 'quiz': '❓', 'match': '🔗'}[mode]!;
+                final label = {'learn': 'Learn', 'flashcard': 'Flashcard', 'quiz': 'Quiz', 'match': 'Match'}[mode]!;
+                final required = mode != 'match';
+                final on = selectedModes[mode]!;
+                return FilterChip(
+                  label: Text('$emoji $label${required ? '' : ' (optional)'}',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: on ? Colors.white : context.textMuted)),
+                  selected: on,
+                  onSelected: required ? null : (v) => setSheet(() => selectedModes[mode] = v),
+                  selectedColor: context.primary, backgroundColor: context.surface2,
+                  disabledColor: context.primary.withValues(alpha: 0.8), checkmarkColor: Colors.white, side: BorderSide.none,
+                );
+              }).toList()),
+              const SizedBox(height: 16),
+            ],
             Text('Due Date', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.8)),
             const SizedBox(height: 8),
             GestureDetector(
@@ -644,7 +675,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
             if (preAssignedStudentIds.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
-                child: Text('Some students already have this day assigned — pick who else should get it.',
+                child: Text('Some students already have this assigned — pick who else should get it.',
                     style: TextStyle(fontSize: 11, color: context.textMuted)),
               ),
             Row(children: [
@@ -677,13 +708,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
               onPressed: (assignedTo == 'specific' && selectedStudents.isEmpty) ? null : () async {
                 final modes = selectedModes.entries.where((e) => e.value).map((e) => e.key).toList();
                 try {
-                  await supabase.from('class_homework').insert({
-                    'class_id': widget.classId,
-                    'collection_name': collName, 'day_number': day.dayNumber,
-                    'modes': modes,
-                    if (dueDate != null) 'due_date': dueDate!.toIso8601String().substring(0, 10),
-                    if (assignedTo == 'specific') 'student_ids': selectedStudents.toList(),
-                  });
+                  await supabase.from('class_homework').insert(buildInsert(modes, assignedTo, selectedStudents, dueDate));
                 } catch (e) {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -695,7 +720,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                 if (ctx.mounted) Navigator.pop(ctx);
                 _load();
               },
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF22C55E), foregroundColor: Colors.white,
+              style: ElevatedButton.styleFrom(backgroundColor: buttonColor, foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   padding: const EdgeInsets.symmetric(vertical: 14)),
               child: const Text('Assign Homework', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
@@ -706,8 +731,6 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
     );
   }
 
-  // ── Shared homework assignment modal ───────────────────────────────────────
-
   Future<void> _showAssignHomework(_UnitRef unit) async {
     final user = currentUser;
     if (user == null) return;
@@ -715,122 +738,17 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
         unit.isClassWords ? h.classUnitId == unit.id : h.unitId == unit.id).toList();
     if (existing.isNotEmpty) { _showHomeworkDetail(existing.first); return; }
 
-    final selectedModes = {'learn': true, 'flashcard': true, 'quiz': true, 'match': false};
-    String assignedTo = 'class';
-    final selectedStudents = <String>{};
-    DateTime? dueDate;
-
-    await showModalBottomSheet(
-      context: context, isScrollControlled: true,
-      backgroundColor: context.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheet) => Padding(
-          padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
-          child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Center(child: Container(width: 36, height: 4, margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(2)))),
-            Text('Assign as Homework', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: context.appText)),
-            const SizedBox(height: 4),
-            Text('${unit.isClassWords ? '📝' : '📖'} ${unit.name}  ·  ${unit.wordCount} words',
-                style: TextStyle(fontSize: 13, color: context.textMuted)),
-            const SizedBox(height: 20),
-            Text('Modes', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.8)),
-            const SizedBox(height: 8),
-            Wrap(spacing: 8, children: ['learn', 'flashcard', 'quiz', 'match'].map((mode) {
-              final emoji = {'learn': '📖', 'flashcard': '🃏', 'quiz': '❓', 'match': '🔗'}[mode]!;
-              final label = {'learn': 'Learn', 'flashcard': 'Flashcard', 'quiz': 'Quiz', 'match': 'Match'}[mode]!;
-              final required = mode != 'match';
-              final on = selectedModes[mode]!;
-              return FilterChip(
-                label: Text('$emoji $label${required ? '' : ' (optional)'}',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: on ? Colors.white : context.textMuted)),
-                selected: on,
-                onSelected: required ? null : (v) => setSheet(() => selectedModes[mode] = v),
-                selectedColor: context.primary, backgroundColor: context.surface2,
-                disabledColor: context.primary.withValues(alpha: 0.8), checkmarkColor: Colors.white, side: BorderSide.none,
-              );
-            }).toList()),
-            const SizedBox(height: 16),
-            Text('Due Date', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.8)),
-            const SizedBox(height: 8),
-            GestureDetector(
-              onTap: () async {
-                final picked = await showDatePicker(context: ctx,
-                    initialDate: DateTime.now().add(const Duration(days: 7)),
-                    firstDate: DateTime.now(), lastDate: DateTime.now().add(const Duration(days: 365)));
-                if (picked != null) setSheet(() => dueDate = picked);
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(12)),
-                child: Row(children: [
-                  const Text('📅', style: TextStyle(fontSize: 16)), const SizedBox(width: 8),
-                  Text(dueDate == null ? 'No due date (optional)' : dueDate!.toIso8601String().substring(0, 10),
-                      style: TextStyle(fontSize: 13, color: dueDate == null ? context.textMuted : context.appText, fontWeight: FontWeight.w500)),
-                  if (dueDate != null) ...[
-                    const Spacer(),
-                    GestureDetector(onTap: () => setSheet(() => dueDate = null), child: Text('✕', style: TextStyle(color: context.textMuted))),
-                  ],
-                ]),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text('Assign to', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.8)),
-            const SizedBox(height: 8),
-            Row(children: [
-              Expanded(child: _choiceBtn('Whole Class', assignedTo == 'class', () => setSheet(() { assignedTo = 'class'; selectedStudents.clear(); }))),
-              const SizedBox(width: 8),
-              Expanded(child: _choiceBtn('Specific Students', assignedTo == 'specific', () => setSheet(() => assignedTo = 'specific'))),
-            ]),
-            if (assignedTo == 'specific') ...[
-              const SizedBox(height: 10),
-              Container(
-                constraints: const BoxConstraints(maxHeight: 180),
-                decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(12)),
-                child: ListView(shrinkWrap: true, children: _students.map((s) {
-                  final on = selectedStudents.contains(s.studentId);
-                  return CheckboxListTile(
-                    dense: true, value: on,
-                    onChanged: (v) => setSheet(() { v == true ? selectedStudents.add(s.studentId) : selectedStudents.remove(s.studentId); }),
-                    title: Text(s.name, style: TextStyle(fontSize: 13, color: context.appText)),
-                    activeColor: context.primary,
-                  );
-                }).toList()),
-              ),
-            ],
-            const SizedBox(height: 20),
-            SizedBox(width: double.infinity, child: ElevatedButton(
-              onPressed: (assignedTo == 'specific' && selectedStudents.isEmpty) ? null : () async {
-                final modes = selectedModes.entries.where((e) => e.value).map((e) => e.key).toList();
-                try {
-                  await supabase.from('class_homework').insert({
-                    'class_id': widget.classId,
-                    if (!unit.isClassWords) 'unit_id': unit.id,
-                    if (unit.isClassWords) 'class_unit_id': unit.id,
-                    'modes': modes,
-                    if (dueDate != null) 'due_date': dueDate!.toIso8601String().substring(0, 10),
-                    if (assignedTo == 'specific') 'student_ids': selectedStudents.toList(),
-                  });
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to assign: $e'), duration: const Duration(seconds: 3)));
-                  }
-                  return;
-                }
-                ClassHomeScreen.invalidate(widget.classId);
-                if (ctx.mounted) Navigator.pop(ctx);
-                _load();
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: context.primary, foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  padding: const EdgeInsets.symmetric(vertical: 14)),
-              child: const Text('Assign Homework', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-            )),
-          ])),
-        ),
-      ),
+    await _showAssignHomeworkSheet(
+      subtitle: '${unit.isClassWords ? '📝' : '📖'} ${unit.name}  ·  ${unit.wordCount} words',
+      buttonColor: context.primary,
+      buildInsert: (modes, assignedTo, selectedStudents, dueDate) => {
+        'class_id': widget.classId,
+        if (!unit.isClassWords) 'unit_id': unit.id,
+        if (unit.isClassWords) 'class_unit_id': unit.id,
+        'modes': modes,
+        if (dueDate != null) 'due_date': dueDate.toIso8601String().substring(0, 10),
+        if (assignedTo == 'specific') 'student_ids': selectedStudents.toList(),
+      },
     );
   }
 
@@ -912,102 +830,17 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
     final user = currentUser;
     if (user == null) return;
 
-    String assignedTo = 'class';
-    final selectedStudents = <String>{};
-    DateTime? dueDate;
-
-    await showModalBottomSheet(
-      context: context, isScrollControlled: true,
-      backgroundColor: context.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheet) => Padding(
-          padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
-          child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Center(child: Container(width: 36, height: 4, margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(2)))),
-            Text('Assign as Homework', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: context.appText)),
-            const SizedBox(height: 4),
-            Text('📚 ${passage.title}  ·  ${passage.topic}',
-                style: TextStyle(fontSize: 13, color: context.textMuted)),
-            const SizedBox(height: 20),
-            Text('Due Date', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.8)),
-            const SizedBox(height: 8),
-            GestureDetector(
-              onTap: () async {
-                final picked = await showDatePicker(context: ctx,
-                    initialDate: DateTime.now().add(const Duration(days: 7)),
-                    firstDate: DateTime.now(), lastDate: DateTime.now().add(const Duration(days: 365)));
-                if (picked != null) setSheet(() => dueDate = picked);
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(12)),
-                child: Row(children: [
-                  const Text('📅', style: TextStyle(fontSize: 16)), const SizedBox(width: 8),
-                  Text(dueDate == null ? 'No due date (optional)' : dueDate!.toIso8601String().substring(0, 10),
-                      style: TextStyle(fontSize: 13, color: dueDate == null ? context.textMuted : context.appText, fontWeight: FontWeight.w500)),
-                  if (dueDate != null) ...[
-                    const Spacer(),
-                    GestureDetector(onTap: () => setSheet(() => dueDate = null), child: Text('✕', style: TextStyle(color: context.textMuted))),
-                  ],
-                ]),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text('Assign to', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.8)),
-            const SizedBox(height: 8),
-            Row(children: [
-              Expanded(child: _choiceBtn('Whole Class', assignedTo == 'class', () => setSheet(() { assignedTo = 'class'; selectedStudents.clear(); }))),
-              const SizedBox(width: 8),
-              Expanded(child: _choiceBtn('Specific Students', assignedTo == 'specific', () => setSheet(() => assignedTo = 'specific'))),
-            ]),
-            if (assignedTo == 'specific') ...[
-              const SizedBox(height: 10),
-              Container(
-                constraints: const BoxConstraints(maxHeight: 180),
-                decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(12)),
-                child: ListView(shrinkWrap: true, children: _students.map((s) {
-                  final on = selectedStudents.contains(s.studentId);
-                  return CheckboxListTile(
-                    dense: true, value: on,
-                    onChanged: (v) => setSheet(() { v == true ? selectedStudents.add(s.studentId) : selectedStudents.remove(s.studentId); }),
-                    title: Text(s.name, style: TextStyle(fontSize: 13, color: context.appText)),
-                    activeColor: context.primary,
-                  );
-                }).toList()),
-              ),
-            ],
-            const SizedBox(height: 20),
-            SizedBox(width: double.infinity, child: ElevatedButton(
-              onPressed: (assignedTo == 'specific' && selectedStudents.isEmpty) ? null : () async {
-                try {
-                  await supabase.from('class_homework').insert({
-                    'class_id': widget.classId,
-                    'passage_id': passage.id,
-                    'modes': ['read'],
-                    if (dueDate != null) 'due_date': dueDate!.toIso8601String().substring(0, 10),
-                    if (assignedTo == 'specific') 'student_ids': selectedStudents.toList(),
-                  });
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to assign: $e'), duration: const Duration(seconds: 3)));
-                  }
-                  return;
-                }
-                ClassHomeScreen.invalidate(widget.classId);
-                if (ctx.mounted) Navigator.pop(ctx);
-                _load();
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF59E0B), foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  padding: const EdgeInsets.symmetric(vertical: 14)),
-              child: const Text('Assign Homework', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-            )),
-          ])),
-        ),
-      ),
+    await _showAssignHomeworkSheet(
+      subtitle: '📚 ${passage.title}  ·  ${passage.topic}',
+      buttonColor: const Color(0xFFF59E0B),
+      showModes: false,
+      buildInsert: (modes, assignedTo, selectedStudents, dueDate) => {
+        'class_id': widget.classId,
+        'passage_id': passage.id,
+        'modes': ['read'],
+        if (dueDate != null) 'due_date': dueDate.toIso8601String().substring(0, 10),
+        if (assignedTo == 'specific') 'student_ids': selectedStudents.toList(),
+      },
     );
   }
 

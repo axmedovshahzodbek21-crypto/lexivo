@@ -42,6 +42,10 @@ compileOptions {
         create("original") {
             dimension = "account"
         }
+        create("clone2") {
+            dimension = "account"
+            applicationIdSuffix = ".clone2"
+        }
         create("clone3") {
             dimension = "account"
             applicationIdSuffix = ".clone3"

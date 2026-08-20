@@ -98,9 +98,12 @@ List<ImportedWord> _parseOutput(String text, String langCode) {
       fields[key] = val;
     }
     if (!fields.containsKey('word') || !fields.containsKey('translation')) continue;
-    // Unlimited examples — collect "exampleN" / "exampleNtranslation" for any N.
+    // Capped at 10 to match StorageService.addImportedWords' storage-side
+    // limit — collecting more here previously let the preview show up to 20
+    // examples that then silently got truncated to 10 on save, so what the
+    // user approved didn't match what was actually kept.
     final examples = <ImportedWordExample>[];
-    for (var n = 1; n <= 20; n++) {
+    for (var n = 1; n <= 10; n++) {
       final sentence = fields['example$n'];
       if (sentence == null || sentence.isEmpty) continue;
       examples.add(ImportedWordExample(sentence: sentence, translation: fields['example${n}translation']));

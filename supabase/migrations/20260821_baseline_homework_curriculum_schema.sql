@@ -16,6 +16,13 @@
 -- guarded (IF NOT EXISTS / DO+EXCEPTION) so this is safe to run against the
 -- already-live database as a no-op, or against a fresh one to recreate the
 -- schema from scratch.
+--
+-- Does NOT include teacher_folders_read / teacher_units_read /
+-- teacher_unit_words_read — those three unrestricted (`using (true)`) SELECT
+-- policies were found during this reconstruction and dropped in
+-- 20260821_fix_teacher_library_public_read_rls.sql; the *_own and
+-- student_read_assigned_* policies below already cover every legitimate
+-- read.
 -- ─────────────────────────────────────────────────────────────────────────────
 
 create table if not exists teacher_folders (
@@ -118,11 +125,6 @@ do $$ begin
 exception when duplicate_object then null; end $$;
 
 do $$ begin
-  create policy teacher_folders_read on teacher_folders for select
-    using (true);
-exception when duplicate_object then null; end $$;
-
-do $$ begin
   create policy student_read_assigned_folders on teacher_folders for select
     using (exists (
       select 1 from class_library_assignments cla
@@ -137,11 +139,6 @@ do $$ begin
 exception when duplicate_object then null; end $$;
 
 do $$ begin
-  create policy teacher_units_read on teacher_units for select
-    using (true);
-exception when duplicate_object then null; end $$;
-
-do $$ begin
   create policy student_read_assigned_units on teacher_units for select
     using (exists (
       select 1 from class_library_assignments cla
@@ -153,11 +150,6 @@ exception when duplicate_object then null; end $$;
 do $$ begin
   create policy teacher_unit_words_own on teacher_unit_words for all
     using (auth.uid() = teacher_id);
-exception when duplicate_object then null; end $$;
-
-do $$ begin
-  create policy teacher_unit_words_read on teacher_unit_words for select
-    using (true);
 exception when duplicate_object then null; end $$;
 
 do $$ begin

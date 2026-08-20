@@ -1076,7 +1076,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                   final ok = await showDialog<bool>(context: context, builder: (d) => AlertDialog(
                     backgroundColor: context.surface, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     title: Text('Delete homework?', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
-                    content: Text('This removes the assignment for all students.', style: TextStyle(color: context.textMuted)),
+                    content: Text('This removes the assignment for all students. Any XP students already earned from it stays on the leaderboard.', style: TextStyle(color: context.textMuted)),
                     actions: [
                       TextButton(onPressed: () => Navigator.pop(d, false), child: Text('Cancel', style: TextStyle(color: context.textMuted))),
                       ElevatedButton(onPressed: () => Navigator.pop(d, true),

@@ -54,10 +54,15 @@ class ContentService {
     }
   }
 
-  // ignore: unused_element
+  // Called (fire-and-forget) from initState() below — the
+  // `unused_element` suppression this used to carry was stale: it's
+  // genuinely called, just not awaited.
   static void _fetchInBackground() async {
     final prefs = await SharedPreferences.getInstance();
-    for (final entry in _keys.entries) {
+    // Independent per-collection fetches — previously one sequential await
+    // per entry in a for loop, up to ~80s worst case (4 × 20s timeout)
+    // instead of ~20s in parallel.
+    await Future.wait(_keys.entries.map((entry) async {
       try {
         final res = await http
             .get(Uri.parse('$_base/${entry.value}.json'))
@@ -72,7 +77,7 @@ class ContentService {
       } catch (_) {
         // No internet or timeout — silently keep cached/bundled data
       }
-    }
+    }));
   }
 
   static void _set(String key, WordCollection col) {

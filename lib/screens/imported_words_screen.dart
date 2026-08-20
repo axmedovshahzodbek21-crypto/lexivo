@@ -67,9 +67,13 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
 
   Future<void> _load() async {
     await SyncService.pullAll();
-    final folders = await StorageService.getImportedFolders();
+    var folders = await StorageService.getImportedFolders();
+    // Seeding the example folder is a local-only write — re-running the
+    // whole _load() (as this used to do via `return _load()`) redundantly
+    // repeated the cloud pull above for no reason. Just re-fetch the local
+    // folder list instead.
     if (folders.isEmpty && await _seedExampleFolder()) {
-      return _load();
+      folders = await StorageService.getImportedFolders();
     }
     final completedCounts = <String, int>{};
     for (final folder in folders) {

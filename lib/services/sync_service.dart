@@ -456,12 +456,12 @@ class SyncService {
         final masteredRaw = prefs.getString('mastered_srs_words') ?? '[]';
         final masteredIds = (jsonDecode(masteredRaw) as List)
             .cast<Map<String, dynamic>>()
-            .map((w) => '${w['word']}_${w['collectionName']}')
+            .map((w) => '${w['word']}::${w['collectionName']}')
             .toSet();
         final localRaw = prefs.getString('srs_words') ?? '[]';
         final localList = (jsonDecode(localRaw) as List).cast<Map<String, dynamic>>();
         final localMap = <String, Map<String, dynamic>>{
-          for (final w in localList) '${w['word']}_${w['collectionName']}': w,
+          for (final w in localList) '${w['word']}::${w['collectionName']}': w,
         };
         int tsOf(Map<String, dynamic> w) {
           final deletedAt = w['deletedAt'] as num?;
@@ -470,7 +470,7 @@ class SyncService {
         }
         bool changed = false;
         for (final cw in cloudSRS) {
-          final key = '${cw['word']}_${cw['collectionName']}';
+          final key = '${cw['word']}::${cw['collectionName']}';
           if (masteredIds.contains(key)) continue;
           final lw = localMap[key];
           if (lw == null) {

@@ -17,6 +17,7 @@ import '../services/supabase_service.dart';
 import '../services/class_srs_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
+import '../widgets/not_enough_words_screen.dart';
 
 class LearningScreen extends StatefulWidget {
   final WordDay wordDay;
@@ -703,7 +704,7 @@ class _LearningScreenState extends State<LearningScreen> {
   @override
   Widget build(BuildContext context) {
     if (_allWords.isEmpty) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const NotEnoughWordsScreen(minWords: 1);
     }
 
     final isLearned = _learnedIndices.contains(_currentIndex);

@@ -5,6 +5,7 @@ import '../app_theme.dart';
 import '../data/storage_service.dart';
 import '../data/word_data.dart';
 import '../l10n.dart';
+import '../widgets/not_enough_words_screen.dart';
 
 const _batchSize = 6;
 
@@ -230,41 +231,10 @@ class _MatchingScreenState extends State<MatchingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_words.length < 2) return _buildNotEnough(context);
+    if (_words.length < 2) return const NotEnoughWordsScreen(minWords: 2);
     if (_phase == 'done') return _buildDone(context);
     if (_phase == 'round_done') return _buildRoundDone(context);
     return _buildPlaying(context);
-  }
-
-  // ── Not enough ────────────────────────────────────────────────────────────
-
-  Widget _buildNotEnough(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.bg,
-      appBar: AppBar(
-        backgroundColor: context.surface,
-        foregroundColor: context.appText,
-        elevation: 0,
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('📭', style: TextStyle(fontSize: 56)),
-              const SizedBox(height: 16),
-              Text('Not enough words',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: context.appText)),
-              const SizedBox(height: 8),
-              Text('Need at least 2 words to play.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: context.textMuted)),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   // ── Done ──────────────────────────────────────────────────────────────────

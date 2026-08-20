@@ -13,6 +13,7 @@ import '../data/storage_service.dart';
 import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
+import '../widgets/not_enough_words_screen.dart';
 
 enum CardMode { wordToTranslation, wordToDefinition, translationToWord }
 
@@ -871,7 +872,13 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
 
   @override
   Widget build(BuildContext context) {
-    if (_sessionFinished || _sessionWords.isEmpty) {
+    if (_sessionWords.isEmpty && !_sessionFinished) {
+      return const NotEnoughWordsScreen(minWords: 1);
+    }
+    if (_sessionFinished) {
+      // Brief transitional frame between the last card being removed and
+      // _showFinishScreen() (called right after, in _nextCard()) actually
+      // appearing — not the empty-at-start case handled above.
       return Scaffold(
         backgroundColor: context.bg,
         body: const Center(child: CircularProgressIndicator()),

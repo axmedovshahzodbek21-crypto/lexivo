@@ -1710,9 +1710,16 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         if (!await _checkTeacher()) return;
         // Previously unguarded: an insert failure (RLS, trigger error, no
         // network) threw with no try/catch, so the sheet just sat there
-        // with no feedback — looked like the button did nothing.
+        // with no feedback — looked like the button did nothing. The real
+        // cause: teacher_id was missing from the payload, and the RLS
+        // policy requires it to equal auth.uid() — web's postAnnouncement
+        // always included it, this didn't.
         try {
-          await supabase.from('class_announcements').insert({'class_id': widget.classId, 'message': ctrl.text.trim()});
+          await supabase.from('class_announcements').insert({
+            'class_id': widget.classId,
+            'teacher_id': currentUser?.id,
+            'message': ctrl.text.trim(),
+          });
         } catch (e) {
           if (mounted) msg.showSnackBar(SnackBar(content: Text('Failed to send: $e')));
           return;
@@ -1734,7 +1741,19 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         final nav = Navigator.of(ctx);
         final msg = ScaffoldMessenger.of(context);
         if (!await _checkTeacher()) return;
-        await supabase.from('class_notes').insert({'class_id': widget.classId, 'student_id': s.studentId, 'message': ctrl.text.trim()});
+        // teacher_id required by RLS — same class_id-missing-teacher_id bug
+        // as class_announcements/class_targets above.
+        try {
+          await supabase.from('class_notes').insert({
+            'class_id': widget.classId,
+            'teacher_id': currentUser?.id,
+            'student_id': s.studentId,
+            'message': ctrl.text.trim(),
+          });
+        } catch (e) {
+          if (mounted) msg.showSnackBar(SnackBar(content: Text('Failed to send: $e')));
+          return;
+        }
         if (!mounted) return;
         nav.pop();
         msg.showSnackBar(SnackBar(content: Text(tr('note_sent')), duration: const Duration(seconds: 2)));
@@ -1801,9 +1820,22 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
                   final nav = Navigator.of(ctx2);
                   final msg = ScaffoldMessenger.of(context);
                   if (!await _checkTeacher()) return;
-                  final data = {'class_id': widget.classId, 'student_id': s.studentId, 'title': ctrl.text.trim()};
+                  // teacher_id is required by the class_targets RLS policy
+                  // (must equal auth.uid()) — see the same fix on
+                  // class_announcements above.
+                  final data = {
+                    'class_id': widget.classId,
+                    'teacher_id': currentUser?.id,
+                    'student_id': s.studentId,
+                    'title': ctrl.text.trim(),
+                  };
                   if (dueDate != null) data['due_date'] = dueDate!;
-                  await supabase.from('class_targets').insert(data);
+                  try {
+                    await supabase.from('class_targets').insert(data);
+                  } catch (e) {
+                    if (mounted) msg.showSnackBar(SnackBar(content: Text('Failed to set target: $e')));
+                    return;
+                  }
                   ClassHomeScreen.invalidate(widget.classId);
                   if (!mounted) return;
                   nav.pop();

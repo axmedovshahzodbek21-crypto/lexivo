@@ -40,6 +40,10 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
   final notifEnabled = prefs.getBool('notifications_enabled') ?? true;
   final notifTime = await NotificationService.getSavedTime();
+  // Resolve this week's freeze grant once, explicitly, before anything
+  // reads streak/freeze state — getStreak()'s missed-day forgiveness and
+  // home.dart's freeze display both depend on it already being current.
+  await StorageService.grantWeeklyFreezeIfDue();
   final streak = await StorageService.getStreak().catchError((_) => 0);
   final userName = prefs.getString('user_name') ?? '';
   await NotificationService.scheduleReminder(

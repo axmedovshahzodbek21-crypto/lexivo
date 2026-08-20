@@ -1610,7 +1610,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
       streak += 1;
     } else {
       final daysMissed = _daysBetween(lastStudy, today) - 1;
-      final freezesAvailable = await getFreezesAvailable();
+      final freezesAvailable = await grantWeeklyFreezeIfDue();
       if (daysMissed == 1 && freezesAvailable > 0) {
         await _useFreeze();
         streak += 1;
@@ -1649,23 +1649,33 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     return 0;
   }
 
+  // Pure read — no side effects. Granting a fresh weekly freeze is a
+  // deliberate action (see grantWeeklyFreezeIfDue()), not something that
+  // should happen just because a screen wanted to display the count.
   static Future<int> getFreezesAvailable() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_freezesKey) ?? 0;
+  }
+
+  // Grants a freeze for the current week if the user hasn't already
+  // received one and has an active streak — idempotent within a week, so
+  // it's safe to call from multiple places (app startup, after recording a
+  // study session). Called explicitly rather than buried inside a getter,
+  // so it can't fire as a surprise side effect of an unrelated UI read.
+  static Future<int> grantWeeklyFreezeIfDue() async {
     final prefs = await SharedPreferences.getInstance();
     final currentWeek = _weekString();
     final lastFreezeWeek = prefs.getString(_lastFreezeWeekKey);
-    if (lastFreezeWeek != currentWeek) {
-      final streak = prefs.getInt(_streakKey) ?? 0;
-      final held = prefs.getInt(_freezesKey) ?? 0;
-      if (streak > 0 && held < 2) {
-        final newHeld = held + 1;
-        await prefs.setInt(_freezesKey, newHeld);
-        await prefs.setString(_lastFreezeWeekKey, currentWeek);
-        return newHeld;
-      }
-      await prefs.setString(_lastFreezeWeekKey, currentWeek);
-      return held;
+    if (lastFreezeWeek == currentWeek) return prefs.getInt(_freezesKey) ?? 0;
+    final streak = prefs.getInt(_streakKey) ?? 0;
+    final held = prefs.getInt(_freezesKey) ?? 0;
+    await prefs.setString(_lastFreezeWeekKey, currentWeek);
+    if (streak > 0 && held < 2) {
+      final newHeld = held + 1;
+      await prefs.setInt(_freezesKey, newHeld);
+      return newHeld;
     }
-    return prefs.getInt(_freezesKey) ?? 0;
+    return held;
   }
 
   static Future<void> _useFreeze() async {

@@ -468,16 +468,21 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
               Expanded(child: Center(child: Text('No words in this class yet.',
                   style: TextStyle(color: context.textMuted))))
             else
-              Expanded(child: ListView(controller: ctrl, children: allWords.map((w) {
-                final on = pending[w.id] ?? false;
-                return CheckboxListTile(
-                  dense: true, value: on,
-                  onChanged: (v) => setSheet(() => pending[w.id] = v ?? false),
-                  activeColor: context.primary,
-                  title: Text(w.word, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.appText)),
-                  subtitle: Text(w.translation, style: TextStyle(fontSize: 11, color: context.primary)),
-                );
-              }).toList())),
+              Expanded(child: ListView.builder(
+                controller: ctrl,
+                itemCount: allWords.length,
+                itemBuilder: (_, i) {
+                  final w = allWords[i];
+                  final on = pending[w.id] ?? false;
+                  return CheckboxListTile(
+                    dense: true, value: on,
+                    onChanged: (v) => setSheet(() => pending[w.id] = v ?? false),
+                    activeColor: context.primary,
+                    title: Text(w.word, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.appText)),
+                    subtitle: Text(w.translation, style: TextStyle(fontSize: 11, color: context.primary)),
+                  );
+                },
+              )),
           ]),
         ),
       ),
@@ -627,6 +632,11 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
     // double-tap fired the insert twice, creating duplicate homework
     // assignments.
     var submitting = false;
+    // showDatePicker below pushes its own route on top of this sheet — if
+    // the sheet's route gets removed while the picker is still open (e.g.
+    // a popUntil elsewhere), calling setSheet afterward would throw since
+    // its StatefulBuilder is already gone.
+    var sheetOpen = true;
 
     await showModalBottomSheet(
       context: context, isScrollControlled: true,
@@ -668,7 +678,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                 final picked = await showDatePicker(context: ctx,
                     initialDate: DateTime.now().add(const Duration(days: 7)),
                     firstDate: DateTime.now(), lastDate: DateTime.now().add(const Duration(days: 365)));
-                if (picked != null) setSheet(() => dueDate = picked);
+                if (picked != null && sheetOpen) setSheet(() => dueDate = picked);
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -866,7 +876,10 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
 
   // ── Homework detail ────────────────────────────────────────────────────────
 
-  void _showHomeworkDetail(_Homework hw) async {
+  // Future<void>, not void — an async void function's exceptions propagate
+  // to the Zone's uncaught-error handler instead of being catchable by any
+  // caller, since there's no Future for one to await.
+  Future<void> _showHomeworkDetail(_Homework hw) async {
     final rows = await supabase.from('class_homework_progress').select('student_id, mode').eq('homework_id', hw.id);
     final completions = <String, Set<String>>{};
     for (final r in (rows as List)) {

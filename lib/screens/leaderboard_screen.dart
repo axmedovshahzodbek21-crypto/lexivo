@@ -319,8 +319,21 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     final myId = _myId;
     final tracked = _trackedEntries;
 
-    // Build the flat item list so index math is simple
-    final items = <Widget>[
+    // Indices (1-based, matching the original loop) of leaderboard rows to
+    // render — skips the top-3 podium positions when there are enough
+    // entries to show a podium. Cheap to precompute; the corresponding row
+    // widgets themselves are built lazily in the SliverList.builder below,
+    // not eagerly here — a leaderboard with hundreds of entries previously
+    // built every single row's widget tree upfront even though only a
+    // handful are ever on screen at once.
+    final rowIndices = [
+      for (int i = 1; i <= _entries.length; i++)
+        if (!(_entries.length >= 3 && i <= 3)) i,
+    ];
+
+    // Fixed-size header (podium + tracking section + divider) — cheap
+    // regardless of leaderboard size, fine to build eagerly.
+    final header = <Widget>[
       _buildPodium(today),
       // Tracking section — always visible, tap ⭐ to expand/collapse
       GestureDetector(
@@ -392,15 +405,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           ],
         ),
       ),
-      // Main leaderboard rows (skip podium positions)
-      for (int i = 1; i <= _entries.length; i++) ...[
-        if (!(_entries.length >= 3 && i <= 3)) () {
-          final entry = _entries[i - 1];
-          final isMe = myId != null && entry.userId == myId;
-          final studiedToday = entry.lastStudyDate == today;
-          return _buildRow(entry, i, isMe, studiedToday);
-        }(),
-      ],
     ];
 
     return RefreshIndicator(
@@ -410,9 +414,26 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 560),
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: items,
+          child: CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                sliver: SliverList(delegate: SliverChildListDelegate(header)),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                sliver: SliverList.builder(
+                  itemCount: rowIndices.length,
+                  itemBuilder: (_, idx) {
+                    final i = rowIndices[idx];
+                    final entry = _entries[i - 1];
+                    final isMe = myId != null && entry.userId == myId;
+                    final studiedToday = entry.lastStudyDate == today;
+                    return _buildRow(entry, i, isMe, studiedToday);
+                  },
+                ),
+              ),
+            ],
           ),
         ),
       ),

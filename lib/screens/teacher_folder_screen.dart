@@ -107,6 +107,7 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
         ],
       ),
     );
+    ctrl.dispose();
     if (name == null || name.isEmpty) return;
     final user = currentUser;
     if (user == null) return;
@@ -162,6 +163,7 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
         ],
       ),
     );
+    ctrl.dispose();
     if (name == null || name.isEmpty || name == unit.name) return;
     final user = currentUser;
     if (user == null) return;

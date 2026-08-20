@@ -138,6 +138,7 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
         ],
       ),
     );
+    ctrl.dispose();
     if (name == null || name.isEmpty) return;
     final user = currentUser;
     if (user == null) return;
@@ -184,6 +185,7 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
         ],
       ),
     );
+    ctrl.dispose();
     if (name == null || name.isEmpty || name == folder.name) return;
     final user = currentUser;
     if (user == null) return;

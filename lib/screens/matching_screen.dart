@@ -74,7 +74,10 @@ class _MatchingScreenState extends State<MatchingScreen> {
   _Sel? _selected;
   _Wrong? _wrongPair;
   int _mistakes = 0;
-  int _elapsed = 0;
+  // ValueNotifier instead of a plain field + setState: the 1Hz tick only
+  // needs to repaint the small stats-bar clock, not rebuild the whole
+  // matching grid + animations every second.
+  final ValueNotifier<int> _elapsed = ValueNotifier(0);
   bool _timerActive = false;
 
   // Totals
@@ -100,6 +103,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
   void dispose() {
     _wrongTimer?.cancel();
     _elapsedTimer?.cancel();
+    _elapsed.dispose();
     super.dispose();
   }
 
@@ -113,7 +117,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
     _selected = null;
     _wrongPair = null;
     _mistakes = 0;
-    _elapsed = 0;
+    _elapsed.value = 0;
     _timerActive = false;
     _elapsedTimer?.cancel();
   }
@@ -121,7 +125,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
   void _startTimer() {
     _timerActive = true;
     _elapsedTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() => _elapsed++);
+      _elapsed.value++;
     });
   }
 
@@ -184,7 +188,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
         }
         setState(() {
           _totalMistakes += _mistakes;
-          _totalTime += _elapsed;
+          _totalTime += _elapsed.value;
           _phase = isLast ? 'done' : 'round_done';
         });
         if (isLast) {
@@ -381,7 +385,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                '${_fmt(_elapsed)} · $_mistakes ${_mistakes == 1 ? 'mistake' : 'mistakes'}',
+                '${_fmt(_elapsed.value)} · $_mistakes ${_mistakes == 1 ? 'mistake' : 'mistakes'}',
                 style: TextStyle(color: context.textMuted),
               ),
               const SizedBox(height: 32),
@@ -451,8 +455,11 @@ class _MatchingScreenState extends State<MatchingScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
-                Text('⏱ ${_fmt(_elapsed)}',
-                    style: TextStyle(fontSize: 13, color: context.textMuted)),
+                ValueListenableBuilder<int>(
+                  valueListenable: _elapsed,
+                  builder: (_, elapsed, _) => Text('⏱ ${_fmt(elapsed)}',
+                      style: TextStyle(fontSize: 13, color: context.textMuted)),
+                ),
                 const SizedBox(width: 16),
                 if (_mistakes > 0)
                   Text('✗ $_mistakes',

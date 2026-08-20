@@ -545,7 +545,9 @@ class _LearningScreenState extends State<LearningScreen> {
         'started_at': _sessionStart.toIso8601String(),
         'last_heartbeat': DateTime.now().toIso8601String(),
       }, onConflict: 'student_id');
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[learning] heartbeat failed: $e');
+    }
   }
 
   Future<void> _emitAnalytics() async {

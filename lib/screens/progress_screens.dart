@@ -37,6 +37,7 @@ class _WordsLearnedScreenState extends State<WordsLearnedScreen> {
 
   Future<void> _load() async {
     final words = await StorageService.getLearnedWords();
+    if (!mounted) return;
     setState(() {
       _words = words;
       _loading = false;
@@ -45,7 +46,7 @@ class _WordsLearnedScreenState extends State<WordsLearnedScreen> {
     final seen = prefs.getBool('hint_words_learned_seen') ?? false;
     if (!seen) {
       await prefs.setBool('hint_words_learned_seen', true);
-      WidgetsBinding.instance.addPostFrameCallback((_) => _showHint());
+      if (mounted) WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) _showHint(); });
     }
   }
 
@@ -1296,8 +1297,14 @@ class _ReviewsDueScreenState extends State<ReviewsDueScreen> {
   void _onLangChange() { if (mounted) setState(() {}); }
 
   Future<void> _load() async {
-    final due = await StorageService.getDueWords();
-    final all = await StorageService.getSRSWords();
+    // Independent reads — parallelized instead of two sequential awaits.
+    final results = await Future.wait([
+      StorageService.getDueWords(),
+      StorageService.getSRSWords(),
+    ]);
+    if (!mounted) return;
+    final due = results[0];
+    final all = results[1];
     setState(() {
       _dueWords = due;
       _allWords = all.where((w) => !w.isMastered).toList();

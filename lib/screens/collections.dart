@@ -1112,8 +1112,11 @@ class _MasteryHeatmapSectionState extends State<_MasteryHeatmapSection> {
   }
 
   Future<void> _load() async {
-    final srsWords = await StorageService.getSRSWords();
-    final learnedWords = await StorageService.getLearnedWords();
+    // Independent reads — parallelized instead of two sequential awaits.
+    final srsWordsFuture = StorageService.getSRSWords();
+    final learnedWordsFuture = StorageService.getLearnedWords();
+    final srsWords = await srsWordsFuture;
+    final learnedWords = await learnedWordsFuture;
     final colName = widget.collection.name;
 
     final srsMap = <String, double>{};

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/supabase_service.dart';
 import '../date_utils.dart';
 import '../app_theme.dart';
+import 'class_models.dart';
 import 'library_unit_study_screen.dart';
 import '../data/word_data.dart';
 import '../data/a1_collection.dart';
@@ -441,29 +442,27 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
         for (final u in f.units) {
           if (u.hasHomework) {
             assigned++;
-            final modes = u.hwModes ?? [];
             final completed = completedModes[u.homeworkId!] ?? {};
-            if (modes.isNotEmpty && modes.every(completed.contains)) done++;
+            if (isHomeworkFullyDone(u.hwModes ?? [], completed)) done++;
           }
         }
       }
       for (final u in cwUnits) {
         if (u.hasHomework) {
           assigned++;
-          final modes = u.hwModes ?? [];
           final completed = completedModes[u.homeworkId!] ?? {};
-          if (modes.isNotEmpty && modes.every(completed.contains)) done++;
+          if (isHomeworkFullyDone(u.hwModes ?? [], completed)) done++;
         }
       }
       for (final h in collHwItems) {
         assigned++;
         final completed = completedModes[h.homeworkId] ?? {};
-        if (h.hwModes.isNotEmpty && h.hwModes.every(completed.contains)) done++;
+        if (isHomeworkFullyDone(h.hwModes, completed)) done++;
       }
       for (final h in passageItems) {
         assigned++;
         final completed = completedModes[h.homeworkId] ?? {};
-        if (h.hwModes.isNotEmpty && h.hwModes.every(completed.contains)) done++;
+        if (isHomeworkFullyDone(h.hwModes, completed)) done++;
       }
 
       if (mounted) { setState(() {
@@ -714,7 +713,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
     required String? hwDue, required bool isClassWords,
   }) {
     final completed = _completedModes[homeworkId] ?? {};
-    final allDone = hwModes.isNotEmpty && hwModes.every(completed.contains);
+    final allDone = isHomeworkFullyDone(hwModes, completed);
     final due = homeworkDueLabel(hwDue);
     final isOverdue = due?.startsWith('Overdue') == true;
     const modeIcons = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯'};
@@ -798,7 +797,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
 
   Widget _buildCollectionCard(_CollHW h) {
     final completed = _completedModes[h.homeworkId] ?? {};
-    final allDone = h.hwModes.isNotEmpty && h.hwModes.every(completed.contains);
+    final allDone = isHomeworkFullyDone(h.hwModes, completed);
     final due = homeworkDueLabel(h.hwDue);
     final isOverdue = due?.startsWith('Overdue') == true;
     const modeIcons = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯'};
@@ -890,7 +889,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
 
   Widget _buildPassageCard(_PassageHW h) {
     final completed = _completedModes[h.homeworkId] ?? {};
-    final allDone = h.hwModes.isNotEmpty && h.hwModes.every(completed.contains);
+    final allDone = isHomeworkFullyDone(h.hwModes, completed);
     final due = homeworkDueLabel(h.hwDue);
     final isOverdue = due?.startsWith('Overdue') == true;
     const passageColor = Color(0xFFF59E0B);

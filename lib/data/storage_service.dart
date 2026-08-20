@@ -754,6 +754,9 @@ class StorageService {
   static const _todayXpKey = 'today_xp';
   static const _lastXpDateKey = 'last_xp_date';
   static const _xpHistoryKey = 'xp_history';
+  // Per-day XP totals, kept forever (unlike _xpHistoryKey, which is capped
+  // at 500 raw entries) — see getXPByDate.
+  static const _xpByDateKey = 'xp_by_date';
   static const _dailyLimitKey = 'daily_words_learned';
   static const _dailyLimitDateKey = 'daily_words_date';
   static const _unitProgressKey = 'unit_progress';
@@ -2076,12 +2079,28 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
       history.add(entry);
       if (history.length > 500) history.removeRange(0, history.length - 500);
       await prefs.setString(_xpHistoryKey, jsonEncode(history));
+
+      // xp_history above is capped at 500 raw entries, so a calendar/heatmap
+      // summing it directly permanently diverges from the lifetime total
+      // once old entries age out — early study days would just vanish from
+      // the calendar while the lifetime banner keeps climbing. This map is
+      // one entry per calendar day (not per event), so it stays small even
+      // over years of daily use and is never evicted.
+      final dateKey = _dateKeyFor(DateTime.now());
+      final rawByDate = prefs.getString(_xpByDateKey);
+      final Map<String, dynamic> byDate = rawByDate != null ? jsonDecode(rawByDate) : {};
+      byDate[dateKey] = ((byDate[dateKey] as num?)?.toInt() ?? 0) + amount;
+      await prefs.setString(_xpByDateKey, jsonEncode(byDate));
+
       SyncService.pushStats();
       final oldLevel = getLevelName(current);
       final newLevel = getLevelName(newXP);
       return oldLevel != newLevel;
     });
   }
+
+  static String _dateKeyFor(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   static Future<List<Map<String, dynamic>>> getXPHistory() async {
     final prefs = await SharedPreferences.getInstance();
@@ -2091,6 +2110,18 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     return list.reversed
         .map((e) => Map<String, dynamic>.from(e as Map))
         .toList();
+  }
+
+  // Lifetime per-day XP totals — see the comment in addXP. Unlike
+  // getXPHistory() (capped at the most recent 500 events), this always
+  // reflects every day XP was ever earned, so a calendar summing this stays
+  // consistent with the lifetime total shown elsewhere.
+  static Future<Map<String, int>> getXPByDate() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_xpByDateKey);
+    if (raw == null) return {};
+    final map = jsonDecode(raw) as Map<String, dynamic>;
+    return map.map((k, v) => MapEntry(k, (v as num).toInt()));
   }
 
   static Future<int> getTodayXP() async {

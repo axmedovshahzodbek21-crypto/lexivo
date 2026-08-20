@@ -28,6 +28,12 @@ class PersonalXpCalendarScreen extends StatefulWidget {
 class _PersonalXpCalendarScreenState extends State<PersonalXpCalendarScreen> {
   bool _loading = true;
   List<Map<String, dynamic>> _entries = [];
+  // Lifetime per-day totals (see StorageService.getXPByDate) — unlike
+  // _entries (getXPHistory, capped at 500 raw events), this never loses old
+  // days, so the calendar's coloring/totals stay consistent with the
+  // lifetime XP banner instead of early days silently going blank once
+  // enough recent activity pushes them out of the capped history.
+  Map<String, int> _xpByDate = {};
   late DateTime _month;
 
   @override
@@ -38,10 +44,14 @@ class _PersonalXpCalendarScreenState extends State<PersonalXpCalendarScreen> {
   }
 
   Future<void> _load() async {
-    final history = await StorageService.getXPHistory();
+    final historyFuture = StorageService.getXPHistory();
+    final byDateFuture = StorageService.getXPByDate();
+    final history = await historyFuture;
+    final byDate = await byDateFuture;
     if (mounted) {
       setState(() {
         _entries = history;
+        _xpByDate = byDate;
         _loading = false;
       });
     }
@@ -206,14 +216,14 @@ class _PersonalXpCalendarScreenState extends State<PersonalXpCalendarScreen> {
                           final isFuture =
                               DateTime.parse(dateStr).isAfter(now);
                           final entries = byDate[dateStr] ?? [];
-                          final hasXp = entries.isNotEmpty;
-                          final dayXp = _dayTotal(entries);
+                          final dayXp = _xpByDate[dateStr] ?? _dayTotal(entries);
+                          final hasXp = dayXp > 0;
 
                           return GestureDetector(
                             onTap: isFuture || !hasXp
                                 ? null
                                 : () => _showDaySheet(
-                                    context, dateStr, entries, color),
+                                    context, dateStr, entries, dayXp, color),
                             child: Opacity(
                               opacity: isFuture ? 0.22 : 1.0,
                               child: Center(
@@ -301,8 +311,7 @@ class _PersonalXpCalendarScreenState extends State<PersonalXpCalendarScreen> {
   }
 
   void _showDaySheet(BuildContext context, String dateStr,
-      List<Map<String, dynamic>> entries, Color color) {
-    final totalXp = _dayTotal(entries);
+      List<Map<String, dynamic>> entries, int totalXp, Color color) {
     final sorted = [...entries]
       ..sort((a, b) => (b['timestamp'] as int).compareTo(a['timestamp'] as int));
 
@@ -346,7 +355,24 @@ class _PersonalXpCalendarScreenState extends State<PersonalXpCalendarScreen> {
                   ]),
                 ),
                 Divider(color: context.border, height: 1),
-                // Entries
+                // Entries — sorted can be empty for an old day whose raw
+                // events already aged out of the 500-entry cap even though
+                // its total (from the never-evicted per-day aggregate)
+                // still counts toward the lifetime banner above.
+                if (sorted.isEmpty)
+                  Expanded(
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text(
+                          'Detailed breakdown no longer available for this day — only recent activity is kept.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 13, color: context.textMuted),
+                        ),
+                      ),
+                    ),
+                  )
+                else
                 Expanded(
                   child: ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),

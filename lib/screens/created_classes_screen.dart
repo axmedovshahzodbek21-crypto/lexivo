@@ -102,14 +102,32 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> {
   Future<void> _renameClass(String classId, String newName) async {
     if (newName.trim().isEmpty) return;
     final user = currentUser;
-    await supabase.from('classes').update({'name': newName.trim()}).eq('id', classId);
+    try {
+      await supabase.from('classes').update({'name': newName.trim()}).eq('id', classId);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to rename class')),
+        );
+      }
+      return;
+    }
     if (user != null) _cache.remove(user.id);
     await _load();
   }
 
   Future<void> _deleteClass(String classId) async {
     final user = currentUser;
-    await supabase.from('classes').delete().eq('id', classId);
+    try {
+      await supabase.from('classes').delete().eq('id', classId);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to delete class')),
+        );
+      }
+      return;
+    }
     if (user != null) _cache.remove(user.id);
     await _load();
   }

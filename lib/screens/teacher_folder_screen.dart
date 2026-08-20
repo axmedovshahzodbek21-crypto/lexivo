@@ -105,11 +105,20 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
     // previously stopped an arbitrary folderId from being trusted outright.
     final folder = await supabase.from('teacher_folders').select('teacher_id').eq('id', widget.folderId).maybeSingle();
     if (folder == null || folder['teacher_id'] != user.id) return;
-    await supabase.from('teacher_units').insert({
-      'folder_id': widget.folderId,
-      'teacher_id': user.id,
-      'name': name,
-    });
+    try {
+      await supabase.from('teacher_units').insert({
+        'folder_id': widget.folderId,
+        'teacher_id': user.id,
+        'name': name,
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to create unit: $e')),
+        );
+      }
+      return;
+    }
     _load();
   }
 
@@ -146,7 +155,16 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
     if (name == null || name.isEmpty || name == unit.name) return;
     final user = currentUser;
     if (user == null) return;
-    await supabase.from('teacher_units').update({'name': name}).eq('id', unit.id).eq('teacher_id', user.id);
+    try {
+      await supabase.from('teacher_units').update({'name': name}).eq('id', unit.id).eq('teacher_id', user.id);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to rename unit: $e')),
+        );
+      }
+      return;
+    }
     _load();
   }
 

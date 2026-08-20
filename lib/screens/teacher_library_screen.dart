@@ -141,7 +141,16 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
     if (name == null || name.isEmpty) return;
     final user = currentUser;
     if (user == null) return;
-    await supabase.from('teacher_folders').insert({'teacher_id': user.id, 'name': name});
+    try {
+      await supabase.from('teacher_folders').insert({'teacher_id': user.id, 'name': name});
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to create folder: $e')),
+        );
+      }
+      return;
+    }
     _load();
   }
 
@@ -178,7 +187,16 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
     if (name == null || name.isEmpty || name == folder.name) return;
     final user = currentUser;
     if (user == null) return;
-    await supabase.from('teacher_folders').update({'name': name}).eq('id', folder.id).eq('teacher_id', user.id);
+    try {
+      await supabase.from('teacher_folders').update({'name': name}).eq('id', folder.id).eq('teacher_id', user.id);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to rename folder: $e')),
+        );
+      }
+      return;
+    }
     _load();
   }
 

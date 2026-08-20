@@ -7,6 +7,27 @@ import '../data/word_data.dart';
 import '../date_utils.dart';
 import '../services/sync_service.dart';
 
+// Minimal dependency-free async mutex: serializes read-modify-write
+// sequences against SharedPreferences' cached values (getX is synchronous,
+// setX is async I/O — a concurrent second call can read the pre-write value
+// while the first call's setX is still pending, silently losing an update).
+// Used instead of pulling in the `synchronized` package for two call sites.
+class _Mutex {
+  Future<void> _tail = Future.value();
+  Future<T> run<T>(Future<T> Function() action) {
+    final previous = _tail;
+    final completer = Completer<void>();
+    _tail = completer.future;
+    return previous.then((_) async {
+      try {
+        return await action();
+      } finally {
+        completer.complete();
+      }
+    });
+  }
+}
+
 class LearnedWord {
   final String word;
   final String translation;
@@ -715,6 +736,12 @@ class CustomList {
 // ─────────────────────────────────────────────
 
 class StorageService {
+  // Serializes addXP's read-modify-write against _xpKey/_todayXpKey/
+  // _xpHistoryKey, and grantWeeklyFreezeIfDue/_useFreeze's against
+  // _freezesKey/_lastFreezeWeekKey — see _Mutex above.
+  static final _xpMutex = _Mutex();
+  static final _freezeMutex = _Mutex();
+
   static const _learnedKey = 'learned_words';
   static const _srsKey = 'srs_words';
   static const _studyDaysKey = 'study_days';
@@ -1683,26 +1710,35 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
   // it's safe to call from multiple places (app startup, after recording a
   // study session). Called explicitly rather than buried inside a getter,
   // so it can't fire as a surprise side effect of an unrelated UI read.
-  static Future<int> grantWeeklyFreezeIfDue() async {
-    final prefs = await SharedPreferences.getInstance();
-    final currentWeek = _weekString();
-    final lastFreezeWeek = prefs.getString(_lastFreezeWeekKey);
-    if (lastFreezeWeek == currentWeek) return prefs.getInt(_freezesKey) ?? 0;
-    final streak = prefs.getInt(_streakKey) ?? 0;
-    final held = prefs.getInt(_freezesKey) ?? 0;
-    await prefs.setString(_lastFreezeWeekKey, currentWeek);
-    if (streak > 0 && held < 2) {
-      final newHeld = held + 1;
-      await prefs.setInt(_freezesKey, newHeld);
-      return newHeld;
-    }
-    return held;
+  // Wrapped in _freezeMutex: called from multiple places (app startup AND
+  // after recording a study session, per the comment above) — two
+  // near-simultaneous calls could both read lastFreezeWeek before either's
+  // setString(_lastFreezeWeekKey, ...) resolved, both pass the "not yet
+  // granted this week" check, and double-grant a freeze.
+  static Future<int> grantWeeklyFreezeIfDue() {
+    return _freezeMutex.run(() async {
+      final prefs = await SharedPreferences.getInstance();
+      final currentWeek = _weekString();
+      final lastFreezeWeek = prefs.getString(_lastFreezeWeekKey);
+      if (lastFreezeWeek == currentWeek) return prefs.getInt(_freezesKey) ?? 0;
+      final streak = prefs.getInt(_streakKey) ?? 0;
+      final held = prefs.getInt(_freezesKey) ?? 0;
+      await prefs.setString(_lastFreezeWeekKey, currentWeek);
+      if (streak > 0 && held < 2) {
+        final newHeld = held + 1;
+        await prefs.setInt(_freezesKey, newHeld);
+        return newHeld;
+      }
+      return held;
+    });
   }
 
-  static Future<void> _useFreeze() async {
-    final prefs = await SharedPreferences.getInstance();
-    final current = prefs.getInt(_freezesKey) ?? 0;
-    if (current > 0) await prefs.setInt(_freezesKey, current - 1);
+  static Future<void> _useFreeze() {
+    return _freezeMutex.run(() async {
+      final prefs = await SharedPreferences.getInstance();
+      final current = prefs.getInt(_freezesKey) ?? 0;
+      if (current > 0) await prefs.setInt(_freezesKey, current - 1);
+    });
   }
 
   // ── Achievement dates ─────────────────────────────────────────────────────
@@ -1971,33 +2007,40 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     return prefs.getInt(_xpKey) ?? 0;
   }
 
-  static Future<bool> addXP(int amount, {String reason = 'Study', String? source}) async {
-    final prefs = await SharedPreferences.getInstance();
-    final current = prefs.getInt(_xpKey) ?? 0;
-    final newXP = current + amount;
-    await prefs.setInt(_xpKey, newXP);
-    final today = _todayString();
-    final lastXpDate = prefs.getString(_lastXpDateKey);
-    int todayXp = lastXpDate == today ? (prefs.getInt(_todayXpKey) ?? 0) : 0;
-    todayXp += amount;
-    await prefs.setInt(_todayXpKey, todayXp);
-    await prefs.setString(_lastXpDateKey, today);
-    final rawHistory = prefs.getString(_xpHistoryKey);
-    final List<dynamic> history = rawHistory != null ? jsonDecode(rawHistory) : [];
-    final ts = DateTime.now().millisecondsSinceEpoch;
-    final entry = <String, dynamic>{
-      'amount': amount,
-      'reason': reason,
-      'timestamp': ts,
-    };
-    if (source != null) entry['source'] = source;
-    history.add(entry);
-    if (history.length > 500) history.removeRange(0, history.length - 500);
-    await prefs.setString(_xpHistoryKey, jsonEncode(history));
-    SyncService.pushStats();
-    final oldLevel = getLevelName(current);
-    final newLevel = getLevelName(newXP);
-    return oldLevel != newLevel;
+  // Wrapped in _xpMutex: two near-simultaneous calls (e.g. finishing a Learn
+  // session that awards XP per word, racing a background sync) could both
+  // read the same `current` before either's setInt(_xpKey, ...) resolved,
+  // silently losing one award. The mutex serializes the whole
+  // read-modify-write instead of just the individual prefs calls.
+  static Future<bool> addXP(int amount, {String reason = 'Study', String? source}) {
+    return _xpMutex.run(() async {
+      final prefs = await SharedPreferences.getInstance();
+      final current = prefs.getInt(_xpKey) ?? 0;
+      final newXP = current + amount;
+      await prefs.setInt(_xpKey, newXP);
+      final today = _todayString();
+      final lastXpDate = prefs.getString(_lastXpDateKey);
+      int todayXp = lastXpDate == today ? (prefs.getInt(_todayXpKey) ?? 0) : 0;
+      todayXp += amount;
+      await prefs.setInt(_todayXpKey, todayXp);
+      await prefs.setString(_lastXpDateKey, today);
+      final rawHistory = prefs.getString(_xpHistoryKey);
+      final List<dynamic> history = rawHistory != null ? jsonDecode(rawHistory) : [];
+      final ts = DateTime.now().millisecondsSinceEpoch;
+      final entry = <String, dynamic>{
+        'amount': amount,
+        'reason': reason,
+        'timestamp': ts,
+      };
+      if (source != null) entry['source'] = source;
+      history.add(entry);
+      if (history.length > 500) history.removeRange(0, history.length - 500);
+      await prefs.setString(_xpHistoryKey, jsonEncode(history));
+      SyncService.pushStats();
+      final oldLevel = getLevelName(current);
+      final newLevel = getLevelName(newXP);
+      return oldLevel != newLevel;
+    });
   }
 
   static Future<List<Map<String, dynamic>>> getXPHistory() async {

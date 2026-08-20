@@ -189,7 +189,7 @@ class _SplashRouterState extends State<SplashRouter> {
       // datasets instead of racing.
       await WidgetService.refreshFromSupabase();
       await WidgetService.pushStats();
-      _relinkPushIfEnabled(currentUser!.id);
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -202,6 +202,7 @@ class _SplashRouterState extends State<SplashRouter> {
           ),
         ),
       );
+      _relinkPushIfEnabled(currentUser!.id);
       return;
     }
 

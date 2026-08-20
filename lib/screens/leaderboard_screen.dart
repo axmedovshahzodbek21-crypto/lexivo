@@ -78,7 +78,19 @@ typedef _LeaderboardCache = ({
   Set<String> savedIds,
   List<LeaderboardEntry> trackedEntries,
 });
+// Keyed by user id, so this normally holds 1 entry — but a shared/test
+// device that signs in and out of several accounts would otherwise grow
+// this forever for the lifetime of the process. Cap it defensively.
+const _maxLeaderboardCacheEntries = 5;
 final _leaderboardCache = <String, _LeaderboardCache>{};
+
+void _cacheLeaderboard(String key, _LeaderboardCache value) {
+  _leaderboardCache.remove(key); // re-insert at the end to track recency
+  _leaderboardCache[key] = value;
+  while (_leaderboardCache.length > _maxLeaderboardCacheEntries) {
+    _leaderboardCache.remove(_leaderboardCache.keys.first);
+  }
+}
 
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
@@ -118,7 +130,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     }
     await Future.wait([_load(), _loadSaved()]);
     await _loadTrackedUsers();
-    _leaderboardCache[key] = (entries: _entries, savedIds: _savedIds, trackedEntries: _trackedEntries);
+    _cacheLeaderboard(key, (entries: _entries, savedIds: _savedIds, trackedEntries: _trackedEntries));
   }
 
   Future<void> _load() async {
@@ -154,16 +166,21 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     final offBoard = <LeaderboardEntry>[];
     if (missing.isNotEmpty) {
       try {
-        final statsRes = await supabase
-            .from('user_stats')
-            .select('id, xp, streak, last_study_date, today_count, total_learned')
-            .inFilter('id', missing);
+        // Independent queries against different tables — parallelized
+        // instead of two sequential round trips.
+        final results = await Future.wait([
+          supabase
+              .from('user_stats')
+              .select('id, xp, streak, last_study_date, today_count, total_learned')
+              .inFilter('id', missing),
+          supabase
+              .from('profiles')
+              .select('id, name, avatar_url')
+              .inFilter('id', missing),
+        ]);
+        final statsRes = results[0];
+        final profileRes = results[1];
         final statsMap = {for (final r in (statsRes as List)) (r as Map)['id'] as String: r};
-
-        final profileRes = await supabase
-            .from('profiles')
-            .select('id, name, avatar_url')
-            .inFilter('id', missing);
 
         for (final p in (profileRes as List)) {
           final pm = Map<String, dynamic>.from(p as Map);
@@ -469,6 +486,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     var calMonth = now.month; // 1-based
     String? fetchedBio; // null = loading, '' = no bio
     bool bioFetchStarted = false;
+    // StatefulBuilder has no `mounted` of its own — track sheet liveness
+    // manually so the async fetch below can't call setSheetState after the
+    // sheet was dismissed (throws), and so a fetch failure (previously
+    // uncaught — no catchError) doesn't leave the bio stuck on "loading".
+    var sheetOpen = true;
 
     showModalBottomSheet(
       context: context,
@@ -480,7 +502,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           if (!bioFetchStarted) {
             bioFetchStarted = true;
             supabase.from('profiles').select('bio').eq('id', entry.userId).maybeSingle().then((res) {
-              setSheetState(() => fetchedBio = (res?['bio'] as String?) ?? '');
+              if (sheetOpen) setSheetState(() => fetchedBio = (res?['bio'] as String?) ?? '');
+            }).catchError((_) {
+              if (sheetOpen) setSheetState(() => fetchedBio = '');
             });
           }
           final isSaved = _savedIds.contains(entry.userId);
@@ -665,7 +689,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           );
         },
       ),
-    );
+    ).then((_) => sheetOpen = false);
   }
 
   Widget _buildPodium(String today) {

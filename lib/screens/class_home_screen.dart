@@ -29,16 +29,6 @@ String _timeAgo(String iso) {
   return '${(diff.inDays / 7).floor()}w ago';
 }
 
-String? _dueText(String? due) {
-  if (due == null) return null;
-  final today = DateTime.now().toIso8601String().substring(0, 10);
-  final tomorrow = DateTime.now().add(const Duration(days: 1)).toIso8601String().substring(0, 10);
-  if (due.compareTo(today) < 0) return 'Overdue · $due';
-  if (due == today) return 'Due today';
-  if (due == tomorrow) return 'Due tomorrow';
-  return 'Due $due';
-}
-
 class ClassHomeScreen extends StatefulWidget {
   final String classId;
   final String className;
@@ -781,7 +771,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
 
   Widget _buildTargetRow(ClassTarget t) {
     final isPending = t.completedAt == null;
-    final due = _dueText(t.dueDate);
+    final due = homeworkDueLabel(t.dueDate);
     final isOverdue = due?.startsWith('Overdue') == true;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),

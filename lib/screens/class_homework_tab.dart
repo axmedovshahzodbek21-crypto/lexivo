@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/supabase_service.dart';
+import '../date_utils.dart';
 import '../app_theme.dart';
 import 'library_unit_study_screen.dart';
 import '../data/word_data.dart';
@@ -64,16 +65,6 @@ Widget _hwHero(String classId, String className) {
       ),
     ]),
   );
-}
-
-String? _hwDueText(String? due) {
-  if (due == null) return null;
-  final today = DateTime.now().toIso8601String().substring(0, 10);
-  final tomorrow = DateTime.now().add(const Duration(days: 1)).toIso8601String().substring(0, 10);
-  if (due.compareTo(today) < 0) return 'Overdue · $due';
-  if (due == today) return 'Due today';
-  if (due == tomorrow) return 'Due tomorrow';
-  return 'Due $due';
 }
 
 // ── Library models ─────────────────────────────────────────────────────────
@@ -724,7 +715,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   }) {
     final completed = _completedModes[homeworkId] ?? {};
     final allDone = hwModes.isNotEmpty && hwModes.every(completed.contains);
-    final due = _hwDueText(hwDue);
+    final due = homeworkDueLabel(hwDue);
     final isOverdue = due?.startsWith('Overdue') == true;
     const modeIcons = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯'};
     final accent = allDone
@@ -808,7 +799,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   Widget _buildCollectionCard(_CollHW h) {
     final completed = _completedModes[h.homeworkId] ?? {};
     final allDone = h.hwModes.isNotEmpty && h.hwModes.every(completed.contains);
-    final due = _hwDueText(h.hwDue);
+    final due = homeworkDueLabel(h.hwDue);
     final isOverdue = due?.startsWith('Overdue') == true;
     const modeIcons = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯'};
     const collColor = Color(0xFF16A34A);
@@ -900,7 +891,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   Widget _buildPassageCard(_PassageHW h) {
     final completed = _completedModes[h.homeworkId] ?? {};
     final allDone = h.hwModes.isNotEmpty && h.hwModes.every(completed.contains);
-    final due = _hwDueText(h.hwDue);
+    final due = homeworkDueLabel(h.hwDue);
     final isOverdue = due?.startsWith('Overdue') == true;
     const passageColor = Color(0xFFF59E0B);
     final accent = allDone

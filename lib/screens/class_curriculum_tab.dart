@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
+import '../date_utils.dart';
 import '../app_theme.dart';
 import 'teacher_library_screen.dart';
 import '../data/word_data.dart';
@@ -57,10 +58,7 @@ class _Homework {
     required this.studentIds, required this.totalStudents,
     required this.completionCounts,
   });
-  bool get isOverdue {
-    if (dueDate == null) return false;
-    return dueDate!.compareTo(DateTime.now().toIso8601String().substring(0, 10)) < 0;
-  }
+  bool get isOverdue => isHomeworkOverdue(dueDate);
 }
 
 // Pre-built collection registry for the picker

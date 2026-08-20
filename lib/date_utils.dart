@@ -31,3 +31,29 @@ String formatStreakDate(DateTime d) =>
 /// Today's date string under the streak day boundary — the common case of
 /// `formatStreakDate(streakAdjustedNow())`.
 String todayForStreaks() => formatStreakDate(streakAdjustedNow());
+
+// ── Homework due dates ──────────────────────────────────────────────────────
+// Unlike the streak day boundary above, a homework due date flips to
+// "overdue" at real local midnight — there's no grace-period concept here.
+// Previously reimplemented identically (byte-for-byte) in three separate
+// Flutter files, each doing the same YYYY-MM-DD string comparison against
+// today by hand.
+
+/// True when [due] (a YYYY-MM-DD date string) is strictly before today's
+/// local date. Null (no due date) is never overdue.
+bool isHomeworkOverdue(String? due) =>
+    due != null && due.compareTo(formatStreakDate(DateTime.now())) < 0;
+
+/// Human label for [due] (a YYYY-MM-DD date string, or null for "no due
+/// date"): "Overdue · `date`", "Due today", "Due tomorrow", or "Due `date`".
+/// Returns null when [due] is null, so callers can decide their own
+/// no-due-date fallback text.
+String? homeworkDueLabel(String? due) {
+  if (due == null) return null;
+  final today = formatStreakDate(DateTime.now());
+  final tomorrow = formatStreakDate(DateTime.now().add(const Duration(days: 1)));
+  if (due.compareTo(today) < 0) return 'Overdue · $due';
+  if (due == today) return 'Due today';
+  if (due == tomorrow) return 'Due tomorrow';
+  return 'Due $due';
+}

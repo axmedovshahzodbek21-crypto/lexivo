@@ -26,6 +26,7 @@ import '../data/word_data.dart';
 import '../data/storage_service.dart';
 import '../services/sync_service.dart';
 import '../services/supabase_service.dart';
+import 'class_models.dart';
 import 'class_shell.dart';
 import 'xp_level_sheet.dart';
 import 'personal_xp_calendar_screen.dart';
@@ -1929,7 +1930,7 @@ class _HomeScreenState extends State<HomeScreen>
                       spacing: 6,
                       runSpacing: 5,
                       children: [
-                        _classChip('⚡ ${(card.classXP / 10).toStringAsFixed(1)} XP'),
+                        _classChip('⚡ ${xpDisplay(card.classXP)} XP'),
                         _classChip('🔥 ${card.classStreak} day streak'),
                         if (card.pendingHomework > 0)
                           _classChipWarning('📚 ${card.pendingHomework} pending'),

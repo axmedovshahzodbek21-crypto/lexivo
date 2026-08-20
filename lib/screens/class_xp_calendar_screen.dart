@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../app_theme.dart';
 import '../date_utils.dart';
 import '../services/supabase_service.dart';
+import 'class_models.dart';
 import 'class_streak_screen.dart' show classColorFromId;
 
 const _monthNames = [
@@ -138,7 +139,7 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
                     Text('⚡', style: const TextStyle(fontSize: 32)),
                     const SizedBox(height: 4),
                     Text(
-                      '${(widget.totalXpRaw / 10).toStringAsFixed(1)} XP',
+                      '${xpDisplay(widget.totalXpRaw)} XP',
                       style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: color),
                     ),
                     Text(widget.studentName != null ? '${widget.studentName}\'s class XP' : 'Total class XP',
@@ -228,7 +229,7 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
                                           color: hasXp ? Colors.white : context.appText,
                                         )),
                                         if (hasXp)
-                                          Text('+${(dayXp / 10).toStringAsFixed(1)}',
+                                          Text('+${xpDisplay(dayXp)}',
                                             style: const TextStyle(fontSize: 7, color: Colors.white70, fontWeight: FontWeight.w600)),
                                       ],
                                     )),
@@ -307,7 +308,7 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
               Expanded(child: Text(dateStr,
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800,
                       color: color, letterSpacing: 1))),
-              Text('+${(totalXp / 10).toStringAsFixed(1)} XP',
+              Text('+${xpDisplay(totalXp)} XP',
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: color)),
             ]),
           ),
@@ -343,7 +344,7 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
                           color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87)),
                       Text('$exactTime · $ago', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
                     ])),
-                    Text('+${(xp / 10).toStringAsFixed(1)} XP',
+                    Text('+${xpDisplay(xp)} XP',
                         style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: color)),
                   ]),
                 );

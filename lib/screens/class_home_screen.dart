@@ -539,7 +539,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
                       totalXpRaw: _myClassXp,
                     ),
                   )),
-                  child: _chip('⚡ ${(_myClassXp / 10).toStringAsFixed(1)} XP'),
+                  child: _chip('⚡ ${xpDisplay(_myClassXp)} XP'),
                 ),
                 if (!widget.isTeacher) GestureDetector(
                   onTap: () => Navigator.push(context, MaterialPageRoute(
@@ -964,7 +964,7 @@ class _StudentsSheetState extends State<_StudentsSheet> {
                               Text('🔥 $streak day streak', style: TextStyle(fontSize: 11, color: ctx.textMuted)),
                           ])),
                           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                            Text('${(xp / 10).toStringAsFixed(1)} XP',
+                            Text('${xpDisplay(xp)} XP',
                               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: ctx.primary)),
                           ]),
                         ]),

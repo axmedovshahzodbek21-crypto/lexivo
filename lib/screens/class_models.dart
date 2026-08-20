@@ -3,6 +3,12 @@ import '../data/a1_collection.dart';
 import '../data/a2_collection.dart';
 import '../data/b1_collection.dart';
 
+/// class_xp_history/class_members.class_xp store XP ×10 (so partial-point
+/// awards can be recorded as integers) — this is the one place that /10
+/// division happens, instead of it being repeated as a magic number
+/// wherever a raw XP value needs to be shown to a user.
+String xpDisplay(num raw) => (raw / 10).toStringAsFixed(1);
+
 /// The 6 built-in word collections homework can be assigned from — the
 /// single source of truth for their names. class_homework.collection_name
 /// (the DB join key) has no separate stable id column, only this name, so

@@ -249,7 +249,7 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
             style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold,
               color: isMe ? ctx.primary : ctx.appText),
             maxLines: 1, overflow: TextOverflow.ellipsis),
-          Text('${(row.xp / 10).toStringAsFixed(1)} XP',
+          Text('${xpDisplay(row.xp)} XP',
             style: TextStyle(fontSize: 10, color: ctx.textMuted, fontWeight: FontWeight.w600)),
           const SizedBox(height: 2),
           Text(medal, style: const TextStyle(fontSize: 22)),
@@ -286,7 +286,7 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
         Text('#$rank in class', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: context.primary)),
       ])),
       if (_rows.isNotEmpty && rank <= _rows.length)
-        Text('${(_rows[rank - 1].xp / 10).toStringAsFixed(1)} XP',
+        Text('${xpDisplay(_rows[rank - 1].xp)} XP',
           style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: context.primary)),
     ]),
   );
@@ -339,7 +339,7 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
           ),
         ])),
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text('${(row.xp / 10).toStringAsFixed(1)} XP',
+          Text('${xpDisplay(row.xp)} XP',
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800,
               color: isMe ? context.primary : context.appText)),
         ]),

@@ -151,13 +151,24 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
   }
 
   Future<void> _deleteUnit(_Unit unit) async {
+    // class_homework.unit_id -> teacher_units(id) is ON DELETE CASCADE, so
+    // deleting this unit silently wipes every class's homework assignment
+    // (and all student completion history via class_homework_progress'
+    // own cascade) for it. Warn the teacher before that happens.
+    List assignedHw = const [];
+    try {
+      assignedHw = await supabase.from('class_homework').select('id').eq('unit_id', unit.id);
+    } catch (_) {}
+    if (!mounted) return;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: context.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text('Delete unit?', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
-        content: Text('This will delete "${unit.name}" and all its words permanently.',
+        content: Text(assignedHw.isEmpty
+            ? 'This will delete "${unit.name}" and all its words permanently.'
+            : 'This will delete "${unit.name}" and all its words permanently. It is currently assigned as homework in ${assignedHw.length} place${assignedHw.length != 1 ? 's' : ''} — deleting it will also remove that homework and every student\'s progress on it.',
             style: TextStyle(color: context.textMuted)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: context.textMuted))),

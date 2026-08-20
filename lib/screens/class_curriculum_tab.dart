@@ -355,11 +355,22 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
   }
 
   Future<void> _deleteClassUnit(_ClassWordUnit unit) async {
+    // class_homework.class_unit_id -> class_word_units(id) is ON DELETE
+    // CASCADE, so deleting this unit silently wipes any homework assigned
+    // from it (and all student completion history). Warn the teacher first.
+    List assignedHw = const [];
+    try {
+      assignedHw = await supabase.from('class_homework').select('id').eq('class_unit_id', unit.id);
+    } catch (_) {}
+    if (!mounted) return;
     final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
       backgroundColor: context.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Text('Delete unit?', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
-      content: Text('Delete "${unit.name}"? Words will remain in the class but lose their unit assignment.', style: TextStyle(color: context.textMuted)),
+      content: Text(assignedHw.isEmpty
+          ? 'Delete "${unit.name}"? Words will remain in the class but lose their unit assignment.'
+          : 'Delete "${unit.name}"? Words will remain in the class but lose their unit assignment. This unit is currently assigned as homework in ${assignedHw.length} place${assignedHw.length != 1 ? 's' : ''} — deleting it will also remove that homework and every student\'s progress on it.',
+          style: TextStyle(color: context.textMuted)),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: context.textMuted))),
         ElevatedButton(onPressed: () => Navigator.pop(ctx, true),

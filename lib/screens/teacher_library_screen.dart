@@ -183,13 +183,28 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
   }
 
   Future<void> _deleteFolder(_Folder folder) async {
+    // teacher_folders -> teacher_units -> class_homework are all
+    // ON DELETE CASCADE, so deleting this folder silently wipes every
+    // class's homework assignment (and all student completion history) for
+    // any unit inside it. Warn the teacher before that happens.
+    List assignedHw = const [];
+    try {
+      final units = await supabase.from('teacher_units').select('id').eq('folder_id', folder.id);
+      final unitIds = (units as List).map((u) => (u as Map)['id'] as String).toList();
+      if (unitIds.isNotEmpty) {
+        assignedHw = await supabase.from('class_homework').select('id').inFilter('unit_id', unitIds);
+      }
+    } catch (_) {}
+    if (!mounted) return;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: context.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text('Delete folder?', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
-        content: Text('This will delete "${folder.name}" and all its units and words permanently.',
+        content: Text(assignedHw.isEmpty
+            ? 'This will delete "${folder.name}" and all its units and words permanently.'
+            : 'This will delete "${folder.name}" and all its units and words permanently. Units in it are currently assigned as homework in ${assignedHw.length} place${assignedHw.length != 1 ? 's' : ''} — deleting it will also remove that homework and every student\'s progress on it.',
             style: TextStyle(color: context.textMuted)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: context.textMuted))),

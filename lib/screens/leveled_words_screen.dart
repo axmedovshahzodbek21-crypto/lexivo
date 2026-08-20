@@ -272,6 +272,7 @@ class _FoundationScreenState extends State<FoundationScreen> {
       if (progress.isComplete) b1Done++;
     }
 
+    if (!mounted) return;
     setState(() {
       _completedUnits = {'A1': a1Done, 'A2': a2Done, 'B1': b1Done};
       _loading = false;
@@ -532,6 +533,7 @@ class _WordsLibraryScreenState extends State<WordsLibraryScreen>
 
     _cache = leveledLearned;
     _cacheUserId = currentUser?.id;
+    if (!mounted) return;
     setState(() {
       _learnedWords = leveledLearned;
       _loading = false;

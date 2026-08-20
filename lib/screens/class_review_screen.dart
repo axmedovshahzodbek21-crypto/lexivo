@@ -32,6 +32,11 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
   int _knew = 0;
   int _didntKnow = 0;
   bool _done = false;
+  // Guards _answer() against re-entrancy — without it, a double-tap on
+  // "Got it"/"Not Yet" before the first call's awaits resolve re-enters
+  // with the same _index (it only advances at the very end), double-
+  // awarding XP and double-recording class activity for the same card.
+  bool _answering = false;
   late final AnimationController _ctrl;
   late final Animation<double> _anim;
 
@@ -102,35 +107,41 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
   }
 
   Future<void> _answer(bool knew) async {
-    final user = currentUser;
-    final card = _cards[_index];
-    if (widget.dueOnly && user != null && card.isSRS) {
-      try {
-        await advanceClassSRSWord(
-            userId: user.id, classId: widget.classId, word: card.word, knew: knew);
-        if (!knew) {
-          await addClassHardWord(
-              userId: user.id, classId: widget.classId, word: card.word);
+    if (_answering) return;
+    _answering = true;
+    try {
+      final user = currentUser;
+      final card = _cards[_index];
+      if (widget.dueOnly && user != null && card.isSRS) {
+        try {
+          await advanceClassSRSWord(
+              userId: user.id, classId: widget.classId, word: card.word, knew: knew);
+          if (!knew) {
+            await addClassHardWord(
+                userId: user.id, classId: widget.classId, word: card.word);
+          }
+          final xp = knew ? 5 : 2;
+          await recordClassActivity(user.id, widget.classId, xp: xp, reason: 'SRS Review');
+          await StorageService.addXP(xp, reason: 'SRS Review', source: 'Class · ${widget.className}');
+        } catch (_) {
+          // Best-effort — an SRS/XP write failing shouldn't block the student
+          // from continuing their review session.
         }
-        final xp = knew ? 5 : 2;
-        await recordClassActivity(user.id, widget.classId, xp: xp, reason: 'SRS Review');
-        await StorageService.addXP(xp, reason: 'SRS Review', source: 'Class · ${widget.className}');
-      } catch (_) {
-        // Best-effort — an SRS/XP write failing shouldn't block the student
-        // from continuing their review session.
+        if (!mounted) return;
       }
-      if (!mounted) return;
-    }
-    setState(() {
-      if (knew) { _knew++; } else { _didntKnow++; }
-    });
+      setState(() {
+        if (knew) { _knew++; } else { _didntKnow++; }
+      });
 
-    if (_index + 1 >= _cards.length) {
-      setState(() => _done = true);
-      return;
+      if (_index + 1 >= _cards.length) {
+        setState(() => _done = true);
+        return;
+      }
+      _ctrl.reset();
+      setState(() { _flipped = false; _index++; });
+    } finally {
+      _answering = false;
     }
-    _ctrl.reset();
-    setState(() { _flipped = false; _index++; });
   }
 
   // In embedded (tab) mode there's no route to pop — instead reset and

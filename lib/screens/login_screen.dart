@@ -110,6 +110,10 @@ class _LoginScreenState extends State<LoginScreen> {
     final emailCtrl = TextEditingController(text: _emailCtrl.text.trim());
     String? dialogError;
     bool sent = false;
+    // StatefulBuilder has no `mounted` of its own — track dialog liveness
+    // manually so the async password-reset call below can't call setS()
+    // after the dialog was dismissed (throws).
+    var dialogOpen = true;
 
     await showDialog(
       context: context,
@@ -163,11 +167,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           email,
                           redirectTo: 'https://lexivo-web-six.vercel.app/update-password',
                         );
-                        setS(() { sent = true; _resetLoading = false; });
+                        if (dialogOpen) setS(() { sent = true; _resetLoading = false; });
                       } on AuthException catch (e) {
-                        setS(() { dialogError = e.message; _resetLoading = false; });
+                        if (dialogOpen) setS(() { dialogError = e.message; _resetLoading = false; });
                       } catch (_) {
-                        setS(() { dialogError = tr('something_wrong'); _resetLoading = false; });
+                        if (dialogOpen) setS(() { dialogError = tr('something_wrong'); _resetLoading = false; });
                       }
                     },
                     style: FilledButton.styleFrom(backgroundColor: context.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
@@ -179,6 +183,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
+    dialogOpen = false;
     emailCtrl.dispose();
   }
 

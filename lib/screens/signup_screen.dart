@@ -68,7 +68,7 @@ class _SignupScreenState extends State<SignupScreen> {
       if (!mounted) return;
       _goToApp();
     } on AuthException catch (e) {
-      setState(() => _error = e.message);
+      if (mounted) setState(() => _error = e.message);
     } finally {
       if (mounted) setState(() => _loading = false);
     }

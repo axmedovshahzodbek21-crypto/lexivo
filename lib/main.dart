@@ -22,47 +22,59 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initSupabase();
-  OneSignalService.initialize();
-  OneSignalService.onNotificationClick((data) {
-    final classId = data['class_id'] as String?;
-    if (classId == null || classId.isEmpty) return;
-    DeepLinkService.navigateToClass(
-      classId: classId,
-      className: data['class_name'] as String? ?? 'Class',
-      isTeacher: data['is_teacher'] == true,
+  // The whole startup sequence used to be one flat unguarded await chain —
+  // any single failing step (Supabase, notifications, content loading, etc.)
+  // threw out of main() before runApp() ever ran, leaving the user stuck on
+  // a blank/native splash screen forever with no way to retry. Every step
+  // below is best-effort: log and fall through to runApp() with whatever
+  // defaults the ValueNotifiers already have, rather than never rendering
+  // anything at all.
+  try {
+    await initSupabase();
+    OneSignalService.initialize();
+    OneSignalService.onNotificationClick((data) {
+      final classId = data['class_id'] as String?;
+      if (classId == null || classId.isEmpty) return;
+      DeepLinkService.navigateToClass(
+        classId: classId,
+        className: data['class_name'] as String? ?? 'Class',
+        isTeacher: data['is_teacher'] == true,
+      );
+    });
+    await WidgetService.init();
+    await DeepLinkService.init();
+    await ContentService.initialize();
+    await NotificationService.initialize();
+    final prefs = await SharedPreferences.getInstance();
+    final notifEnabled = prefs.getBool('notifications_enabled') ?? true;
+    final notifTime = await NotificationService.getSavedTime();
+    // Resolve this week's freeze grant once, explicitly, before anything
+    // reads streak/freeze state — getStreak()'s missed-day forgiveness and
+    // home.dart's freeze display both depend on it already being current.
+    await StorageService.grantWeeklyFreezeIfDue();
+    final streak = await StorageService.getStreak().catchError((_) => 0);
+    final userName = prefs.getString('user_name') ?? '';
+    await NotificationService.scheduleReminder(
+      customTime: notifTime,
+      streak: streak,
+      userName: userName,
+      enabled: notifEnabled,
     );
-  });
-  await WidgetService.init();
-  await DeepLinkService.init();
-  await ContentService.initialize();
-  await NotificationService.initialize();
-  final prefs = await SharedPreferences.getInstance();
-  final notifEnabled = prefs.getBool('notifications_enabled') ?? true;
-  final notifTime = await NotificationService.getSavedTime();
-  // Resolve this week's freeze grant once, explicitly, before anything
-  // reads streak/freeze state — getStreak()'s missed-day forgiveness and
-  // home.dart's freeze display both depend on it already being current.
-  await StorageService.grantWeeklyFreezeIfDue();
-  final streak = await StorageService.getStreak().catchError((_) => 0);
-  final userName = prefs.getString('user_name') ?? '';
-  await NotificationService.scheduleReminder(
-    customTime: notifTime,
-    streak: streak,
-    userName: userName,
-    enabled: notifEnabled,
-  );
-  appLangNotifier.value = prefs.getString('ui_language') ?? 'en';
-  textScaleNotifier.value = prefs.getDouble('text_scale') ?? 1.0;
-  final pulseEnabled = prefs.getBool('pulse_enabled') ?? true;
-  final pulseSpeed = prefs.getString('pulse_speed') ?? 'normal';
-  pulseNotifier.value = pulseEnabled ? pulseSpeed : 'off';
-  final themeModeStr = prefs.getString('theme_mode') ?? 'system';
-  themeModeNotifier.value = themeModeStr == 'dark'
-      ? ThemeMode.dark
-      : themeModeStr == 'light'
-          ? ThemeMode.light
-          : ThemeMode.system;
+    appLangNotifier.value = prefs.getString('ui_language') ?? 'en';
+    textScaleNotifier.value = prefs.getDouble('text_scale') ?? 1.0;
+    final pulseEnabled = prefs.getBool('pulse_enabled') ?? true;
+    final pulseSpeed = prefs.getString('pulse_speed') ?? 'normal';
+    pulseNotifier.value = pulseEnabled ? pulseSpeed : 'off';
+    final themeModeStr = prefs.getString('theme_mode') ?? 'system';
+    themeModeNotifier.value = themeModeStr == 'dark'
+        ? ThemeMode.dark
+        : themeModeStr == 'light'
+            ? ThemeMode.light
+            : ThemeMode.system;
+  } catch (e, st) {
+    // ignore: avoid_print
+    print('[main] startup init failed, continuing with defaults: $e\n$st');
+  }
 
   runApp(const LexivoApp());
 }
@@ -169,8 +181,14 @@ class _SplashRouterState extends State<SplashRouter> {
       // words, etc.) over newer cloud data before the initial pull lands.
       await SyncService.pullAll();
       if (!mounted) return;
-      WidgetService.refreshFromSupabase();
-      WidgetService.pushStats();
+      // Both write to the home-screen widget's saved data and both end
+      // with HomeWidget.updateWidget() (which re-renders from whatever is
+      // currently saved across every key) — firing them unawaited let
+      // whichever happened to finish last win, with no guaranteed order.
+      // Sequenced so the widget's first render after login reflects both
+      // datasets instead of racing.
+      await WidgetService.refreshFromSupabase();
+      await WidgetService.pushStats();
       _relinkPushIfEnabled(currentUser!.id);
       Navigator.pushReplacement(
         context,

@@ -98,6 +98,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
     final name = _renameController.text.trim();
     if (name.isEmpty || _list == null) return;
     await StorageService.saveCustomList(_list!.copyWith(name: name));
+    if (!mounted) return;
     setState(() => _renaming = false);
     _load();
   }

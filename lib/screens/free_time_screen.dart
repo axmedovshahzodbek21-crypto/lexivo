@@ -32,6 +32,7 @@ class _FreeTimeScreenState extends State<FreeTimeScreen> {
 
   Future<void> _load() async {
     final mastered = await StorageService.getMasteredWords();
+    if (!mounted) return;
     setState(() {
       _masteredWords = mastered;
       _loading = false;

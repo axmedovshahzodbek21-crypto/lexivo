@@ -47,6 +47,7 @@ class _CustomListsScreenState extends State<CustomListsScreen> {
       createdAt: DateTime.now().toIso8601String(),
     );
     await StorageService.saveCustomList(list);
+    if (!mounted) return;
     _nameController.clear();
     setState(() => _creating = false);
     await _load();
@@ -60,6 +61,7 @@ class _CustomListsScreenState extends State<CustomListsScreen> {
 
   Future<void> _delete(String id) async {
     await StorageService.deleteCustomList(id);
+    if (!mounted) return;
     setState(() => _deleteId = null);
     _load();
   }

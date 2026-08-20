@@ -573,6 +573,7 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
     // Record SRS locked day if nothing is due today
     if (dueWords.isEmpty) await StorageService.recordSRSLockedDay();
     final completeDays = reviewDays.where((d) => wordGoalDays.contains(d)).toList();
+    if (!mounted) return;
     setState(() {
       _streak          = _calcCurrentStreak(completeDays);
       _reviewDays      = reviewDays;

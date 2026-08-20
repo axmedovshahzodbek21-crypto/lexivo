@@ -303,7 +303,9 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
       _wordCtrl.clear(); _translationCtrl.clear(); _definitionCtrl.clear();
       _example1Ctrl.clear(); _example1TrCtrl.clear(); _example2Ctrl.clear(); _example2TrCtrl.clear();
       await _loadWords();
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) setState(() => _manualError = 'Failed to add word: $e');
+    }
     if (mounted) setState(() => _saving = false);
   }
 
@@ -335,7 +337,13 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
       setState(() => _parsed = []);
       await _loadWords();
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${rows.length} words added!'), duration: const Duration(seconds: 2)));
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to import words: $e')),
+        );
+      }
+    }
     if (mounted) setState(() => _importing = false);
   }
 
@@ -352,10 +360,29 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
         _starredCount++;
       }
     });
-    if (isStarred) {
-      await removeClassStarredWord(userId: user.id, classId: widget.classId, word: word);
-    } else {
-      await addClassStarredWord(userId: user.id, classId: widget.classId, word: word);
+    try {
+      if (isStarred) {
+        await removeClassStarredWord(userId: user.id, classId: widget.classId, word: word);
+      } else {
+        await addClassStarredWord(userId: user.id, classId: widget.classId, word: word);
+      }
+    } catch (_) {
+      // Revert the optimistic update — the star toggle never made it to the
+      // server, so leaving it applied locally would desync from what's
+      // actually stored (and get silently overwritten on the next reload).
+      if (!mounted) return;
+      setState(() {
+        if (isStarred) {
+          _starredIds = {..._starredIds, word};
+          _starredCount++;
+        } else {
+          _starredIds = {..._starredIds}..remove(word);
+          _starredCount--;
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to update star — try again')),
+      );
     }
   }
 
@@ -1042,7 +1069,13 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
         setState(() => _selectedDayIdx = null);
       }
       await _loadWords();
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to import collection: $e')),
+        );
+      }
+    }
     if (mounted) setState(() => _importingCollection = false);
   }
 

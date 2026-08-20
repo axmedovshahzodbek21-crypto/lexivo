@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
+import '../date_utils.dart';
 import '../services/supabase_service.dart';
 import 'class_streak_screen.dart' show classColorFromId;
 
@@ -67,9 +68,14 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
   }
 
   Map<String, List<Map<String, dynamic>>> get _byDate {
+    // created_at comes back from Supabase as a UTC timestamp — taking the
+    // date substring directly (as before) read the UTC calendar date, not
+    // the device's local one, so a late-night XP award could land on the
+    // wrong day cell. Parsing and converting .toLocal() first fixes that,
+    // matching how class_progress_screen.dart's study calendar does it.
     final map = <String, List<Map<String, dynamic>>>{};
     for (final e in _entries) {
-      final day = (e['created_at'] as String).substring(0, 10);
+      final day = formatStreakDate(DateTime.parse(e['created_at'] as String).toLocal());
       (map[day] ??= []).add(e);
     }
     return map;
@@ -89,7 +95,9 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
   Widget build(BuildContext context) {
     final color = classColorFromId(widget.classId);
     final now = DateTime.now();
-    final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    // Same streak-day boundary as class_streak_screen.dart/class_progress_
+    // screen.dart, so this calendar's "today" highlight agrees with theirs.
+    final todayStr = todayForStreaks();
     final canNext = !(_month.year == now.year && _month.month == now.month);
     final monthName = _monthNames[_month.month - 1];
     final mm = _month.month.toString().padLeft(2, '0');

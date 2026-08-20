@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
 import '../services/class_srs_service.dart';
 import '../app_theme.dart';
+import '../date_utils.dart';
 
 List<Color> _pgGradColors(String id) {
   const grads = <List<Color>>[
@@ -145,13 +146,16 @@ class _ClassProgressScreenState extends State<ClassProgressScreen> {
     }
   }
 
-  String _todayStr() => DateTime.now().toIso8601String().substring(0, 10);
+  // Same streak-day boundary as class_streak_screen.dart/class_dashboard_
+  // screen.dart (see date_utils.dart) — using a plain DateTime.now() here
+  // instead would disagree with those about what "today" is right around
+  // the boundary hour, showing a word due (or the calendar's "today" cell)
+  // a bit early relative to the rest of the app.
+  String _todayStr() => todayForStreaks();
 
   List<String> _last30Days() {
-    return List.generate(30, (i) {
-      final d = DateTime.now().subtract(Duration(days: 29 - i));
-      return d.toIso8601String().substring(0, 10);
-    });
+    final now = streakAdjustedNow();
+    return List.generate(30, (i) => formatStreakDate(now.subtract(Duration(days: 29 - i))));
   }
 
   @override
@@ -162,9 +166,15 @@ class _ClassProgressScreenState extends State<ClassProgressScreen> {
     final dueCount = _entries.where((e) => e.nextDue.compareTo(today) <= 0 && e.stage < 5).length;
     final learnedCount = _entries.length;
     final stageCounts = List.generate(6, (s) => _entries.where((e) => e.stage == s).length);
+    // lastReviewed comes back from Supabase as a UTC timestamp string —
+    // taking the date substring directly (as before) read the UTC calendar
+    // date, not the device's local one, so a late-night review could land
+    // on the wrong cell in the local-dated 30-day calendar below. Parsing
+    // and converting .toLocal() first fixes that mismatch.
     final reviewDates = _entries
-        .map((e) => e.lastReviewed?.substring(0, 10))
+        .map((e) => e.lastReviewed)
         .whereType<String>()
+        .map((s) => formatStreakDate(DateTime.parse(s).toLocal()))
         .toSet();
     final days = _last30Days();
 

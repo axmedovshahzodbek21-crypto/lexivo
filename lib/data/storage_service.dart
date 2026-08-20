@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/word_data.dart';
+import '../date_utils.dart';
 import '../services/sync_service.dart';
 
 class LearnedWord {
@@ -92,10 +93,7 @@ class SRSWord {
   }) : nextReviewDate = nextReviewDate ?? _nextDateFromNow(1),
        learnedAt = learnedAt ?? _todayStr();
 
-  static String _todayStr() {
-    final now = DateTime.now().subtract(const Duration(hours: 2));
-    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-  }
+  static String _todayStr() => todayForStreaks();
 
   static String _nextDateFromNow(int days) {
     final today = DateTime.parse(_todayStr());
@@ -2033,10 +2031,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
 
   static bool isMaxLevel(int xp) => xp >= _levels.last.$2;
 
-  static String _todayString() {
-    final now = DateTime.now().subtract(const Duration(hours: 2));
-    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-  }
+  static String _todayString() => todayForStreaks();
 
   static String _weekString() {
     final now = DateTime.now();

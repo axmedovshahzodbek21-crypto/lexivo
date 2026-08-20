@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../data/storage_service.dart';
+import '../date_utils.dart';
 import 'widget_service.dart';
 
 /// Push-on-change + pull-on-login sync against the single `user_data` table.
@@ -16,10 +17,7 @@ class SyncService {
 
   static String _now() => DateTime.now().toUtc().toIso8601String();
 
-  static String _todayStr() {
-    final now = DateTime.now().subtract(const Duration(hours: 2));
-    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-  }
+  static String _todayStr() => todayForStreaks();
 
   // Uses the same key set as StorageService.resetProgressKeepingImportedWords()
   // (this device's own "Reset Progress") so a reset performed on another

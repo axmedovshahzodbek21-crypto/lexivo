@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import '../date_utils.dart';
 import '../main.dart';
 import 'leveled_words_screen.dart';
 import 'stats_screen.dart';
@@ -165,21 +166,18 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  static String _homeDateStr(DateTime d) =>
-      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-
   static int _homeCalcStreak(List<String> days) {
     if (days.isEmpty) return 0;
     final set = days.toSet();
-    final now = DateTime.now().subtract(const Duration(hours: 2));
-    final today = _homeDateStr(now);
-    final yesterday = _homeDateStr(now.subtract(const Duration(days: 1)));
+    final now = streakAdjustedNow();
+    final today = formatStreakDate(now);
+    final yesterday = formatStreakDate(now.subtract(const Duration(days: 1)));
     if (!set.contains(today) && !set.contains(yesterday)) return 0;
     int count = 0;
     DateTime cur = set.contains(today)
         ? now
         : now.subtract(const Duration(days: 1));
-    while (set.contains(_homeDateStr(cur))) {
+    while (set.contains(formatStreakDate(cur))) {
       count++;
       cur = cur.subtract(const Duration(days: 1));
     }

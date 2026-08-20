@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/storage_service.dart';
+import '../date_utils.dart';
 import '../services/sync_service.dart';
 import '../app_theme.dart';
 import 'srs_review_screen.dart';
@@ -585,22 +586,18 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
     });
   }
 
-  String _dateStr(DateTime d) =>
-      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-
   // Current streak = consecutive complete days ending today or yesterday
   int _calcCurrentStreak(List<String> days) {
     if (days.isEmpty) return 0;
     final set = days.toSet();
-    // Use same -2h offset as storage_service so "today" matches
-    final now = DateTime.now().subtract(const Duration(hours: 2));
-    final today = _dateStr(now);
-    final yesterday = _dateStr(now.subtract(const Duration(days: 1)));
+    final now = streakAdjustedNow();
+    final today = formatStreakDate(now);
+    final yesterday = formatStreakDate(now.subtract(const Duration(days: 1)));
     // Streak must be anchored to today or yesterday
     if (!set.contains(today) && !set.contains(yesterday)) return 0;
     var cursor = set.contains(today) ? now : now.subtract(const Duration(days: 1));
     int streak = 0;
-    while (set.contains(_dateStr(cursor))) {
+    while (set.contains(formatStreakDate(cursor))) {
       streak++;
       cursor = cursor.subtract(const Duration(days: 1));
     }

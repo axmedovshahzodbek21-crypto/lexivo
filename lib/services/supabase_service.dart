@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../date_utils.dart';
+
 const _supabaseUrl = 'https://jzozrqbzhagezlwncktf.supabase.co';
 const _supabaseKey = 'sb_publishable_hLGMI-rjYNWAMmPyW_7Cnw_4J2-j3sX';
 
@@ -80,19 +82,16 @@ class HomeClassCard {
   );
 }
 
-String _dateStr(DateTime d) =>
-    '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-
 int _computeClassStreak(List<String> dates) {
   if (dates.isEmpty) return 0;
   final set = dates.toSet();
-  final now = DateTime.now().subtract(const Duration(hours: 2));
-  final today = _dateStr(now);
-  final yesterday = _dateStr(now.subtract(const Duration(days: 1)));
+  final now = streakAdjustedNow();
+  final today = formatStreakDate(now);
+  final yesterday = formatStreakDate(now.subtract(const Duration(days: 1)));
   if (!set.contains(today) && !set.contains(yesterday)) return 0;
   int streak = 0;
   DateTime cur = set.contains(today) ? now : now.subtract(const Duration(days: 1));
-  while (set.contains(_dateStr(cur))) {
+  while (set.contains(formatStreakDate(cur))) {
     streak++;
     cur = cur.subtract(const Duration(days: 1));
   }
@@ -107,7 +106,11 @@ Future<void> recordClassActivity(
   String reason = '',
 }) async {
   try {
-    final today = _dateStr(DateTime.now());
+    // Same streak day boundary as _computeClassStreak below — recording (or
+    // querying, see getHomeClassCards) a study day with a plain
+    // DateTime.now() instead would disagree with the streak calculation for
+    // a session between midnight and the boundary hour.
+    final today = todayForStreaks();
     // Atomic upsert instead of select-then-insert: two near-simultaneous
     // calls (e.g. finishing two homework modes back to back) could otherwise
     // both see "not exists" and both attempt insert, one hitting a
@@ -159,7 +162,7 @@ Future<List<HomeClassCard>> getHomeClassCards(String userId) async {
     // Teacher cards
     if (taught.isNotEmpty) {
       final taughtList = taughtIds.toList();
-      final today = _dateStr(DateTime.now());
+      final today = todayForStreaks();
       final batch = await Future.wait([
         supabase.from('class_members').select('class_id').inFilter('class_id', taughtList),
         supabase.from('class_study_days').select('class_id').inFilter('class_id', taughtList).eq('study_date', today),

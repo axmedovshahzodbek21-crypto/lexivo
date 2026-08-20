@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/supabase_service.dart';
+import '../date_utils.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import 'class_models.dart';
@@ -409,15 +410,13 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
         ..sort();
       if (days.isEmpty) return;
       final set = days.toSet();
-      final now = DateTime.now().subtract(const Duration(hours: 2));
-      String dateStr(DateTime d) =>
-          '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-      final today = dateStr(now);
-      final yesterday = dateStr(now.subtract(const Duration(days: 1)));
+      final now = streakAdjustedNow();
+      final today = formatStreakDate(now);
+      final yesterday = formatStreakDate(now.subtract(const Duration(days: 1)));
       if (!set.contains(today) && !set.contains(yesterday)) return;
       var cursor = set.contains(today) ? now : now.subtract(const Duration(days: 1));
       int streak = 0;
-      while (set.contains(dateStr(cursor))) {
+      while (set.contains(formatStreakDate(cursor))) {
         streak++;
         cursor = cursor.subtract(const Duration(days: 1));
       }

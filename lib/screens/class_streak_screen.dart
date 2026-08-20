@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
+import '../date_utils.dart';
 import '../services/supabase_service.dart';
 
 /// Computes a deterministic color for a class from its ID — mirrors the
@@ -81,20 +82,16 @@ class _ClassStreakScreenState extends State<ClassStreakScreen> {
       ? '${widget.viewUserName} · ${widget.className}'
       : '${widget.className} Streak';
 
-  String _dateStr(DateTime d) =>
-      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-
   int _calcCurrent(List<String> days) {
     if (days.isEmpty) return 0;
     final set = days.toSet();
-    // 2-hour offset so midnight doesn't reset streak prematurely
-    final now = DateTime.now().subtract(const Duration(hours: 2));
-    final today = _dateStr(now);
-    final yesterday = _dateStr(now.subtract(const Duration(days: 1)));
+    final now = streakAdjustedNow();
+    final today = formatStreakDate(now);
+    final yesterday = formatStreakDate(now.subtract(const Duration(days: 1)));
     if (!set.contains(today) && !set.contains(yesterday)) return 0;
     var cursor = set.contains(today) ? now : now.subtract(const Duration(days: 1));
     int streak = 0;
-    while (set.contains(_dateStr(cursor))) {
+    while (set.contains(formatStreakDate(cursor))) {
       streak++;
       cursor = cursor.subtract(const Duration(days: 1));
     }
@@ -152,7 +149,7 @@ class _ClassStreakScreenState extends State<ClassStreakScreen> {
     }
 
     final now = DateTime.now();
-    final todayStr = _dateStr(now);
+    final todayStr = formatStreakDate(now);
     final canGoNext = !(_month.year == now.year && _month.month == now.month);
     final monthName = [
       'January', 'February', 'March', 'April', 'May', 'June',

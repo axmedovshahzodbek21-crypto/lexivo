@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/word_data.dart';
 import '../data/storage_service.dart';
+import '../date_utils.dart';
 import 'flashcard.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
@@ -49,10 +50,7 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
   String get _dailyLearnedWordsKey =>
       'daily_learned_words_${widget.collection.id}_${_todayString()}';
 
-  String _todayString() {
-    final now = DateTime.now().subtract(const Duration(hours: 2));
-    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-  }
+  String _todayString() => todayForStreaks();
 
   @override
   void initState() {

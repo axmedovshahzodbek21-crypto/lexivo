@@ -760,7 +760,10 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
         final data = jsonDecode(response.body);
         final audioContent = base64Decode(data['audioContent']);
         final dir = await getTemporaryDirectory();
-        final file = File('${dir.path}/tts_output.mp3');
+        // Unique per request — a shared fixed filename meant rapid repeated
+        // taps could interleave one request's write with another's read,
+        // playing back a corrupted file or the wrong word.
+        final file = File('${dir.path}/tts_output_${DateTime.now().microsecondsSinceEpoch}.mp3');
         await file.writeAsBytes(audioContent);
         await _audioPlayer.stop();
         await _audioPlayer.play(DeviceFileSource(file.path));

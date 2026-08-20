@@ -3,22 +3,30 @@ import '../data/a1_collection.dart';
 import '../data/a2_collection.dart';
 import '../data/b1_collection.dart';
 
+/// The 6 built-in word collections homework can be assigned from — the
+/// single source of truth for their names. class_homework.collection_name
+/// (the DB join key) has no separate stable id column, only this name, so
+/// this list is what everything else (the assignment picker, the lookup
+/// below) derives from instead of separately hand-typing each title.
+final builtInCollections = <WordCollection>[
+  thirtyDaysCollection, vocabularyChallengeCollection, wordMasteryCollection,
+  a1Collection, a2Collection, b1Collection,
+];
+
 /// Looks up one of the six built-in word collections by its exact display
-/// name, as stored in class_homework.collection_name. Previously
-/// reimplemented identically in 3 Flutter files (class_curriculum_tab.dart,
-/// class_homework_tab.dart, library_unit_study_screen.dart) — renaming a
-/// collection required updating every copy in lockstep, or homework
-/// silently fell back to whatever the caller did on a null return.
+/// name, as stored in class_homework.collection_name. Previously a switch
+/// statement with each title hand-typed as a separate string literal,
+/// independent of the real WordCollection.name it was supposed to match —
+/// renaming a collection's name here required also finding and updating
+/// that copy (and the ones in class_curriculum_tab.dart's picker list) in
+/// lockstep, or the lookup silently returned null with no error surfaced.
+/// Deriving the match from builtInCollections instead means a rename can't
+/// desync the two.
 WordCollection? collectionByName(String name) {
-  switch (name) {
-    case '30 Days of Powerful Words': return thirtyDaysCollection;
-    case '24 Vocabulary Challenge':   return vocabularyChallengeCollection;
-    case 'Word Mastery':              return wordMasteryCollection;
-    case 'A1':                        return a1Collection;
-    case 'A2':                        return a2Collection;
-    case 'B1':                        return b1Collection;
-    default: return null;
+  for (final c in builtInCollections) {
+    if (c.name == name) return c;
   }
+  return null;
 }
 
 // "Fully done" for a homework assignment: every assigned mode has a

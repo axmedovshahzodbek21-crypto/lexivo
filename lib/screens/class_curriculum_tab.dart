@@ -6,6 +6,9 @@ import 'class_models.dart';
 import 'teacher_library_screen.dart';
 import '../data/word_data.dart';
 import '../data/reading_data.dart';
+import '../data/a1_collection.dart';
+import '../data/a2_collection.dart';
+import '../data/b1_collection.dart';
 import 'class_home_screen.dart';
 
 // ── Models ────────────────────────────────────────────────────────────────────
@@ -59,15 +62,26 @@ class _Homework {
   bool get isOverdue => isHomeworkOverdue(dueDate);
 }
 
-// Pre-built collection registry for the picker
-const _kCollectionMeta = [
-  (name: '30 Days of Powerful Words', emoji: '🔥', days: 30),
-  (name: '24 Vocabulary Challenge',   emoji: '⚡', days: 24),
-  (name: 'Word Mastery',              emoji: '🏆', days: 32),
-  (name: 'A1',                        emoji: '🟢', days: 23),
-  (name: 'A2',                        emoji: '🔵', days: 30),
-  (name: 'B1',                        emoji: '🟡', days: 26),
-];
+// Emoji shown for each built-in collection in the picker — keyed by object
+// identity off the real collection instances (builtInCollections, see
+// class_models.dart) rather than a separately hand-typed name string, so a
+// collection rename can't desync this from what collectionByName() actually
+// matches on.
+final _kCollectionEmoji = <WordCollection, String>{
+  thirtyDaysCollection: '🔥',
+  vocabularyChallengeCollection: '⚡',
+  wordMasteryCollection: '🏆',
+  a1Collection: '🟢',
+  a2Collection: '🔵',
+  b1Collection: '🟡',
+};
+
+// Pre-built collection registry for the picker — name and day count are
+// read straight off the real collection objects instead of hand-typed
+// copies that could silently drift out of sync.
+final _kCollectionMeta = builtInCollections
+    .map((c) => (name: c.name, emoji: _kCollectionEmoji[c] ?? '📚', days: c.days.length))
+    .toList();
 
 class _StudentProgress {
   final String studentId, name;

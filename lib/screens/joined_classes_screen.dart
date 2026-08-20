@@ -183,12 +183,35 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
 
   Future<void> _toggleTargetDone(ClassTarget t) async {
     final completed = t.completedAt == null ? DateTime.now().toIso8601String() : null;
-    await supabase.from('class_targets').update({'completed_at': completed}).eq('id', t.id);
+    try {
+      await supabase.from('class_targets').update({'completed_at': completed}).eq('id', t.id);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to update target — try again')),
+      );
+      return;
+    }
     ClassHomeScreen.invalidate(t.classId);
+    if (!mounted) return;
     setState(() {
       _classTargets[t.classId] = (_classTargets[t.classId] ?? []).map((x) => x.id != t.id ? x
         : ClassTarget(id: x.id, classId: x.classId, title: x.title, createdAt: x.createdAt, dueDate: x.dueDate, completedAt: completed)).toList();
     });
+    // _cache is what a subsequent _load() call optimistically applies before
+    // its own fresh fetch resolves — leaving the stale (pre-toggle) targets
+    // list in there would briefly flash the un-toggled state on next visit.
+    final user = currentUser;
+    if (user != null) {
+      final cached = _cache[user.id];
+      if (cached != null) {
+        _cache[user.id] = (
+          joinedClasses: cached.joinedClasses, teacherNames: cached.teacherNames,
+          classNotes: cached.classNotes, classTargets: _classTargets,
+          classAnnouncements: cached.classAnnouncements,
+        );
+      }
+    }
   }
 
   @override

@@ -1255,7 +1255,11 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
   // advanced independently by advanceStage/hardStage/dropStage), which could
   // disagree with getDueWords()'s learnedAt-based due date and cause words to
   // be unlearned or kept inconsistently with what the due-count showed.
-  static Future<void> checkAndUnlearn() async {
+  // Returns the SRS words/review log actually current after this call, so
+  // the caller (getDueWords()) doesn't need to re-decode both from prefs
+  // immediately afterward just to see whatever this method itself already
+  // loaded (and possibly updated).
+  static Future<({List<SRSWord> words, Map<String, List<int>> log})> checkAndUnlearn() async {
     const intervals = [1, 3, 7, 14, 30];
     final today = DateTime.parse(SRSWord._todayStr());
     final words = await getSRSWords();
@@ -1275,7 +1279,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
       toUnlearn.add(word);
     }
 
-    if (toUnlearn.isEmpty) return;
+    if (toUnlearn.isEmpty) return (words: words, log: log);
 
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -1332,16 +1336,20 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     // Push immediately so the tombstones (and unit-progress reset) reach the
     // server right away instead of waiting for some unrelated future write.
     SyncService.pushLists();
+    return (
+      words: updatedSRS.where((w) => w.deletedAt == null).toList(),
+      log: updatedLog,
+    );
   }
 
   static Future<List<DueSRSWord>> getDueWords() async {
     await migrateReviewLogIfNeeded();
     await _migrateReviewLogToPerWord();
-    await checkAndUnlearn();
+    final unlearned = await checkAndUnlearn();
     const intervals = [1, 3, 7, 14, 30];
     final today = DateTime.parse(SRSWord._todayStr());
-    final words = await getSRSWords();
-    final log = await getReviewLog();
+    final words = unlearned.words;
+    final log = unlearned.log;
 
     final result = <DueSRSWord>[];
     for (final word in words) {

@@ -87,6 +87,10 @@ class SyncService {
         'streak':              streak,
         'streak_freezes':      freezes,
         'last_study_date':     prefs.getString('last_study_date'),
+        // Un-synced before, this let two devices each independently award
+        // the once-per-day streak bonus XP on the same day — see the merge
+        // in pullAll() below and 20260821_streak_bonus_date_sync.sql.
+        'streak_bonus_date':   prefs.getString('streak_bonus_date'),
         'last_freeze_week':    prefs.getString('last_freeze_week'),
         'study_days':          studyDays,
         if (prefs.getString('last_xp_date') == todayStr) ...{
@@ -308,6 +312,17 @@ class SyncService {
         }
       }
 
+      // Same last-write-wins merge, applied just as early — recordStudySession()
+      // checks this key to decide whether to award today's streak bonus, so a
+      // stale local value could re-award a bonus another device already gave.
+      final cloudBonusDateEarly = row['streak_bonus_date'] as String?;
+      if (cloudBonusDateEarly != null) {
+        final localBonusDateEarly = prefs.getString('streak_bonus_date');
+        if (localBonusDateEarly == null || cloudBonusDateEarly.compareTo(localBonusDateEarly) >= 0) {
+          await prefs.setString('streak_bonus_date', cloudBonusDateEarly);
+        }
+      }
+
       // Daily accumulators: always take max regardless of which side has newer timestamp
       final today = _todayStr();
       final cloudTodayXpDate = row['today_xp_date'] as String?;
@@ -429,11 +444,13 @@ class SyncService {
         }
       }
 
-      // srs_words: union by key; when both sides are live, take the higher
-      // reviewStage (preserves real review progress); when either side is a
-      // tombstone (deletedAt), last-write-wins by timestamp instead, so an
-      // unlearn on another device isn't undone by this add-only-style merge.
-      // Skips words already mastered locally.
+      // srs_words: union by key. When either side is a tombstone (deletedAt),
+      // last-write-wins by timestamp, so an unlearn on another device isn't
+      // undone. When both sides are live and the word already exists
+      // locally, the local entry is left as-is — review progress is tracked
+      // authoritatively by review_log (unioned separately below), not by
+      // this table's reviewStage, which the web app doesn't even populate
+      // when it pushes. Skips words already mastered locally.
       final cloudSRS = (row['srs_words'] as List? ?? []).cast<Map<String, dynamic>>();
       if (cloudSRS.isNotEmpty) {
         final masteredRaw = prefs.getString('mastered_srs_words') ?? '[]';
@@ -461,13 +478,6 @@ class SyncService {
             changed = true;
           } else if (cw['deletedAt'] != null || lw['deletedAt'] != null) {
             if (tsOf(cw) > tsOf(lw)) {
-              localMap[key] = cw;
-              changed = true;
-            }
-          } else {
-            final cloudStage = (cw['reviewStage'] as num? ?? 0).toInt();
-            final localStage = (lw['reviewStage'] as num? ?? 0).toInt();
-            if (cloudStage > localStage) {
               localMap[key] = cw;
               changed = true;
             }

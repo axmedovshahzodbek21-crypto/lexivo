@@ -200,6 +200,14 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   static final _memCache = <String, _HwCache>{};
   static const _prefsPrefix = 'class_hw_v1_';
 
+  // Scoped by user id, not just class id — otherwise switching accounts on
+  // a shared classroom device could briefly show the previous student's
+  // completion state before the real load overwrites it.
+  String? get _cacheKey {
+    final uid = currentUser?.id;
+    return uid == null ? null : '${uid}_${widget.classId}';
+  }
+
   bool _loading = true;
   List<_AssignedFolder> _folders = [];
   List<_CWUnit> _cwUnits = [];
@@ -212,7 +220,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   @override
   void initState() {
     super.initState();
-    final mem = _memCache[widget.classId];
+    final mem = _cacheKey == null ? null : _memCache[_cacheKey];
     if (mem != null) {
       _applyCache(mem);
       _load(background: true);
@@ -233,9 +241,11 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   }
 
   Future<void> _initFromPrefs() async {
+    final key = _cacheKey;
+    if (key == null) { _load(); return; }
     try {
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString('$_prefsPrefix${widget.classId}');
+      final raw = prefs.getString('$_prefsPrefix$key');
       if (raw != null) {
         final m = jsonDecode(raw) as Map<String, dynamic>;
         final cache = _HwCache(
@@ -247,7 +257,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
           totalAssigned: m['totalAssigned'] as int? ?? 0,
           totalDone: m['totalDone'] as int? ?? 0,
         );
-        _memCache[widget.classId] = cache;
+        _memCache[key] = cache;
         if (mounted) setState(() => _applyCache(cache));
         _load(background: true);
         return;
@@ -257,9 +267,11 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   }
 
   Future<void> _saveToPrefs(_HwCache c) async {
+    final key = _cacheKey;
+    if (key == null) return;
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('$_prefsPrefix${widget.classId}', jsonEncode({
+      await prefs.setString('$_prefsPrefix$key', jsonEncode({
         'folders': c.folders.map((f) => f.toJson()).toList(),
         'cwUnits': c.cwUnits.map((u) => u.toJson()).toList(),
         'collHwItems': c.collHwItems.map((h) => h.toJson()).toList(),
@@ -478,7 +490,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
         folders: folders, cwUnits: cwUnits, collHwItems: collHwItems, passageItems: passageItems,
         completedModes: completedModes, totalAssigned: assigned, totalDone: done,
       );
-      _memCache[widget.classId] = cache;
+      if (_cacheKey != null) _memCache[_cacheKey!] = cache;
       _saveToPrefs(cache);
     } catch (_) {
       // _folders/_cwUnits/etc. are only ever reassigned above on a full

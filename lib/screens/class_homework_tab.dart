@@ -450,6 +450,15 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
         if (isHomeworkFullyDone(h.hwModes, completed)) done++;
       }
 
+      // Carry over each folder's "Show all" expansion state by id — folders
+      // is a fresh list of _AssignedFolder objects built from this load, so
+      // replacing _folders outright would silently re-collapse every folder
+      // a teacher had expanded, on every background refresh.
+      final prevShowAll = {for (final f in _folders) f.id: f.showAll};
+      for (final f in folders) {
+        f.showAll = prevShowAll[f.id] ?? false;
+      }
+
       if (mounted) { setState(() {
         _folders = folders;
         _cwUnits = cwUnits;

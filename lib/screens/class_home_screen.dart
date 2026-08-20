@@ -460,7 +460,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
         final m = h as Map;
         final modes = (m['modes'] as List).cast<String>();
         final done = doneMap[m['id'] as String] ?? {};
-        return !modes.every(done.contains);
+        return !isHomeworkFullyDone(modes, done);
       }).length;
       if (mounted) setState(() => _pendingHwCount = pending);
     } catch (_) {}

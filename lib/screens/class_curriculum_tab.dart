@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
 import '../date_utils.dart';
 import '../app_theme.dart';
+import 'class_models.dart';
 import 'teacher_library_screen.dart';
 import '../data/word_data.dart';
 import '../data/a1_collection.dart';
@@ -943,7 +944,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
             Text('PER STUDENT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
             const SizedBox(height: 8),
             ...progress.map((s) {
-              final allDone = hw.modes.every((m) => s.completedModes.contains(m));
+              final allDone = isHomeworkFullyDone(hw.modes, s.completedModes);
               return Container(
                 margin: const EdgeInsets.only(bottom: 6),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

@@ -1829,6 +1829,10 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   void _showTargetSheet(StudentRow s) {
     final ctrl = TextEditingController();
     String? dueDate;
+    // showDatePicker below pushes its own route on top of this sheet — if
+    // the sheet gets dismissed while the picker is still open, calling
+    // setSt afterward would throw since its StatefulBuilder is already gone.
+    var sheetOpen = true;
     showModalBottomSheet(
       context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(builder: (ctx2, setSt) => Padding(
@@ -1857,7 +1861,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             GestureDetector(
               onTap: () async {
                 final picked = await showDatePicker(context: ctx2, initialDate: DateTime.now().add(const Duration(days: 7)), firstDate: DateTime.now(), lastDate: DateTime.now().add(const Duration(days: 365)));
-                if (picked != null) setSt(() => dueDate = picked.toIso8601String().substring(0, 10));
+                if (picked != null && sheetOpen) setSt(() => dueDate = picked.toIso8601String().substring(0, 10));
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -1913,7 +1917,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
           ]),
         ),
       )),
-    ).whenComplete(ctrl.dispose);
+    ).whenComplete(() { sheetOpen = false; ctrl.dispose(); });
   }
 
   Widget _bottomSheet(BuildContext ctx, String title, TextEditingController ctrl, String hint, VoidCallback onSend) => Padding(

@@ -758,6 +758,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
         ),
       ),
     );
+    sheetOpen = false;
   }
 
   Future<void> _showAssignHomework(_UnitRef unit) async {

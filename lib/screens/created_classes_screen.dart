@@ -35,6 +35,18 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> {
   List<ClassRow> _myClasses = [];
   bool _loading = true;
   String? _copiedId;
+  // A fast double-tap on a card could fire Navigator.push twice before the
+  // first push's route transition even begins, stacking a duplicate route.
+  bool _navigating = false;
+  Future<void> _pushOnce(Route route) async {
+    if (_navigating) return;
+    _navigating = true;
+    try {
+      await Navigator.push(context, route);
+    } finally {
+      _navigating = false;
+    }
+  }
 
   @override
   void initState() {
@@ -266,7 +278,7 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> {
   }
 
   Widget _buildLibraryBanner() => GestureDetector(
-    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherLibraryScreen())),
+    onTap: () => _pushOnce(MaterialPageRoute(builder: (_) => const TeacherLibraryScreen())),
     child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -293,7 +305,7 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> {
   Widget _buildMyClassCard(ClassRow cls) {
     final colors = _cardColors(cls.id);
     return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(
+      onTap: () => _pushOnce(MaterialPageRoute(
         builder: (_) => ClassShell(classId: cls.id, className: cls.name, isTeacher: true),
       )).then((_) => _load()),
       child: Container(

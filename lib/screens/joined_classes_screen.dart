@@ -57,6 +57,18 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
   String? _expandedLeaderboard;
   String? _leaderboardLoading;
   bool _loading = true;
+  // A fast double-tap on a card could fire Navigator.push twice before the
+  // first push's route transition even begins, stacking a duplicate route.
+  bool _navigating = false;
+  Future<void> _pushOnce(Route route) async {
+    if (_navigating) return;
+    _navigating = true;
+    try {
+      await Navigator.push(context, route);
+    } finally {
+      _navigating = false;
+    }
+  }
 
   @override
   void initState() {
@@ -400,7 +412,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
           child: GestureDetector(
-            onTap: () => Navigator.push(context, MaterialPageRoute(
+            onTap: () => _pushOnce(MaterialPageRoute(
               builder: (_) => ClassShell(classId: cls.id, className: cls.name, isTeacher: false),
             )).then((_) => _load()),
             child: Container(

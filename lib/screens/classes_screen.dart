@@ -18,6 +18,19 @@ class _ClassesScreenState extends State<ClassesScreen> {
   bool _loading = true;
   final _joinCtrl = TextEditingController();
   String _joinError = '';
+  bool _joining = false;
+  // A fast double-tap on a hub card could fire Navigator.push twice before
+  // the first push's route transition even begins, stacking a duplicate route.
+  bool _navigating = false;
+  Future<void> _pushOnce(Route route) async {
+    if (_navigating) return;
+    _navigating = true;
+    try {
+      await Navigator.push(context, route);
+    } finally {
+      _navigating = false;
+    }
+  }
 
   @override
   void initState() {
@@ -75,10 +88,11 @@ class _ClassesScreenState extends State<ClassesScreen> {
   }
 
   Future<void> _joinClass() async {
+    if (_joining) return;
     final user = currentUser;
     final code = _joinCtrl.text.trim().toUpperCase();
     if (user == null || code.isEmpty) return;
-    if (mounted) setState(() => _joinError = '');
+    if (mounted) setState(() { _joinError = ''; _joining = true; });
     try {
       final cls = await supabase.from('classes').select('id, teacher_id').eq('join_code', code).maybeSingle();
       if (cls == null) { if (mounted) setState(() => _joinError = 'Class not found'); return; }
@@ -91,6 +105,8 @@ class _ClassesScreenState extends State<ClassesScreen> {
           .then((_) => _loadCounts());
     } catch (e) {
       if (mounted) setState(() => _joinError = e.toString().contains('23505') ? 'Already in this class' : 'Failed to join');
+    } finally {
+      if (mounted) setState(() => _joining = false);
     }
   }
 
@@ -172,7 +188,7 @@ class _ClassesScreenState extends State<ClassesScreen> {
                           subtitle: _createdCount == 0 ? 'No classes yet' : '$_createdCount class${_createdCount != 1 ? 'es' : ''} created',
                           emoji: '🏫',
                           colors: [const Color(0xFF6366F1), const Color(0xFF8B5CF6)],
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreatedClassesScreen())).then((_) => _loadCounts()),
+                          onTap: () => _pushOnce(MaterialPageRoute(builder: (_) => const CreatedClassesScreen())).then((_) => _loadCounts()),
                         ),
                         const SizedBox(height: 16),
                         _buildHubCard(
@@ -180,7 +196,7 @@ class _ClassesScreenState extends State<ClassesScreen> {
                           subtitle: _joinedCount == 0 ? 'Not enrolled yet' : '$_joinedCount class${_joinedCount != 1 ? 'es' : ''} joined',
                           emoji: '🎓',
                           colors: [const Color(0xFF10B981), const Color(0xFF06B6D4)],
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const JoinedClassesScreen())).then((_) => _loadCounts()),
+                          onTap: () => _pushOnce(MaterialPageRoute(builder: (_) => const JoinedClassesScreen())).then((_) => _loadCounts()),
                         ),
                         const SizedBox(height: 28),
                         _buildCreateButton(),
@@ -276,9 +292,11 @@ class _ClassesScreenState extends State<ClassesScreen> {
             ),
             const SizedBox(width: 8),
             ElevatedButton(
-              onPressed: _joinClass,
+              onPressed: _joining ? null : _joinClass,
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), elevation: 0),
-              child: Text(tr('join_class'), style: const TextStyle(fontWeight: FontWeight.bold)),
+              child: _joining
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : Text(tr('join_class'), style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
           ]),
           if (_joinError.isNotEmpty) ...[

@@ -733,7 +733,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
             homeworkId: homeworkId, modes: hwModes, isClassWords: isClassWords,
           ),
         ));
-        _load();
+        if (mounted) _load();
       },
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -819,7 +819,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
             collectionName: h.collectionName, dayNumber: h.dayNumber,
           ),
         ));
-        _load();
+        if (mounted) _load();
       },
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -909,7 +909,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
             homeworkId: h.homeworkId, modes: h.hwModes, passageId: h.passageId,
           ),
         ));
-        _load();
+        if (mounted) _load();
       },
       child: DecoratedBox(
         decoration: BoxDecoration(

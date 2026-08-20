@@ -38,14 +38,20 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   bool _gradesApplied = false;
   double _cardDx = 0;
 
+  // Grades from before the most recent shuffle toggle — persisted
+  // immediately (see _toggleShuffle) rather than kept in _history, but
+  // still counted toward the session's live/final knew-vs-not-yet totals.
+  int _shuffledKnew = 0;
+  int _shuffledNotYet = 0;
+
   // Quiz mode
   late List<List<String>?> _cardChoices;
   String? _tappedChoice;
   bool _choicesRevealed = false;
   Timer? _autoAdvanceTimer;
 
-  int get _knew   => _history.where((g) => g == _Grade.knew).length;
-  int get _notYet => _history.where((g) => g == _Grade.notYet).length;
+  int get _knew   => _shuffledKnew   + _history.where((g) => g == _Grade.knew).length;
+  int get _notYet => _shuffledNotYet + _history.where((g) => g == _Grade.notYet).length;
 
   bool get _isQuizMode {
     if (_currentIndex >= _cardChoices.length) return false;
@@ -149,12 +155,37 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
 
   void _onLangChange() { if (mounted) setState(() {}); }
 
-  void _toggleShuffle() {
+  Future<void> _toggleShuffle() async {
+    // Previously this cleared _history and rebuilt the queue from the full
+    // original word list without persisting anything — any words already
+    // graded this session had their SRS updates silently discarded, with
+    // no warning, and would be shown again for a second (duplicate) grade.
+    // Now: persist the already-graded prefix immediately, and only the
+    // remaining ungraded words go back into rotation (shuffled or not).
+    final gradedCount = _history.length;
+    for (int i = 0; i < gradedCount; i++) {
+      switch (_history[i]) {
+        case _Grade.knew:
+          await StorageService.reviewSRSWord(_queue[i]);
+          _shuffledKnew++;
+        case _Grade.notYet:
+          await StorageService.failSRSWord(_queue[i]);
+          _shuffledNotYet++;
+        case _Grade.skip:
+          break;
+      }
+    }
+    if (!mounted) return;
+    // Filter graded words out of _originalQueue (not just take the tail of
+    // the possibly-already-shuffled _queue) so toggling shuffle back OFF
+    // still restores the words' true original order, not whatever order
+    // they happened to be left in.
+    final gradedWords = _queue.sublist(0, gradedCount).toSet();
+    final remaining = _originalQueue.where((w) => !gradedWords.contains(w)).toList();
     setState(() {
       _shuffled = !_shuffled;
-      _queue = _shuffled
-          ? (List.from(_originalQueue)..shuffle())
-          : List.from(_originalQueue);
+      _originalQueue = remaining;
+      _queue = _shuffled ? (List.from(remaining)..shuffle()) : List.from(remaining);
       _currentIndex = 0;
       _revealed = false;
       _tappedChoice = null;

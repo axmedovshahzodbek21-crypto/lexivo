@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
 import '../app_theme.dart';
+import '../date_utils.dart';
 import '../l10n.dart';
 
 class LeaderboardEntry {
@@ -221,10 +222,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     }
   }
 
-  String get _todayStr {
-    final now = DateTime.now();
-    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-  }
+  // Streak-adjusted — entry.lastStudyDate (compared against this below) is
+  // synced from the local last_study_date value, which is written using the
+  // same streak-adjusted boundary. A raw DateTime.now() here disagreed with
+  // it between midnight and the 2-hour streak boundary, so a user who
+  // studied at, say, 1am could fail to get the "TODAY" badge (or lose it a
+  // moment after midnight even though their streak day hadn't rolled over).
+  String get _todayStr => todayForStreaks();
 
   String? get _myId => currentUser?.id;
 

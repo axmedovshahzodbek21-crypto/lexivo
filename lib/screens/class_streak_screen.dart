@@ -154,7 +154,10 @@ class _ClassStreakScreenState extends State<ClassStreakScreen> {
       );
     }
 
-    final now = DateTime.now();
+    // Streak-adjusted, matching _calcCurrent above — a raw DateTime.now()
+    // here disagreed with it (and with the class dashboard/leaderboard's
+    // streak) between midnight and the 2-hour streak boundary.
+    final now = streakAdjustedNow();
     final todayStr = formatStreakDate(now);
     final canGoNext = !(_month.year == now.year && _month.month == now.month);
     final monthName = [

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:lexivo/services/content_service.dart';
 import '../data/storage_service.dart';
 import '../services/sync_service.dart';
+import '../date_utils.dart';
 import '../app_theme.dart';
 import 'achievements.dart';
 import 'xp_level_sheet.dart';
@@ -95,13 +96,19 @@ class _StatsScreenState extends State<StatsScreen> {
     });
   }
 
+  // Streak-adjusted, not raw DateTime.now() — _studyDays entries are
+  // recorded (via recordStudySession()) using the same streak-adjusted
+  // boundary, so between midnight and the 2-hour boundary a raw "today"
+  // here could show today's cell unchecked even though the user already
+  // studied "today" per the streak system (the session is still filed
+  // under yesterday), or vice versa once the date rolls but the streak day
+  // hasn't. Same root cause as the already-fixed #228.
   List<bool> _last7Days() {
     final result = <bool>[];
+    final now = streakAdjustedNow();
     for (int i = 6; i >= 0; i--) {
-      final date = DateTime.now().subtract(Duration(days: i));
-      final str =
-          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-      result.add(_studyDays.contains(str));
+      final date = now.subtract(Duration(days: i));
+      result.add(_studyDays.contains(formatStreakDate(date)));
     }
     return result;
   }
@@ -109,7 +116,7 @@ class _StatsScreenState extends State<StatsScreen> {
   String _dayLabel(int daysAgo) {
     if (daysAgo == 0) return 'Today';
     if (daysAgo == 1) return 'Yes';
-    final date = DateTime.now().subtract(Duration(days: daysAgo));
+    final date = streakAdjustedNow().subtract(Duration(days: daysAgo));
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     return days[date.weekday % 7];
   }

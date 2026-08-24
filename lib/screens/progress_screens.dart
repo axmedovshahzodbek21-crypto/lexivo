@@ -647,8 +647,12 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
       );
     }
 
-    final now      = DateTime.now();
-    final todayStr = '${now.year}-${now.month.toString().padLeft(2,'0')}-${now.day.toString().padLeft(2,'0')}';
+    // Streak-adjusted, not raw DateTime.now() — otherwise this "today" (used
+    // for the calendar's today-ring highlight and reviewToday/wordsToday
+    // below) can disagree with _calcCurrentStreak's streak-adjusted "today"
+    // between midnight and the 2-hour streak boundary.
+    final now      = streakAdjustedNow();
+    final todayStr = formatStreakDate(now);
     final monthName = ['January','February','March','April','May','June',
       'July','August','September','October','November','December'][_month.month - 1];
     final canGoNext = !(_month.year == now.year && _month.month == now.month);
@@ -1105,8 +1109,12 @@ class _MiniCalendar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final todayStr = '${now.year}-${now.month.toString().padLeft(2,'0')}-${now.day.toString().padLeft(2,'0')}';
+    // Streak-adjusted, matching every other "today" computed for this
+    // calendar family (see _StreakCalendarScreenState._calcCurrentStreak) —
+    // a raw DateTime.now() here disagreed with them between midnight and
+    // the 2-hour streak boundary.
+    final now = streakAdjustedNow();
+    final todayStr = formatStreakDate(now);
     final mm = month.month.toString().padLeft(2, '0');
     final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
     // Monday-first offset

@@ -742,6 +742,24 @@ class StorageService {
   static final _xpMutex = _Mutex();
   static final _freezeMutex = _Mutex();
 
+  // Same pattern, extended to the other read-modify-write keys that were
+  // previously unprotected: SharedPreferences' getX is synchronous against a
+  // cache but setX is async I/O, so two near-simultaneous calls (a
+  // background sync merge racing a local mutation, or just rapid UI taps)
+  // could read the pre-write value while the first call's setX was still
+  // pending, silently losing one side's update. _srsMutex covers _srsKey,
+  // _masteredSRSKey, and _reviewLogKey together since markIntervalDone/
+  // checkAndUnlearn read-modify-write more than one of those in a single
+  // call. checkAndUnlearn also touches _learnedKey/_unitProgressKey, so it
+  // holds all three of those mutexes for its duration — safe from deadlock
+  // since no other function ever acquires more than one of these at once.
+  static final _srsMutex = _Mutex();
+  static final _learnedMutex = _Mutex();
+  static final _importedMutex = _Mutex();
+  static final _markedHardMutex = _Mutex();
+  static final _unitProgressMutex = _Mutex();
+  static final _myUnitProgressMutex = _Mutex();
+
   static const _learnedKey = 'learned_words';
   static const _srsKey = 'srs_words';
   static const _studyDaysKey = 'study_days';
@@ -799,7 +817,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     String collectionName,
     int dayNumber,
     UnitProgress progress,
-  ) async {
+  ) => _unitProgressMutex.run(() async {
     final prefs = await SharedPreferences.getInstance();
     final all = await _getAllUnitProgress();
     all[_unitKey(collectionName, dayNumber)] = progress;
@@ -807,7 +825,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
       _unitProgressKey,
       jsonEncode(all.map((k, v) => MapEntry(k, v.toJson()))),
     );
-  }
+  });
 
   static Future<void> saveLearnProgress(
     String collectionName,
@@ -1016,13 +1034,13 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     String? folderName,
     String collectionName,
     MyUnitProgress progress,
-  ) async {
+  ) => _myUnitProgressMutex.run(() async {
     final prefs = await SharedPreferences.getInstance();
     final all = await _getAllMyUnitProgress();
     all[_myUnitKey(folderName, collectionName)] = progress;
     await prefs.setString(_myUnitProgressKey,
         jsonEncode(all.map((k, v) => MapEntry(k, v.toJson()))));
-  }
+  });
 
   static Future<MyUnitProgress> getMyUnitProgress(
     String? folderName,
@@ -1202,7 +1220,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     String collectionName,
     String unitTopic,
     int dayNumber,
-  ) async {
+  ) => _learnedMutex.run(() async {
     final prefs = await SharedPreferences.getInstance();
     final existing = await _getLearnedWordsRaw();
     final liveKeys = existing
@@ -1228,13 +1246,15 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
       _learnedKey,
       jsonEncode(existing.map((e) => e.toJson()).toList()),
     );
+    // addToSRS acquires _srsMutex — a different mutex, so this is safe
+    // (nested acquisition of the same mutex is what would deadlock).
     await addToSRS(words, collectionName, unitTopic, dayNumber);
     if (newCount > 0) {
       await _incrementDailyCount(newCount);
       await _checkAndRecordWordGoalDay(prefs);
     }
     SyncService.pushLists();
-  }
+  });
 
   // ── SRS Words ─────────────────────────────
 
@@ -1262,7 +1282,15 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
   // the caller (getDueWords()) doesn't need to re-decode both from prefs
   // immediately afterward just to see whatever this method itself already
   // loaded (and possibly updated).
-  static Future<({List<SRSWord> words, Map<String, List<int>> log})> checkAndUnlearn() async {
+  //
+  // Touches _srsKey/_reviewLogKey, _learnedKey, and _unitProgressKey all in
+  // one go, so it holds all three of their mutexes for its duration — safe
+  // from deadlock since no other function ever acquires more than one of
+  // these three at once.
+  static Future<({List<SRSWord> words, Map<String, List<int>> log})> checkAndUnlearn() =>
+      _srsMutex.run(() => _learnedMutex.run(() => _unitProgressMutex.run(() => _checkAndUnlearnImpl())));
+
+  static Future<({List<SRSWord> words, Map<String, List<int>> log})> _checkAndUnlearnImpl() async {
     const intervals = [1, 3, 7, 14, 30];
     final today = DateTime.parse(SRSWord._todayStr());
     final words = await getSRSWords();
@@ -1394,7 +1422,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     String collectionName,
     String unitTopic,
     int dayNumber,
-  ) async {
+  ) => _srsMutex.run(() async {
     final prefs = await SharedPreferences.getInstance();
     final existing = await _getSRSWordsRaw();
     final liveKeys = existing
@@ -1425,11 +1453,12 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
       _srsKey,
       jsonEncode(existing.map((e) => e.toJson()).toList()),
     );
-  }
+  });
 
   // ── Interval completion ───────────────────────────────────────────────────
 
-  static Future<void> markIntervalDone(String wordKey, String learnedAt, int interval) async {
+  static Future<void> markIntervalDone(String wordKey, String learnedAt, int interval) =>
+      _srsMutex.run(() async {
     const allIntervals = [1, 3, 7, 14, 30];
     final log = await getReviewLog();
     final completed = List<int>.from(log[wordKey] ?? []);
@@ -1460,7 +1489,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
       }
     }
     SyncService.pushLists();
-  }
+  });
 
   // ── Review Log ───────────────────────────────────────────────────────────
 
@@ -1648,7 +1677,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     await prefs.setString(_markedHardKey, jsonEncode(entries.map((e) => e.toJson()).toList()));
   }
 
-  static Future<void> addMarkedHardWord(String word) async {
+  static Future<void> addMarkedHardWord(String word) => _markedHardMutex.run(() async {
     final entries = await _getMarkedHardEntriesRaw();
     final idx = entries.indexWhere((e) => e.word == word);
     final now = DateTime.now().toUtc().toIso8601String();
@@ -1659,14 +1688,14 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     }
     await _saveMarkedHardEntries(entries);
     SyncService.pushLists();
-  }
+  });
 
   static Future<List<String>> getMarkedHardWords() async {
     final entries = await _getMarkedHardEntriesRaw();
     return entries.where((e) => e.isActive).map((e) => e.word).toList();
   }
 
-  static Future<void> removeMarkedHardWord(String word) async {
+  static Future<void> removeMarkedHardWord(String word) => _markedHardMutex.run(() async {
     final entries = await _getMarkedHardEntriesRaw();
     final idx = entries.indexWhere((e) => e.word == word);
     final now = DateTime.now().toUtc().toIso8601String();
@@ -1678,7 +1707,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     }
     await _saveMarkedHardEntries(entries);
     SyncService.pushLists();
-  }
+  });
 
   // ── Streak & Study Days ────────────────────
 
@@ -2503,7 +2532,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     List<ImportedWord> words,
     String collectionName, {
     String? folderName,
-  }) async {
+  }) => _importedMutex.run(() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = await getImportedWordsRaw();
     // Dedupe against live words in this same collection/folder only — a word
@@ -2544,7 +2573,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     // words are new for each activity, so there's no need to force a full
     // redo — the existing ✅ badges stay, with a "N new" indicator alongside.
     SyncService.pushLists();
-  }
+  });
 
   // Soft-delete: mark with a tombstone timestamp instead of removing
   // outright, so the deletion syncs to (and takes effect on) other devices.
@@ -2555,7 +2584,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     String id,
     String collectionName, {
     String? folderName,
-  }) async {
+  }) => _importedMutex.run(() async {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now().millisecondsSinceEpoch;
     final raw = await getImportedWordsRaw();
@@ -2566,7 +2595,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     ).toList();
     await prefs.setString(_importedKey, jsonEncode(updated.map((e) => e.toJson()).toList()));
     SyncService.pushLists();
-  }
+  });
 
   // Same tombstoning as deleteImportedWord, but for many words in one local
   // mutation and one push instead of looping deleteImportedWord() per word.
@@ -2578,7 +2607,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     Set<String> ids,
     String collectionName, {
     String? folderName,
-  }) async {
+  }) => _importedMutex.run(() async {
     if (ids.isEmpty) return;
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -2590,9 +2619,10 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     ).toList();
     await prefs.setString(_importedKey, jsonEncode(updated.map((e) => e.toJson()).toList()));
     SyncService.pushLists();
-  }
+  });
 
-  static Future<void> deleteImportedCollection(String collectionName, {String? folderName}) async {
+  static Future<void> deleteImportedCollection(String collectionName, {String? folderName}) =>
+      _importedMutex.run(() async {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now().millisecondsSinceEpoch;
     final raw = await getImportedWordsRaw();
@@ -2603,9 +2633,9 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     ).toList();
     await prefs.setString(_importedKey, jsonEncode(updated.map((e) => e.toJson()).toList()));
     SyncService.pushLists();
-  }
+  });
 
-  static Future<void> deleteImportedFolder(String folderName) async {
+  static Future<void> deleteImportedFolder(String folderName) => _importedMutex.run(() async {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now().millisecondsSinceEpoch;
     final raw = await getImportedWordsRaw();
@@ -2614,7 +2644,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     ).toList();
     await prefs.setString(_importedKey, jsonEncode(updated.map((e) => e.toJson()).toList()));
     SyncService.pushLists();
-  }
+  });
 
   static Future<void> markLevelCompletedViaTest(String levelId) async {
     final prefs = await SharedPreferences.getInstance();

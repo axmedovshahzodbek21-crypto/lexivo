@@ -209,7 +209,13 @@ class SyncService {
       // Merge in whatever's currently in the cloud row before overwriting it —
       // otherwise a device pushing after being offline (or racing another
       // device's own push) would silently discard the other side's data
-      // instead of just adding to it.
+      // instead of just adding to it. If this fetch fails, abort the push
+      // entirely instead of falling through to an unmerged overwrite — that
+      // would silently discard the cloud's data in exactly the scenario
+      // (poor connectivity) this merge exists to guard against. Local state
+      // is untouched either way, so the next successful pushLists() call
+      // (from any of its many call sites, or the next app resume) picks up
+      // right where this one left off — nothing is lost by deferring it.
       try {
         final cloudRow = await _sb.from('user_data')
             .select('learned_words, srs_words, starred_words, hard_words, study_days, review_days, word_goal_days, unit_done_days, xp_history, unit_progress, my_unit_progress, review_log, achievements, imported_words')
@@ -217,7 +223,8 @@ class SyncService {
         if (cloudRow != null) await _mergeListsFromCloudRow(cloudRow, prefs);
       } catch (e) {
         // ignore: avoid_print
-        print('[SyncService.pushLists] pre-merge cloud fetch failed: $e');
+        print('[SyncService.pushLists] pre-merge cloud fetch failed, aborting push: $e');
+        return;
       }
 
       final ts = _now();
@@ -727,6 +734,47 @@ class SyncService {
           }
         }
         if (changed) await prefs.setString('srs_review_log', jsonEncode(localLog));
+      }
+
+      // Post-merge: any active SRS word whose review log (just merged above)
+      // now shows all 5 intervals complete graduates into the mastered list.
+      // markIntervalDone() already does this locally the moment a word's own
+      // 5th interval completes on this device — but a word graduated
+      // entirely on another device pulls its interval completions in via
+      // the review_log union merge above without ever completing a review
+      // here, so without this step it stays in the active list forever:
+      // Hard Words and the mastered count keep treating it as still
+      // in-progress even though getDueWords() (which reads the review log
+      // directly, not this list) correctly stops showing it as due.
+      {
+        const allIntervals = [1, 3, 7, 14, 30];
+        final srsRaw = prefs.getString('srs_words');
+        if (srsRaw != null) {
+          final srsList = (jsonDecode(srsRaw) as List).cast<Map<String, dynamic>>();
+          final logRaw = prefs.getString('srs_review_log');
+          final log = logRaw != null ? (jsonDecode(logRaw) as Map<String, dynamic>) : <String, dynamic>{};
+          final remaining = <Map<String, dynamic>>[];
+          final toGraduate = <Map<String, dynamic>>[];
+          for (final w in srsList) {
+            final key = '${w['word']}::${w['collectionName']}';
+            final completed = ((log[key] as List?) ?? []).cast<int>().toSet();
+            if (w['deletedAt'] == null && allIntervals.every(completed.contains)) {
+              toGraduate.add(w);
+            } else {
+              remaining.add(w);
+            }
+          }
+          if (toGraduate.isNotEmpty) {
+            final masteredRaw = prefs.getString('mastered_srs_words') ?? '[]';
+            final masteredList = (jsonDecode(masteredRaw) as List).cast<Map<String, dynamic>>();
+            final masteredKeys = masteredList.map((w) => '${w['word']}::${w['collectionName']}').toSet();
+            masteredList.addAll(toGraduate.where(
+              (w) => !masteredKeys.contains('${w['word']}::${w['collectionName']}'),
+            ));
+            await prefs.setString('mastered_srs_words', jsonEncode(masteredList));
+            await prefs.setString('srs_words', jsonEncode(remaining));
+          }
+        }
       }
 
       // achievements: apply {id, date} entries from cloud

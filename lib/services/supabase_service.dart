@@ -82,22 +82,6 @@ class HomeClassCard {
   );
 }
 
-int _computeClassStreak(List<String> dates) {
-  if (dates.isEmpty) return 0;
-  final set = dates.toSet();
-  final now = streakAdjustedNow();
-  final today = formatStreakDate(now);
-  final yesterday = formatStreakDate(now.subtract(const Duration(days: 1)));
-  if (!set.contains(today) && !set.contains(yesterday)) return 0;
-  int streak = 0;
-  DateTime cur = set.contains(today) ? now : now.subtract(const Duration(days: 1));
-  while (set.contains(formatStreakDate(cur))) {
-    streak++;
-    cur = cur.subtract(const Duration(days: 1));
-  }
-  return streak;
-}
-
 /// Records a study day and increments class XP for the given class.
 Future<void> recordClassActivity(
   String userId,
@@ -106,7 +90,7 @@ Future<void> recordClassActivity(
   String reason = '',
 }) async {
   try {
-    // Same streak day boundary as _computeClassStreak below — recording (or
+    // Same streak day boundary as computeStreak() (date_utils.dart) — recording (or
     // querying, see getHomeClassCards) a study day with a plain
     // DateTime.now() instead would disagree with the streak calculation for
     // a session between midnight and the boundary hour.
@@ -241,7 +225,7 @@ Future<List<HomeClassCard>> getHomeClassCards(String userId) async {
           className: cm['name'] as String,
           isTeacher: false,
           classXP: xpMap[classId] ?? 0,
-          classStreak: _computeClassStreak(daysByClass[classId] ?? []),
+          classStreak: computeStreak(daysByClass[classId] ?? []),
           pendingHomework: pending,
         ));
       }

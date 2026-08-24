@@ -760,6 +760,16 @@ class StorageService {
   static final _unitProgressMutex = _Mutex();
   static final _myUnitProgressMutex = _Mutex();
 
+  // recordStudySession/recordReviewDay/recordUnitDoneDay do the same
+  // read-modify-write over _studyDaysKey/_streakKey/_lastStudyKey/
+  // _reviewDaysKey/_unitDoneDaysKey that markIntervalDone/checkAndUnlearn
+  // used to do before _srsMutex was added — the SRS review flow calls
+  // recordStudySession() then recordReviewDay() back to back on every
+  // completed review, so an overlapping call from elsewhere (e.g. a quiz
+  // finishing at the same moment) could read a stale day list/streak and
+  // silently drop the other call's update.
+  static final _dayTrackingMutex = _Mutex();
+
   static const _learnedKey = 'learned_words';
   static const _srsKey = 'srs_words';
   static const _studyDaysKey = 'study_days';
@@ -1711,7 +1721,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
 
   // ── Streak & Study Days ────────────────────
 
-  static Future<void> recordStudySession() async {
+  static Future<void> recordStudySession() => _dayTrackingMutex.run(() async {
     final prefs = await SharedPreferences.getInstance();
     final today = _todayString();
     final lastStudy = prefs.getString(_lastStudyKey);
@@ -1751,7 +1761,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
         await prefs.setString('streak_bonus_date', today);
       }
     }
-  }
+  });
 
   static Future<int> getStreak() async {
     final prefs = await SharedPreferences.getInstance();
@@ -1961,7 +1971,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     return raw != null ? List<String>.from(jsonDecode(raw)) : [];
   }
 
-  static Future<void> recordUnitDoneDay() async {
+  static Future<void> recordUnitDoneDay() => _dayTrackingMutex.run(() async {
     final prefs = await SharedPreferences.getInstance();
     final today = _todayString();
     final raw = prefs.getString(_unitDoneDaysKey);
@@ -1970,7 +1980,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
       days.add(today);
       await prefs.setString(_unitDoneDaysKey, jsonEncode(days));
     }
-  }
+  });
 
   static Future<List<String>> getReviewDays() async {
     final prefs = await SharedPreferences.getInstance();
@@ -1978,7 +1988,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     return raw != null ? List<String>.from(jsonDecode(raw)) : [];
   }
 
-  static Future<void> recordReviewDay() async {
+  static Future<void> recordReviewDay() => _dayTrackingMutex.run(() async {
     final prefs = await SharedPreferences.getInstance();
     final today = _todayString();
     final raw = prefs.getString(_reviewDaysKey);
@@ -1987,7 +1997,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
       days.add(today);
       await prefs.setString(_reviewDaysKey, jsonEncode(days));
     }
-  }
+  });
 
   static Future<List<String>> getSRSLockedDays() async {
     final prefs = await SharedPreferences.getInstance();

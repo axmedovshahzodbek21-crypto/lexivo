@@ -32,6 +32,26 @@ String formatStreakDate(DateTime d) =>
 /// `formatStreakDate(streakAdjustedNow())`.
 String todayForStreaks() => formatStreakDate(streakAdjustedNow());
 
+/// Current streak length from a set of study-day date strings (YYYY-MM-DD),
+/// under the streak day boundary above. Zero if neither today nor yesterday
+/// is present. Previously duplicated verbatim as `_computeClassStreak` in
+/// supabase_service.dart and `_computeStreak` in widget_service.dart.
+int computeStreak(List<String> dates) {
+  if (dates.isEmpty) return 0;
+  final set = dates.toSet();
+  final now = streakAdjustedNow();
+  final today = formatStreakDate(now);
+  final yesterday = formatStreakDate(now.subtract(const Duration(days: 1)));
+  if (!set.contains(today) && !set.contains(yesterday)) return 0;
+  var cursor = set.contains(today) ? now : now.subtract(const Duration(days: 1));
+  var streak = 0;
+  while (set.contains(formatStreakDate(cursor))) {
+    streak++;
+    cursor = cursor.subtract(const Duration(days: 1));
+  }
+  return streak;
+}
+
 // ── Homework due dates ──────────────────────────────────────────────────────
 // Unlike the streak day boundary above, a homework due date flips to
 // "overdue" at real local midnight — there's no grace-period concept here.

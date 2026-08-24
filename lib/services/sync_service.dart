@@ -483,29 +483,55 @@ class SyncService {
       // word+collection). Cloud rows may include tombstones (deletedAt), so
       // an unlearn made on another device correctly overwrites a stale local
       // copy instead of a naive add-only merge silently resurrecting it.
-      final cloudLearned = (row['learned_words'] as List? ?? []).cast<Map<String, dynamic>>();
-      if (cloudLearned.isNotEmpty) {
-        final localRaw = prefs.getString('learned_words') ?? '[]';
-        final localList = (jsonDecode(localRaw) as List).cast<Map<String, dynamic>>();
-        String keyOf(Map<String, dynamic> w) => '${w['word']}::${w['collectionName']}';
-        int tsOf(Map<String, dynamic> w) {
-          final deletedAt = w['deletedAt'] as num?;
-          if (deletedAt != null) return deletedAt.toInt();
-          try { return DateTime.parse(w['learnedAt'] as String).millisecondsSinceEpoch; } catch (_) { return 0; }
-        }
-        final byKey = <String, Map<String, dynamic>>{ for (final w in localList) keyOf(w): w };
-        bool changed = false;
-        for (final cw in cloudLearned) {
-          final key = keyOf(cw);
-          final existing = byKey[key];
-          if (existing == null || tsOf(cw) > tsOf(existing)) {
-            byKey[key] = cw;
-            changed = true;
+      // Each field below is merged independently and wrapped in its own
+      // try/catch — a malformed field from a bad cloud row (bad JSON shape,
+      // unexpected type) used to throw uncaught, aborting every remaining
+      // field's merge for this pull instead of just skipping that one field.
+      try {
+        final cloudLearned = (row['learned_words'] as List? ?? []).cast<Map<String, dynamic>>();
+        if (cloudLearned.isNotEmpty) {
+          final localRaw = prefs.getString('learned_words') ?? '[]';
+          final localList = (jsonDecode(localRaw) as List).cast<Map<String, dynamic>>();
+          String keyOf(Map<String, dynamic> w) => '${w['word']}::${w['collectionName']}';
+          // Returns null (rather than defaulting to epoch-0) when the
+          // timestamp can't be parsed — epoch-0 silently made an unparseable
+          // record always look like "the oldest possible," so whichever side
+          // failed to parse always lost the LWW comparison, even when it was
+          // actually the newer/correct data. Below, a null on either side
+          // means "don't trust this comparison" rather than "this side is
+          // definitely older."
+          int? tsOf(Map<String, dynamic> w) {
+            final deletedAt = w['deletedAt'] as num?;
+            if (deletedAt != null) return deletedAt.toInt();
+            try { return DateTime.parse(w['learnedAt'] as String).millisecondsSinceEpoch; }
+            catch (e) {
+              print('[SyncService._mergeListsFromCloudRow] learned_words: unparseable learnedAt for ${w['word']}: $e');
+              return null;
+            }
+          }
+          final byKey = <String, Map<String, dynamic>>{ for (final w in localList) keyOf(w): w };
+          bool changed = false;
+          for (final cw in cloudLearned) {
+            final key = keyOf(cw);
+            final existing = byKey[key];
+            if (existing == null) {
+              byKey[key] = cw;
+              changed = true;
+            } else {
+              final cwTs = tsOf(cw);
+              final exTs = tsOf(existing);
+              if (cwTs != null && exTs != null && cwTs > exTs) {
+                byKey[key] = cw;
+                changed = true;
+              }
+            }
+          }
+          if (changed) {
+            await prefs.setString('learned_words', jsonEncode(byKey.values.toList()));
           }
         }
-        if (changed) {
-          await prefs.setString('learned_words', jsonEncode(byKey.values.toList()));
-        }
+      } catch (e) {
+        print('[SyncService._mergeListsFromCloudRow] learned_words merge failed: $e');
       }
 
       // srs_words: union by key. When either side is a tombstone (deletedAt),
@@ -515,41 +541,56 @@ class SyncService {
       // authoritatively by review_log (unioned separately below), not by
       // this table's reviewStage, which the web app doesn't even populate
       // when it pushes. Skips words already mastered locally.
-      final cloudSRS = (row['srs_words'] as List? ?? []).cast<Map<String, dynamic>>();
-      if (cloudSRS.isNotEmpty) {
-        final masteredRaw = prefs.getString('mastered_srs_words') ?? '[]';
-        final masteredIds = (jsonDecode(masteredRaw) as List)
-            .cast<Map<String, dynamic>>()
-            .map((w) => '${w['word']}::${w['collectionName']}')
-            .toSet();
-        final localRaw = prefs.getString('srs_words') ?? '[]';
-        final localList = (jsonDecode(localRaw) as List).cast<Map<String, dynamic>>();
-        final localMap = <String, Map<String, dynamic>>{
-          for (final w in localList) '${w['word']}::${w['collectionName']}': w,
-        };
-        int tsOf(Map<String, dynamic> w) {
-          final deletedAt = w['deletedAt'] as num?;
-          if (deletedAt != null) return deletedAt.toInt();
-          try { return DateTime.parse(w['learnedAt'] as String).millisecondsSinceEpoch; } catch (_) { return 0; }
-        }
-        bool changed = false;
-        for (final cw in cloudSRS) {
-          final key = '${cw['word']}::${cw['collectionName']}';
-          if (masteredIds.contains(key)) continue;
-          final lw = localMap[key];
-          if (lw == null) {
-            localMap[key] = cw;
-            changed = true;
-          } else if (cw['deletedAt'] != null || lw['deletedAt'] != null) {
-            if (tsOf(cw) > tsOf(lw)) {
-              localMap[key] = cw;
-              changed = true;
+      try {
+        final cloudSRS = (row['srs_words'] as List? ?? []).cast<Map<String, dynamic>>();
+        if (cloudSRS.isNotEmpty) {
+          final masteredRaw = prefs.getString('mastered_srs_words') ?? '[]';
+          final masteredIds = (jsonDecode(masteredRaw) as List)
+              .cast<Map<String, dynamic>>()
+              .map((w) => '${w['word']}::${w['collectionName']}')
+              .toSet();
+          final localRaw = prefs.getString('srs_words') ?? '[]';
+          final localList = (jsonDecode(localRaw) as List).cast<Map<String, dynamic>>();
+          final localMap = <String, Map<String, dynamic>>{
+            for (final w in localList) '${w['word']}::${w['collectionName']}': w,
+          };
+          // Returns null (rather than epoch-0) on an unparseable learnedAt —
+          // see the identical note on learned_words' tsOf above. epoch-0
+          // made the failing side always look oldest, silently letting the
+          // other side win the tombstone comparison even when it wasn't
+          // actually newer.
+          int? tsOf(Map<String, dynamic> w) {
+            final deletedAt = w['deletedAt'] as num?;
+            if (deletedAt != null) return deletedAt.toInt();
+            try { return DateTime.parse(w['learnedAt'] as String).millisecondsSinceEpoch; }
+            catch (e) {
+              print('[SyncService._mergeListsFromCloudRow] srs_words: unparseable learnedAt for ${w['word']}: $e');
+              return null;
             }
           }
+          bool changed = false;
+          for (final cw in cloudSRS) {
+            final key = '${cw['word']}::${cw['collectionName']}';
+            if (masteredIds.contains(key)) continue;
+            final lw = localMap[key];
+            if (lw == null) {
+              localMap[key] = cw;
+              changed = true;
+            } else if (cw['deletedAt'] != null || lw['deletedAt'] != null) {
+              final cwTs = tsOf(cw);
+              final lwTs = tsOf(lw);
+              if (cwTs != null && lwTs != null && cwTs > lwTs) {
+                localMap[key] = cw;
+                changed = true;
+              }
+            }
+          }
+          if (changed) {
+            await prefs.setString('srs_words', jsonEncode(localMap.values.toList()));
+          }
         }
-        if (changed) {
-          await prefs.setString('srs_words', jsonEncode(localMap.values.toList()));
-        }
+      } catch (e) {
+        print('[SyncService._mergeListsFromCloudRow] srs_words merge failed: $e');
       }
 
       // starred_words: full records now, keyed by word+collectionName
@@ -559,199 +600,243 @@ class SyncService {
       // entry (from an older app version's push, mid-rollout) is still
       // accepted and filled in with blanks, same as the old behavior,
       // instead of crashing the whole pull.
-      final cloudStarred = (row['starred_words'] as List? ?? []).map((e) {
-        if (e is Map) return e.cast<String, dynamic>();
-        return <String, dynamic>{
-          'word': e as String, 'translation': '', 'definition': '', 'example1': '',
-          'partOfSpeech': '', 'pronunciation': '', 'collectionName': '',
-        };
-      }).toList();
-      if (cloudStarred.isNotEmpty) {
-        final localStarred = prefs.getStringList('starred_words') ?? [];
-        String keyOf(Map<String, dynamic> w) => '${w['word']}::${w['collectionName']}';
-        final localKeys = <String>{};
-        for (final s in localStarred) {
-          try { localKeys.add(keyOf(jsonDecode(s) as Map<String, dynamic>)); }
-          catch (_) {}
-        }
-        bool changed = false;
-        final merged = [...localStarred];
-        for (final w in cloudStarred) {
-          if (!localKeys.contains(keyOf(w))) {
-            merged.add(jsonEncode(w));
-            changed = true;
+      try {
+        final cloudStarred = (row['starred_words'] as List? ?? []).map((e) {
+          if (e is Map) return e.cast<String, dynamic>();
+          return <String, dynamic>{
+            'word': e as String, 'translation': '', 'definition': '', 'example1': '',
+            'partOfSpeech': '', 'pronunciation': '', 'collectionName': '',
+          };
+        }).toList();
+        if (cloudStarred.isNotEmpty) {
+          final localStarred = prefs.getStringList('starred_words') ?? [];
+          String keyOf(Map<String, dynamic> w) => '${w['word']}::${w['collectionName']}';
+          final localKeys = <String>{};
+          for (final s in localStarred) {
+            try { localKeys.add(keyOf(jsonDecode(s) as Map<String, dynamic>)); }
+            catch (_) {}
           }
+          bool changed = false;
+          final merged = [...localStarred];
+          for (final w in cloudStarred) {
+            if (!localKeys.contains(keyOf(w))) {
+              merged.add(jsonEncode(w));
+              changed = true;
+            }
+          }
+          if (changed) await prefs.setStringList('starred_words', merged);
         }
-        if (changed) await prefs.setStringList('starred_words', merged);
+      } catch (e) {
+        print('[SyncService._mergeListsFromCloudRow] starred_words merge failed: $e');
       }
 
       // hard_words: per-word last-write-wins merge, keyed by word. Cloud rows
       // may include tombstones (removedAt), so unmarking a word on another
       // device correctly overwrites a stale local copy instead of a naive
       // union merge silently resurrecting it.
-      final cloudHardRaw = row['hard_words'] as List? ?? [];
-      if (cloudHardRaw.isNotEmpty) {
-        int tsOf(String? addedAt, String? removedAt) {
-          try {
-            final removed = removedAt != null ? DateTime.parse(removedAt) : null;
-            final added = addedAt != null ? DateTime.parse(addedAt) : DateTime.fromMillisecondsSinceEpoch(0);
-            return (removed != null && removed.isAfter(added) ? removed : added).millisecondsSinceEpoch;
-          } catch (_) { return 0; }
-        }
-        final localRaw = prefs.getString('marked_hard_words') ?? '[]';
-        final localList = (jsonDecode(localRaw) as List).cast<Map<String, dynamic>>();
-        final byWord = <String, Map<String, dynamic>>{ for (final e in localList) e['word'] as String: e };
-        bool changed = false;
-        for (final item in cloudHardRaw) {
-          final cw = item is String
-              ? {'word': item, 'addedAt': DateTime.fromMillisecondsSinceEpoch(0).toIso8601String()}
-              : item as Map<String, dynamic>;
-          final word = cw['word'] as String;
-          final existing = byWord[word];
-          final cloudTs = tsOf(cw['addedAt'] as String?, cw['removedAt'] as String?);
-          final localTs = existing == null ? -1 : tsOf(existing['addedAt'] as String?, existing['removedAt'] as String?);
-          if (existing == null || cloudTs > localTs) {
-            byWord[word] = cw;
-            changed = true;
+      try {
+        final cloudHardRaw = row['hard_words'] as List? ?? [];
+        if (cloudHardRaw.isNotEmpty) {
+          // Returns null (rather than epoch-0) specifically when a *present*
+          // addedAt/removedAt string fails to parse — a missing field still
+          // defaults to epoch-0 (genuinely "no data, treat as oldest" is the
+          // right call there), but a malformed one used to collapse to the
+          // same epoch-0, silently making that side always lose the LWW
+          // comparison below even when it held the real, current data.
+          int? tsOf(String? addedAt, String? removedAt) {
+            try {
+              DateTime? removed;
+              if (removedAt != null) removed = DateTime.parse(removedAt);
+              final added = addedAt != null ? DateTime.parse(addedAt) : DateTime.fromMillisecondsSinceEpoch(0);
+              return (removed != null && removed.isAfter(added) ? removed : added).millisecondsSinceEpoch;
+            } catch (e) {
+              print('[SyncService._mergeListsFromCloudRow] hard_words: unparseable addedAt/removedAt: $e');
+              return null;
+            }
+          }
+          final localRaw = prefs.getString('marked_hard_words') ?? '[]';
+          final localList = (jsonDecode(localRaw) as List).cast<Map<String, dynamic>>();
+          final byWord = <String, Map<String, dynamic>>{ for (final e in localList) e['word'] as String: e };
+          bool changed = false;
+          for (final item in cloudHardRaw) {
+            final cw = item is String
+                ? {'word': item, 'addedAt': DateTime.fromMillisecondsSinceEpoch(0).toIso8601String()}
+                : item as Map<String, dynamic>;
+            final word = cw['word'] as String;
+            final existing = byWord[word];
+            if (existing == null) {
+              byWord[word] = cw;
+              changed = true;
+            } else {
+              final cloudTs = tsOf(cw['addedAt'] as String?, cw['removedAt'] as String?);
+              final localTs = tsOf(existing['addedAt'] as String?, existing['removedAt'] as String?);
+              if (cloudTs != null && localTs != null && cloudTs > localTs) {
+                byWord[word] = cw;
+                changed = true;
+              }
+            }
+          }
+          if (changed) {
+            await prefs.setString('marked_hard_words', jsonEncode(byWord.values.toList()));
           }
         }
-        if (changed) {
-          await prefs.setString('marked_hard_words', jsonEncode(byWord.values.toList()));
-        }
+      } catch (e) {
+        print('[SyncService._mergeListsFromCloudRow] hard_words merge failed: $e');
       }
 
-      // day sets
+      // day sets — each key merged independently so a malformed field
+      // (e.g. review_days) doesn't also skip the others in this group.
       for (final pair in [
         ['study_days', 'study_days'],
         ['review_days', 'review_days'],
         ['word_goal_days', 'word_goal_days'],
         ['unit_done_days', 'unit_done_days'],
       ]) {
-        final cloudDays = (row[pair[0]] as List? ?? []).cast<String>();
-        if (cloudDays.isNotEmpty) {
-          final localRaw = prefs.getString(pair[1]) ?? '[]';
-          final localDays = (jsonDecode(localRaw) as List).cast<String>().toSet();
-          final merged = {...localDays, ...cloudDays}.toList();
-          if (merged.length > localDays.length) {
-            await prefs.setString(pair[1], jsonEncode(merged));
+        try {
+          final cloudDays = (row[pair[0]] as List? ?? []).cast<String>();
+          if (cloudDays.isNotEmpty) {
+            final localRaw = prefs.getString(pair[1]) ?? '[]';
+            final localDays = (jsonDecode(localRaw) as List).cast<String>().toSet();
+            final merged = {...localDays, ...cloudDays}.toList();
+            if (merged.length > localDays.length) {
+              await prefs.setString(pair[1], jsonEncode(merged));
+            }
           }
+        } catch (e) {
+          print('[SyncService._mergeListsFromCloudRow] ${pair[0]} merge failed: $e');
         }
       }
 
       // xp_history: union by timestamp
-      final cloudXpHist = (row['xp_history'] as List? ?? []).cast<Map<String, dynamic>>();
-      if (cloudXpHist.isNotEmpty) {
-        final localRaw = prefs.getString('xp_history') ?? '[]';
-        final localHist = (jsonDecode(localRaw) as List).cast<Map<String, dynamic>>();
-        final localTs = {for (final e in localHist) e['timestamp']};
-        final toAdd = cloudXpHist.where((e) => !localTs.contains(e['timestamp'])).toList();
-        if (toAdd.isNotEmpty) {
-          final merged = [...localHist, ...toAdd];
-          if (merged.length > 500) merged.removeRange(0, merged.length - 500);
-          await prefs.setString('xp_history', jsonEncode(merged));
+      try {
+        final cloudXpHist = (row['xp_history'] as List? ?? []).cast<Map<String, dynamic>>();
+        if (cloudXpHist.isNotEmpty) {
+          final localRaw = prefs.getString('xp_history') ?? '[]';
+          final localHist = (jsonDecode(localRaw) as List).cast<Map<String, dynamic>>();
+          final localTs = {for (final e in localHist) e['timestamp']};
+          final toAdd = cloudXpHist.where((e) => !localTs.contains(e['timestamp'])).toList();
+          if (toAdd.isNotEmpty) {
+            final merged = [...localHist, ...toAdd];
+            if (merged.length > 500) merged.removeRange(0, merged.length - 500);
+            await prefs.setString('xp_history', jsonEncode(merged));
+          }
         }
+      } catch (e) {
+        print('[SyncService._mergeListsFromCloudRow] xp_history merge failed: $e');
       }
 
       // unit_progress (object: key → progress), OR flags
-      final cloudProgress = (row['unit_progress'] as Map<String, dynamic>?) ?? {};
-      if (cloudProgress.isNotEmpty) {
-        final localRaw = prefs.getString('unit_progress');
-        final localProgress = localRaw != null
-            ? (jsonDecode(localRaw) as Map<String, dynamic>)
-            : <String, dynamic>{};
-        bool changed = false;
-        for (final entry in cloudProgress.entries) {
-          if (!localProgress.containsKey(entry.key)) {
-            localProgress[entry.key] = entry.value;
-            changed = true;
-          } else {
-            final lp = localProgress[entry.key] as Map<String, dynamic>;
-            final cp = entry.value as Map<String, dynamic>;
-            final mergedLearn = (lp['learnDone'] as bool? ?? false) || (cp['learnDone'] as bool? ?? false);
-            final mergedFlash = (lp['flashcardDone'] as bool? ?? false) || (cp['flashcardDone'] as bool? ?? false);
-            final mergedQuiz  = (lp['quizDone'] as bool? ?? false) || (cp['quizDone'] as bool? ?? false);
-            final mergedAt    = lp['completedAt'] ?? cp['completedAt'];
-            if (mergedLearn != (lp['learnDone'] ?? false) ||
-                mergedFlash != (lp['flashcardDone'] ?? false) ||
-                mergedQuiz  != (lp['quizDone'] ?? false) ||
-                mergedAt    != lp['completedAt']) {
-              localProgress[entry.key] = {
-                'learnDone': mergedLearn,
-                'flashcardDone': mergedFlash,
-                'quizDone': mergedQuiz,
-                'completedAt': mergedAt,
-              };
+      try {
+        final cloudProgress = (row['unit_progress'] as Map<String, dynamic>?) ?? {};
+        if (cloudProgress.isNotEmpty) {
+          final localRaw = prefs.getString('unit_progress');
+          final localProgress = localRaw != null
+              ? (jsonDecode(localRaw) as Map<String, dynamic>)
+              : <String, dynamic>{};
+          bool changed = false;
+          for (final entry in cloudProgress.entries) {
+            if (!localProgress.containsKey(entry.key)) {
+              localProgress[entry.key] = entry.value;
               changed = true;
+            } else {
+              final lp = localProgress[entry.key] as Map<String, dynamic>;
+              final cp = entry.value as Map<String, dynamic>;
+              final mergedLearn = (lp['learnDone'] as bool? ?? false) || (cp['learnDone'] as bool? ?? false);
+              final mergedFlash = (lp['flashcardDone'] as bool? ?? false) || (cp['flashcardDone'] as bool? ?? false);
+              final mergedQuiz  = (lp['quizDone'] as bool? ?? false) || (cp['quizDone'] as bool? ?? false);
+              final mergedAt    = lp['completedAt'] ?? cp['completedAt'];
+              if (mergedLearn != (lp['learnDone'] ?? false) ||
+                  mergedFlash != (lp['flashcardDone'] ?? false) ||
+                  mergedQuiz  != (lp['quizDone'] ?? false) ||
+                  mergedAt    != lp['completedAt']) {
+                localProgress[entry.key] = {
+                  'learnDone': mergedLearn,
+                  'flashcardDone': mergedFlash,
+                  'quizDone': mergedQuiz,
+                  'completedAt': mergedAt,
+                };
+                changed = true;
+              }
             }
           }
+          if (changed) await prefs.setString('unit_progress', jsonEncode(localProgress));
         }
-        if (changed) await prefs.setString('unit_progress', jsonEncode(localProgress));
+      } catch (e) {
+        print('[SyncService._mergeListsFromCloudRow] unit_progress merge failed: $e');
       }
 
       // my_unit_progress (object: folder+collection key → progress), OR flags
       // + per-activity word snapshots (local's own snapshot wins once local
       // has run that activity itself; cloud's snapshot only fills in an
       // activity local hasn't done yet).
-      final cloudMyProgress = (row['my_unit_progress'] as Map<String, dynamic>?) ?? {};
-      if (cloudMyProgress.isNotEmpty) {
-        final localRaw = prefs.getString('my_unit_progress');
-        final localMyProgress = localRaw != null
-            ? (jsonDecode(localRaw) as Map<String, dynamic>)
-            : <String, dynamic>{};
-        bool changed = false;
-        for (final entry in cloudMyProgress.entries) {
-          if (!localMyProgress.containsKey(entry.key)) {
-            localMyProgress[entry.key] = entry.value;
-            changed = true;
-          } else {
-            final lp = localMyProgress[entry.key] as Map<String, dynamic>;
-            final cp = entry.value as Map<String, dynamic>;
-            Map<String, dynamic> pick(String activity) {
-              final doneKey = '${activity}Done';
-              final wordsKey = '${activity}Words';
-              final lDone = lp[doneKey] as bool? ?? false;
-              final cDone = cp[doneKey] as bool? ?? false;
-              final done = lDone || cDone;
-              final words = lDone ? lp[wordsKey] : (cDone ? cp[wordsKey] : lp[wordsKey]);
-              return {doneKey: done, wordsKey: words ?? []};
-            }
-            final learn = pick('learn');
-            final flashcard = pick('flashcard');
-            final quiz = pick('quiz');
-            final match = pick('match');
-            final lCompletedWords = (lp['completedWords'] as List?) ?? [];
-            final merged = {
-              ...learn, ...flashcard, ...quiz, ...match,
-              'completedAt': lp['completedAt'] ?? cp['completedAt'],
-              'completedWords': lCompletedWords.isNotEmpty ? lCompletedWords : (cp['completedWords'] ?? []),
-            };
-            if (jsonEncode(merged) != jsonEncode(lp)) {
-              localMyProgress[entry.key] = merged;
+      try {
+        final cloudMyProgress = (row['my_unit_progress'] as Map<String, dynamic>?) ?? {};
+        if (cloudMyProgress.isNotEmpty) {
+          final localRaw = prefs.getString('my_unit_progress');
+          final localMyProgress = localRaw != null
+              ? (jsonDecode(localRaw) as Map<String, dynamic>)
+              : <String, dynamic>{};
+          bool changed = false;
+          for (final entry in cloudMyProgress.entries) {
+            if (!localMyProgress.containsKey(entry.key)) {
+              localMyProgress[entry.key] = entry.value;
               changed = true;
+            } else {
+              final lp = localMyProgress[entry.key] as Map<String, dynamic>;
+              final cp = entry.value as Map<String, dynamic>;
+              Map<String, dynamic> pick(String activity) {
+                final doneKey = '${activity}Done';
+                final wordsKey = '${activity}Words';
+                final lDone = lp[doneKey] as bool? ?? false;
+                final cDone = cp[doneKey] as bool? ?? false;
+                final done = lDone || cDone;
+                final words = lDone ? lp[wordsKey] : (cDone ? cp[wordsKey] : lp[wordsKey]);
+                return {doneKey: done, wordsKey: words ?? []};
+              }
+              final learn = pick('learn');
+              final flashcard = pick('flashcard');
+              final quiz = pick('quiz');
+              final match = pick('match');
+              final lCompletedWords = (lp['completedWords'] as List?) ?? [];
+              final merged = {
+                ...learn, ...flashcard, ...quiz, ...match,
+                'completedAt': lp['completedAt'] ?? cp['completedAt'],
+                'completedWords': lCompletedWords.isNotEmpty ? lCompletedWords : (cp['completedWords'] ?? []),
+              };
+              if (jsonEncode(merged) != jsonEncode(lp)) {
+                localMyProgress[entry.key] = merged;
+                changed = true;
+              }
             }
           }
+          if (changed) await prefs.setString('my_unit_progress', jsonEncode(localMyProgress));
         }
-        if (changed) await prefs.setString('my_unit_progress', jsonEncode(localMyProgress));
+      } catch (e) {
+        print('[SyncService._mergeListsFromCloudRow] my_unit_progress merge failed: $e');
       }
 
       // review_log (object: wordKey → [intervals]), union merge
-      final cloudReviewLog = (row['review_log'] as Map<String, dynamic>?) ?? {};
-      if (cloudReviewLog.isNotEmpty) {
-        final localRaw = prefs.getString('srs_review_log');
-        final localLog = localRaw != null
-            ? (jsonDecode(localRaw) as Map<String, dynamic>)
-            : <String, dynamic>{};
-        bool changed = false;
-        for (final entry in cloudReviewLog.entries) {
-          final cloudIntervals = (entry.value as List).cast<int>().toSet();
-          final localIntervals = ((localLog[entry.key] as List?)?.cast<int>() ?? []).toSet();
-          final merged = {...localIntervals, ...cloudIntervals}.toList();
-          if (merged.length > localIntervals.length) {
-            localLog[entry.key] = merged;
-            changed = true;
+      try {
+        final cloudReviewLog = (row['review_log'] as Map<String, dynamic>?) ?? {};
+        if (cloudReviewLog.isNotEmpty) {
+          final localRaw = prefs.getString('srs_review_log');
+          final localLog = localRaw != null
+              ? (jsonDecode(localRaw) as Map<String, dynamic>)
+              : <String, dynamic>{};
+          bool changed = false;
+          for (final entry in cloudReviewLog.entries) {
+            final cloudIntervals = (entry.value as List).cast<int>().toSet();
+            final localIntervals = ((localLog[entry.key] as List?)?.cast<int>() ?? []).toSet();
+            final merged = {...localIntervals, ...cloudIntervals}.toList();
+            if (merged.length > localIntervals.length) {
+              localLog[entry.key] = merged;
+              changed = true;
+            }
           }
+          if (changed) await prefs.setString('srs_review_log', jsonEncode(localLog));
         }
-        if (changed) await prefs.setString('srs_review_log', jsonEncode(localLog));
+      } catch (e) {
+        print('[SyncService._mergeListsFromCloudRow] review_log merge failed: $e');
       }
 
       // Post-merge: any active SRS word whose review log (just merged above)
@@ -764,7 +849,7 @@ class SyncService {
       // Hard Words and the mastered count keep treating it as still
       // in-progress even though getDueWords() (which reads the review log
       // directly, not this list) correctly stops showing it as due.
-      {
+      try {
         const allIntervals = [1, 3, 7, 14, 30];
         final srsRaw = prefs.getString('srs_words');
         if (srsRaw != null) {
@@ -793,23 +878,29 @@ class SyncService {
             await prefs.setString('srs_words', jsonEncode(remaining));
           }
         }
+      } catch (e) {
+        print('[SyncService._mergeListsFromCloudRow] post-merge SRS graduation failed: $e');
       }
 
       // achievements: apply {id, date} entries from cloud
-      final cloudAchs = (row['achievements'] as List? ?? []).cast<Map<String, dynamic>>();
-      for (final ach in cloudAchs) {
-        final id = ach['id'] as String?;
-        final date = ach['date'] as String?;
-        if (id != null && date != null && prefs.getString('ach_date_$id') == null) {
-          await prefs.setString('ach_date_$id', date);
+      try {
+        final cloudAchs = (row['achievements'] as List? ?? []).cast<Map<String, dynamic>>();
+        for (final ach in cloudAchs) {
+          final id = ach['id'] as String?;
+          final date = ach['date'] as String?;
+          if (id != null && date != null && prefs.getString('ach_date_$id') == null) {
+            await prefs.setString('ach_date_$id', date);
+          }
         }
+      } catch (e) {
+        print('[SyncService._mergeListsFromCloudRow] achievements merge failed: $e');
       }
 
       // imported_words — per-record last-write-wins merge (keyed by word+collection+folder).
       // Cloud rows include tombstones (deletedAt), so a deletion made on another
       // device correctly overwrites a stale local copy instead of being ignored.
-      final cloudImported = (row['imported_words'] as List? ?? []).cast<Map<String, dynamic>>();
-      {
+      try {
+        final cloudImported = (row['imported_words'] as List? ?? []).cast<Map<String, dynamic>>();
         final localRaw = prefs.getString('imported_words') ?? '[]';
         final localList = (jsonDecode(localRaw) as List).cast<Map<String, dynamic>>();
         String keyOf(Map<String, dynamic> w) => '${w['word']}__${w['collectionName'] ?? ''}__${w['folderName'] ?? ''}';
@@ -827,6 +918,8 @@ class SyncService {
           }
         }
         if (changed) await prefs.setString('imported_words', jsonEncode(byKey.values.toList()));
+      } catch (e) {
+        print('[SyncService._mergeListsFromCloudRow] imported_words merge failed: $e');
       }
   }
 }

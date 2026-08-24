@@ -105,7 +105,7 @@ class WidgetService {
                 .add(rm['study_date'] as String);
           }
           for (final cid in joinedIds) {
-            classStreakMap[cid] = _computeStreak(datesByClass[cid] ?? []);
+            classStreakMap[cid] = computeStreak(datesByClass[cid] ?? []);
           }
         }
       }
@@ -165,20 +165,4 @@ class WidgetService {
     );
   }
 
-  // Mirrors class_streak_screen.dart logic
-  static int _computeStreak(List<String> dates) {
-    if (dates.isEmpty) return 0;
-    final set = dates.toSet();
-    final now = streakAdjustedNow();
-    final today = formatStreakDate(now);
-    final yesterday = formatStreakDate(now.subtract(const Duration(days: 1)));
-    if (!set.contains(today) && !set.contains(yesterday)) return 0;
-    var cursor = set.contains(today) ? now : now.subtract(const Duration(days: 1));
-    var streak = 0;
-    while (set.contains(formatStreakDate(cursor))) {
-      streak++;
-      cursor = cursor.subtract(const Duration(days: 1));
-    }
-    return streak;
-  }
 }

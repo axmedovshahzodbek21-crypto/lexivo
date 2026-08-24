@@ -237,25 +237,26 @@ Future<List<HomeClassCard>> getHomeClassCards(String userId) async {
   }
 }
 
+// Throws on a genuine fetch failure instead of swallowing it into the same
+// null the caller gets for "no story written yet" — story_reader_screen.dart
+// was rendering both cases as the identical "Story coming soon" empty
+// state, hiding a real load failure (network error, etc.) behind a message
+// implying the content simply doesn't exist, with no way to retry.
 Future<Map<String, String>?> fetchUnitStory(
   String collectionName,
   int unitNumber,
   int storyNumber,
 ) async {
-  try {
-    final response = await supabase
-        .from('unit_stories')
-        .select('title, content')
-        .eq('collection_name', collectionName)
-        .eq('unit_number', unitNumber)
-        .eq('story_number', storyNumber)
-        .maybeSingle();
-    if (response == null) return null;
-    return {
-      'title': (response['title'] as String?) ?? '',
-      'content': (response['content'] as String?) ?? '',
-    };
-  } catch (_) {
-    return null;
-  }
+  final response = await supabase
+      .from('unit_stories')
+      .select('title, content')
+      .eq('collection_name', collectionName)
+      .eq('unit_number', unitNumber)
+      .eq('story_number', storyNumber)
+      .maybeSingle();
+  if (response == null) return null;
+  return {
+    'title': (response['title'] as String?) ?? '',
+    'content': (response['content'] as String?) ?? '',
+  };
 }

@@ -41,6 +41,7 @@ class _RealEnglishVideoScreenState extends State<RealEnglishVideoScreen> {
   WordCollection? _collection;
   Map<int, UnitProgress> _progressMap = {};
   bool _loading = true;
+  bool _loadError = false;
 
   @override
   void initState() {
@@ -56,9 +57,16 @@ class _RealEnglishVideoScreenState extends State<RealEnglishVideoScreen> {
       final data = jsonDecode(raw) as Map<String, dynamic>;
       final col = wordCollectionFromJson(data);
       await _loadProgress(col);
-      if (mounted) setState(() { _collection = col; _loading = false; });
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() { _collection = col; _loading = false; _loadError = false; });
+    } catch (e) {
+      // _collection only ever gets set on success above, so "null after
+      // loading" and "loaded but genuinely has zero days" used to be
+      // indistinguishable — both rendered the same "Words coming soon"
+      // empty state, hiding an actual load failure (missing/corrupt asset)
+      // behind a message implying there's simply no content yet, with no
+      // way to retry.
+      debugPrint('[RealEnglishVideoScreen] load failed: $e');
+      if (mounted) setState(() { _loading = false; _loadError = true; });
     }
   }
 
@@ -107,7 +115,7 @@ class _RealEnglishVideoScreenState extends State<RealEnglishVideoScreen> {
                   ),
                   const SizedBox(height: 20),
                   if (_collection == null || _collection!.days.isEmpty)
-                    _EmptyState()
+                    _EmptyState(loadError: _loadError, onRetry: _loadError ? () { setState(() => _loading = true); _load(); } : null)
                   else
                     GridView.builder(
                       shrinkWrap: true,
@@ -374,15 +382,23 @@ class _SmallBtn extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
+  final bool loadError;
+  final VoidCallback? onRetry;
+  const _EmptyState({this.loadError = false, this.onRetry});
+
   @override
   Widget build(BuildContext context) {
     return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
       const SizedBox(height: 40),
-      const Text('📭', style: TextStyle(fontSize: 48)),
+      Text(loadError ? '⚠️' : '📭', style: const TextStyle(fontSize: 48)),
       const SizedBox(height: 12),
-      Text('Words coming soon', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+      Text(loadError ? "Couldn't load this video's words" : 'Words coming soon', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
       const SizedBox(height: 6),
-      Text('This video\'s words are being prepared.', style: TextStyle(fontSize: 13, color: context.textMuted)),
+      Text(loadError ? 'Check your connection and try again.' : 'This video\'s words are being prepared.', style: TextStyle(fontSize: 13, color: context.textMuted)),
+      if (loadError && onRetry != null) ...[
+        const SizedBox(height: 16),
+        ElevatedButton(onPressed: onRetry, child: const Text('Try again')),
+      ],
     ]));
   }
 }

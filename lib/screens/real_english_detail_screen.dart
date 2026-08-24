@@ -29,6 +29,13 @@ class RealEnglishDetailScreen extends StatefulWidget {
 
 class _RealEnglishDetailScreenState extends State<RealEnglishDetailScreen> {
   final Map<String, int> _wordCounts = {};
+  // Videos whose word-count asset failed to load — kept separate from
+  // _wordCounts (rather than defaulting the count to 0) so the card can show
+  // something other than a real-looking "0 words", which was
+  // indistinguishable from a video that genuinely has no words. Tapping the
+  // card still opens RealEnglishVideoScreen, which retries the same fetch
+  // and shows its own proper error/retry state.
+  final Set<String> _failedCounts = {};
 
   @override
   void initState() {
@@ -41,7 +48,7 @@ class _RealEnglishDetailScreenState extends State<RealEnglishDetailScreen> {
     // single setState applies all results once every load settles, instead
     // of both awaiting sequentially and rebuilding the whole screen once per
     // video as each one resolved.
-    Future<MapEntry<String, int>> loadOne(String videoId) async {
+    Future<MapEntry<String, int?>> loadOne(String videoId) async {
       try {
         final raw = await rootBundle.loadString('assets/real_english/$videoId.json');
         final data = jsonDecode(raw) as Map<String, dynamic>;
@@ -51,12 +58,23 @@ class _RealEnglishDetailScreenState extends State<RealEnglishDetailScreen> {
           (s, d) => s + ((d as Map<String, dynamic>)['words'] as List).length,
         );
         return MapEntry(videoId, count);
-      } catch (_) {
-        return MapEntry(videoId, 0);
+      } catch (e) {
+        debugPrint('[RealEnglishDetailScreen] word count load failed for $videoId: $e');
+        return MapEntry(videoId, null);
       }
     }
     final entries = await Future.wait(widget.set.videos.map((v) => loadOne(v.id)));
-    if (mounted) setState(() => _wordCounts.addAll(Map.fromEntries(entries)));
+    if (mounted) {
+      setState(() {
+        for (final e in entries) {
+          if (e.value == null) {
+            _failedCounts.add(e.key);
+          } else {
+            _wordCounts[e.key] = e.value!;
+          }
+        }
+      });
+    }
   }
 
   @override
@@ -92,11 +110,13 @@ class _RealEnglishDetailScreenState extends State<RealEnglishDetailScreen> {
         itemBuilder: (ctx, i) {
           final video = widget.set.videos[i];
           final wordCount = _wordCounts[video.id] ?? 0;
+          final failed = _failedCounts.contains(video.id);
           final accent = _accent(i);
           return _VideoCard(
             video: video,
             index: i,
             wordCount: wordCount,
+            failed: failed,
             accent: accent,
             onTap: () => Navigator.push(
               context,
@@ -120,6 +140,7 @@ class _VideoCard extends StatelessWidget {
   final RealEnglishVideo video;
   final int index;
   final int wordCount;
+  final bool failed;
   final Color accent;
   final VoidCallback onTap;
 
@@ -127,6 +148,7 @@ class _VideoCard extends StatelessWidget {
     required this.video,
     required this.index,
     required this.wordCount,
+    this.failed = false,
     required this.accent,
     required this.onTap,
   });
@@ -180,11 +202,11 @@ class _VideoCard extends StatelessWidget {
                       Row(
                         children: [
                           Text(
-                            wordCount > 0 ? '$wordCount words' : 'No words yet',
+                            failed ? "Couldn't load" : (wordCount > 0 ? '$wordCount words' : 'No words yet'),
                             style: TextStyle(
                               fontSize: 10,
                               color: context.textMuted,
-                              fontStyle: wordCount == 0 ? FontStyle.italic : FontStyle.normal,
+                              fontStyle: (wordCount == 0 || failed) ? FontStyle.italic : FontStyle.normal,
                             ),
                           ),
                           if (video.duration.isNotEmpty && wordCount > 0) ...[

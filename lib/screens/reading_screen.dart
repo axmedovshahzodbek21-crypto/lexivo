@@ -47,7 +47,13 @@ class _ReadingScreenState extends State<ReadingScreen> {
     if (user != null) {
       supabase.from('class_members').select('class_id').eq('student_id', user.id).then((rows) {
         if (mounted) setState(() => _classIds = rows.map((r) => r['class_id'] as String).toList());
-      }).catchError((_) {});
+      }).catchError((e) {
+        // Previously swallowed with zero trace — a failure here silently
+        // means every subsequent reading session's class XP/activity credit
+        // (_recordClassReadActivity, gated on _classIds being non-empty)
+        // never fires, with nothing indicating why.
+        debugPrint('[ReadingScreen] class membership fetch failed: $e');
+      });
     }
   }
 
@@ -66,6 +72,14 @@ class _ReadingScreenState extends State<ReadingScreen> {
   }
 
   ReadingPassage _pickRandom(List<ReadingPassage> pool, [int? avoidId]) {
+    // Every current call site only ever passes a non-empty pool, but
+    // nothing enforced that — an empty pool would have hit `pool[0]` below
+    // and thrown a bare, undiagnosable RangeError. Fails loudly with a
+    // clear message instead, if that assumption is ever broken by a future
+    // caller.
+    if (pool.isEmpty) {
+      throw StateError('_pickRandom called with an empty pool');
+    }
     if (pool.length <= 1) return pool[0];
     ReadingPassage picked;
     do {

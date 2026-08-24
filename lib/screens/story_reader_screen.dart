@@ -48,6 +48,7 @@ class StoryReaderScreen extends StatefulWidget {
 
 class _StoryReaderScreenState extends State<StoryReaderScreen> {
   bool _loading = true;
+  bool _loadError = false;
   String _title = '';
   List<_StorySegment> _segments = [];
   final List<TapGestureRecognizer> _recognizers = [];
@@ -67,11 +68,18 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
   }
 
   Future<void> _fetchStory() async {
-    final result = await fetchUnitStory(
-      widget.collectionName,
-      widget.unitNumber,
-      widget.storyNumber,
-    );
+    Map<String, String>? result;
+    try {
+      result = await fetchUnitStory(
+        widget.collectionName,
+        widget.unitNumber,
+        widget.storyNumber,
+      );
+    } catch (e) {
+      debugPrint('[StoryReaderScreen] fetch failed: $e');
+      if (mounted) setState(() { _loading = false; _loadError = true; });
+      return;
+    }
     if (!mounted) return;
 
     final content = result?['content'] ?? '';
@@ -90,6 +98,7 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
 
     setState(() {
       _loading = false;
+      _loadError = false;
       _title = result?['title'] ?? '';
       _segments = segments;
     });
@@ -244,15 +253,24 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 60),
                         child: Column(
                           children: [
-                            Text(_storyEmoji, style: const TextStyle(fontSize: 52)),
+                            Text(_loadError ? '⚠️' : _storyEmoji, style: const TextStyle(fontSize: 52)),
                             const SizedBox(height: 16),
-                            Text('Story coming soon', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
+                            Text(_loadError ? "Couldn't load this story" : 'Story coming soon', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
                             const SizedBox(height: 8),
                             Text(
-                              "You've unlocked this story, but it hasn't\nbeen written yet. Check back soon!",
+                              _loadError
+                                  ? 'Check your connection and try again.'
+                                  : "You've unlocked this story, but it hasn't\nbeen written yet. Check back soon!",
                               textAlign: TextAlign.center,
                               style: TextStyle(fontSize: 14, color: context.textMuted, height: 1.55),
                             ),
+                            if (_loadError) ...[
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: () { setState(() => _loading = true); _fetchStory(); },
+                                child: const Text('Try again'),
+                              ),
+                            ],
                           ],
                         ),
                       ),

@@ -30,6 +30,12 @@ class _FreeTimeScreenState extends State<FreeTimeScreen> {
     _load();
   }
 
+  @override
+  void dispose() {
+    _tts.stop();
+    super.dispose();
+  }
+
   Future<void> _load() async {
     final mastered = await StorageService.getMasteredWords();
     if (!mounted) return;

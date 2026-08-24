@@ -92,10 +92,13 @@ class PomodoroService extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  bool _oneMinuteWarningSent = false;
+
   void _beginPhase(PomodoroState newState, int seconds) {
     _state = newState;
     _secondsRemaining = seconds;
     _phaseEndTime = DateTime.now().add(Duration(seconds: seconds));
+    _oneMinuteWarningSent = false;
   }
 
   void start(int workMinutes, int breakMinutes) {
@@ -122,17 +125,24 @@ class PomodoroService extends ChangeNotifier with WidgetsBindingObserver {
         return;
       }
 
-      if (remaining == 61 && _state == PomodoroState.working) {
-        _sendNotification(
-          '🍅 Almost done!',
-          '1 minute left in your focus session. Get ready for a break!',
-        );
-      }
-      if (remaining == 61 && _state == PomodoroState.onBreak) {
-        _sendNotification(
-          '✅ Break ending!',
-          'Break ends in 1 minute. Get ready to focus!',
-        );
+      // Threshold, not an exact tick match — remaining is recomputed from
+      // the wall-clock phase end (see the comment above), so a throttled/
+      // delayed tick could skip clean over the exact value 61 entirely
+      // (e.g. jump from 63 straight to 59 after the app was backgrounded),
+      // silently dropping the notification for that whole phase.
+      if (remaining <= 60 && !_oneMinuteWarningSent) {
+        _oneMinuteWarningSent = true;
+        if (_state == PomodoroState.working) {
+          _sendNotification(
+            '🍅 Almost done!',
+            '1 minute left in your focus session. Get ready for a break!',
+          );
+        } else if (_state == PomodoroState.onBreak) {
+          _sendNotification(
+            '✅ Break ending!',
+            'Break ends in 1 minute. Get ready to focus!',
+          );
+        }
       }
 
       _secondsRemaining = remaining;
@@ -189,12 +199,20 @@ class PomodoroService extends ChangeNotifier with WidgetsBindingObserver {
       android: androidDetails,
       windows: WindowsNotificationDetails(),
     );
-    await _notifications.show(
-      id: 0,
-      title: title,
-      body: body,
-      notificationDetails: details,
-    );
+    try {
+      await _notifications.show(
+        id: 0,
+        title: title,
+        body: body,
+        notificationDetails: details,
+      );
+    } catch (e) {
+      // Every call site fires this without awaiting it (the timer callback
+      // can't usefully await a notification), so a failure here (denied
+      // permission, plugin error) would otherwise be an unhandled Future
+      // rejection with nothing to catch it.
+      debugPrint('[PomodoroService] notification failed: $e');
+    }
   }
 
   // Not named dispose()/not an override on purpose — this is a singleton

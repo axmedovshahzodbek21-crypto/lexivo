@@ -229,6 +229,13 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
           builder: (_) => LearningScreen(
             wordDay: wd, userProfile: '', collectionName: widget.unitName,
             classId: widget.classId, dayIndex: 0, onHomeworkCompleted: onCompleted,
+            // record_class_homework_progress (fired via onHomeworkCompleted
+            // above, on session finish) already awards word_count * 10 class
+            // XP for 'learn' mode — without noXP, _grantLearnReward's
+            // per-word recordClassWordLearned call also awards full XP for
+            // the same words, double-paying class XP. Same bug and same fix
+            // as flashcard/quiz/match below, which already pass noXP: true.
+            noXP: true,
           ),
         ));
       case 'flashcard':

@@ -416,6 +416,14 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
   bool _isFlipped = false;
   bool _sessionFinished = false;
 
+  // Guards _markEasy/_markHard against rapid double-tap (direct button
+  // onTap, not just the swipe path): both are async and funnel into
+  // _nextCard(), which awaits _saveProgress() before calling
+  // _showFinishScreen() on the last card — a second invocation arriving
+  // while the first is still in flight could double-add the same word to
+  // _easyWords/_hardWords, or fire _showFinishScreen() twice.
+  bool _processingCard = false;
+
   Color _swipeOverlayColor = Colors.transparent;
   String _swipeOverlayText = '';
   bool _swipeOverlayVisible = false;
@@ -520,15 +528,27 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
     // navigated away before the delay elapsed.
     if (!mounted) return;
     if (!_hasWords) return;
-    _easyWords.add(_currentWord);
-    await _nextCard();
+    if (_processingCard) return;
+    _processingCard = true;
+    try {
+      _easyWords.add(_currentWord);
+      await _nextCard();
+    } finally {
+      _processingCard = false;
+    }
   }
 
   Future<void> _markHard() async {
     if (!mounted) return;
     if (!_hasWords) return;
-    _hardWords.add(_currentWord);
-    await _nextCard();
+    if (_processingCard) return;
+    _processingCard = true;
+    try {
+      _hardWords.add(_currentWord);
+      await _nextCard();
+    } finally {
+      _processingCard = false;
+    }
   }
 
   Future<void> _skipCard() async {

@@ -401,6 +401,8 @@ class _QuizSessionScreenState extends State<QuizSessionScreen>
           noXP: widget.noXP,
           myUnitCompleted: myUnitCompleted,
           onMatchComplete: widget.onMatchComplete,
+          onHomeworkCompleted: widget.onHomeworkCompleted,
+          onSessionComplete: widget.onSessionComplete,
         ),
       ),
     );
@@ -618,6 +620,13 @@ class QuizFinishScreen extends StatefulWidget {
   // Forwarded into the "Play Match" button so chaining onward from Quiz
   // still marks My Words progress for the Match activity.
   final Future<bool> Function()? onMatchComplete;
+  // Not used by this screen itself (already consumed once by
+  // QuizSessionScreen._showFinishScreen before this screen was even shown) —
+  // carried here purely so the "Retry wrong words" button below can forward
+  // them into the retry's own QuizSessionScreen, matching the original
+  // session's noXP/completion wiring instead of silently dropping it.
+  final VoidCallback? onHomeworkCompleted;
+  final Future<bool> Function()? onSessionComplete;
 
   const QuizFinishScreen({
     super.key,
@@ -631,6 +640,8 @@ class QuizFinishScreen extends StatefulWidget {
     this.noXP = false,
     this.myUnitCompleted = false,
     this.onMatchComplete,
+    this.onHomeworkCompleted,
+    this.onSessionComplete,
   });
 
   @override
@@ -883,6 +894,16 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
                             collectionName: widget.collectionName,
                             quizType: widget.quizType,
                             questionCount: widget.wrongWords.length,
+                            // Previously dropped entirely, so a retry silently
+                            // became a real-XP session (noXP not forwarded)
+                            // whose completion never reached the homework
+                            // screen (onHomeworkCompleted/onSessionComplete
+                            // not forwarded) — see QuizFinishScreen's own
+                            // doc comment on these two fields.
+                            noXP: widget.noXP,
+                            onHomeworkCompleted: widget.onHomeworkCompleted,
+                            onSessionComplete: widget.onSessionComplete,
+                            onMatchComplete: widget.onMatchComplete,
                           ),
                         ),
                       );

@@ -37,6 +37,15 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
 
   List<WordItem> _learnedThisSession = [];
 
+  // Guards _onWordLearned against rapid double-tap/double-swipe: it's async
+  // with several awaits (saveLearnedWords, recordStudySession, several
+  // SharedPreferences writes) before it finally advances _currentIndex or
+  // navigates away. Without this, a second invocation arriving while the
+  // first is still in flight re-enters with a stale _currentIndex, risking
+  // duplicate navigation (_showLevelCompleteScreen/_goToFlashcardWithLearned
+  // firing twice) on the session's last word.
+  bool _processingWordLearned = false;
+
   // A ValueNotifier instead of setState-backed fields: onVerticalDragUpdate
   // fires on nearly every frame during a swipe, and setState() at this
   // level rebuilds the whole screen (AppBar, stats, action buttons —
@@ -471,72 +480,87 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
   }
 
   Future<void> _onWordLearned() async {
-    final currentWord = _todayWords[_currentIndex].word;
-    final newIndex = _currentIndex + 1;
+    if (_processingWordLearned) return;
+    _processingWordLearned = true;
+    try {
+      final currentWord = _todayWords[_currentIndex].word;
+      final newIndex = _currentIndex + 1;
 
-    if (!_actedWords.contains(currentWord)) {
-      _actedWords.add(currentWord);
-      _learnedThisSession.add(_todayWords[_currentIndex]);
-      setState(() => _learnedToday++);
+      if (!_actedWords.contains(currentWord)) {
+        _actedWords.add(currentWord);
+        _learnedThisSession.add(_todayWords[_currentIndex]);
+        setState(() => _learnedToday++);
 
-      await StorageService.saveLearnedWords(
-        [_todayWords[_currentIndex]],
-        widget.collection.id,
-        widget.collection.title,
-        1,
-      );
-      await StorageService.recordStudySession();
+        await StorageService.saveLearnedWords(
+          [_todayWords[_currentIndex]],
+          widget.collection.id,
+          widget.collection.title,
+          1,
+        );
+        await StorageService.recordStudySession();
 
-      await StorageService.setLeveledWordsLearnedCount(
-        widget.collection.id,
-        _learnedAllTime + _learnedToday,
-      );
+        await StorageService.setLeveledWordsLearnedCount(
+          widget.collection.id,
+          _learnedAllTime + _learnedToday,
+        );
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt(_dailyLearnedKey, _learnedToday);
-      await _saveLearnedWordsToPrefs();
-      if (!mounted) return;
-
-      if (_learnedToday == _dailyLimit) {
-        await _savePosition();
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt(_dailyLearnedKey, _learnedToday);
+        await _saveLearnedWordsToPrefs();
         if (!mounted) return;
-        setState(() => _limitReached = true);
-        _showLimitDialog();
+
+        if (_learnedToday == _dailyLimit) {
+          await _savePosition();
+          if (!mounted) return;
+          setState(() => _limitReached = true);
+          _showLimitDialog();
+          return;
+        }
+
+        if (_learnedToday == _overLimitWarning && !_overLimitWarningShown) {
+          _overLimitWarningShown = true;
+          // Unlike the _dailyLimit branch above, this doesn't switch the whole
+          // screen into a different full-screen state — it's just an
+          // AlertDialog shown over the normal card view, with a "Keep
+          // learning" option that simply dismisses it. Returning early here
+          // (as this used to) left _currentIndex unadvanced, so dismissing
+          // the dialog showed the same already-learned word again. Show the
+          // dialog (non-blocking — showDialog doesn't need to be awaited to
+          // display) and fall through to the same advance/day-complete logic
+          // below that every other path already goes through, instead of
+          // duplicating it here.
+          _showOverLimitWarning();
+        }
+      }
+
+      if (newIndex >= _todayWords.length) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(_sessionKey);
+        // Check if entire level is now complete
+        final learnedWords = (await StorageService.getLearnedWords())
+            .where((l) => l.collectionName == widget.collection.id)
+            .map((l) => l.word)
+            .toSet();
+        final skippedWords = await StorageService.getSkippedWords(
+          widget.collection.id,
+        );
+        if (!mounted) return;
+        final allCovered = widget.collection.words.every(
+          (w) => learnedWords.contains(w.word) || skippedWords.contains(w.word),
+        );
+        if (allCovered) {
+          _showLevelCompleteScreen();
+          return;
+        }
+        _goToFlashcardWithLearned();
         return;
       }
 
-      if (_learnedToday == _overLimitWarning && !_overLimitWarningShown) {
-        _overLimitWarningShown = true;
-        _showOverLimitWarning();
-        return;
-      }
+      setState(() => _currentIndex = newIndex);
+      await _savePosition();
+    } finally {
+      _processingWordLearned = false;
     }
-
-    if (newIndex >= _todayWords.length) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_sessionKey);
-      // Check if entire level is now complete
-      final learnedWords = (await StorageService.getLearnedWords())
-          .where((l) => l.collectionName == widget.collection.id)
-          .map((l) => l.word)
-          .toSet();
-      final skippedWords = await StorageService.getSkippedWords(
-        widget.collection.id,
-      );
-      if (!mounted) return;
-      final allCovered = widget.collection.words.every(
-        (w) => learnedWords.contains(w.word) || skippedWords.contains(w.word),
-      );
-      if (allCovered) {
-        _showLevelCompleteScreen();
-        return;
-      }
-      _goToFlashcardWithLearned();
-      return;
-    }
-
-    setState(() => _currentIndex = newIndex);
-    await _savePosition();
   }
 
   Future<void> _skipWordPermanently() async {

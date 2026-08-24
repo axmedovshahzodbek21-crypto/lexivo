@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
@@ -7,11 +8,39 @@ import '../data/storage_service.dart';
 import '../date_utils.dart';
 import 'widget_service.dart';
 
+// Minimal dependency-free async mutex (mirrors StorageService's private
+// _Mutex — duplicated rather than shared across files since Dart privacy is
+// per-library and that one is private to storage_service.dart). Serializes
+// concurrent invocations of the *same* push function: pushLists()/pushStats()
+// are each fire-and-forget from ~19 call sites in storage_service.dart, and
+// each one reads local state, merges the cloud row, then upserts. Without
+// this, two overlapping calls to the same function can race on the network —
+// whichever upsert lands last wins outright, even if it was built from an
+// earlier, less-complete local snapshot than the other call's, silently
+// overwriting newer data with stale data.
+class _Mutex {
+  Future<void> _tail = Future.value();
+  Future<T> run<T>(Future<T> Function() action) {
+    final previous = _tail;
+    final completer = Completer<void>();
+    _tail = completer.future;
+    return previous.then((_) async {
+      try {
+        return await action();
+      } finally {
+        completer.complete();
+      }
+    });
+  }
+}
+
 /// Push-on-change + pull-on-login sync against the single `user_data` table.
 /// All push methods are fire-and-forget (they swallow errors silently).
 /// pullAll() is called once on login and merges server state with local state.
 class SyncService {
   static final _sb = Supabase.instance.client;
+  static final _pushStatsMutex = _Mutex();
+  static final _pushListsMutex = _Mutex();
 
   static String? get _uid => _sb.auth.currentUser?.id;
 
@@ -37,7 +66,12 @@ class SyncService {
 
   // ── Push ─────────────────────────────────────────────────────────────────────
 
-  static Future<void> pushStats() async {
+  static Future<void> pushStats() {
+    if (_uid == null) return Future.value();
+    return _pushStatsMutex.run(_pushStatsImpl);
+  }
+
+  static Future<void> _pushStatsImpl() async {
     final uid = _uid;
     if (uid == null) return;
     try {
@@ -161,7 +195,12 @@ class SyncService {
     }
   }
 
-  static Future<void> pushLists() async {
+  static Future<void> pushLists() {
+    if (_uid == null) return Future.value();
+    return _pushListsMutex.run(_pushListsImpl);
+  }
+
+  static Future<void> _pushListsImpl() async {
     final uid = _uid;
     if (uid == null) return;
     try {

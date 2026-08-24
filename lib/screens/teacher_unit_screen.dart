@@ -114,6 +114,12 @@ class TeacherUnitScreen extends StatefulWidget {
 
   @override
   State<TeacherUnitScreen> createState() => _TeacherUnitScreenState();
+
+  // Call on sign-out — the cache is process-lifetime and keyed only by
+  // unit id, so signing into a different account on the same device
+  // without a full app restart could briefly paint the previous teacher's
+  // cached word list before _load() overwrote it.
+  static void clearCache() => _TeacherUnitScreenState._cache.clear();
 }
 
 class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTickerProviderStateMixin {

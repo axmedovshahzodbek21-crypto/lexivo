@@ -16,6 +16,12 @@ class TeacherFolderScreen extends StatefulWidget {
 
   @override
   State<TeacherFolderScreen> createState() => _TeacherFolderScreenState();
+
+  // Call on sign-out — the cache is process-lifetime and keyed only by
+  // folder id, so signing into a different account on the same device
+  // without a full app restart could briefly paint the previous teacher's
+  // cached unit names before _load() overwrote it.
+  static void clearCache() => _TeacherFolderScreenState._cache.clear();
 }
 
 class _TeacherFolderScreenState extends State<TeacherFolderScreen> {

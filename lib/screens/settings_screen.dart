@@ -17,6 +17,9 @@ import 'login_screen.dart';
 import 'main_shell.dart';
 import 'class_progress_screen.dart';
 import 'my_words_folder_screen.dart';
+import 'teacher_library_screen.dart';
+import 'teacher_folder_screen.dart';
+import 'teacher_unit_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -1284,6 +1287,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await StorageService.clearAllProgress();
     ClassProgressScreen.clearCache();
     MyWordsFolderScreen.clearCache();
+    TeacherLibraryScreen.clearCache();
+    TeacherFolderScreen.clearCache();
+    TeacherUnitScreen.clearCache();
     await OneSignalService.unlinkUser();
     await Supabase.instance.client.auth.signOut();
     if (!mounted) return;
@@ -1351,6 +1357,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await Supabase.instance.client.rpc('delete_own_account');
       await StorageService.clearAllProgress();
       ClassProgressScreen.clearCache();
+      TeacherLibraryScreen.clearCache();
+      TeacherFolderScreen.clearCache();
+      TeacherUnitScreen.clearCache();
       await Supabase.instance.client.auth.signOut();
       if (!mounted) return;
       navigator.pushAndRemoveUntil(

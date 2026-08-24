@@ -39,6 +39,7 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
 
   List<_Unit> _units = [];
   bool _loading = true;
+  bool _hasError = false;
 
   static const _cardColors = [
     Color(0xFF5B8AF0), Color(0xFFFF6B6B), Color(0xFF06D6A0), Color(0xFFFFD166),
@@ -57,7 +58,7 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
   }
 
   Future<void> _load() async {
-    if (_units.isEmpty && mounted) setState(() => _loading = true);
+    if (_units.isEmpty && mounted) setState(() { _loading = true; _hasError = false; });
     try {
       final data = await supabase
           .from('teacher_units')
@@ -75,9 +76,11 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
         );
       }).toList();
       _cachePut(widget.folderId, units);
-      if (mounted) setState(() { _units = units; _loading = false; });
+      if (mounted) setState(() { _units = units; _loading = false; _hasError = false; });
     } catch (_) {
-      if (mounted) setState(() => _loading = false);
+      // Only surface the error state when there's nothing to show already —
+      // previously a load failure was indistinguishable from "no units yet".
+      if (mounted) setState(() { _loading = false; if (_units.isEmpty) _hasError = true; });
     }
   }
 
@@ -283,11 +286,28 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
       ),
       body: _loading
           ? Center(child: CircularProgressIndicator(color: context.primary))
-          : _units.isEmpty
-              ? _buildEmpty()
-              : _buildGrid(),
+          : _hasError
+              ? _buildError()
+              : _units.isEmpty
+                  ? _buildEmpty()
+                  : _buildGrid(),
     );
   }
+
+  Widget _buildError() => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Text('⚠️', style: TextStyle(fontSize: 48)),
+        const SizedBox(height: 14),
+        Text('Couldn\'t load this folder', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+        const SizedBox(height: 6),
+        Text('Check your connection and try again.', textAlign: TextAlign.center, style: TextStyle(color: context.textMuted)),
+        const SizedBox(height: 16),
+        ElevatedButton(onPressed: _load, child: const Text('Retry')),
+      ]),
+    ),
+  );
 
   Widget _buildEmpty() => Center(
     child: Padding(

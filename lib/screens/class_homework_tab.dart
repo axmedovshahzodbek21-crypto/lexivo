@@ -718,8 +718,12 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   }) {
     final completed = _completedModes[homeworkId] ?? {};
     final allDone = isHomeworkFullyDone(hwModes, completed);
-    final due = homeworkDueLabel(hwDue);
-    final isOverdue = due?.startsWith('Overdue') == true;
+    // isHomeworkOverdue(), not string-matching homeworkDueLabel()'s display
+    // text — see the same fix in class_home_screen.dart's _buildTargetRow.
+    // The label itself isn't rendered on this card (only a ⚠️ icon below),
+    // so unlike the other two call sites in this file, there's no separate
+    // `due` variable to keep around here.
+    final isOverdue = isHomeworkOverdue(hwDue);
     const modeIcons = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯'};
     final accent = allDone
         ? const LinearGradient(colors: [Color(0xFF22c55e), Color(0xFF4ade80)])
@@ -842,8 +846,9 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   Widget _buildCollectionCard(_CollHW h) {
     final completed = _completedModes[h.homeworkId] ?? {};
     final allDone = isHomeworkFullyDone(h.hwModes, completed);
-    final due = homeworkDueLabel(h.hwDue);
-    final isOverdue = due?.startsWith('Overdue') == true;
+    // isHomeworkOverdue(), not string-matching homeworkDueLabel()'s display
+    // text — see the same fix in class_home_screen.dart's _buildTargetRow.
+    final isOverdue = isHomeworkOverdue(h.hwDue);
     const modeIcons = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯'};
     const collColor = Color(0xFF16A34A);
     final accent = allDone
@@ -912,8 +917,9 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   Widget _buildPassageCard(_PassageHW h) {
     final completed = _completedModes[h.homeworkId] ?? {};
     final allDone = isHomeworkFullyDone(h.hwModes, completed);
-    final due = homeworkDueLabel(h.hwDue);
-    final isOverdue = due?.startsWith('Overdue') == true;
+    // isHomeworkOverdue(), not string-matching homeworkDueLabel()'s display
+    // text — see the same fix in class_home_screen.dart's _buildTargetRow.
+    final isOverdue = isHomeworkOverdue(h.hwDue);
     const passageColor = Color(0xFFF59E0B);
     final accent = allDone
         ? const LinearGradient(colors: [Color(0xFF22c55e), Color(0xFF4ade80)])

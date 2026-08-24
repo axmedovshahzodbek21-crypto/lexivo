@@ -114,8 +114,14 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> {
   Future<void> _renameClass(String classId, String newName) async {
     if (newName.trim().isEmpty) return;
     final user = currentUser;
+    if (user == null) return;
     try {
-      await supabase.from('classes').update({'name': newName.trim()}).eq('id', classId);
+      // teacher_id scopes the update to classes this account actually
+      // teaches, as defense-in-depth — RLS is the real backstop, but a bare
+      // .eq('id', classId) here (unlike _load()'s query above, and every
+      // other class-scoped mutation in this file) would let a misconfigured
+      // policy rename any class by id regardless of who teaches it.
+      await supabase.from('classes').update({'name': newName.trim()}).eq('id', classId).eq('teacher_id', user.id);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -124,14 +130,16 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> {
       }
       return;
     }
-    if (user != null) _cache.remove(user.id);
+    _cache.remove(user.id);
     await _load();
   }
 
   Future<void> _deleteClass(String classId) async {
     final user = currentUser;
+    if (user == null) return;
     try {
-      await supabase.from('classes').delete().eq('id', classId);
+      // Same defense-in-depth scoping as _renameClass above.
+      await supabase.from('classes').delete().eq('id', classId).eq('teacher_id', user.id);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -140,7 +148,7 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> {
       }
       return;
     }
-    if (user != null) _cache.remove(user.id);
+    _cache.remove(user.id);
     await _load();
   }
 

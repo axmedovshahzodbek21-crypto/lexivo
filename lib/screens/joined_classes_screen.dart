@@ -184,7 +184,26 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
     setState(() => _expandedLeaderboard = classId);
     if (_classLeaderboards.containsKey(classId)) return;
     setState(() => _leaderboardLoading = classId);
+    final user = currentUser;
+    if (user == null) { if (mounted) setState(() => _leaderboardLoading = null); return; }
     try {
+      // get_class_leaderboard's own definition isn't reconstructible from
+      // this repo's migrations, so whether it enforces caller membership
+      // server-side can't be verified here. classId always comes from this
+      // screen's own _joinedClasses (already scoped to this student), so
+      // this check is currently redundant for every real call site — but
+      // it's cheap defense-in-depth against a future bug passing an
+      // unexpected classId in, rather than trusting the RPC alone.
+      final membership = await supabase
+          .from('class_members')
+          .select('class_id')
+          .eq('class_id', classId)
+          .eq('student_id', user.id)
+          .maybeSingle();
+      if (membership == null) {
+        if (mounted) setState(() => _leaderboardLoading = null);
+        return;
+      }
       final res = await supabase.rpc('get_class_leaderboard', params: {'p_class_id': classId});
       final rows = (res as List).map((e) => ClassLeaderboardRow.fromMap(Map<String, dynamic>.from(e as Map))).toList();
       if (mounted) setState(() { _classLeaderboards[classId] = rows; _leaderboardLoading = null; });

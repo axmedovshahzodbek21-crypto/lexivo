@@ -11,14 +11,26 @@ class _Folder {
 }
 
 // One-time real example (folder → unit → word) so a first-time teacher sees
-// the actual structure, not an empty page. Guarded server-side (does this
-// teacher have zero folders at all?) rather than a local flag — a local
-// SharedPreferences flag only guards the one device, so a teacher signing in
-// on a second device would get a second copy of "Vocabulary 101" seeded.
+// the actual structure, not an empty page. Guarded server-side rather than a
+// local flag — a local SharedPreferences flag only guards the one device, so
+// a teacher signing in on a second device would get a second copy of
+// "Vocabulary 101" seeded.
+//
+// The guard is a persistent has_seeded_library flag on profiles, not just
+// "does this teacher currently have zero folders" — the latter re-triggered
+// every time a teacher deleted every folder they own, silently recreating
+// "Vocabulary 101" right after a delete they explicitly performed. See
+// supabase/migrations/20260824_add_has_seeded_library_flag.sql.
 Future<bool> _seedExampleFolder(String teacherId) async {
   try {
+    final profile = await supabase.from('profiles').select('has_seeded_library').eq('id', teacherId).maybeSingle();
+    if (profile?['has_seeded_library'] == true) return false;
+
     final existing = await supabase.from('teacher_folders').select('id').eq('teacher_id', teacherId).limit(1);
-    if ((existing as List).isNotEmpty) return false;
+    if ((existing as List).isNotEmpty) {
+      await supabase.from('profiles').update({'has_seeded_library': true}).eq('id', teacherId);
+      return false;
+    }
     final folder = await supabase
         .from('teacher_folders')
         .insert({'teacher_id': teacherId, 'name': 'Vocabulary 101'})
@@ -38,6 +50,7 @@ Future<bool> _seedExampleFolder(String teacherId) async {
       'definition_uz': "qizil, sariq yoki yashil po'stli, ichi oq mevali dumaloq meva",
       'examples': [{'sentence': 'She ate a fresh apple for breakfast.', 'translation': 'U nonushta uchun yangi olma yedi.'}],
     });
+    await supabase.from('profiles').update({'has_seeded_library': true}).eq('id', teacherId);
     return true;
   } catch (_) {
     return false;
@@ -62,6 +75,7 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
 
   List<_Folder> _folders = [];
   bool _loading = true;
+  bool _hasError = false;
 
   static const _cardColors = [
     Color(0xFF5B8AF0), Color(0xFFFF6B6B), Color(0xFF06D6A0), Color(0xFFFFD166),
@@ -85,7 +99,7 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
       if (mounted) setState(() => _loading = false);
       return;
     }
-    if (_folders.isEmpty && mounted) setState(() => _loading = true);
+    if (_folders.isEmpty && mounted) setState(() { _loading = true; _hasError = false; });
     try {
       final data = await supabase
           .from('teacher_folders')
@@ -106,9 +120,15 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
         return _load();
       }
       _cache = folders;
-      if (mounted) setState(() { _folders = folders; _loading = false; });
+      if (mounted) setState(() { _folders = folders; _loading = false; _hasError = false; });
     } catch (_) {
-      if (mounted) setState(() => _loading = false);
+      // Only surface the error state when there's nothing to show already —
+      // a failed background refresh of data already on screen just leaves
+      // the stale data displayed rather than replacing it with an error.
+      // Previously this was indistinguishable from "no folders yet" either
+      // way, with no way for the teacher to tell a load failed vs. genuinely
+      // having none.
+      if (mounted) setState(() { _loading = false; if (_folders.isEmpty) _hasError = true; });
     }
   }
 
@@ -213,24 +233,39 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
     // ON DELETE CASCADE, so deleting this folder silently wipes every
     // class's homework assignment (and all student completion history) for
     // any unit inside it. Warn the teacher before that happens.
+    //
+    // A whole folder can also be assigned to a class directly as browsable
+    // library content via class_library_assignments — independent of any
+    // per-unit homework — so that's checked separately; without it, deleting
+    // a folder that's actively assigned to a class as reading material gave
+    // zero warning that students would lose access to it.
     List assignedHw = const [];
+    List assignedClasses = const [];
     try {
       final units = await supabase.from('teacher_units').select('id').eq('folder_id', folder.id);
       final unitIds = (units as List).map((u) => (u as Map)['id'] as String).toList();
       if (unitIds.isNotEmpty) {
         assignedHw = await supabase.from('class_homework').select('id').inFilter('unit_id', unitIds);
       }
+      assignedClasses = await supabase.from('class_library_assignments').select('id').eq('folder_id', folder.id);
     } catch (_) {}
     if (!mounted) return;
+    final warnings = <String>[];
+    if (assignedHw.isNotEmpty) {
+      warnings.add('assigned as homework in ${assignedHw.length} place${assignedHw.length != 1 ? 's' : ''} — deleting it will also remove that homework and every student\'s progress on it');
+    }
+    if (assignedClasses.isNotEmpty) {
+      warnings.add('assigned to ${assignedClasses.length} class${assignedClasses.length != 1 ? 'es' : ''} as browsable library content — students there will lose access to it');
+    }
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: context.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text('Delete folder?', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
-        content: Text(assignedHw.isEmpty
+        content: Text(warnings.isEmpty
             ? 'This will delete "${folder.name}" and all its units and words permanently.'
-            : 'This will delete "${folder.name}" and all its units and words permanently. Units in it are currently assigned as homework in ${assignedHw.length} place${assignedHw.length != 1 ? 's' : ''} — deleting it will also remove that homework and every student\'s progress on it.',
+            : 'This will delete "${folder.name}" and all its units and words permanently. It is currently ${warnings.join(', and ')}.',
             style: TextStyle(color: context.textMuted)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: context.textMuted))),
@@ -306,11 +341,28 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
       ),
       body: _loading
           ? Center(child: CircularProgressIndicator(color: context.primary))
-          : _folders.isEmpty
-              ? _buildEmpty()
-              : _buildGrid(),
+          : _hasError
+              ? _buildError()
+              : _folders.isEmpty
+                  ? _buildEmpty()
+                  : _buildGrid(),
     );
   }
+
+  Widget _buildError() => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Text('⚠️', style: TextStyle(fontSize: 48)),
+        const SizedBox(height: 14),
+        Text('Couldn\'t load your library', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+        const SizedBox(height: 6),
+        Text('Check your connection and try again.', textAlign: TextAlign.center, style: TextStyle(color: context.textMuted)),
+        const SizedBox(height: 16),
+        ElevatedButton(onPressed: _load, child: const Text('Retry')),
+      ]),
+    ),
+  );
 
   Widget _buildEmpty() => Center(
     child: Padding(

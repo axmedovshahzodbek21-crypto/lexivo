@@ -303,11 +303,23 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
     }
   }
 
+  // class_srs_states/class_hard_words/class_starred_words are keyed by
+  // (user_id, class_id, word) text — not by class_words.id, since there's
+  // no FK — so two rows sharing the same word text within this class would
+  // share the same starred/hard/SRS state, silently linking two
+  // conceptually different cards. Case/whitespace-insensitive, matching the
+  // dedup convention used for imported words elsewhere in the app.
+  Set<String> get _existingWordKeys => _words.map((w) => w.word.trim().toLowerCase()).toSet();
+
   Future<void> _addWord() async {
     final word = _wordCtrl.text.trim();
     final translation = _translationCtrl.text.trim();
     if (word.isEmpty || translation.isEmpty) {
       setState(() => _manualError = 'Word and translation are required');
+      return;
+    }
+    if (_existingWordKeys.contains(word.toLowerCase())) {
+      setState(() => _manualError = 'This word already exists in the class');
       return;
     }
     setState(() { _saving = true; _manualError = ''; });
@@ -343,7 +355,17 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
       final user = currentUser;
       final folder = _folderCtrl.text.trim();
       final group = _groupCtrl.text.trim();
-      final rows = _parsed.map((w) => {
+      // Skip words already in the class, and dedupe within this batch too
+      // (a pasted AI response can repeat a word) — see _existingWordKeys.
+      final seen = _existingWordKeys;
+      final toImport = <_ParsedWord>[];
+      for (final w in _parsed) {
+        final key = w.word.trim().toLowerCase();
+        if (seen.contains(key)) continue;
+        seen.add(key);
+        toImport.add(w);
+      }
+      final rows = toImport.map((w) => {
         'class_id': widget.classId,
         'teacher_id': user?.id,
         'word': w.word,
@@ -357,13 +379,18 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
         if (folder.isNotEmpty) 'folder_name': folder,
         if (group.isNotEmpty) 'collection_name': group,
       }).toList();
-      await supabase.from('class_words').insert(rows);
+      if (rows.isNotEmpty) await supabase.from('class_words').insert(rows);
       if (!mounted) return;
       _pasteCtrl.clear();
       _wordsInputCtrl.clear();
       setState(() => _parsed = []);
       await _loadWords();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${rows.length} words added!'), duration: const Duration(seconds: 2)));
+      if (mounted) {
+        final message = rows.isEmpty
+            ? 'All words already exist in the class'
+            : '${rows.length} word${rows.length == 1 ? '' : 's'} added!';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), duration: const Duration(seconds: 2)));
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -414,12 +441,16 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
   }
 
   Future<void> _deleteWord(String id) async {
-    // class_id scopes the delete to this class as defense-in-depth — RLS is
-    // the real backstop, but a bare .eq('id', id) here would let a
-    // misconfigured policy delete any class_words row by id regardless of
-    // which class it belongs to.
+    // Goes through delete_class_word (SECURITY DEFINER RPC) instead of a
+    // plain class_words delete — the word alone has no FK from
+    // class_srs_states/class_hard_words/class_starred_words (they're keyed
+    // by word text), so a bare delete here left every student's SRS/hard/
+    // starred progress for this word behind forever. The RPC verifies
+    // teacher ownership itself and cascades the cleanup across all three
+    // tables server-side, which the teacher's own RLS can't do client-side
+    // (it only lets a student manage their own rows in those tables).
     try {
-      await supabase.from('class_words').delete().eq('id', id).eq('class_id', widget.classId);
+      await supabase.rpc('delete_class_word', params: {'p_word_id': id, 'p_class_id': widget.classId});
     } catch (e) {
       // Previously unawaited by its caller with no try/catch here either —
       // a failed delete became an unhandled Future rejection with zero
@@ -1076,7 +1107,16 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
     try {
       final user = currentUser;
       final collection = _collections[_selectedCollectionIdx!];
-      final rows = day.words.map((w) {
+      // Skip words already in the class — see _existingWordKeys.
+      final seen = _existingWordKeys;
+      final wordsToImport = <WordItem>[];
+      for (final w in day.words) {
+        final key = w.word.trim().toLowerCase();
+        if (seen.contains(key)) continue;
+        seen.add(key);
+        wordsToImport.add(w);
+      }
+      final rows = wordsToImport.map((w) {
         final exPairs = [
           if (w.example1.isNotEmpty) {'sentence': w.example1, 'translation': w.example1Translation},
           if (w.example2.isNotEmpty) {'sentence': w.example2, 'translation': w.example2Translation},
@@ -1099,10 +1139,13 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
           'collection_name': 'Day ${day.dayNumber}: ${day.topic}',
         };
       }).toList();
-      await supabase.from('class_words').insert(rows);
+      if (rows.isNotEmpty) await supabase.from('class_words').insert(rows);
       if (mounted) {
+        final message = rows.isEmpty
+            ? 'All words already exist in the class'
+            : '${rows.length} word${rows.length == 1 ? '' : 's'} imported!';
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('${rows.length} words imported!'),
+          content: Text(message),
           duration: const Duration(seconds: 2),
         ));
         setState(() => _selectedDayIdx = null);

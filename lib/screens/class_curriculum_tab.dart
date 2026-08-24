@@ -45,6 +45,7 @@ class _Homework {
   final int? dayNumber;           // day within collection
   final int? passageId;           // Ideas reading passage
   final String unitName, source;
+  final String? topic;            // collection-day topic (e.g. "Fruits & Vegetables")
   final List<String> modes;
   final String? dueDate;
   final String assignedTo;
@@ -54,7 +55,7 @@ class _Homework {
   const _Homework({
     required this.id, this.unitId, this.classUnitId,
     this.collectionName, this.dayNumber, this.passageId,
-    required this.unitName, required this.source,
+    required this.unitName, required this.source, this.topic,
     required this.modes, this.dueDate, required this.assignedTo,
     required this.studentIds, required this.totalStudents,
     required this.completionCounts,
@@ -215,13 +216,28 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
         } else {
           unitName = (cwMap?['name'] as String?) ?? 'Unit';
         }
+        // The topic was never persisted for collection-day homework — only
+        // known transiently in _pickCollectionDay's sheet — so it's
+        // recomputed here the same way collectionByName() is already used
+        // elsewhere, instead of a previous dead attempt to parse it back
+        // out of unitName's "$collName · Day $dayNum" format (which never
+        // actually contained it).
+        String? topic;
+        if (collName != null && dayNum != null) {
+          final col = collectionByName(collName);
+          if (col != null) {
+            for (final d in col.days) {
+              if (d.dayNumber == dayNum) { topic = d.topic; break; }
+            }
+          }
+        }
         final rawModes = (m['modes'] as List?)?.map((x) => x as String).toList() ?? ['learn', 'flashcard', 'quiz'];
         final rawStudentIds = (m['student_ids'] as List?)?.map((x) => x as String).toList() ?? [];
         final totalStudents = rawStudentIds.isEmpty ? _students.length : rawStudentIds.length;
         return _Homework(
           id: m['id'] as String, unitId: unitId, classUnitId: classUnitId,
           collectionName: collName, dayNumber: dayNum, passageId: passageId,
-          unitName: unitName, source: source,
+          unitName: unitName, source: source, topic: topic,
           modes: rawModes, dueDate: m['due_date'] as String?,
           assignedTo: rawStudentIds.isEmpty ? 'class' : 'specific', studentIds: rawStudentIds,
           totalStudents: totalStudents, completionCounts: completionMap[m['id'] as String] ?? {},
@@ -766,11 +782,25 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
     if (user == null) return;
     final existing = _homework.where((h) =>
         unit.isClassWords ? h.classUnitId == unit.id : h.unitId == unit.id).toList();
-    if (existing.isNotEmpty) { _showHomeworkDetail(existing.first); return; }
+
+    // Scoped to who existing assignments for this unit actually cover, not
+    // just whether *a* row exists — matches the same coverage-tracking
+    // pattern _pickCollectionDay uses for collection days. Without this, a
+    // unit assigned to only some students became a dead end (routed
+    // straight to the read-only detail view) with no way to assign the
+    // rest of the class, unlike the collections flow.
+    final allStudentIds = _students.map((s) => s.studentId).toSet();
+    final coverage = <String>{};
+    for (final h in existing) {
+      coverage.addAll(h.assignedTo == 'class' ? allStudentIds : h.studentIds.toSet());
+    }
+    final fullyAssigned = allStudentIds.isEmpty ? coverage.isNotEmpty : allStudentIds.difference(coverage).isEmpty;
+    if (fullyAssigned && existing.isNotEmpty) { _showHomeworkDetail(existing.first); return; }
 
     await _showAssignHomeworkSheet(
       subtitle: '${unit.isClassWords ? '📝' : '📖'} ${unit.name}  ·  ${unit.wordCount} words',
       buttonColor: context.primary,
+      preAssignedStudentIds: coverage,
       buildInsert: (modes, assignedTo, selectedStudents, dueDate) => {
         'class_id': widget.classId,
         if (!unit.isClassWords) 'unit_id': unit.id,
@@ -1016,8 +1046,26 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
   Widget build(BuildContext context) {
     if (_loading) return Center(child: CircularProgressIndicator(color: context.primary));
 
-    final assignedLibUnitIds = _homework.where((h) => h.unitId != null).map((h) => h.unitId!).toSet();
-    final assignedCWUnitIds  = _homework.where((h) => h.classUnitId != null).map((h) => h.classUnitId!).toSet();
+    // "Fully assigned" (covers every current student), not just "has any
+    // homework row" — matches the coverage-aware check _showAssignHomework
+    // now uses. Otherwise these badges/labels would say "✓ Assigned"/"View
+    // Progress" for a unit only partially assigned, even though tapping it
+    // correctly reopens the assign sheet for the remaining students.
+    final allStudentIds = _students.map((s) => s.studentId).toSet();
+    Set<String> fullyAssignedUnitIds(bool isClassWords) {
+      final byUnit = <String, Set<String>>{};
+      for (final h in _homework) {
+        final unitId = isClassWords ? h.classUnitId : h.unitId;
+        if (unitId == null) continue;
+        (byUnit[unitId] ??= {}).addAll(h.assignedTo == 'class' ? allStudentIds : h.studentIds.toSet());
+      }
+      return byUnit.entries
+          .where((e) => allStudentIds.isEmpty ? e.value.isNotEmpty : allStudentIds.difference(e.value).isEmpty)
+          .map((e) => e.key)
+          .toSet();
+    }
+    final assignedLibUnitIds = fullyAssignedUnitIds(false);
+    final assignedCWUnitIds  = fullyAssignedUnitIds(true);
 
     return RefreshIndicator(
       color: context.primary, onRefresh: _load,
@@ -1273,7 +1321,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                           decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(12)),
                           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                             Row(children: [
-                              Expanded(child: Text('Day ${hw.dayNumber}: ${hw.unitName.contains(': ') ? hw.unitName.split(': ').skip(1).join(': ') : hw.unitName}',
+                              Expanded(child: Text('Day ${hw.dayNumber}: ${hw.topic ?? hw.unitName}',
                                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText))),
                               Text('$avgDone/$total', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: context.appText)),
                             ]),

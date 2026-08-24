@@ -477,22 +477,36 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   void _onLang() { if (mounted) setState(() {}); }
 
   // The refresh button/pull-to-refresh only ever called _load(), which
-  // covers the Students/Activity/Radar/Heatmap tabs. The SRS and Review
-  // Pattern tabs load once (gated by _srsLoaded/_reviewLoaded, see the
+  // covers the Students/Activity/Heatmap tabs. The SRS and Review Pattern
+  // tabs load once (gated by _srsLoaded/_reviewLoaded, see the
   // TabController listener in initState) and were never re-fetched, so a
   // teacher pulling to refresh while on the SRS tab kept seeing whatever it
-  // showed on first visit no matter how stale.
+  // showed on first visit no matter how stale. Analytics/30-day-progress
+  // (Speed Flags, Slowest Words, the Radar tab, the Progress Chart) had the
+  // same problem but worse — they're loaded once in initState() and were
+  // never included here at all, so they went permanently stale the moment
+  // the screen first rendered, with no way to refresh them short of leaving
+  // and re-entering the whole screen.
   Future<void> _refresh() async {
     _srsLoaded = false;
     _reviewLoaded = false;
-    final futures = <Future<void>>[_load()];
+    final futures = <Future<void>>[_load(), _loadAnalytics(), _loadProgressOverTime()];
     if (_tabs.index == 4) futures.add(_loadSRS());
     if (_tabs.index == 5) futures.add(_loadReviewPattern());
     await Future.wait(futures);
   }
 
   Future<void> _load() async {
-    final hasCached = _dashboardCache.containsKey(widget.classId);
+    // Must check freshness, not just presence — containsKey() alone was true
+    // even for a stale (TTL-expired) entry, which initState() deliberately
+    // does NOT apply to _students/etc (see the freshness check there). If
+    // the network call below then failed, hasCached being true suppressed
+    // the error state, leaving _students at its empty default with no
+    // _error set — rendered identically to a genuinely empty class instead
+    // of a failed load.
+    final cachedEntry = _dashboardCache[widget.classId];
+    final hasCached = cachedEntry != null &&
+        DateTime.now().difference(cachedEntry.cachedAt) < _dashboardCacheTtl;
     if (mounted) setState(() { if (!hasCached) _loading = true; _error = null; });
     try {
       final results = await Future.wait<dynamic>([
@@ -670,7 +684,19 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       return;
     }
     _dashboardCache.remove(widget.classId);
-    if (mounted) _load();
+    // Without this, the removed student lingers in the SRS tab (per-student
+    // overview, Word Mastery Grid), Review Pattern tab, Speed Flags, and
+    // Per-Student Overview until something else happens to trigger a
+    // refresh of those specific sections — resetting _srsLoaded/
+    // _reviewLoaded makes the next visit to either tab refetch instead of
+    // reusing stale data that still includes this student.
+    _srsLoaded = false;
+    _reviewLoaded = false;
+    if (mounted) {
+      _load();
+      _loadAnalytics();
+      _loadProgressOverTime();
+    }
   }
 
   @override
@@ -1308,11 +1334,17 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         ..._hardWords.asMap().entries.map((e) {
           final rank = e.key;
           final w = e.value;
-          final word = w['word'] as String;
-          final translation = w['translation'] as String;
-          final attempts = (w['attempts'] as num).toInt();
-          final correct = (w['correct_count'] as num).toInt();
-          final pct = (w['accuracy_pct'] as num).toInt();
+          // Null-safe casts, matching every other RPC-row parse in this
+          // file (StudentRow.fromMap, ActivityRow.fromMap, etc.) — these
+          // were the one spot still using hard non-nullable casts, so a
+          // null field from get_hard_words (e.g. a LEFT JOIN edge case, or
+          // a word deleted out from under a hard-word record) would crash
+          // the whole Radar tab instead of degrading gracefully.
+          final word = w['word'] as String? ?? '';
+          final translation = w['translation'] as String? ?? '';
+          final attempts = (w['attempts'] as num?)?.toInt() ?? 0;
+          final correct = (w['correct_count'] as num?)?.toInt() ?? 0;
+          final pct = (w['accuracy_pct'] as num?)?.toInt() ?? 0;
           final barColor = pct < 30 ? context.dangerColor : pct < 60 ? Colors.orange : context.successColor;
           return Container(
             margin: const EdgeInsets.only(bottom: 10),

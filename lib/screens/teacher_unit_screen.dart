@@ -138,6 +138,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
   late TabController _tabs;
   List<_Word> _words = [];
   bool _loading = true;
+  bool _hasError = false;
   bool _importing = false;
 
   String _wordLang = 'English';
@@ -186,7 +187,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
   }
 
   Future<void> _load() async {
-    if (_words.isEmpty && mounted) setState(() => _loading = true);
+    if (_words.isEmpty && mounted) setState(() { _loading = true; _hasError = false; });
     try {
       final data = await supabase
           .from('teacher_unit_words')
@@ -200,10 +201,13 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
         setState(() {
           _words = words;
           _loading = false;
+          _hasError = false;
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _loading = false);
+      // Only surface the error state when there's nothing to show already —
+      // previously a load failure was indistinguishable from "no words yet".
+      if (mounted) setState(() { _loading = false; if (_words.isEmpty) _hasError = true; });
     }
   }
 
@@ -255,7 +259,15 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
   Future<void> _deleteWord(String id) async {
     final user = currentUser;
     if (user == null) return;
-    await supabase.from('teacher_unit_words').delete().eq('id', id).eq('teacher_id', user.id);
+    try {
+      await supabase.from('teacher_unit_words').delete().eq('id', id).eq('teacher_id', user.id);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete word: $e')));
+      }
+      return;
+    }
     if (mounted) setState(() => _words.removeWhere((w) => w.id == id));
     _cachePut(widget.unitId, _words);
   }
@@ -305,7 +317,15 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
     if (confirm == true) {
       final user = currentUser;
       if (user == null) return;
-      await supabase.from('teacher_unit_words').delete().inFilter('id', _selected.toList()).eq('teacher_id', user.id);
+      try {
+        await supabase.from('teacher_unit_words').delete().inFilter('id', _selected.toList()).eq('teacher_id', user.id);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to delete words: $e')));
+        }
+        return;
+      }
       if (mounted) {
         setState(() {
           _words.removeWhere((w) => _selected.contains(w.id));
@@ -473,6 +493,22 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
   // ── Words tab ────────────────────────────────────────────────────────────────
 
   Widget _buildWordsTab() {
+    if (_hasError) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('⚠️', style: TextStyle(fontSize: 48)),
+            const SizedBox(height: 14),
+            Text('Couldn\'t load this unit\'s words', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+            const SizedBox(height: 6),
+            Text('Check your connection and try again.', textAlign: TextAlign.center, style: TextStyle(color: context.textMuted)),
+            const SizedBox(height: 16),
+            ElevatedButton(onPressed: _load, child: const Text('Retry')),
+          ]),
+        ),
+      );
+    }
     if (_words.isEmpty) {
       return Center(
         child: Padding(

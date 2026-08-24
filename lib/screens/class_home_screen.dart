@@ -763,7 +763,11 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
   Widget _buildTargetRow(ClassTarget t) {
     final isPending = t.completedAt == null;
     final due = homeworkDueLabel(t.dueDate);
-    final isOverdue = due?.startsWith('Overdue') == true;
+    // isHomeworkOverdue(), not string-matching the display label — the
+    // label's "Overdue" text is only correct while it stays hardcoded
+    // English; localizing it would silently break this comparison with no
+    // error, since due?.startsWith(...) just quietly stops matching.
+    final isOverdue = isHomeworkOverdue(t.dueDate);
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),

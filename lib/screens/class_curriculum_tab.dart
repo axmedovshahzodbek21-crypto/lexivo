@@ -113,7 +113,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
   final Set<String> _expandedCWUnits = {};
 
   @override
-  void initState() { super.initState(); _students = List.of(_students); _load(); }
+  void initState() { super.initState(); _students = List.of(widget.students); _load(); }
 
   // ── Data loading ───────────────────────────────────────────────────────────
 

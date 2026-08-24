@@ -19,6 +19,10 @@ class WordsLearnedScreen extends StatefulWidget {
 class _WordsLearnedScreenState extends State<WordsLearnedScreen> {
   List<LearnedWord> _words = [];
   bool _loading = true;
+  // Computed once in _load() when _words actually changes, instead of
+  // being recomputed by build() on every rebuild — including the language
+  // toggle's setState in _onLangChange, which never changes _words at all.
+  Map<String, Map<String, List<LearnedWord>>> _grouped = {};
 
   @override
   void initState() {
@@ -40,6 +44,7 @@ class _WordsLearnedScreenState extends State<WordsLearnedScreen> {
     if (!mounted) return;
     setState(() {
       _words = words;
+      _grouped = _computeGrouped(words);
       _loading = false;
     });
     final prefs = await SharedPreferences.getInstance();
@@ -91,9 +96,9 @@ class _WordsLearnedScreenState extends State<WordsLearnedScreen> {
     );
   }
 
-  Map<String, Map<String, List<LearnedWord>>> _grouped() {
+  Map<String, Map<String, List<LearnedWord>>> _computeGrouped(List<LearnedWord> words) {
     final Map<String, Map<String, List<LearnedWord>>> result = {};
-    for (final w in _words) {
+    for (final w in words) {
       result.putIfAbsent(w.collectionName, () => {});
       result[w.collectionName]!.putIfAbsent(w.unitTopic, () => []);
       result[w.collectionName]![w.unitTopic]!.add(w);
@@ -103,7 +108,7 @@ class _WordsLearnedScreenState extends State<WordsLearnedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final grouped = _grouped();
+    final grouped = _grouped;
     return Scaffold(
       backgroundColor: context.bg,
       appBar: AppBar(

@@ -61,23 +61,18 @@ class _StatsScreenState extends State<StatsScreen> {
     final dueWords = await StorageService.getDueWords();
     final studyDays = await StorageService.getStudyDays();
 
-    // Count completed units for each level
-    int a1Done = 0;
-    int a2Done = 0;
-    int b1Done = 0;
-
-    for (final day in ContentService.a1.days) {
-      final progress = await StorageService.getUnitProgress('A1', day.dayNumber);
-      if (progress.isComplete) a1Done++;
-    }
-    for (final day in ContentService.a2.days) {
-      final progress = await StorageService.getUnitProgress('A2', day.dayNumber);
-      if (progress.isComplete) a2Done++;
-    }
-    for (final day in ContentService.b1.days) {
-      final progress = await StorageService.getUnitProgress('B1', day.dayNumber);
-      if (progress.isComplete) b1Done++;
-    }
+    // Parallelized instead of one sequential await per day (matches this
+    // codebase's stated preference elsewhere) — with all three levels'
+    // days combined this was a sequential N+1 read pattern before every
+    // frame of this screen.
+    final progressResults = await Future.wait([
+      Future.wait(ContentService.a1.days.map((d) => StorageService.getUnitProgress('A1', d.dayNumber))),
+      Future.wait(ContentService.a2.days.map((d) => StorageService.getUnitProgress('A2', d.dayNumber))),
+      Future.wait(ContentService.b1.days.map((d) => StorageService.getUnitProgress('B1', d.dayNumber))),
+    ]);
+    final a1Done = progressResults[0].where((p) => p.isComplete).length;
+    final a2Done = progressResults[1].where((p) => p.isComplete).length;
+    final b1Done = progressResults[2].where((p) => p.isComplete).length;
 
     if (!mounted) return;
     setState(() {

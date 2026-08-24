@@ -318,10 +318,35 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         ),
       );
 
+  // Standard competition ranking (1, 2, 2, 4, ...) over the already-sorted
+  // _entries — rank was previously just the list position (mirrors the same
+  // bug already fixed on the web leaderboard), so two users tied on XP got
+  // sequential ranks with nothing indicating they were actually tied.
+  List<int> get _ranks {
+    final ranks = <int>[];
+    for (int i = 0; i < _entries.length; i++) {
+      ranks.add(i > 0 && _entries[i].xp == _entries[i - 1].xp ? ranks[i - 1] : i + 1);
+    }
+    return ranks;
+  }
+
+  List<bool> get _tiedFlags {
+    final tied = <bool>[];
+    for (int i = 0; i < _entries.length; i++) {
+      tied.add(
+        (i > 0 && _entries[i].xp == _entries[i - 1].xp) ||
+        (i < _entries.length - 1 && _entries[i].xp == _entries[i + 1].xp),
+      );
+    }
+    return tied;
+  }
+
   Widget _buildList() {
     final today = _todayStr;
     final myId = _myId;
     final tracked = _trackedEntries;
+    final ranks = _ranks;
+    final tied = _tiedFlags;
 
     // Indices (1-based, matching the original loop) of leaderboard rows to
     // render — skips the top-3 podium positions when there are enough
@@ -338,7 +363,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     // Fixed-size header (podium + tracking section + divider) — cheap
     // regardless of leaderboard size, fine to build eagerly.
     final header = <Widget>[
-      _buildPodium(today),
+      _buildPodium(today, ranks, tied),
       // Tracking section — always visible, tap ⭐ to expand/collapse
       GestureDetector(
         onTap: () => setState(() => _trackingExpanded = !_trackingExpanded),
@@ -433,7 +458,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                     final entry = _entries[i - 1];
                     final isMe = myId != null && entry.userId == myId;
                     final studiedToday = entry.lastStudyDate == today;
-                    return _buildRow(entry, i, isMe, studiedToday);
+                    return _buildRow(entry, ranks[i - 1], isMe, studiedToday, tied[i - 1]);
                   },
                 ),
               ),
@@ -503,14 +528,17 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   void _showStreakSheet(LeaderboardEntry entry) {
     final now = DateTime.now();
-    final studiedSet = entry.studyDays.toSet();
-    final reviewSet = entry.reviewDays.toSet();
-    final wordsSet = entry.wordGoalDays.toSet();
-    final avgPerDay = entry.studyDays.isEmpty ? 0 : (entry.totalLearned / entry.studyDays.length).round();
     var calYear = now.year;
     var calMonth = now.month; // 1-based
     String? fetchedBio; // null = loading, '' = no bio
     bool bioFetchStarted = false;
+    // get_leaderboard() no longer includes study_days/review_days/
+    // word_goal_days in its bulk response (they used to ship every visible
+    // user's full day-by-day history to every leaderboard visitor) — this
+    // per-user detail is now fetched lazily here, only when this specific
+    // entry's sheet is actually opened, mirroring the bio fetch below.
+    LeaderboardEntry? fetchedHistory; // null = loading
+    bool historyFetchStarted = false;
     // StatefulBuilder has no `mounted` of its own — track sheet liveness
     // manually so the async fetch below can't call setSheetState after the
     // sheet was dismissed (throws), and so a fetch failure (previously
@@ -532,6 +560,31 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               if (sheetOpen) setSheetState(() => fetchedBio = '');
             });
           }
+          if (!historyFetchStarted) {
+            historyFetchStarted = true;
+            supabase.rpc('get_leaderboard_profile', params: {'p_user_id': entry.userId}).maybeSingle().then((res) {
+              if (!sheetOpen) return;
+              setSheetState(() => fetchedHistory = res == null
+                  ? entry
+                  : LeaderboardEntry(
+                      userId: entry.userId, name: entry.name, avatarUrl: entry.avatarUrl,
+                      xp: entry.xp, streak: entry.streak, lastStudyDate: entry.lastStudyDate,
+                      todayCount: entry.todayCount, totalLearned: entry.totalLearned,
+                      studyDays: LeaderboardEntry._parseList(res['study_days']),
+                      reviewDays: LeaderboardEntry._parseList(res['review_days']),
+                      wordGoalDays: LeaderboardEntry._parseList(res['word_goal_days']),
+                    ));
+            }).catchError((_) {
+              if (sheetOpen) setSheetState(() => fetchedHistory = entry);
+            });
+          }
+          final history = fetchedHistory;
+          final studiedSet = (history?.studyDays ?? const <String>[]).toSet();
+          final reviewSet = (history?.reviewDays ?? const <String>[]).toSet();
+          final wordsSet = (history?.wordGoalDays ?? const <String>[]).toSet();
+          final avgPerDay = history == null || history.studyDays.isEmpty
+              ? 0
+              : (entry.totalLearned / history.studyDays.length).round();
           final isSaved = _savedIds.contains(entry.userId);
           final isMe = entry.userId == _myId;
 
@@ -592,9 +645,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    _StatBox(emoji: '📊', value: '~$avgPerDay', label: 'Words/day', color: const Color(0xFF9B59B6)),
+                    _StatBox(emoji: '📊', value: history == null ? '…' : '~$avgPerDay', label: 'Words/day', color: const Color(0xFF9B59B6)),
                     const SizedBox(width: 8),
-                    _StatBox(emoji: '📅', value: '$activeDays/$daysInMonth', label: 'Days this month', color: const Color(0xFFE67E22)),
+                    _StatBox(emoji: '📅', value: history == null ? '…' : '$activeDays/$daysInMonth', label: 'Days this month', color: const Color(0xFFE67E22)),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -715,23 +768,23 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     ).then((_) => sheetOpen = false);
   }
 
-  Widget _buildPodium(String today) {
+  Widget _buildPodium(String today, List<int> ranks, List<bool> tied) {
     if (_entries.length < 3) return const SizedBox.shrink();
     final myId = _myId;
 
     final configs = [
       (
-        idx: 1, watermark: '02', minH: 160.0, avatarSize: 42.0,
+        idx: 1, minH: 160.0, avatarSize: 42.0,
         grad: [const Color(0xFFE2E8F0), const Color(0xFF94A3B8), const Color(0xFF334155)],
         shadow: const Color(0xFF1E293B),
       ),
       (
-        idx: 0, watermark: '01', minH: 200.0, avatarSize: 54.0,
+        idx: 0, minH: 200.0, avatarSize: 54.0,
         grad: [const Color(0xFFFDE047), const Color(0xFFF59E0B), const Color(0xFFB45309)],
         shadow: const Color(0xFF78350F),
       ),
       (
-        idx: 2, watermark: '03', minH: 140.0, avatarSize: 38.0,
+        idx: 2, minH: 140.0, avatarSize: 38.0,
         grad: [const Color(0xFFFED7AA), const Color(0xFFF97316), const Color(0xFF9A3412)],
         shadow: const Color(0xFF7C2D12),
       ),
@@ -745,6 +798,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           final entry = _entries[cfg.idx];
           final isMe = myId != null && entry.userId == myId;
           final studiedToday = entry.lastStudyDate == today;
+          final rank = ranks[cfg.idx];
+          final isTied = tied[cfg.idx];
+          final watermark = (isTied ? '=' : '') + rank.toString().padLeft(2, '0');
           return Expanded(
             child: GestureDetector(
               onTap: () => _showStreakSheet(entry),
@@ -771,7 +827,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                       right: -6,
                       bottom: -10,
                       child: Text(
-                        cfg.watermark,
+                        watermark,
                         style: TextStyle(fontSize: 52, fontWeight: FontWeight.w900, color: Colors.white.withValues(alpha: 0.12), height: 1),
                       ),
                     ),
@@ -786,7 +842,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                               color: Colors.white.withValues(alpha: 0.25),
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: Text(cfg.watermark, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Colors.white)),
+                            child: Text(watermark, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Colors.white)),
                           ),
                           const SizedBox(height: 8),
                           Container(
@@ -813,6 +869,16 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                           ),
                           if (entry.streak > 0)
                             Text('🔥 ${entry.streak}', style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.8))),
+                          if (isTied)
+                            Container(
+                              margin: const EdgeInsets.only(top: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.25),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Text('TIED', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.white)),
+                            ),
                           if (studiedToday)
                             Container(
                               margin: const EdgeInsets.only(top: 4),
@@ -836,7 +902,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     );
   }
 
-  Widget _buildRow(LeaderboardEntry entry, int rank, bool isMe, bool studiedToday) {
+  Widget _buildRow(LeaderboardEntry entry, int rank, bool isMe, bool studiedToday, bool isTied) {
     final Color rankBg;
     final Color rankColor;
     if (isMe) {
@@ -869,7 +935,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               width: 32, height: 32,
               decoration: BoxDecoration(color: rankBg, borderRadius: BorderRadius.circular(10)),
               alignment: Alignment.center,
-              child: Text('$rank', style: TextStyle(fontWeight: FontWeight.w900, color: rankColor, fontSize: 13)),
+              child: Text('${isTied ? '=' : ''}$rank', style: TextStyle(fontWeight: FontWeight.w900, color: rankColor, fontSize: 13)),
             ),
             const SizedBox(width: 10),
             _Avatar(name: entry.name, size: 38, avatarUrl: entry.avatarUrl, avatarColor: _userColor(entry.userId)),
@@ -888,6 +954,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(color: context.primary, borderRadius: BorderRadius.circular(20)),
                           child: const Text('YOU', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                      if (isTied) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(20)),
+                          child: Text('TIED', style: TextStyle(color: context.textMuted, fontSize: 9, fontWeight: FontWeight.bold)),
                         ),
                       ],
                     ],

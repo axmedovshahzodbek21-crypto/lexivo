@@ -48,12 +48,21 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
     final uid = widget.studentId ?? currentUser?.id;
     if (uid == null) { setState(() => _loading = false); return; }
     try {
+      // Capped at 500, matching StorageService.getXPHistory()'s cap on the
+      // personal calendar — this query had no limit at all, re-fetching and
+      // re-summing a class's *entire* XP history on every screen open with
+      // no bound on how large that history could grow over a long-running
+      // class. The "Total class XP" banner above doesn't depend on this
+      // list (it uses widget.totalXpRaw directly), so a cap only affects
+      // how far back day-by-day detail is visible — same tradeoff already
+      // accepted for the personal calendar.
       final rows = await supabase
           .from('class_xp_history')
           .select('id, amount, reason, created_at')
           .eq('user_id', uid)
           .eq('class_id', widget.classId)
-          .order('created_at', ascending: false);
+          .order('created_at', ascending: false)
+          .limit(500);
       if (mounted) {
         setState(() {
           _entries = (rows as List).map((r) => Map<String, dynamic>.from(r as Map)).toList();

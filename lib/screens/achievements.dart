@@ -263,20 +263,22 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
       quizPerfect: quizPerfect, flashFirst: flashFirst,
     );
 
-    // Award XP + record the unlock date for newly unlocked achievements
-    // (one atomic call per unlocked id — avoids both a read-then-write race
-    // and the redundant extra getAchievementDate() call this used to make),
-    // then batch-read the rest in a single SharedPreferences fetch instead
-    // of one getAchievementDate() round trip per definition.
-    final Map<String, String?> dates = {};
-    for (final d in _allAchs) {
-      if (_isUnlocked(d, stats)) {
+    // Batch-read every definition's unlock date in one SharedPreferences
+    // fetch first — with ~190 definitions and most already unlocked from a
+    // prior session, calling the mutex-protected checkAndUnlockAchievement
+    // for every single one of them on every _load() meant up to ~190
+    // sequential mutex round-trips before this screen's first frame, even
+    // though nearly all of those calls just immediately found an existing
+    // date and returned. Only a genuinely new unlock (no existing date for
+    // an id whose criteria are now met) still needs the mutex-protected
+    // award-XP-and-record call — normally 0 or 1 of them per _load().
+    final unlockedDefs = _allAchs.where((d) => _isUnlocked(d, stats)).toList();
+    final allDates = await StorageService.getAchievementDatesBatch(_allAchs.map((d) => d.id).toList());
+    final Map<String, String?> dates = Map.of(allDates);
+    for (final d in unlockedDefs) {
+      if (allDates[d.id] == null) {
         dates[d.id] = await StorageService.checkAndUnlockAchievement(d.id, d.xp * 10, _achTitle(d));
       }
-    }
-    final lockedIds = _allAchs.where((d) => !dates.containsKey(d.id)).map((d) => d.id).toList();
-    if (lockedIds.isNotEmpty) {
-      dates.addAll(await StorageService.getAchievementDatesBatch(lockedIds));
     }
 
     if (mounted) setState(() { _stats = stats; _dates = dates; });

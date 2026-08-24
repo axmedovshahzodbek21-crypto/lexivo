@@ -14,6 +14,11 @@ class XpHistoryScreen extends StatefulWidget {
 class _XpHistoryScreenState extends State<XpHistoryScreen> {
   bool _loading = true;
   List<Map<String, dynamic>> _entries = [];
+  // Computed once in _load() when _entries actually changes, instead of
+  // being recomputed by build() on every rebuild (theme changes, unrelated
+  // setState calls elsewhere in the tree, etc.) regardless of whether the
+  // underlying entries changed at all.
+  Map<String, List<Map<String, dynamic>>> _grouped = {};
 
   @override
   void initState() {
@@ -26,13 +31,14 @@ class _XpHistoryScreenState extends State<XpHistoryScreen> {
     if (!mounted) return;
     setState(() {
       _entries = history;
+      _grouped = _computeGrouped(history);
       _loading = false;
     });
   }
 
-  Map<String, List<Map<String, dynamic>>> _grouped() {
+  Map<String, List<Map<String, dynamic>>> _computeGrouped(List<Map<String, dynamic>> entries) {
     final map = <String, List<Map<String, dynamic>>>{};
-    for (final e in _entries) {
+    for (final e in entries) {
       final ts = e['timestamp'] as int;
       final d = DateTime.fromMillisecondsSinceEpoch(ts);
       final key =
@@ -87,7 +93,7 @@ class _XpHistoryScreenState extends State<XpHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final grouped = _grouped();
+    final grouped = _grouped;
     final dateKeys = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
 
     return Scaffold(

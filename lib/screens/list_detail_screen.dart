@@ -31,6 +31,11 @@ Map<String, WordItem> buildWordMap() {
   return map;
 }
 
+// Built once per app process (module-level), not once per screen instance —
+// shared with custom_lists_screen.dart, which used to build its own
+// separate copy of the exact same cross-collection index.
+final wordMap = buildWordMap();
+
 class ListDetailScreen extends StatefulWidget {
   final String listId;
   const ListDetailScreen({super.key, required this.listId});
@@ -41,7 +46,7 @@ class ListDetailScreen extends StatefulWidget {
 
 class _ListDetailScreenState extends State<ListDetailScreen> {
   CustomList? _list;
-  final _wordMap = buildWordMap();
+  final _wordMap = wordMap;
   final _searchController = TextEditingController();
   List<WordItem> _searchResults = [];
   bool _showSearch = false;
@@ -85,22 +90,43 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
   }
 
   Future<void> _addWord(String word) async {
-    await StorageService.addWordToList(widget.listId, word);
-    await _load();
+    try {
+      await StorageService.addWordToList(widget.listId, word);
+      await _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to add word: $e')));
+      }
+    }
   }
 
   Future<void> _removeWord(String word) async {
-    await StorageService.removeWordFromList(widget.listId, word);
-    await _load();
+    try {
+      await StorageService.removeWordFromList(widget.listId, word);
+      await _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to remove word: $e')));
+      }
+    }
   }
 
   Future<void> _rename() async {
     final name = _renameController.text.trim();
     if (name.isEmpty || _list == null) return;
-    await StorageService.saveCustomList(_list!.copyWith(name: name));
-    if (!mounted) return;
-    setState(() => _renaming = false);
-    _load();
+    try {
+      await StorageService.saveCustomList(_list!.copyWith(name: name));
+      if (!mounted) return;
+      setState(() => _renaming = false);
+      _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to rename list: $e')));
+      }
+    }
   }
 
   void _studyFlashcards() {

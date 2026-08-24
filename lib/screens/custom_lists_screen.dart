@@ -4,8 +4,6 @@ import '../data/storage_service.dart';
 import '../l10n.dart';
 import 'list_detail_screen.dart';
 
-final _wordMap = buildWordMap();
-
 class CustomListsScreen extends StatefulWidget {
   const CustomListsScreen({super.key});
 
@@ -39,14 +37,28 @@ class _CustomListsScreenState extends State<CustomListsScreen> {
   Future<void> _create() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) return;
-    final id = '${DateTime.now().millisecondsSinceEpoch.toRadixString(36)}'
-        '${(DateTime.now().microsecondsSinceEpoch % 10000).toRadixString(36)}';
+    // A single microsecond timestamp instead of two separate DateTime.now()
+    // calls — reading the millisecond and microsecond clock at two
+    // different instants (however close) could theoretically straddle a
+    // rollover and produce a duplicate id for two lists created in quick
+    // succession, silently overwriting one with the other under the same
+    // storage key.
+    final now = DateTime.now();
+    final id = now.microsecondsSinceEpoch.toRadixString(36);
     final list = CustomList(
       id: id,
       name: name,
-      createdAt: DateTime.now().toIso8601String(),
+      createdAt: now.toIso8601String(),
     );
-    await StorageService.saveCustomList(list);
+    try {
+      await StorageService.saveCustomList(list);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to create list: $e')));
+      }
+      return;
+    }
     if (!mounted) return;
     _nameController.clear();
     setState(() => _creating = false);
@@ -60,10 +72,17 @@ class _CustomListsScreenState extends State<CustomListsScreen> {
   }
 
   Future<void> _delete(String id) async {
-    await StorageService.deleteCustomList(id);
-    if (!mounted) return;
-    setState(() => _deleteId = null);
-    _load();
+    try {
+      await StorageService.deleteCustomList(id);
+      if (!mounted) return;
+      setState(() => _deleteId = null);
+      _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete list: $e')));
+      }
+    }
   }
 
   @override
@@ -195,7 +214,7 @@ class _CustomListsScreenState extends State<CustomListsScreen> {
 
   Widget _buildListRow(CustomList list) {
     final created = _formatDate(list.createdAt);
-    final studyableCount = list.words.where((w) => _wordMap.containsKey(w.toLowerCase())).length;
+    final studyableCount = list.words.where((w) => wordMap.containsKey(w.toLowerCase())).length;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(

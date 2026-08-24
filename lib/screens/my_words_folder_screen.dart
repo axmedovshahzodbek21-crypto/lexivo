@@ -45,11 +45,13 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
 
   Future<void> _load() async {
     final cols = await StorageService.getCollectionsByFolder(widget.folderName);
-    final completed = <String>{};
-    for (final col in cols) {
-      final p = await StorageService.getMyUnitProgress(widget.folderName, col.name);
-      if (p.completedAt != null) completed.add(col.name);
-    }
+    // Parallelized instead of one sequential await per collection.
+    final progresses = await Future.wait(
+        cols.map((col) => StorageService.getMyUnitProgress(widget.folderName, col.name)));
+    final completed = <String>{
+      for (var i = 0; i < cols.length; i++)
+        if (progresses[i].completedAt != null) cols[i].name,
+    };
     if (mounted) {
       setState(() {
         _collections = cols;

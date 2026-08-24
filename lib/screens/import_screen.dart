@@ -115,7 +115,11 @@ List<ImportedWord> _parseOutput(String text, String langCode) {
     if (fields.isNotEmpty) entries.add(fields);
 
     for (final fields in entries) {
-      if (!fields.containsKey('word') || !fields.containsKey('translation')) continue;
+      // Checked the key was present but not that its value was actually
+      // non-empty — a response with a bare "Word:" or "Translation:" line
+      // (nothing after the colon) passed this check and got silently
+      // imported as a word/translation, showing an empty flashcard.
+      if ((fields['word'] ?? '').isEmpty || (fields['translation'] ?? '').isEmpty) continue;
       // Capped at 10 to match StorageService.addImportedWords' storage-side
       // limit — collecting more here previously let the preview show up to 20
       // examples that then silently got truncated to 10 on save, so what the
@@ -227,7 +231,19 @@ class _ImportScreenState extends State<ImportScreen> {
   Future<void> _addWords() async {
     final name = _collectionCtrl.text.trim().isEmpty ? 'My Words' : _collectionCtrl.text.trim();
     setState(() => _adding = true);
-    await StorageService.addImportedWords(_parsed, name, folderName: widget.prefilledFolder);
+    try {
+      await StorageService.addImportedWords(_parsed, name, folderName: widget.prefilledFolder);
+    } catch (e) {
+      // Previously unguarded — a failure here left _adding stuck true
+      // forever (a frozen "Adding..." button) with no navigation and no
+      // explanation of what went wrong.
+      if (mounted) {
+        setState(() => _adding = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to add words: $e')));
+      }
+      return;
+    }
     if (!mounted) return;
     Navigator.pushReplacement(context, MaterialPageRoute(
       builder: (_) => ImportCollectionDetailScreen(collectionName: name, folderName: widget.prefilledFolder),

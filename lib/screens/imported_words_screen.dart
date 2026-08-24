@@ -75,16 +75,17 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
     if (folders.isEmpty && await _seedExampleFolder()) {
       folders = await StorageService.getImportedFolders();
     }
+    // Parallelized across folders, and across each folder's own
+    // collections — this used to be a fully sequential nested await chain
+    // (one round trip per collection, one folder at a time) against this
+    // codebase's stated Future.wait preference for independent reads.
     final completedCounts = <String, int>{};
-    for (final folder in folders) {
+    await Future.wait(folders.map((folder) async {
       final cols = await StorageService.getCollectionsByFolder(folder.name);
-      var done = 0;
-      for (final col in cols) {
-        final p = await StorageService.getMyUnitProgress(folder.name, col.name);
-        if (p.completedAt != null) done++;
-      }
-      completedCounts[folder.name] = done;
-    }
+      final progresses = await Future.wait(
+          cols.map((col) => StorageService.getMyUnitProgress(folder.name, col.name)));
+      completedCounts[folder.name] = progresses.where((p) => p.completedAt != null).length;
+    }));
     if (mounted) {
       setState(() {
         _folders = folders;
@@ -117,8 +118,15 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
       ),
     );
     if (confirm == true) {
-      await StorageService.resetMyWordsProgress();
-      _load();
+      try {
+        await StorageService.resetMyWordsProgress();
+        _load();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to reset progress: $e')));
+        }
+      }
     }
   }
   void _cancelCreating() => setState(() { _creating = false; _folderCtrl.clear(); });
@@ -152,9 +160,16 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
       ),
     );
     if (confirm == true) {
-      await StorageService.deleteImportedFolder(folderName);
-      MyWordsFolderScreen.invalidate(folderName);
-      _load();
+      try {
+        await StorageService.deleteImportedFolder(folderName);
+        MyWordsFolderScreen.invalidate(folderName);
+        _load();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to delete folder: $e')));
+        }
+      }
     }
   }
 

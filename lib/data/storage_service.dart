@@ -1034,7 +1034,20 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
 
   // ── My Words Unit Progress ─────────────────
 
-  static String _myUnitKey(String? folderName, String collectionName) =>
+  // Length-prefixed so two different (folder, collection) pairs can never
+  // concatenate to the same key — the old plain `'${folder}_$collection'`
+  // form let e.g. folder "Foo" + collection "Bar_Baz" collide with folder
+  // "Foo_Bar" + collection "Baz" (both user-typed names can legitimately
+  // contain underscores), silently sharing/overwriting one pair's progress
+  // with the other's.
+  static String _myUnitKey(String? folderName, String collectionName) {
+    final f = folderName ?? '';
+    return '${f.length}:$f|${collectionName.length}:$collectionName';
+  }
+
+  // The old key format, kept only so progress saved before the format above
+  // was introduced still reads back correctly — never written going forward.
+  static String _myUnitKeyLegacy(String? folderName, String collectionName) =>
       '${folderName ?? ''}_$collectionName';
 
   static Future<Map<String, MyUnitProgress>> _getAllMyUnitProgress() async {
@@ -1053,6 +1066,10 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     final prefs = await SharedPreferences.getInstance();
     final all = await _getAllMyUnitProgress();
     all[_myUnitKey(folderName, collectionName)] = progress;
+    // Clean up any stale entry under the old key format now that this pair
+    // has been (re)written under the new one — otherwise both linger,
+    // harmlessly but wastefully, in the persisted map forever.
+    all.remove(_myUnitKeyLegacy(folderName, collectionName));
     await prefs.setString(_myUnitProgressKey,
         jsonEncode(all.map((k, v) => MapEntry(k, v.toJson()))));
   });
@@ -1062,7 +1079,9 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     String collectionName,
   ) async {
     final all = await _getAllMyUnitProgress();
-    return all[_myUnitKey(folderName, collectionName)] ?? const MyUnitProgress();
+    return all[_myUnitKey(folderName, collectionName)] ??
+        all[_myUnitKeyLegacy(folderName, collectionName)] ??
+        const MyUnitProgress();
   }
 
   // Returns true when this call is what just brought the unit to full
@@ -2659,7 +2678,9 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     // badge — _myUnitKey only keys on the (folder, collection) name pair,
     // with no per-collection identity to tell the old and new ones apart.
     final allProgress = await _getAllMyUnitProgress();
-    if (allProgress.remove(_myUnitKey(folderName, collectionName)) != null) {
+    final removedNew = allProgress.remove(_myUnitKey(folderName, collectionName)) != null;
+    final removedLegacy = allProgress.remove(_myUnitKeyLegacy(folderName, collectionName)) != null;
+    if (removedNew || removedLegacy) {
       await prefs.setString(_myUnitProgressKey, jsonEncode(allProgress.map((k, v) => MapEntry(k, v.toJson()))));
     }
     SyncService.pushLists();

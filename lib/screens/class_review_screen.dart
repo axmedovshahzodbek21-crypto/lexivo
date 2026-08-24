@@ -105,7 +105,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
       // "genuinely nothing due" (both landed on _cards.isEmpty showing
       // "All caught up!" 🎉) — now distinguished so a real failure shows a
       // retry instead of a misleadingly cheerful success message.
-      print('[ClassReviewScreen] load failed: $e');
+      debugPrint('[ClassReviewScreen] load failed: $e');
       if (mounted) setState(() { _loading = false; _loadError = true; });
     }
   }

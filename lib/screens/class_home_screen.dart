@@ -388,11 +388,13 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
       // data is better than an error banner replacing it. A true first-load
       // failure (nothing to show at all) gets a retry banner instead of
       // silently looking like an empty class.
-      print('[ClassHomeScreen] load failed: $e');
-      if (mounted) setState(() {
-        _loading = false;
-        _loadError = _announcements.isEmpty && _targets.isEmpty && _teacherName.isEmpty;
-      });
+      debugPrint('[ClassHomeScreen] load failed: $e');
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _loadError = _announcements.isEmpty && _targets.isEmpty && _teacherName.isEmpty;
+        });
+      }
     } finally {
       safetyNet.cancel();
     }

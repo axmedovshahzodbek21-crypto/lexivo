@@ -339,10 +339,12 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     if (user == null) return;
     try {
       final cls = await supabase.from('classes').select('teacher_id').eq('id', widget.classId).maybeSingle();
-      if (mounted) setState(() {
-        _verifiedTeacher = cls != null && cls['teacher_id'] == user.id;
-        _verifiedTeacherAt = DateTime.now();
-      });
+      if (mounted) {
+        setState(() {
+          _verifiedTeacher = cls != null && cls['teacher_id'] == user.id;
+          _verifiedTeacherAt = DateTime.now();
+        });
+      }
     } catch (_) {
       if (mounted) setState(() => _verifiedTeacher = false);
     }
@@ -407,7 +409,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       final rows = (data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
       if (mounted) setState(() => _activeStudents = rows);
     } catch (e) {
-      print('[ClassDashboardScreen] _loadActiveStudents failed: $e');
+      debugPrint('[ClassDashboardScreen] _loadActiveStudents failed: $e');
     }
   }
 
@@ -417,7 +419,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       final rows = (data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
       if (mounted) setState(() => _analyticsData = rows);
     } catch (e) {
-      print('[ClassDashboardScreen] _loadAnalytics failed: $e');
+      debugPrint('[ClassDashboardScreen] _loadAnalytics failed: $e');
     }
   }
 
@@ -430,7 +432,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       final rows = (data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
       if (mounted) setState(() => _progressPoints = rows);
     } catch (e) {
-      print('[ClassDashboardScreen] _loadProgressOverTime failed: $e');
+      debugPrint('[ClassDashboardScreen] _loadProgressOverTime failed: $e');
     }
   }
 
@@ -2092,7 +2094,7 @@ class _CollectionDetailSheetState extends State<_CollectionDetailSheet> {
         });
       }
     } catch (e) {
-      print('[CollectionDetailSheet] load failed: $e');
+      debugPrint('[CollectionDetailSheet] load failed: $e');
       if (mounted) setState(() { _loading = false; _loadError = true; });
     }
   }
@@ -2313,7 +2315,7 @@ class _StreakCalendarSheetState extends State<_StreakCalendarSheet> {
         });
       }
     } catch (e) {
-      print('[StreakCalendarSheet] load failed: $e');
+      debugPrint('[StreakCalendarSheet] load failed: $e');
       if (mounted) setState(() { _loading = false; _loadError = true; });
     }
   }

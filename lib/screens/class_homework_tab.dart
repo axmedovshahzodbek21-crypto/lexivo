@@ -373,7 +373,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
           // classified into any bucket below and previously just vanished
           // from the UI with no trace, making a genuinely corrupt/orphaned
           // class_homework row indistinguishable from "everything's fine."
-          print('[ClassHomeworkTab] homework row ${h['id']} has no unit_id/class_unit_id/collection_name/passage_id — skipping');
+          debugPrint('[ClassHomeworkTab] homework row ${h['id']} has no unit_id/class_unit_id/collection_name/passage_id — skipping');
         }
       }
 
@@ -433,7 +433,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
           // it at least makes a stale/renamed collection reference visible
           // instead of just quietly showing a blank-looking homework card.
           if (col == null) {
-            print('[ClassHomeworkTab] homework ${h['id']} references unknown collection "$name"');
+            debugPrint('[ClassHomeworkTab] homework ${h['id']} references unknown collection "$name"');
           }
           final day = col?.days.firstWhere((d) => d.dayNumber == dayNum, orElse: () => WordDay(dayNumber: dayNum, topic: 'Day $dayNum', words: []));
           collHwItems.add(_CollHW(
@@ -446,7 +446,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
             hwDue: h['due_date'] as String?,
           ));
         } catch (e) {
-          print('[ClassHomeworkTab] failed to build collection homework item ${h['id']}: $e');
+          debugPrint('[ClassHomeworkTab] failed to build collection homework item ${h['id']}: $e');
         }
       }
 
@@ -466,7 +466,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
             hwDue: h['due_date'] as String?,
           ));
         } catch (e) {
-          print('[ClassHomeworkTab] failed to build passage homework item ${h['id']}: $e');
+          debugPrint('[ClassHomeworkTab] failed to build passage homework item ${h['id']}: $e');
         }
       }
 
@@ -535,11 +535,13 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
       // logged, and surfaced as a retry banner when there's nothing cached
       // to fall back on (a background refresh failure over stale-but-valid
       // data stays silent, matching the comment above).
-      print('[ClassHomeworkTab] load failed: $e');
-      if (mounted) setState(() {
-        _loading = false;
-        _loadError = _folders.isEmpty && _cwUnits.isEmpty && _collHwItems.isEmpty && _passageItems.isEmpty;
-      });
+      debugPrint('[ClassHomeworkTab] load failed: $e');
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _loadError = _folders.isEmpty && _cwUnits.isEmpty && _collHwItems.isEmpty && _passageItems.isEmpty;
+        });
+      }
     }
   }
 

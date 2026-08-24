@@ -70,7 +70,7 @@ class _ClassesScreenState extends State<ClassesScreen> {
       // A failed count fetch used to leave _createdCount/_joinedCount at 0,
       // rendered identically to "no classes yet"/"not enrolled yet" —
       // indistinguishable from a genuinely new account.
-      print('[ClassesScreen] _loadCounts failed: $e');
+      debugPrint('[ClassesScreen] _loadCounts failed: $e');
       if (mounted) setState(() { _loading = false; _loadError = true; });
     }
   }

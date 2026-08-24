@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../data/storage_service.dart';
@@ -104,8 +105,7 @@ class SyncService {
       try {
         cloudRow = await _sb.from('user_data').select('total_xp, streak').eq('id', uid).maybeSingle();
       } catch (e) {
-        // ignore: avoid_print
-        print('[SyncService.pushStats] cloud fetch for max() merge failed: $e');
+        debugPrint('[SyncService.pushStats] cloud fetch for max() merge failed: $e');
       }
       final xp = max(prefs.getInt('total_xp') ?? 0, ((cloudRow?['total_xp'] as num?) ?? 0).toInt());
       final streak = max(prefs.getInt('streak') ?? 0, ((cloudRow?['streak'] as num?) ?? 0).toInt());
@@ -148,8 +148,7 @@ class SyncService {
       await prefs.setInt('streak_freezes', freezes);
       await prefs.setString('sync_stats_ts', ts);
     } catch (e) {
-      // ignore: avoid_print
-      print('[SyncService.pushStats] failed: $e');
+      debugPrint('[SyncService.pushStats] failed: $e');
     }
     WidgetService.pushStats();
   }
@@ -190,8 +189,7 @@ class SyncService {
       });
       await prefs.setString('sync_settings_ts', ts);
     } catch (e) {
-      // ignore: avoid_print
-      print('[SyncService.pushSettings] failed: $e');
+      debugPrint('[SyncService.pushSettings] failed: $e');
     }
   }
 
@@ -222,8 +220,7 @@ class SyncService {
             .eq('id', uid).maybeSingle();
         if (cloudRow != null) await _mergeListsFromCloudRow(cloudRow, prefs);
       } catch (e) {
-        // ignore: avoid_print
-        print('[SyncService.pushLists] pre-merge cloud fetch failed, aborting push: $e');
+        debugPrint('[SyncService.pushLists] pre-merge cloud fetch failed, aborting push: $e');
         return;
       }
 
@@ -290,8 +287,7 @@ class SyncService {
       });
       await prefs.setString('sync_lists_ts', ts);
     } catch (e) {
-      // ignore: avoid_print
-      print('[SyncService.pushLists] failed: $e');
+      debugPrint('[SyncService.pushLists] failed: $e');
     }
   }
 
@@ -466,8 +462,7 @@ class SyncService {
 
       await _mergeListsFromCloudRow(row, prefs);
     } catch (e) {
-      // ignore: avoid_print
-      print('[SyncService.pullAll] failed: $e');
+      debugPrint('[SyncService.pullAll] failed: $e');
     }
   }
 
@@ -505,7 +500,7 @@ class SyncService {
             if (deletedAt != null) return deletedAt.toInt();
             try { return DateTime.parse(w['learnedAt'] as String).millisecondsSinceEpoch; }
             catch (e) {
-              print('[SyncService._mergeListsFromCloudRow] learned_words: unparseable learnedAt for ${w['word']}: $e');
+              debugPrint('[SyncService._mergeListsFromCloudRow] learned_words: unparseable learnedAt for ${w['word']}: $e');
               return null;
             }
           }
@@ -531,7 +526,7 @@ class SyncService {
           }
         }
       } catch (e) {
-        print('[SyncService._mergeListsFromCloudRow] learned_words merge failed: $e');
+        debugPrint('[SyncService._mergeListsFromCloudRow] learned_words merge failed: $e');
       }
 
       // srs_words: union by key. When either side is a tombstone (deletedAt),
@@ -564,7 +559,7 @@ class SyncService {
             if (deletedAt != null) return deletedAt.toInt();
             try { return DateTime.parse(w['learnedAt'] as String).millisecondsSinceEpoch; }
             catch (e) {
-              print('[SyncService._mergeListsFromCloudRow] srs_words: unparseable learnedAt for ${w['word']}: $e');
+              debugPrint('[SyncService._mergeListsFromCloudRow] srs_words: unparseable learnedAt for ${w['word']}: $e');
               return null;
             }
           }
@@ -590,7 +585,7 @@ class SyncService {
           }
         }
       } catch (e) {
-        print('[SyncService._mergeListsFromCloudRow] srs_words merge failed: $e');
+        debugPrint('[SyncService._mergeListsFromCloudRow] srs_words merge failed: $e');
       }
 
       // starred_words: full records now, keyed by word+collectionName
@@ -627,7 +622,7 @@ class SyncService {
           if (changed) await prefs.setStringList('starred_words', merged);
         }
       } catch (e) {
-        print('[SyncService._mergeListsFromCloudRow] starred_words merge failed: $e');
+        debugPrint('[SyncService._mergeListsFromCloudRow] starred_words merge failed: $e');
       }
 
       // hard_words: per-word last-write-wins merge, keyed by word. Cloud rows
@@ -650,7 +645,7 @@ class SyncService {
               final added = addedAt != null ? DateTime.parse(addedAt) : DateTime.fromMillisecondsSinceEpoch(0);
               return (removed != null && removed.isAfter(added) ? removed : added).millisecondsSinceEpoch;
             } catch (e) {
-              print('[SyncService._mergeListsFromCloudRow] hard_words: unparseable addedAt/removedAt: $e');
+              debugPrint('[SyncService._mergeListsFromCloudRow] hard_words: unparseable addedAt/removedAt: $e');
               return null;
             }
           }
@@ -681,7 +676,7 @@ class SyncService {
           }
         }
       } catch (e) {
-        print('[SyncService._mergeListsFromCloudRow] hard_words merge failed: $e');
+        debugPrint('[SyncService._mergeListsFromCloudRow] hard_words merge failed: $e');
       }
 
       // day sets — each key merged independently so a malformed field
@@ -703,7 +698,7 @@ class SyncService {
             }
           }
         } catch (e) {
-          print('[SyncService._mergeListsFromCloudRow] ${pair[0]} merge failed: $e');
+          debugPrint('[SyncService._mergeListsFromCloudRow] ${pair[0]} merge failed: $e');
         }
       }
 
@@ -722,7 +717,7 @@ class SyncService {
           }
         }
       } catch (e) {
-        print('[SyncService._mergeListsFromCloudRow] xp_history merge failed: $e');
+        debugPrint('[SyncService._mergeListsFromCloudRow] xp_history merge failed: $e');
       }
 
       // unit_progress (object: key → progress), OR flags
@@ -762,7 +757,7 @@ class SyncService {
           if (changed) await prefs.setString('unit_progress', jsonEncode(localProgress));
         }
       } catch (e) {
-        print('[SyncService._mergeListsFromCloudRow] unit_progress merge failed: $e');
+        debugPrint('[SyncService._mergeListsFromCloudRow] unit_progress merge failed: $e');
       }
 
       // my_unit_progress (object: folder+collection key → progress), OR flags
@@ -812,7 +807,7 @@ class SyncService {
           if (changed) await prefs.setString('my_unit_progress', jsonEncode(localMyProgress));
         }
       } catch (e) {
-        print('[SyncService._mergeListsFromCloudRow] my_unit_progress merge failed: $e');
+        debugPrint('[SyncService._mergeListsFromCloudRow] my_unit_progress merge failed: $e');
       }
 
       // review_log (object: wordKey → [intervals]), union merge
@@ -836,7 +831,7 @@ class SyncService {
           if (changed) await prefs.setString('srs_review_log', jsonEncode(localLog));
         }
       } catch (e) {
-        print('[SyncService._mergeListsFromCloudRow] review_log merge failed: $e');
+        debugPrint('[SyncService._mergeListsFromCloudRow] review_log merge failed: $e');
       }
 
       // Post-merge: any active SRS word whose review log (just merged above)
@@ -879,7 +874,7 @@ class SyncService {
           }
         }
       } catch (e) {
-        print('[SyncService._mergeListsFromCloudRow] post-merge SRS graduation failed: $e');
+        debugPrint('[SyncService._mergeListsFromCloudRow] post-merge SRS graduation failed: $e');
       }
 
       // achievements: apply {id, date} entries from cloud
@@ -893,7 +888,7 @@ class SyncService {
           }
         }
       } catch (e) {
-        print('[SyncService._mergeListsFromCloudRow] achievements merge failed: $e');
+        debugPrint('[SyncService._mergeListsFromCloudRow] achievements merge failed: $e');
       }
 
       // imported_words — per-record last-write-wins merge (keyed by word+collection+folder).
@@ -919,7 +914,7 @@ class SyncService {
         }
         if (changed) await prefs.setString('imported_words', jsonEncode(byKey.values.toList()));
       } catch (e) {
-        print('[SyncService._mergeListsFromCloudRow] imported_words merge failed: $e');
+        debugPrint('[SyncService._mergeListsFromCloudRow] imported_words merge failed: $e');
       }
   }
 }

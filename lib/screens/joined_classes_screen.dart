@@ -137,7 +137,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
           if (unreadIds.isNotEmpty) {
             supabase.from('class_notes').update({'read_at': DateTime.now().toIso8601String()}).inFilter('id', unreadIds)
                 .then((_) {})
-                .catchError((e) { print('[JoinedClassesScreen] mark-notes-read failed: $e'); });
+                .catchError((e) { debugPrint('[JoinedClassesScreen] mark-notes-read failed: $e'); });
           }
 
           for (final t in parallel[2] as List) {
@@ -164,7 +164,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
       // back on — a failed background refresh keeps showing stale-but-
       // valid data instead. Previously always looked identical to "you
       // haven't joined any classes yet" regardless of which one it was.
-      print('[JoinedClassesScreen] load failed: $e');
+      debugPrint('[JoinedClassesScreen] load failed: $e');
       if (mounted) setState(() { _loading = false; _loadError = _joinedClasses.isEmpty; });
     }
   }

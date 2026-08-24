@@ -96,7 +96,7 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> {
       // stale-but-valid data, same convention as elsewhere in this file.
       // Previously always looked identical to "you haven't created any
       // classes yet" regardless of which one it actually was.
-      print('[CreatedClassesScreen] load failed: $e');
+      debugPrint('[CreatedClassesScreen] load failed: $e');
       if (mounted) setState(() { _loading = false; _loadError = _myClasses.isEmpty; });
     }
   }

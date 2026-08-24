@@ -375,7 +375,11 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                 itemCount: _searchResults.length,
                 itemBuilder: (context, i) {
                   final w = _searchResults[i];
-                  final inList = list.words.contains(w.word);
+                  // Case-insensitive, matching StorageService.addWordToList's
+                  // check — an exact-case comparison here let this "add"
+                  // button stay active for e.g. "enormous" even when
+                  // "Enormous" was already in the list.
+                  final inList = list.words.any((lw) => lw.toLowerCase() == w.word.toLowerCase());
                   return ListTile(
                     dense: true,
                     title: Text(w.word, style: TextStyle(fontWeight: FontWeight.bold, color: context.appText, fontSize: 14)),

@@ -87,7 +87,17 @@ List<ImportedWord> _parseOutput(String text, String langCode) {
   final result = <ImportedWord>[];
   for (final block in blocks) {
     final lines = block.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
-    final fields = <String, String>{};
+    // A block can still contain more than one word entry if the AI response
+    // omitted a --- separator somewhere (missing on the last block, or
+    // dropped entirely for a short reply) — previously this silently
+    // collapsed every word after the missing separator into one `fields`
+    // map, where each repeated `word:`/`translation:`/etc. line overwrote
+    // the previous value, keeping only the LAST word and discarding the
+    // rest with no error or warning shown. Starting a new field-map
+    // whenever a `word:` key repeats (not just on ---) catches this
+    // regardless of whether the source actually included separators.
+    var fields = <String, String>{};
+    final entries = <Map<String, String>>[];
     for (final line in lines) {
       final colonIdx = line.indexOf(':');
       if (colonIdx == -1) continue;
@@ -96,31 +106,39 @@ List<ImportedWord> _parseOutput(String text, String langCode) {
       var key = line.substring(0, colonIdx).trim().toLowerCase().replaceAll(RegExp(r'[*_`#\s]'), '');
       if (key == 'uzbekdefinition') key = 'definitionuz';
       final val = line.substring(colonIdx + 1).trim().replaceAll(RegExp(r'[*_`]'), '');
+      if (key == 'word' && fields.containsKey('word')) {
+        entries.add(fields);
+        fields = {};
+      }
       fields[key] = val;
     }
-    if (!fields.containsKey('word') || !fields.containsKey('translation')) continue;
-    // Capped at 10 to match StorageService.addImportedWords' storage-side
-    // limit — collecting more here previously let the preview show up to 20
-    // examples that then silently got truncated to 10 on save, so what the
-    // user approved didn't match what was actually kept.
-    final examples = <ImportedWordExample>[];
-    for (var n = 1; n <= 10; n++) {
-      final sentence = fields['example$n'];
-      if (sentence == null || sentence.isEmpty) continue;
-      examples.add(ImportedWordExample(sentence: sentence, translation: fields['example${n}translation']));
+    if (fields.isNotEmpty) entries.add(fields);
+
+    for (final fields in entries) {
+      if (!fields.containsKey('word') || !fields.containsKey('translation')) continue;
+      // Capped at 10 to match StorageService.addImportedWords' storage-side
+      // limit — collecting more here previously let the preview show up to 20
+      // examples that then silently got truncated to 10 on save, so what the
+      // user approved didn't match what was actually kept.
+      final examples = <ImportedWordExample>[];
+      for (var n = 1; n <= 10; n++) {
+        final sentence = fields['example$n'];
+        if (sentence == null || sentence.isEmpty) continue;
+        examples.add(ImportedWordExample(sentence: sentence, translation: fields['example${n}translation']));
+      }
+      result.add(ImportedWord(
+        word: fields['word']!,
+        partOfSpeech: fields['partofspeech']?.isNotEmpty == true ? fields['partofspeech'] : null,
+        pronunciation: fields['pronunciation']?.isNotEmpty == true ? fields['pronunciation'] : null,
+        translation: fields['translation']!,
+        definition: fields['definition'] ?? '',
+        definitionUz: fields['definitionuz']?.isNotEmpty == true ? fields['definitionuz'] : null,
+        examples: examples,
+        language: langCode,
+        addedAt: DateTime.now().millisecondsSinceEpoch,
+        collectionName: '',
+      ));
     }
-    result.add(ImportedWord(
-      word: fields['word']!,
-      partOfSpeech: fields['partofspeech']?.isNotEmpty == true ? fields['partofspeech'] : null,
-      pronunciation: fields['pronunciation']?.isNotEmpty == true ? fields['pronunciation'] : null,
-      translation: fields['translation']!,
-      definition: fields['definition'] ?? '',
-      definitionUz: fields['definitionuz']?.isNotEmpty == true ? fields['definitionuz'] : null,
-      examples: examples,
-      language: langCode,
-      addedAt: DateTime.now().millisecondsSinceEpoch,
-      collectionName: '',
-    ));
   }
   return result;
 }

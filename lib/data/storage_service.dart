@@ -2549,23 +2549,30 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
         existingSet.add(w.word.toLowerCase().trim());
       }
     }
-    final fresh = words
-        .where((w) => !existingSet.contains(w.word.toLowerCase().trim()))
-        .map((w) => ImportedWord(
-          id: w.id,
-          word: w.word,
-          partOfSpeech: w.partOfSpeech,
-          pronunciation: w.pronunciation,
-          translation: w.translation,
-          definition: w.definition,
-          definitionUz: w.definitionUz,
-          examples: w.examples.take(10).toList(),
-          language: w.language,
-          addedAt: w.addedAt,
-          collectionName: collectionName,
-          folderName: folderName,
-        ))
-        .toList();
+    // Dedupe within the incoming batch too, not just against already-saved
+    // words — existingSet is updated as we go, so a word repeated twice in
+    // the same paste/import (e.g. the AI echoed a block twice) only keeps
+    // its first occurrence instead of both slipping through.
+    final fresh = <ImportedWord>[];
+    for (final w in words) {
+      final key = w.word.toLowerCase().trim();
+      if (existingSet.contains(key)) continue;
+      existingSet.add(key);
+      fresh.add(ImportedWord(
+        id: w.id,
+        word: w.word,
+        partOfSpeech: w.partOfSpeech,
+        pronunciation: w.pronunciation,
+        translation: w.translation,
+        definition: w.definition,
+        definitionUz: w.definitionUz,
+        examples: w.examples.take(10).toList(),
+        language: w.language,
+        addedAt: w.addedAt,
+        collectionName: collectionName,
+        folderName: folderName,
+      ));
+    }
     raw.addAll(fresh);
     await prefs.setString(_importedKey, jsonEncode(raw.map((e) => e.toJson()).toList()));
     // No longer resetting the four done-flags here: per-activity word
@@ -2622,7 +2629,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
   });
 
   static Future<void> deleteImportedCollection(String collectionName, {String? folderName}) =>
-      _importedMutex.run(() async {
+      _importedMutex.run(() => _myUnitProgressMutex.run(() async {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now().millisecondsSinceEpoch;
     final raw = await getImportedWordsRaw();
@@ -2632,10 +2639,19 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
         : w
     ).toList();
     await prefs.setString(_importedKey, jsonEncode(updated.map((e) => e.toJson()).toList()));
+    // Otherwise a new folder/collection created later with the same name
+    // inherits this deleted one's stale "completed" progress/completion
+    // badge — _myUnitKey only keys on the (folder, collection) name pair,
+    // with no per-collection identity to tell the old and new ones apart.
+    final allProgress = await _getAllMyUnitProgress();
+    if (allProgress.remove(_myUnitKey(folderName, collectionName)) != null) {
+      await prefs.setString(_myUnitProgressKey, jsonEncode(allProgress.map((k, v) => MapEntry(k, v.toJson()))));
+    }
     SyncService.pushLists();
-  });
+  }));
 
-  static Future<void> deleteImportedFolder(String folderName) => _importedMutex.run(() async {
+  static Future<void> deleteImportedFolder(String folderName) =>
+      _importedMutex.run(() => _myUnitProgressMutex.run(() async {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now().millisecondsSinceEpoch;
     final raw = await getImportedWordsRaw();
@@ -2643,8 +2659,18 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
       w.folderName == folderName ? w.copyWith(deletedAt: now) : w
     ).toList();
     await prefs.setString(_importedKey, jsonEncode(updated.map((e) => e.toJson()).toList()));
+    // Same reasoning as deleteImportedCollection above — purge every
+    // collection's progress entry under this folder too, so a new folder/
+    // collection reusing the name later doesn't inherit stale progress.
+    final allProgress = await _getAllMyUnitProgress();
+    final prefix = '${folderName}_';
+    final keysToRemove = allProgress.keys.where((k) => k.startsWith(prefix)).toList();
+    if (keysToRemove.isNotEmpty) {
+      for (final k in keysToRemove) { allProgress.remove(k); }
+      await prefs.setString(_myUnitProgressKey, jsonEncode(allProgress.map((k, v) => MapEntry(k, v.toJson()))));
+    }
     SyncService.pushLists();
-  });
+  }));
 
   static Future<void> markLevelCompletedViaTest(String levelId) async {
     final prefs = await SharedPreferences.getInstance();
@@ -2761,7 +2787,12 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     final idx = all.indexWhere((l) => l.id == listId);
     if (idx < 0) return;
     final list = all[idx];
-    if (list.words.contains(word)) return;
+    // Case-insensitive, matching how word lookups resolve to a WordItem
+    // elsewhere (e.g. list_detail_screen.dart's _wordMap keyed by
+    // word.toLowerCase()) — an exact-case check let "Enormous" and
+    // "enormous" both be added as separate, duplicate entries.
+    final normalized = word.toLowerCase();
+    if (list.words.any((w) => w.toLowerCase() == normalized)) return;
     await saveCustomList(list.copyWith(words: [...list.words, word]));
   }
 
@@ -2776,7 +2807,8 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
   static Future<bool> isWordInList(String listId, String word) async {
     final all = await getCustomLists();
     final list = all.cast<CustomList?>().firstWhere((l) => l?.id == listId, orElse: () => null);
-    return list?.words.contains(word) ?? false;
+    final normalized = word.toLowerCase();
+    return list?.words.any((w) => w.toLowerCase() == normalized) ?? false;
   }
 
   static Future<void> clearAllProgress() async {

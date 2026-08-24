@@ -21,6 +21,10 @@ class QuizSettingsScreen extends StatefulWidget {
   // Forwarded into the finish screen's "Play Match" button so chaining onward
   // from Quiz still marks My Words progress for the Match activity.
   final Future<bool> Function()? onMatchComplete;
+  // Reachable from the finish screen's "Try Again" button — without this, a
+  // homework-linked quiz's retry silently dropped the homework context (see
+  // the identical fix applied to flashcard.dart's settings gear icon).
+  final VoidCallback? onHomeworkCompleted;
 
   const QuizSettingsScreen({
     super.key,
@@ -30,6 +34,7 @@ class QuizSettingsScreen extends StatefulWidget {
     this.noXP = false,
     this.onSessionComplete,
     this.onMatchComplete,
+    this.onHomeworkCompleted,
   });
 
   @override
@@ -149,6 +154,7 @@ class _QuizSettingsScreenState extends State<QuizSettingsScreen> {
                         noXP: widget.noXP,
                         onSessionComplete: widget.onSessionComplete,
                         onMatchComplete: widget.onMatchComplete,
+                        onHomeworkCompleted: widget.onHomeworkCompleted,
                       ),
                     ),
                   );
@@ -956,6 +962,10 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
                         wordDay: widget.wordDay,
                         userProfile: widget.userProfile,
                         collectionName: widget.collectionName,
+                        noXP: widget.noXP,
+                        onSessionComplete: widget.onSessionComplete,
+                        onMatchComplete: widget.onMatchComplete,
+                        onHomeworkCompleted: widget.onHomeworkCompleted,
                       ),
                     ),
                   );

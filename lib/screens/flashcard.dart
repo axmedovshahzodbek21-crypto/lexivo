@@ -695,6 +695,8 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
           xpEarned: xpEarned,
           onQuizComplete: widget.onQuizComplete,
           onMatchComplete: widget.onMatchComplete,
+          noXP: widget.noXP,
+          onHomeworkCompleted: widget.onHomeworkCompleted,
         ),
       ),
     );
@@ -991,6 +993,15 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
                   wordDay: widget.wordDay,
                   userProfile: widget.userProfile,
                   collectionName: widget.collectionName,
+                  // Without these, tapping Settings mid-session and starting a
+                  // new one from there silently dropped the homework/noXP
+                  // context — the new session earned real Main XP instead of
+                  // class XP, and never reported back to the homework screen.
+                  noXP: widget.noXP,
+                  onHomeworkCompleted: widget.onHomeworkCompleted,
+                  onSessionComplete: widget.onSessionComplete,
+                  onQuizComplete: widget.onQuizComplete,
+                  onMatchComplete: widget.onMatchComplete,
                 ),
               ),
             ),
@@ -1372,6 +1383,12 @@ class FlashcardFinishScreen extends StatelessWidget {
   final int xpEarned;
   final Future<bool> Function()? onQuizComplete;
   final Future<bool> Function()? onMatchComplete;
+  // Forwarded into this screen's own retry buttons ("Practice hard words",
+  // "Continue to Quiz", "start_again") — without these, restarting from here
+  // silently dropped the homework/noXP context, same bug as the mid-session
+  // settings icon above.
+  final bool noXP;
+  final VoidCallback? onHomeworkCompleted;
 
   const FlashcardFinishScreen({
     super.key,
@@ -1387,6 +1404,8 @@ class FlashcardFinishScreen extends StatelessWidget {
     this.xpEarned = 0,
     this.onQuizComplete,
     this.onMatchComplete,
+    this.noXP = false,
+    this.onHomeworkCompleted,
   });
 
   @override
@@ -1574,6 +1593,8 @@ class FlashcardFinishScreen extends StatelessWidget {
                             collectionName: collectionName,
                             cardMode: cardMode,
                             shuffle: shuffle,
+                            noXP: noXP,
+                            onHomeworkCompleted: onHomeworkCompleted,
                           ),
                         ),
                       );
@@ -1612,6 +1633,8 @@ class FlashcardFinishScreen extends StatelessWidget {
                           questionCount: originalWordDay.words.length.clamp(1, 20),
                           onSessionComplete: onQuizComplete,
                           onMatchComplete: onMatchComplete,
+                          noXP: noXP,
+                          onHomeworkCompleted: onHomeworkCompleted,
                         ),
                       ),
                     );
@@ -1650,6 +1673,8 @@ class FlashcardFinishScreen extends StatelessWidget {
                       wordDay: wordDay,
                       userProfile: userProfile,
                       collectionName: collectionName,
+                      noXP: noXP,
+                      onHomeworkCompleted: onHomeworkCompleted,
                     ),
                   ),
                 ),

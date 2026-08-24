@@ -18,6 +18,11 @@ class _BreakOverlayState extends State<BreakOverlay>
   late Animation<double> _breatheAnim;
   int _tipIndex = 0;
   Timer? _tipTimer;
+  // Tracks whether the breathing animation/tip timer are currently running,
+  // so _syncWithBreakState only starts/stops them on an actual on-break
+  // transition instead of on every one of PomodoroService's per-second
+  // notifyListeners() calls.
+  bool _running = false;
 
   final List<String> _tips = [
     '👁 Look 20 feet away for 20 seconds.\nYour eyes need rest too.',
@@ -40,15 +45,34 @@ class _BreakOverlayState extends State<BreakOverlay>
     _breatheAnim = Tween<double>(begin: 0.8, end: 1.2).animate(
       CurvedAnimation(parent: _breatheController, curve: Curves.easeInOut),
     );
-    _breatheController.repeat(reverse: true);
+    // This overlay is mounted at the app root for the whole session (see
+    // main.dart), so unconditionally starting the animation/timer here (as
+    // this used to) ran a 4s repeating animation and a 6s periodic rebuild
+    // for the app's entire lifetime, not just while a break is actually
+    // showing. Start/stop them only on real on-break transitions instead.
+    PomodoroService().addListener(_syncWithBreakState);
+    _syncWithBreakState();
+  }
 
-    _tipTimer = Timer.periodic(const Duration(seconds: 6), (_) {
-      if (mounted) setState(() => _tipIndex = (_tipIndex + 1) % _tips.length);
-    });
+  void _syncWithBreakState() {
+    final onBreak = PomodoroService().isOnBreak;
+    if (onBreak == _running) return;
+    _running = onBreak;
+    if (onBreak) {
+      _breatheController.repeat(reverse: true);
+      _tipTimer = Timer.periodic(const Duration(seconds: 6), (_) {
+        if (mounted) setState(() => _tipIndex = (_tipIndex + 1) % _tips.length);
+      });
+    } else {
+      _breatheController.stop();
+      _tipTimer?.cancel();
+      _tipTimer = null;
+    }
   }
 
   @override
   void dispose() {
+    PomodoroService().removeListener(_syncWithBreakState);
     _breatheController.dispose();
     _tipTimer?.cancel();
     super.dispose();

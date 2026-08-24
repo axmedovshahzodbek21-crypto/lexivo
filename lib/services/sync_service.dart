@@ -301,7 +301,25 @@ class SyncService {
 
   // ── Pull ─────────────────────────────────────────────────────────────────────
 
-  static Future<void> pullAll() async {
+  // Login (_goToApp) fires pullAll() right before navigating to MainShell,
+  // whose HomeScreen.initState() fires its own pullAll() the moment it
+  // mounts — two concurrent calls racing each other over the network, plus
+  // wasted duplicate traffic, and a visible "flash" as the first call's
+  // result gets overwritten by the second's. Sharing the in-flight call
+  // (instead of just serializing, which would still redundantly repeat the
+  // whole network round-trip) means the second caller just awaits the same
+  // pull already underway.
+  static Future<void>? _pullInFlight;
+
+  static Future<void> pullAll() {
+    final existing = _pullInFlight;
+    if (existing != null) return existing;
+    final future = _pullAllImpl().whenComplete(() => _pullInFlight = null);
+    _pullInFlight = future;
+    return future;
+  }
+
+  static Future<void> _pullAllImpl() async {
     final uid = _uid;
     if (uid == null) return;
     try {

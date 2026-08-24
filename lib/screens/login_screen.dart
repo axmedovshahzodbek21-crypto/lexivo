@@ -66,7 +66,13 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       _goToApp();
     } on AuthException catch (e) {
-      setState(() => _error = e.message);
+      if (mounted) setState(() => _error = e.message);
+    } catch (e) {
+      // A network failure (SocketException, timeout, etc.) isn't an
+      // AuthException, so it fell through uncaught before this — the finally
+      // block still stopped the spinner, but with no error message shown,
+      // the button looked like it had silently done nothing.
+      if (mounted) setState(() => _error = 'Network error: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }

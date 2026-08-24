@@ -86,11 +86,37 @@ class _SignupScreenState extends State<SignupScreen> {
 
     setState(() { _loading = true; _error = null; });
     try {
-      await Supabase.instance.client.auth.signUp(email: email, password: pass);
+      final response = await Supabase.instance.client.auth.signUp(email: email, password: pass);
       if (!mounted) return;
+      // Supabase's anti-email-enumeration behavior: signing up with an email
+      // that already has an account returns a fake user with an empty
+      // identities list and no error, indistinguishable from a genuine new
+      // signup unless checked for explicitly. Without this check the user
+      // was silently dropped into the app as if a new account had been
+      // created, with no indication they already have one and should log in
+      // instead.
+      if (response.user != null && (response.user!.identities?.isEmpty ?? false)) {
+        setState(() => _error = tr('email_already_registered'));
+        return;
+      }
+      // If the project requires email confirmation, signUp() succeeds but
+      // issues no session yet. Continuing into the app here would push an
+      // effectively-unauthenticated user into UI that assumes currentUser is
+      // set (SyncService, class_shell.dart, etc.) instead of showing a
+      // "check your email" message.
+      if (response.session == null) {
+        setState(() => _error = tr('check_email_confirm'));
+        return;
+      }
       _goToApp();
     } on AuthException catch (e) {
       if (mounted) setState(() => _error = e.message);
+    } catch (e) {
+      // A network failure (SocketException, timeout, etc.) isn't an
+      // AuthException, so it fell through uncaught before this — the finally
+      // block still stopped the spinner, but with no error message shown,
+      // the button looked like it had silently done nothing.
+      if (mounted) setState(() => _error = 'Network error: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }

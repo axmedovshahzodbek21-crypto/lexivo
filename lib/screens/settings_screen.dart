@@ -434,6 +434,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await prefs.setString('language_level', level);
     await prefs.setString('language_level_updated_at', DateTime.now().toIso8601String());
     if (mounted) setState(() => _englishLevel = level);
+    // Without this, sync_settings_ts never advances for this change, so the
+    // next pullAll() (fired on every app resume) can see a lower local
+    // timestamp than the cloud's and silently overwrite the level just
+    // chosen here with an older cloud value — the same "settings clobbered
+    // by periodic pull" bug class already fixed for other settings, which
+    // all call pushSettings() (see _setDailyGoal above) after saving.
+    SyncService.pushSettings();
   }
 
   Future<void> _setDailyGoal(int goal) async {

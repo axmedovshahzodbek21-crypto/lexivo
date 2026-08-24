@@ -75,38 +75,52 @@ class _MainShellState extends State<MainShell> {
     final user = currentUser;
     if (user == null) return;
 
-    // Pre-fetch joined class names (exclude own classes)
-    final memberships = await supabase.from('class_members').select('class_id').eq('student_id', user.id);
-    final ids = (memberships as List).map((m) => (m as Map)['class_id'] as String).toList();
-    if (ids.isEmpty) return;
-    final classes = await supabase.from('classes').select('id, name, teacher_id').inFilter('id', ids);
-    for (final c in (classes as List)) {
-      final m = Map<String, dynamic>.from(c as Map);
-      if (m['teacher_id'] != user.id) _classNames[m['id'] as String] = m['name'] as String;
-    }
+    try {
+      // Pre-fetch joined class names (exclude own classes)
+      final memberships = await supabase.from('class_members').select('class_id').eq('student_id', user.id);
+      final ids = (memberships as List).map((m) => (m as Map)['class_id'] as String).toList();
+      if (ids.isEmpty) return;
+      final classes = await supabase.from('classes').select('id, name, teacher_id').inFilter('id', ids);
+      // Widget can be disposed while the two awaits above were in flight —
+      // dispose() already ran _hwChannel?.unsubscribe() (a no-op, since
+      // _hwChannel was still null then), so creating and subscribing the
+      // channel now would leak it for the rest of the app session with
+      // nothing left to ever unsubscribe it.
+      if (!mounted) return;
+      for (final c in (classes as List)) {
+        final m = Map<String, dynamic>.from(c as Map);
+        if (m['teacher_id'] != user.id) _classNames[m['id'] as String] = m['name'] as String;
+      }
 
-    _hwChannel = supabase.channel('hw-notify-${user.id}')
-      .onPostgresChanges(
-        event: PostgresChangeEvent.insert,
-        schema: 'public',
-        table: 'class_targets',
-        filter: PostgresChangeFilter(type: PostgresChangeFilterType.eq, column: 'student_id', value: user.id),
-        callback: (payload) {
-          if (!mounted) return;
-          final row = Map<String, dynamic>.from(payload.newRecord);
-          final classId = row['class_id'] as String? ?? '';
-          final className = _classNames[classId] ?? 'Class';
-          setState(() => _hwToast = (
-            title: row['title'] as String? ?? 'New homework',
-            dueDate: row['due_date'] as String?,
-            className: className,
-          ));
-          Future.delayed(const Duration(seconds: 8), () {
-            if (mounted) setState(() => _hwToast = null);
-          });
-        },
-      )
-      .subscribe();
+      _hwChannel = supabase.channel('hw-notify-${user.id}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'class_targets',
+          filter: PostgresChangeFilter(type: PostgresChangeFilterType.eq, column: 'student_id', value: user.id),
+          callback: (payload) {
+            if (!mounted) return;
+            final row = Map<String, dynamic>.from(payload.newRecord);
+            final classId = row['class_id'] as String? ?? '';
+            final className = _classNames[classId] ?? 'Class';
+            setState(() => _hwToast = (
+              title: row['title'] as String? ?? 'New homework',
+              dueDate: row['due_date'] as String?,
+              className: className,
+            ));
+            Future.delayed(const Duration(seconds: 8), () {
+              if (mounted) setState(() => _hwToast = null);
+            });
+          },
+        )
+        .subscribe();
+    } catch (e) {
+      // A network failure here previously threw unhandled from this
+      // fire-and-forget initState() call, silently and permanently breaking
+      // homework notifications for the rest of the session with no retry.
+      // ignore: avoid_print
+      print('[_MainShellState._subscribeHomework] failed: $e');
+    }
   }
 
   void _dismissHwToast() => setState(() => _hwToast = null);

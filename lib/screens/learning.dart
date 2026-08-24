@@ -351,7 +351,11 @@ class _LearningScreenState extends State<LearningScreen> {
           await recordClassActivity(user.id, widget.classId!, reason: 'Learn');
           final xp = isNew ? requestedXp : 0;
           if (xp > 0) {
-            await StorageService.addXP(xp, reason: 'Learn', source: 'Class · ${widget.collectionName}');
+            // Class XP is scoped to the class leaderboard only (already
+            // credited via recordClassWordLearned above) — it must not also
+            // land in the personal StorageService pool the Main Lexivo
+            // homescreen/level reads from. _sessionXP still reflects it for
+            // this session's own summary screen.
             _sessionXP += xp;
           }
         } catch (_) {

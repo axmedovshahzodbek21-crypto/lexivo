@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
 import '../services/class_srs_service.dart';
 import '../app_theme.dart';
-import '../data/storage_service.dart';
 
 class ClassReviewScreen extends StatefulWidget {
   final String classId;
@@ -121,8 +120,10 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
                 userId: user.id, classId: widget.classId, word: card.word);
           }
           final xp = knew ? 5 : 2;
+          // Class XP is scoped to the class leaderboard only (class_xp_history
+          // via recordClassActivity) — it must not also land in the personal
+          // StorageService pool the Main Lexivo homescreen/level reads from.
           await recordClassActivity(user.id, widget.classId, xp: xp, reason: 'SRS Review');
-          await StorageService.addXP(xp, reason: 'SRS Review', source: 'Class · ${widget.className}');
         } catch (_) {
           // Best-effort — an SRS/XP write failing shouldn't block the student
           // from continuing their review session.

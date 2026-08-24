@@ -653,8 +653,7 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
     // between midnight and the 2-hour streak boundary.
     final now      = streakAdjustedNow();
     final todayStr = formatStreakDate(now);
-    final monthName = ['January','February','March','April','May','June',
-      'July','August','September','October','November','December'][_month.month - 1];
+    final monthLabel = monthName(_month.month);
     final canGoNext = !(_month.year == now.year && _month.month == now.month);
 
     final reviewToday = _reviewDays.contains(todayStr);
@@ -774,7 +773,7 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(onPressed: _prevMonth, icon: Icon(Icons.chevron_left, color: context.primary)),
-                      Text('$monthName ${_month.year}',
+                      Text('$monthLabel ${_month.year}',
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
                       IconButton(
                           onPressed: canGoNext ? _nextMonth : null,

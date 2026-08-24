@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
 import '../date_utils.dart';
+import '../l10n.dart' as l10n;
 import '../services/supabase_service.dart';
 import 'class_models.dart';
 import 'class_streak_screen.dart' show classColorFromId;
 
-const _monthNames = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
 const _dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 const _reasonIcons = <String, String>{
@@ -100,7 +97,7 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
     // screen.dart, so this calendar's "today" highlight agrees with theirs.
     final todayStr = todayForStreaks();
     final canNext = !(_month.year == now.year && _month.month == now.month);
-    final monthName = _monthNames[_month.month - 1];
+    final monthName = l10n.monthName(_month.month);
     final mm = _month.month.toString().padLeft(2, '0');
     final daysInMonth = DateTime(_month.year, _month.month + 1, 0).day;
     final firstWeekday = DateTime(_month.year, _month.month, 1).weekday; // 1=Mon

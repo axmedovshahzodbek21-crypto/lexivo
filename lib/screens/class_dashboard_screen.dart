@@ -2301,8 +2301,6 @@ void _prevMonth() => setState(() {
     final thisMonth = DateTime(_currentYear, _currentMonth, 1);
     final canGoNext = thisMonth.isBefore(nowMonth);
 
-    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-
     return Container(
       decoration: BoxDecoration(
         color: context.surface,
@@ -2335,7 +2333,7 @@ void _prevMonth() => setState(() {
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                 ),
-                Text('${monthNames[_currentMonth - 1]} $_currentYear',
+                Text('${monthName(_currentMonth)} $_currentYear',
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: context.appText)),
                 IconButton(
                   icon: Icon(Icons.chevron_right, color: canGoNext ? context.appText : context.textMuted.withValues(alpha: 0.3)),
@@ -2346,7 +2344,7 @@ void _prevMonth() => setState(() {
               ]),
               const SizedBox(height: 8),
               // Day headers
-              Row(children: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d) => Expanded(
+              Row(children: List.generate(7, (i) => weekdayAbbr(i + 1)).map((d) => Expanded(
                 child: Text(d, textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: context.textMuted)),
               )).toList()),

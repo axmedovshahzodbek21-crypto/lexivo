@@ -7,6 +7,20 @@ String tr(String key) {
   return (_t[lang] ?? _t['en']!)[key] ?? _t['en']![key] ?? key;
 }
 
+/// Localized full month name for [month] (1-12), via the month_1.._month_12
+/// keys below. Previously reimplemented as a hardcoded English-only const
+/// array independently in 6 different screens.
+String monthName(int month) => tr('month_$month');
+
+/// Localized 3-letter weekday abbreviation for [dartWeekday] — a
+/// DateTime.weekday value (1=Monday..7=Sunday, Dart's own convention), via
+/// the wd_mon..wd_sun keys below. Previously reimplemented as hardcoded
+/// English-only const arrays independently in several screens.
+String weekdayAbbr(int dartWeekday) {
+  const keys = ['wd_mon', 'wd_tue', 'wd_wed', 'wd_thu', 'wd_fri', 'wd_sat', 'wd_sun'];
+  return tr(keys[(dartWeekday - 1) % 7]);
+}
+
 const Map<String, Map<String, String>> _t = {
   'en': {
     // ── Navigation ──────────────────────────────────────────────────────────────
@@ -364,6 +378,86 @@ const Map<String, Map<String, String>> _t = {
     'ach_xp_master_desc': 'Earn 1000 XP',
     'ach_xp_legend': 'XP Legend',
     'ach_xp_legend_desc': 'Earn 2000 XP',
+
+    // ── Achievements (current set, achievements.dart) ─────────────────────────────
+    // The ach_* keys above were written for an older achievement list (different
+    // ids/titles/thresholds) that achievements.dart no longer uses — kept as-is
+    // since removing them isn't necessary, but tr() never resolves them anymore.
+    // These achv_* keys match the ids actually used by _allAchs today.
+    'achv_first_word': 'First Step',
+    'achv_first_word_desc': 'Learn your first word',
+    'achv_words_10': 'Getting Started',
+    'achv_words_10_desc': 'Learn 10 words',
+    'achv_words_50': 'Word Collector',
+    'achv_words_50_desc': 'Learn 50 words',
+    'achv_words_100': 'Centurion',
+    'achv_words_100_desc': 'Learn 100 words',
+    'achv_words_250': 'Word Master',
+    'achv_words_250_desc': 'Learn 250 words',
+    'achv_words_500': 'Lexicon Master',
+    'achv_words_500_desc': 'Learn 500 words',
+    'achv_words_1000': 'Lexivo Legend',
+    'achv_words_1000_desc': 'Learn 1000 words',
+    'achv_xp_100': 'XP Earner',
+    'achv_xp_100_desc': 'Earn 100 XP',
+    'achv_xp_500': 'XP Hunter',
+    'achv_xp_500_desc': 'Earn 500 XP',
+    'achv_xp_1000': 'XP Legend',
+    'achv_xp_1000_desc': 'Earn 1000 XP',
+    'achv_xp_2000': 'XP Master',
+    'achv_xp_2000_desc': 'Earn 2000 XP',
+    'achv_srs_first': 'Reviewer',
+    'achv_srs_first_desc': 'Complete your first SRS review',
+    'achv_srs_mastered_10': 'Memory Champion',
+    'achv_srs_mastered_10_desc': 'Master 10 words in SRS',
+    'achv_flashcard_first': 'Flashcard Fan',
+    'achv_flashcard_first_desc': 'Complete a flashcard session',
+    'achv_quiz_first': 'Quiz Taker',
+    'achv_quiz_first_desc': 'Complete a quiz',
+    'achv_quiz_perfect': 'Perfect Score',
+    'achv_quiz_perfect_desc': 'Score 100% on a quiz',
+
+    // Category names (_catMeta)
+    'achv_cat_words': 'Words Learned',
+    'achv_cat_xp': 'XP Earned',
+    'achv_cat_study_days': 'Study Days',
+    'achv_cat_study_streak': 'Study Streak',
+    'achv_cat_flash_days': 'Flashcard Days',
+    'achv_cat_flash_streak': 'Flashcard Streak',
+    'achv_cat_quiz_days': 'Quiz Days',
+    'achv_cat_quiz_streak': 'Quiz Streak',
+    'achv_cat_srs': 'SRS & Memory',
+    'achv_cat_milestones': 'Milestones',
+
+    // Description templates for the 6 generated milestone categories — {n}
+    // is substituted with the milestone's day/session count.
+    'achv_desc_study_days': 'Study on {n} different days',
+    'achv_desc_study_streak': 'Study {n} days in a row',
+    'achv_desc_flash_days': 'Do flashcards on {n} different days',
+    'achv_desc_flash_streak': 'Do flashcards {n} days in a row',
+    'achv_desc_quiz_days': 'Do a quiz on {n} different days',
+    'achv_desc_quiz_streak': 'Do a quiz {n} days in a row',
+
+    // Milestone titles (only the named ones — _ms values with no entry in
+    // the name map just show the bare number, which needs no translation).
+    'achv_sd_3': 'First Steps', 'achv_sd_7': 'One Week', 'achv_sd_10': 'Double Digits',
+    'achv_sd_30': 'One Month', 'achv_sd_50': 'Half Century', 'achv_sd_90': 'Three Months',
+    'achv_sd_100': 'Century', 'achv_sd_111': 'Triple One', 'achv_sd_123': 'One-Two-Three',
+    'achv_ss_3': 'On Fire', 'achv_ss_7': 'Week Warrior', 'achv_ss_10': 'Unstoppable',
+    'achv_ss_30': 'Monthly Flame', 'achv_ss_50': 'Inferno', 'achv_ss_90': 'Eternal Flame',
+    'achv_ss_100': 'Century Streak', 'achv_ss_111': 'Triple Streak', 'achv_ss_123': 'Endless Fire',
+    'achv_fd_3': 'Card Curious', 'achv_fd_7': 'Card Week', 'achv_fd_10': 'Card Habit',
+    'achv_fd_30': 'Card Month', 'achv_fd_50': 'Card Addict', 'achv_fd_100': 'Card Century',
+    'achv_fd_111': 'Card Triple', 'achv_fd_123': 'Card Master',
+    'achv_fs_3': 'Flash Spark', 'achv_fs_7': 'Flash Week', 'achv_fs_10': 'Flash Habit',
+    'achv_fs_30': 'Flash Month', 'achv_fs_50': 'Flash Inferno', 'achv_fs_100': 'Flash Century',
+    'achv_fs_111': 'Flash Triple', 'achv_fs_123': 'Flash Legend',
+    'achv_qd_3': 'Quiz Curious', 'achv_qd_7': 'Quiz Week', 'achv_qd_10': 'Quiz Habit',
+    'achv_qd_30': 'Quiz Month', 'achv_qd_50': 'Quiz Addict', 'achv_qd_100': 'Quiz Century',
+    'achv_qd_111': 'Quiz Triple', 'achv_qd_123': 'Quiz Master',
+    'achv_qs_3': 'Quiz Spark', 'achv_qs_7': 'Quiz Warrior', 'achv_qs_10': 'Quiz Machine',
+    'achv_qs_30': 'Quiz Marathoner', 'achv_qs_50': 'Quiz Inferno', 'achv_qs_100': 'Quiz Legend',
+    'achv_qs_111': 'Quiz Triple', 'achv_qs_123': 'Quiz God',
 
     // ── Stats ───────────────────────────────────────────────────────────────────
     'stats_title': 'Statistics',
@@ -990,6 +1084,77 @@ const Map<String, Map<String, String>> _t = {
     'ach_xp_master_desc': '1000 XP oling',
     'ach_xp_legend': 'XP afsonasi',
     'ach_xp_legend_desc': '2000 XP oling',
+
+    // ── Achievements (current set, achievements.dart) ─────────────────────────────
+    'achv_first_word': 'Birinchi qadam',
+    'achv_first_word_desc': 'Birinchi so\'zingizni o\'rganing',
+    'achv_words_10': 'Boshlash',
+    'achv_words_10_desc': '10 ta so\'z o\'rganing',
+    'achv_words_50': 'So\'z to\'plovchi',
+    'achv_words_50_desc': '50 ta so\'z o\'rganing',
+    'achv_words_100': 'Yuzlik',
+    'achv_words_100_desc': '100 ta so\'z o\'rganing',
+    'achv_words_250': 'So\'z ustasi',
+    'achv_words_250_desc': '250 ta so\'z o\'rganing',
+    'achv_words_500': 'Lug\'at ustasi',
+    'achv_words_500_desc': '500 ta so\'z o\'rganing',
+    'achv_words_1000': 'Lexivo afsonasi',
+    'achv_words_1000_desc': '1000 ta so\'z o\'rganing',
+    'achv_xp_100': 'XP ishlab topuvchi',
+    'achv_xp_100_desc': '100 XP toping',
+    'achv_xp_500': 'XP izlovchi',
+    'achv_xp_500_desc': '500 XP toping',
+    'achv_xp_1000': 'XP afsonasi',
+    'achv_xp_1000_desc': '1000 XP toping',
+    'achv_xp_2000': 'XP ustasi',
+    'achv_xp_2000_desc': '2000 XP toping',
+    'achv_srs_first': 'Takrorlovchi',
+    'achv_srs_first_desc': 'Birinchi SRS takrorlashingizni yakunlang',
+    'achv_srs_mastered_10': 'Xotira chempioni',
+    'achv_srs_mastered_10_desc': 'SRSda 10 ta so\'zni mukammal o\'zlashtiring',
+    'achv_flashcard_first': 'Flashkart muxlisi',
+    'achv_flashcard_first_desc': 'Flashkart mashg\'ulotini yakunlang',
+    'achv_quiz_first': 'Test ishtirokchisi',
+    'achv_quiz_first_desc': 'Testni yakunlang',
+    'achv_quiz_perfect': 'Mukammal natija',
+    'achv_quiz_perfect_desc': 'Testda 100% natija ko\'rsating',
+
+    'achv_cat_words': 'O\'rganilgan so\'zlar',
+    'achv_cat_xp': 'To\'plangan XP',
+    'achv_cat_study_days': 'O\'qish kunlari',
+    'achv_cat_study_streak': 'O\'qish seriyasi',
+    'achv_cat_flash_days': 'Flashkart kunlari',
+    'achv_cat_flash_streak': 'Flashkart seriyasi',
+    'achv_cat_quiz_days': 'Test kunlari',
+    'achv_cat_quiz_streak': 'Test seriyasi',
+    'achv_cat_srs': 'SRS va xotira',
+    'achv_cat_milestones': 'Yutuqlar',
+
+    'achv_desc_study_days': '{n} xil kunda o\'qing',
+    'achv_desc_study_streak': 'Ketma-ket {n} kun o\'qing',
+    'achv_desc_flash_days': '{n} xil kunda flashkart qiling',
+    'achv_desc_flash_streak': 'Ketma-ket {n} kun flashkart qiling',
+    'achv_desc_quiz_days': '{n} xil kunda test yeching',
+    'achv_desc_quiz_streak': 'Ketma-ket {n} kun test yeching',
+
+    'achv_sd_3': 'Birinchi qadamlar', 'achv_sd_7': 'Bir hafta', 'achv_sd_10': 'Ikki xonali',
+    'achv_sd_30': 'Bir oy', 'achv_sd_50': 'Yarim asr', 'achv_sd_90': 'Uch oy',
+    'achv_sd_100': 'Asr', 'achv_sd_111': 'Uchlik birlik', 'achv_sd_123': 'Bir-ikki-uch',
+    'achv_ss_3': 'Olovda', 'achv_ss_7': 'Hafta jangchisi', 'achv_ss_10': 'To\'xtatib bo\'lmas',
+    'achv_ss_30': 'Oylik alanga', 'achv_ss_50': 'Do\'zax', 'achv_ss_90': 'Abadiy olov',
+    'achv_ss_100': 'Asrlik seriya', 'achv_ss_111': 'Uchlik seriya', 'achv_ss_123': 'Cheksiz olov',
+    'achv_fd_3': 'Karta qiziquvchisi', 'achv_fd_7': 'Karta haftasi', 'achv_fd_10': 'Karta odati',
+    'achv_fd_30': 'Karta oyi', 'achv_fd_50': 'Karta ishqibozi', 'achv_fd_100': 'Karta asri',
+    'achv_fd_111': 'Karta uchligi', 'achv_fd_123': 'Karta ustasi',
+    'achv_fs_3': 'Flash uchqun', 'achv_fs_7': 'Flash haftasi', 'achv_fs_10': 'Flash odati',
+    'achv_fs_30': 'Flash oyi', 'achv_fs_50': 'Flash do\'zaxi', 'achv_fs_100': 'Flash asri',
+    'achv_fs_111': 'Flash uchligi', 'achv_fs_123': 'Flash afsonasi',
+    'achv_qd_3': 'Test qiziquvchisi', 'achv_qd_7': 'Test haftasi', 'achv_qd_10': 'Test odati',
+    'achv_qd_30': 'Test oyi', 'achv_qd_50': 'Test ishqibozi', 'achv_qd_100': 'Test asri',
+    'achv_qd_111': 'Test uchligi', 'achv_qd_123': 'Test ustasi',
+    'achv_qs_3': 'Test uchquni', 'achv_qs_7': 'Test jangchisi', 'achv_qs_10': 'Test mashinasi',
+    'achv_qs_30': 'Test marafonchisi', 'achv_qs_50': 'Test do\'zaxi', 'achv_qs_100': 'Test afsonasi',
+    'achv_qs_111': 'Test uchligi', 'achv_qs_123': 'Test xudosi',
 
     // ── Stats ───────────────────────────────────────────────────────────────────
     'stats_title': 'Statistika',

@@ -1282,9 +1282,12 @@ class _MasteryHeatmapSectionState extends State<_MasteryHeatmapSection> {
             Wrap(
               spacing: 6,
               runSpacing: 6,
-              children: widget.collection.days.map((day) {
-                final avgUnit = day.words.isEmpty ? 0.0
-                    : day.words.fold(0.0, (s, w) => s + _score(w.word)) / day.words.length;
+              // Excludes placeholder days with no words yet, matching the
+              // unit picker's own nonEmptyDays filter above — otherwise this
+              // heatmap showed a permanent 0% tile for content that doesn't
+              // exist yet and can never be opened from the picker anyway.
+              children: widget.collection.days.where((d) => d.words.isNotEmpty).map((day) {
+                final avgUnit = day.words.fold(0.0, (s, w) => s + _score(w.word)) / day.words.length;
                 final c = _color(avgUnit);
                 return GestureDetector(
                   onTap: () => setState(() => _selectedUnit = day.dayNumber),

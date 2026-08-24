@@ -117,8 +117,7 @@ class _StatsScreenState extends State<StatsScreen> {
     if (daysAgo == 0) return 'Today';
     if (daysAgo == 1) return 'Yes';
     final date = streakAdjustedNow().subtract(Duration(days: daysAgo));
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    return days[date.weekday % 7];
+    return weekdayAbbr(date.weekday);
   }
 
   @override

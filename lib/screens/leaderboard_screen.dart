@@ -540,8 +540,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           final activeDays = List.generate(daysInMonth, (i) =>
             '$calYear-${calMonth.toString().padLeft(2, '0')}-${(i + 1).toString().padLeft(2, '0')}')
             .where(studiedSet.contains).length;
-          final monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-
           final cells = <String?>[...List.filled(firstWeekday, null)];
           for (int d = 1; d <= daysInMonth; d++) {
             cells.add('$calYear-${calMonth.toString().padLeft(2, '0')}-${d.toString().padLeft(2, '0')}');
@@ -614,7 +612,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                     ),
-                    Text('${monthNames[calMonth - 1]} $calYear',
+                    Text('${monthName(calMonth)} $calYear',
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted)),
                     IconButton(
                       icon: const Icon(Icons.chevron_right_rounded),

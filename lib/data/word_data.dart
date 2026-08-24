@@ -1939,46 +1939,6 @@ final thirtyDaysCollection = WordCollection(
       topic: 'Work & Employment',
       words: [
         WordItem(
-          word: 'Remote work',
-          partOfSpeech: 'noun',
-          pronunciation: '/rɪˈməʊt wɜːrk/',
-          translation: 'Masofaviy ish',
-          definition:
-              'Working from outside a traditional office, usually from home or another location using technology.',
-          definitionUz:
-              'Masofaviy ish — bu ofisga borish o‘rniga uyda yoki boshqa joydan kompyuter va internet orqali ishlashni anglatadi.',
-          example1:
-              'Many companies adopted remote work during the pandemic to keep operations running.',
-          example1Translation:
-              'Ko‘plab kompaniyalar pandemiya davrida faoliyatini davom ettirish uchun masofaviy ishlashni joriy etdi.',
-          example2:
-              'Remote work allows employees to save time and money on commuting.',
-          example2Translation:
-              'Masofaviy ish xodimlarning yo‘lga ketadigan vaqt va pulini tejashiga yordam beradi.',
-          example3:
-              'Effective communication tools are essential for successful remote work.',
-          example3Translation:
-              'Muvaffaqiyatli masofaviy ish uchun samarali aloqa vositalari juda muhim.',
-          extraExamples: [
-            'She prefers remote work because it gives her more flexibility with family responsibilities.',
-            'Remote work has become a key factor in attracting new talent.',
-            'Not everyone has a suitable environment for productive remote work.',
-            'The company is offering hybrid models combining remote work and office days.',
-            'Remote work can improve work-life balance for many professionals.',
-            'Managers need special training to lead remote work teams effectively.',
-            'Internet reliability is one of the biggest challenges of remote work in rural areas.',
-          ],
-          extraExampleTranslations: [
-            'U oilaviy mas’uliyatlari tufayli masofaviy ishlashni afzal ko‘radi.',
-            'Masofaviy ish yangi xodimlarni jalb qilishda muhim omilga aylandi.',
-            'Hamma ham samarali masofaviy ish uchun mos muhitga ega emas.',
-            'Kompaniya masofaviy ish va ofis kunlarini birlashtirgan gibrid modelni taklif qilmoqda.',
-            'Masofaviy ish ko‘plab mutaxassislar uchun ish va shaxsiy hayot muvozanatini yaxshilashi mumkin.',
-            'Rahbarlar masofaviy ish jamoalarini boshqarish uchun maxsus tayyorgarlikdan o‘tishlari kerak.',
-            'Internetning ishonchliligi qishloq joylarda masofaviy ishning eng katta muammolaridan biridir.',
-          ],
-        ),
-        WordItem(
           word: 'Job satisfaction',
           partOfSpeech: 'noun',
           pronunciation: '/dʒɒb ˌsætɪsˈfækʃən/',
@@ -2016,46 +1976,6 @@ final thirtyDaysCollection = WordCollection(
             'Moslashuvchan ish vaqti uning umumiy ishdan qoniqishiga hissa qo‘shdi.',
             'Ishdan qoniqish ruhiy salomatlik va farovonlik bilan chambarchas bog‘liq.',
             'Yangi loyiha jamoaning ishdan qoniqishini sezilarli oshirdi.',
-          ],
-        ),
-        WordItem(
-          word: 'Automation',
-          partOfSpeech: 'noun',
-          pronunciation: '/ˌɔːtəˈmeɪʃən/',
-          translation: 'Avtomatlashtirish',
-          definition:
-              'The use of technology to perform tasks with minimal or no human input.',
-          definitionUz:
-              'Avtomatlashtirish — bu texnologiyalardan foydalanib, vazifalarni odam aralashuvisiz yoki minimal aralashuv bilan bajarishni anglatadi.',
-          example1:
-              'Automation has transformed manufacturing by increasing efficiency and reducing errors.',
-          example1Translation:
-              'Avtomatlashtirish ishlab chiqarishni samaradorlikni oshirib va xatolarni kamaytirib o‘zgartirdi.',
-          example2:
-              'Many routine office tasks are now handled through automation software.',
-          example2Translation:
-              'Ko‘plab oddiy ofis vazifalari endi avtomatlashtirish dasturlari orqali bajarilmoqda.',
-          example3:
-              'While automation creates new jobs, it also makes some traditional roles redundant.',
-          example3Translation:
-              'Avtomatlashtirish yangi ish o‘rinlarini yaratishi bilan birga ba’zi an’anaviy lavozimlarni keraksiz qiladi.',
-          extraExamples: [
-            'The rise of automation is changing the skills required in the job market.',
-            'Factories are investing heavily in automation to stay competitive.',
-            'Automation in customer service includes chatbots and automated responses.',
-            'Employees fear that automation will replace their jobs.',
-            'Smart home automation allows control of lighting and security from a phone.',
-            'Automation helps companies reduce operational costs significantly.',
-            'Governments are discussing policies to support workers affected by automation.',
-          ],
-          extraExampleTranslations: [
-            'Avtomatlashtirishning o‘sishi ish bozorida talab qilinadigan ko‘nikmalarni o‘zgartirmoqda.',
-            'Zavodlar raqobatbardosh bo‘lish uchun avtomatlashtirishga katta sarmoya kiritmoqda.',
-            'Mijozlarga xizmat ko‘rsatishdagi avtomatlashtirish chat-botlar va avtomatik javoblarni o‘z ichiga oladi.',
-            'Xodimlar avtomatlashtirish ularning ish o‘rnini egallab olishidan qo‘rqishadi.',
-            'Aqlli uy avtomatlashtirish telefondan yorug‘lik va xavfsizlikni boshqarishga imkon beradi.',
-            'Avtomatlashtirish kompaniyalarga operatsion xarajatlarni sezilarli kamaytirishga yordam beradi.',
-            'Hukumatlar avtomatlashtirishdan zarar ko‘rgan ishchilarni qo‘llab-quvvatlash siyosatlarini muhokama qilmoqda.',
           ],
         ),
         WordItem(
@@ -6465,46 +6385,6 @@ final thirtyDaysCollection = WordCollection(
           ],
         ),
 
-        WordItem(
-          word: 'Cultural appropriation',
-          partOfSpeech: 'noun',
-          pronunciation: '/ˈkʌltʃərəl əˌprəʊpriˈeɪʃn/',
-          translation: 'Madaniy o‘zlashtirish',
-          definition:
-              'The adoption of elements from one culture by members of another culture without proper understanding, respect, or permission.',
-          definitionUz:
-              'Madaniy o‘zlashtirish – bir madaniyat elementlarini boshqa madaniyat vakillari tomonidan chuqur tushunmasdan, hurmat qilmasdan yoki ruxsatsiz qabul qilish.',
-          example1:
-              'The fashion industry has been criticized for cultural appropriation.',
-          example1Translation:
-              'Moda sanoati madaniy o‘zlashtirish uchun tanqid qilinmoqda.',
-          example2:
-              'Cultural appropriation can offend members of the original culture.',
-          example2Translation:
-              'Madaniy o‘zlashtirish asl madaniyat vakillarini xafa qilishi mumkin.',
-          example3:
-              'Understanding the difference between appreciation and appropriation is important.',
-          example3Translation:
-              'Qadrlash va o‘zlashtirish o‘rtasidagi farqni tushunish muhim.',
-          extraExamples: [
-            'Wearing traditional clothing as a costume can be seen as cultural appropriation.',
-            'Cultural appropriation often involves power imbalances between cultures.',
-            'Social media has increased discussions about cultural appropriation.',
-            'Artists should be careful to avoid cultural appropriation in their work.',
-            'Cultural appropriation differs from cultural exchange.',
-            'Many celebrities have faced backlash for cultural appropriation.',
-            'Education helps prevent unintentional cultural appropriation.',
-          ],
-          extraExampleTranslations: [
-            'An’anaviy kiyimlarni kostyum sifatida kiyish madaniy o‘zlashtirish deb qaralishi mumkin.',
-            'Madaniy o‘zlashtirish ko‘pincha madaniyatlar o‘rtasidagi kuch muvozanatsizligi bilan bog‘liq.',
-            'Ijtimoiy tarmoqlar madaniy o‘zlashtirish haqidagi muhokamalarni ko‘paytirdi.',
-            'Rassomlar o‘z ishlarida madaniy o‘zlashtirishdan ehtiyot bo‘lishlari kerak.',
-            'Madaniy o‘zlashtirish madaniy almashinuvdan farq qiladi.',
-            'Ko‘plab mashhurlar madaniy o‘zlashtirish uchun tanqidga uchragan.',
-            'Ta’lim beixtiyor madaniy o‘zlashtirishning oldini olishga yordam beradi.',
-          ],
-        ),
 
         WordItem(
           word: 'Legacy',
@@ -7412,46 +7292,6 @@ final thirtyDaysCollection = WordCollection(
       dayNumber: 13,
       topic: 'Food & Diet',
       words: [
-        WordItem(
-          word: 'Balanced diet',
-          partOfSpeech: 'noun phrase',
-          pronunciation: '/ˈbælənst ˈdaɪ.ət/',
-          translation: 'Muvozanatli ovqatlanish',
-          definition:
-              'A diet that includes a variety of foods in the right proportions to provide all essential nutrients the body needs.',
-          definitionUz:
-              'Tanaga kerakli barcha oziq moddalarni to\'g\'ri miqdorda ta\'minlaydigan, turli xil ovqatlardan iborat ovqatlanish tarzi.',
-          example1:
-              'A balanced diet includes proteins, carbohydrates, fats, vitamins, and minerals.',
-          example1Translation:
-              'Muvozanatli ovqatlanish oqsillar, uglevodlar, yog\'lar, vitaminlar va minerallarni o\'z ichiga oladi.',
-          example2:
-              'Her doctor advised her to follow a balanced diet to improve her energy levels.',
-          example2Translation:
-              'Uning shifokori energiya darajasini oshirish uchun muvozanatli ovqatlanishga amal qilishni maslahat berdi.',
-          example3:
-              'Children who eat a balanced diet tend to perform better at school.',
-          example3Translation:
-              'Muvozanatli ovqatlanadigan bolalar maktabda yaxshiroq o\'zlashtiradi.',
-          extraExamples: [
-            'A balanced diet is the foundation of a healthy lifestyle.',
-            'He struggled to maintain a balanced diet while traveling for work.',
-            'Nutritionists recommend building a balanced diet around whole foods.',
-            'A balanced diet doesn\'t mean you can never enjoy treats.',
-            'The school introduced a program to teach kids about a balanced diet.',
-            'She replaced fast food with home-cooked meals to achieve a balanced diet.',
-            'A balanced diet combined with regular exercise can prevent many diseases.',
-          ],
-          extraExampleTranslations: [
-            'Muvozanatli ovqatlanish sog\'lom hayot tarzining asosi hisoblanadi.',
-            'U ish uchun sayohat qilar ekan, muvozanatli ovqatlanishni saqlashda qiynaldi.',
-            'Mutaxassislar muvozanatli ovqatlanishni tabiiy mahsulotlar asosida qurishni tavsiya etadi.',
-            'Muvozanatli ovqatlanish hech qachon mazali narsalardan voz kechish degani emas.',
-            'Maktab bolalarga muvozanatli ovqatlanishni o\'rgatish dasturini joriy etdi.',
-            'U muvozanatli ovqatlanishga erishish uchun tez ovqatni uy taomlariga almashtirdi.',
-            'Muvozanatli ovqatlanish muntazam jismoniy mashq bilan birgalikda ko\'plab kasalliklarning oldini olishi mumkin.',
-          ],
-        ),
 
         WordItem(
           word: 'Processed foods',
@@ -9076,46 +8916,6 @@ final thirtyDaysCollection = WordCollection(
           ],
         ),
         WordItem(
-          word: 'Cultural preservation',
-          partOfSpeech: 'noun',
-          pronunciation: '/ˈkʌl.tʃər.əl ˌprez.əˈveɪ.ʃən/',
-          translation: 'Madaniy merosni saqlash',
-          definition:
-              'The act of protecting and maintaining cultural traditions, artifacts, and heritage for future generations.',
-          definitionUz:
-              'Madaniy merosni saqlash — madaniy anʼanalar, buyumlar va merosni kelajak avlodlar uchun himoya qilish va saqlab qolish harakatidir.',
-          example1:
-              'Cultural preservation is important to maintain national identity.',
-          example1Translation:
-              'Madaniy merosni saqlash milliy oʻzlikni saqlab qolish uchun muhim.',
-          example2:
-              'The organization works on cultural preservation projects around the world.',
-          example2Translation:
-              'Tashkilot dunyo boʻylab madaniy merosni saqlash loyihalari ustida ishlaydi.',
-          example3:
-              'Language revitalization is a key part of cultural preservation.',
-          example3Translation:
-              'Tilni tiklash madaniy merosni saqlashning muhim qismidir.',
-          extraExamples: [
-            'Cultural preservation efforts include restoring historic buildings.',
-            'Indigenous communities are fighting for cultural preservation.',
-            'Museums play a vital role in cultural preservation.',
-            'Cultural preservation helps maintain diversity in a globalized world.',
-            'The festival promotes cultural preservation through performances.',
-            'Government funding supports cultural preservation initiatives.',
-            'Digital archives aid in cultural preservation.',
-          ],
-          extraExampleTranslations: [
-            'Madaniy merosni saqlash harakatlari tarixiy binolarni tiklashni oʻz ichiga oladi.',
-            'Mahalliy jamoalar madaniy merosni saqlash uchun kurashmoqda.',
-            'Muzeylar madaniy merosni saqlashda muhim rol oʻynaydi.',
-            'Madaniy merosni saqlash globallashgan dunyoda xilma-xillikni saqlashga yordam beradi.',
-            'Festival tomoshalar orqali madaniy merosni saqlashni targʻib qiladi.',
-            'Davlat mablagʻlari madaniy merosni saqlash tashabbuslarini qoʻllab-quvvatlaydi.',
-            'Raqamli arxivlar madaniy merosni saqlashga yordam beradi.',
-          ],
-        ),
-        WordItem(
           word: 'Patron of the arts',
           partOfSpeech: 'noun',
           pronunciation: '/ˈpeɪ.trən əv ði ɑːrts/',
@@ -9859,46 +9659,6 @@ final thirtyDaysCollection = WordCollection(
       dayNumber: 17,
       topic: 'Transportation',
       words: [
-        WordItem(
-          word: 'Public transportation',
-          partOfSpeech: 'noun',
-          pronunciation: '/ˈpʌblɪk ˌtrænspɔːrˈteɪʃən/',
-          translation: 'Jamoat transporti',
-          definition:
-              'Transport services available to the general public such as buses, trains, and subways.',
-          definitionUz:
-              'Jamoat transporti — avtobus, poyezd va metro kabi barcha odamlar foydalana oladigan transport xizmatlaridir.',
-          example1:
-              'Public transportation is essential for reducing traffic in big cities.',
-          example1Translation:
-              'Jamoat transporti katta shaharlarda tirbandlikni kamaytirish uchun juda muhim.',
-          example2:
-              'Many people rely on public transportation to commute to work every day.',
-          example2Translation:
-              'Ko‘p odamlar har kuni ishga borish uchun jamoat transportiga tayanadi.',
-          example3:
-              'The government is investing more in public transportation to make it faster and cleaner.',
-          example3Translation:
-              'Hukumat jamoat transportini tezroq va toza qilish uchun ko‘proq mablag‘ ajratmoqda.',
-          extraExamples: [
-            'Using public transportation helps lower air pollution in urban areas.',
-            'Public transportation is usually more affordable than owning a car.',
-            'Some cities offer free public transportation to encourage its use.',
-            'Reliable public transportation improves quality of life for residents.',
-            'During rush hour, public transportation can become very crowded.',
-            'Many tourists prefer public transportation to explore the city.',
-            'Expanding public transportation networks is a key urban planning goal.',
-          ],
-          extraExampleTranslations: [
-            'Jamoat transportidan foydalanish shaharlarda havo ifloslanishini kamaytirishga yordam beradi.',
-            'Jamoat transporti odatda shaxsiy avtomobilga qaraganda arzonroq.',
-            'Ba’zi shaharlar undan foydalanishni rag‘batlantirish uchun bepul jamoat transportini taklif qiladi.',
-            'Ishonchli jamoat transporti aholining hayot sifatini yaxshilaydi.',
-            'Qatnov vaqtida jamoat transporti juda gavjum bo‘lib qolishi mumkin.',
-            'Ko‘p sayyohlar shaharni kashf qilish uchun jamoat transportini afzal ko‘radi.',
-            'Jamoat transporti tarmoqlarini kengaytirish shaharsozlikning asosiy maqsadlaridan biridir.',
-          ],
-        ),
 
         WordItem(
           word: 'Traffic congestion',
@@ -10062,46 +9822,6 @@ final thirtyDaysCollection = WordCollection(
           ],
         ),
 
-        WordItem(
-          word: 'Carbon emissions',
-          partOfSpeech: 'noun',
-          pronunciation: '/ˈkɑːbən ɪˈmɪʃənz/',
-          translation: 'Uglerod chiqindilari',
-          definition:
-              'The release of carbon dioxide (CO₂) and other greenhouse gases into the atmosphere.',
-          definitionUz:
-              'Uglerod chiqindilari — atmosfera ga uglerod dioksidi (CO₂) va boshqa issiqxona gazlarining chiqarilishidir.',
-          example1:
-              'Transportation is one of the largest sources of carbon emissions.',
-          example1Translation:
-              'Transport uglerod chiqindilarining eng katta manbalaridan biridir.',
-          example2:
-              'Electric vehicles help reduce carbon emissions from road transport.',
-          example2Translation:
-              'Elektr transport vositalari yo‘l transportidagi uglerod chiqindilarini kamaytirishga yordam beradi.',
-          example3:
-              'Countries are setting targets to cut carbon emissions by 2030.',
-          example3Translation:
-              'Mamlakatlar 2030 yilgacha uglerod chiqindilarini qisqartirish bo‘yicha maqsadlar qo‘ymoqda.',
-          extraExamples: [
-            'Reducing carbon emissions is essential to slow down global warming.',
-            'Carbon emissions from aviation have increased significantly.',
-            'Governments use taxes to discourage high carbon emissions.',
-            'Planting trees helps absorb some carbon emissions.',
-            'Companies are investing in technologies to lower their carbon emissions.',
-            'Tracking carbon emissions is important for environmental policies.',
-            'Switching to renewable energy reduces carbon emissions from transport.',
-          ],
-          extraExampleTranslations: [
-            'Uglerod chiqindilarini kamaytirish global isishni sekinlashtirish uchun zarur.',
-            'Aviatsiyadan chiqadigan uglerod chiqindilari sezilarli darajada oshdi.',
-            'Hukumatlar yuqori uglerod chiqindilarini kamaytirish uchun soliqlar qo‘llaydi.',
-            'Daraxt ekish ba’zi uglerod chiqindilarini o‘zlashtirishga yordam beradi.',
-            'Kompaniyalar uglerod chiqindilarini kamaytirish uchun texnologiyalarga sarmoya kiritmoqda.',
-            'Uglerod chiqindilarini kuzatish ekologik siyosatlar uchun muhim.',
-            'Qayta tiklanadigan energiyaga o‘tish transportdagi uglerod chiqindilarini kamaytiradi.',
-          ],
-        ),
 
         WordItem(
           word: 'Pedestrian-friendly',
@@ -10474,46 +10194,6 @@ final thirtyDaysCollection = WordCollection(
       dayNumber: 18,
       topic: 'Social Media',
       words: [
-        WordItem(
-          word: 'Digital footprint',
-          partOfSpeech: 'noun phrase',
-          pronunciation: '/ˈdɪdʒɪtəl ˈfʊtprɪnt/',
-          translation: 'Raqamli iz',
-          definition:
-              'The trail of data a person leaves behind through their online activities, such as browsing, posting, and shopping.',
-          definitionUz:
-              'Odamning internetda amalga oshirgan harakatlari — saytlarga kirish, post yozish, xarid qilish — natijasida qoldiradigan ma\'lumotlar izi.',
-          example1:
-              'Everything you post online becomes part of your digital footprint.',
-          example1Translation:
-              'Internetda joylashtiradigan har narsa sizning raqamli izingizning bir qismiga aylanadi.',
-          example2:
-              'Employers often check a candidate\'s digital footprint before making a hiring decision.',
-          example2Translation:
-              'Ish beruvchilar ko\'pincha ishga olish qarorini qabul qilishdan oldin nomzodning raqamli izini tekshiradi.',
-          example3:
-              'Being careful about what you share online helps protect your digital footprint.',
-          example3Translation:
-              'Internetda nima ulashishingizga ehtiyot bo\'lish raqamli izingizni himoya qilishga yordam beradi.',
-          extraExamples: [
-            'Your digital footprint can reveal a lot about your interests and habits.',
-            'Deleting an account does not always erase your digital footprint.',
-            'Children are building a digital footprint from a very young age.',
-            'Companies use your digital footprint to target you with advertisements.',
-            'A negative digital footprint can affect your reputation for years.',
-            'Using private browsing can reduce but not eliminate your digital footprint.',
-            'Schools now teach students how to manage their digital footprint responsibly.',
-          ],
-          extraExampleTranslations: [
-            'Raqamli izingiz qiziqishlaringiz va odatlaringiz haqida ko\'p narsa aytib berishi mumkin.',
-            'Hisobni o\'chirish har doim ham raqamli izingizni yo\'q qilmaydi.',
-            'Bolalar juda yosh yoshdan raqamli iz qoldira boshlaydi.',
-            'Kompaniyalar sizning raqamli izingizdan reklamalar bilan maqsad qilib foydalanadi.',
-            'Salbiy raqamli iz yillar davomida obro\'yingizga ta\'sir qilishi mumkin.',
-            'Maxfiy ko\'rishdan foydalanish raqamli izingizni kamaytirishi mumkin, ammo butunlay yo\'q qilmaydi.',
-            'Maktablar endi o\'quvchilarga raqamli izlarini mas\'uliyat bilan boshqarishni o\'rgatadi.',
-          ],
-        ),
 
         WordItem(
           word: 'Online presence',
@@ -10597,46 +10277,6 @@ final thirtyDaysCollection = WordCollection(
           ],
         ),
 
-        WordItem(
-          word: 'Viral content',
-          partOfSpeech: 'noun phrase',
-          pronunciation: '/ˈvaɪrəl ˈkɒntent/',
-          translation: 'Viral kontent',
-          definition:
-              'Online content that spreads rapidly and widely as large numbers of people share it across social media and other platforms.',
-          definitionUz:
-              'Ko\'p odamlar tomonidan tez tarqatiladigan va qisqa vaqt ichida millionlab kishilarga yetib boradigan internet kontenti.',
-          example1:
-              'The funny video became viral content overnight and got millions of views.',
-          example1Translation:
-              'Qiziqarli video bir kechada viral kontentga aylandi va millionlab ko\'rishga ega bo\'ldi.',
-          example2:
-              'Brands often try to create viral content to reach a wider audience.',
-          example2Translation:
-              'Brendlar ko\'pincha keng auditoriyaga yetib borish uchun viral kontent yaratishga harakat qiladi.',
-          example3:
-              'Viral content can spread both accurate information and dangerous misinformation.',
-          example3Translation:
-              'Viral kontent ham to\'g\'ri ma\'lumotlarni, ham xavfli noto\'g\'ri ma\'lumotlarni tarqatishi mumkin.',
-          extraExamples: [
-            'Nobody can fully predict what will become viral content.',
-            'Emotional stories are more likely to become viral content.',
-            'The viral content drew attention to an important social issue.',
-            'Going viral can bring overnight fame to an unknown creator.',
-            'Viral content often sparks public debate and discussion.',
-            'Some companies pay influencers to help their content go viral.',
-            'Viral content can spread across borders within hours.',
-          ],
-          extraExampleTranslations: [
-            'Hech kim nima viral kontentga aylanishini to\'liq bashorat qila olmaydi.',
-            'Hissiy hikoyalar viral kontentga aylanish ehtimoli ko\'proq.',
-            'Viral kontent muhim ijtimoiy muammoga e\'tiborni tortdi.',
-            'Viral bo\'lish noma\'lum yaratuvchiga bir kechada shuhrat keltirishi mumkin.',
-            'Viral kontent ko\'pincha jamoat munozarasi va muhokamalarini qo\'zg\'atadi.',
-            'Ba\'zi kompaniyalar kontentlarini viral qilishga yordam berishlari uchun influenserlarga pul to\'laydi.',
-            'Viral kontent soatlar ichida chegaralardan o\'tib tarqalishi mumkin.',
-          ],
-        ),
 
         WordItem(
           word: 'Echo chamber',
@@ -11007,46 +10647,6 @@ final thirtyDaysCollection = WordCollection(
           ],
         ),
 
-        WordItem(
-          word: 'Digital literacy',
-          partOfSpeech: 'noun phrase',
-          pronunciation: '/ˈdɪdʒɪtəl ˈlɪtərəsi/',
-          translation: 'Raqamli savodxonlik',
-          definition:
-              'The ability to find, evaluate, use, and create information using digital technology in a safe and responsible way.',
-          definitionUz:
-              'Raqamli texnologiyalardan foydalanib ma\'lumot topish, baholash, ishlatish va yaratish, hamda internetda xavfsiz va mas\'uliyatli harakat qilish ko\'nikmasi.',
-          example1:
-              'Digital literacy is now considered as important as reading and writing.',
-          example1Translation:
-              'Raqamli savodxonlik endi o\'qish va yozish kabi muhim deb hisoblanadi.',
-          example2:
-              'Students with strong digital literacy skills are better equipped to spot misinformation.',
-          example2Translation:
-              'Kuchli raqamli savodxonlik ko\'nikmalariga ega talabalar noto\'g\'ri ma\'lumotni aniqlay olish uchun yaxshiroq tayyorlangan.',
-          example3:
-              'Digital literacy programs are helping older adults use technology more confidently.',
-          example3Translation:
-              'Raqamli savodxonlik dasturlari katta yoshli odamlarga texnologiyadan ishonchli foydalanishga yordam bermoqda.',
-          extraExamples: [
-            'Digital literacy includes knowing how to protect your personal data online.',
-            'Schools are integrating digital literacy into their core curriculum.',
-            'Low digital literacy leaves people vulnerable to online scams.',
-            'Digital literacy is essential for participating fully in modern society.',
-            'Teaching digital literacy can help reduce the spread of misinformation.',
-            'Digital literacy skills vary greatly across different generations.',
-            'Governments are investing in digital literacy training to prepare workers for the future.',
-          ],
-          extraExampleTranslations: [
-            'Raqamli savodxonlik onlayn shaxsiy ma\'lumotlaringizni qanday himoya qilishni bilishni ham o\'z ichiga oladi.',
-            'Maktablar raqamli savodxonlikni asosiy o\'quv dasturiga kiritmoqda.',
-            'Past raqamli savodxonlik odamlarni onlayn firibgarlikka moyil qiladi.',
-            'Raqamli savodxonlik zamonaviy jamiyatda to\'liq ishtirok etish uchun muhim.',
-            'Raqamli savodxonlikni o\'rgatish noto\'g\'ri ma\'lumotlarning tarqalishini kamaytirishga yordam beradi.',
-            'Raqamli savodxonlik ko\'nikmalari turli avlodlarda katta farq qiladi.',
-            'Hukumatlar ishchilarni kelajakka tayyorlash uchun raqamli savodxonlik treningiga sarmoya kiritmoqda.',
-          ],
-        ),
 
         WordItem(
           word: 'Self-curated identity',
@@ -11776,46 +11376,6 @@ final thirtyDaysCollection = WordCollection(
           ],
         ),
 
-        WordItem(
-          word: 'Life expectancy',
-          partOfSpeech: 'noun phrase',
-          pronunciation: '/laɪf ɪkˈspektənsi/',
-          translation: 'Umr ko\'rish davomiyligi',
-          definition:
-              'The average number of years a person in a given population is statistically expected to live.',
-          definitionUz:
-              'Ma\'lum bir aholida odamlar o\'rtacha necha yil yashashi kutilayotganini ko\'rsatuvchi raqam.',
-          example1:
-              'Life expectancy has risen significantly over the past century.',
-          example1Translation:
-              'Umr ko\'rish davomiyligi o\'tgan asrda sezilarli darajada oshdi.',
-          example2:
-              'Better healthcare and nutrition have increased life expectancy worldwide.',
-          example2Translation:
-              'Yaxshiroq sog\'liqni saqlash va oziqlanish butun dunyo bo\'ylab umr ko\'rish davomiyligini oshirdi.',
-          example3:
-              'Countries with high life expectancy face growing challenges with elderly care.',
-          example3Translation:
-              'Umr ko\'rish davomiyligi yuqori bo\'lgan mamlakatlar keksalarga g\'amxo\'rlik qilishda tobora ko\'proq muammolarga duch kelmoqda.',
-          extraExamples: [
-            'Life expectancy at birth is a key indicator of a country\'s development.',
-            'Lifestyle choices such as diet and exercise strongly influence life expectancy.',
-            'Life expectancy varies widely between rich and poor countries.',
-            'Advances in medicine have extended life expectancy for cancer patients.',
-            'A longer life expectancy means governments must fund pensions for more years.',
-            'Life expectancy declined in some countries during the pandemic.',
-            'Women generally have a higher life expectancy than men in most countries.',
-          ],
-          extraExampleTranslations: [
-            'Tug\'ilishda kutilayotgan umr ko\'rish davomiyligi mamlakatning rivojlanishini ko\'rsatuvchi asosiy ko\'rsatkichdir.',
-            'Ovqatlanish va mashq qilish kabi turmush tarzini tanlash umr ko\'rish davomiyligiga kuchli ta\'sir qiladi.',
-            'Umr ko\'rish davomiyligi boy va kambag\'al mamlakatlar o\'rtasida sezilarli darajada farq qiladi.',
-            'Tibbiyotdagi yutuqlar saraton bemorlarining umr ko\'rish davomiyligini uzaytirdi.',
-            'Uzoqroq umr ko\'rish davomiyligi hukumatlar nafaqalarni ko\'proq yillar davomida moliyalashtirishini anglatadi.',
-            'Pandемiya davrida ba\'zi mamlakatlarda umr ko\'rish davomiyligi qisqardi.',
-            'Ko\'pgina mamlakatlarda ayollarning umr ko\'rish davomiyligi erkaklarga qaraganda yuqori.',
-          ],
-        ),
 
         WordItem(
           word: 'Geriatric care',
@@ -12764,46 +12324,6 @@ final thirtyDaysCollection = WordCollection(
           ],
         ),
 
-        WordItem(
-          word: 'Work-life balance',
-          partOfSpeech: 'noun phrase',
-          pronunciation: '/wɜːk laɪf ˈbæl.əns/',
-          translation: 'Ish va hayot muvozanati',
-          definition:
-              'The equilibrium between the time and energy a person dedicates to their professional work and the time and energy they give to their personal life, family, and wellbeing.',
-          definitionUz:
-              'Odamning kasbiy ishiga va shaxsiy hayoti, oilasi va farovonligiga sarflaydigan vaqt va energiya o\'rtasidagi muvozanat.',
-          example1:
-              'Many employees cite poor work-life balance as a major reason for leaving their jobs.',
-          example1Translation:
-              'Ko\'plab xodimlar ishdan ketishining asosiy sababi sifatida yomon ish va hayot muvozanatini ko\'rsatadi.',
-          example2:
-              'Remote working has helped some people achieve a better work-life balance.',
-          example2Translation:
-              'Masofaviy ishlash ba\'zi odamlarga yaxshiroq ish va hayot muvozanatiga erishishga yordam berdi.',
-          example3:
-              'Achieving work-life balance often requires setting clear boundaries between work and personal time.',
-          example3Translation:
-              'Ish va hayot muvozanatiga erishish ko\'pincha ish va shaxsiy vaqt o\'rtasida aniq chegaralar qo\'yishni talab qiladi.',
-          extraExamples: [
-            'Work-life balance is particularly challenging for parents with young children.',
-            'Some companies promote work-life balance by offering flexible hours and remote work options.',
-            'Poor work-life balance has been linked to burnout, anxiety, and reduced productivity.',
-            'The concept of work-life balance has become a central concern in modern career discussions.',
-            'Gender inequality at home can make it harder for women to achieve a healthy work-life balance.',
-            'Younger generations tend to prioritize work-life balance more than previous generations did.',
-            'Work-life balance looks different for everyone and depends on personal values and circumstances.',
-          ],
-          extraExampleTranslations: [
-            'Ish va hayot muvozanati ayniqsa yosh bolali ota-onalar uchun qiyin.',
-            'Ba\'zi kompaniyalar moslashuvchan ish vaqti va masofaviy ish imkoniyatlarini taklif qilish orqali ish va hayot muvozanatini qo\'llab-quvvatlaydi.',
-            'Yomon ish va hayot muvozanati charchash, tashvish va samaradorlikning pasayishi bilan bog\'liq.',
-            'Ish va hayot muvozanati tushunchasi zamonaviy martaba muhokamalarida markaziy muammoga aylandi.',
-            'Uyda gender tengsizligi ayollar uchun sog\'lom ish va hayot muvozanatiga erishishni qiyinlashtirishi mumkin.',
-            'Yosh avlodlar ish va hayot muvozanatini avvalgi avlodlarga qaraganda ko\'proq ustuvor qo\'yishga moyil.',
-            'Ish va hayot muvozanati hamma uchun boshqacha ko\'rinadi va shaxsiy qadriyatlar hamda sharoitlarga bog\'liq.',
-          ],
-        ),
 
         WordItem(
           word: 'Gender-neutral',
@@ -14758,45 +14278,6 @@ final thirtyDaysCollection = WordCollection(
       dayNumber: 25,
       topic: 'Mental Health',
       words: [
-        WordItem(
-          word: 'Mental well-being',
-          partOfSpeech: 'noun',
-          pronunciation: '/ˈmɛntəl ˈwɛlˌbiːɪŋ/',
-          translation: 'Ruhiy salomatlik',
-          definition:
-              'The state in which a person can cope with normal life stresses, work productively, and contribute to their community.',
-          definitionUz:
-              'Ruhiy salomatlik — odamning kundalik hayotdagi stresslarni boshqarishi, samarali ishlashi va jamiyatga hissa qo‘shishi mumkin bo‘lgan holatidir.',
-          example1:
-              'Regular exercise and good sleep are important for mental well-being.',
-          example1Translation:
-              'Muntazam jismoniy mashq va yaxshi uyqu ruhiy salomatlik uchun juda muhim.',
-          example2:
-              'Schools are now teaching students ways to improve their mental well-being.',
-          example2Translation:
-              'Maktablar endi o‘quvchilarga ruhiy salomatlikni yaxshilash usullarini o‘rgatmoqda.',
-          example3: 'Taking breaks at work helps maintain mental well-being.',
-          example3Translation:
-              'Ishda tanaffus qilish ruhiy salomatlikni saqlashga yordam beradi.',
-          extraExamples: [
-            'Mental well-being is just as important as physical health.',
-            'Strong social relationships support mental well-being.',
-            'Many workplaces now offer programs to promote employee mental well-being.',
-            'Financial worries can negatively affect mental well-being.',
-            'Mindfulness practices are popular for improving mental well-being.',
-            'Governments are investing more in mental well-being initiatives.',
-            'A balanced lifestyle contributes greatly to mental well-being.',
-          ],
-          extraExampleTranslations: [
-            'Ruhiy salomatlik jismoniy salomatlik kabi muhimdir.',
-            'Kuchli ijtimoiy munosabatlar ruhiy salomatlikni qo‘llab-quvvatlaydi.',
-            'Ko‘p ish joylarida xodimlarning ruhiy salomatligini yaxshilash dasturlari mavjud.',
-            'Moliyaviy muammolar ruhiy salomatlikka salbiy ta’sir qilishi mumkin.',
-            'Onglilik mashqlari ruhiy salomatlikni yaxshilash uchun mashhur.',
-            'Hukumatlar ruhiy salomatlik tashabbuslariga ko‘proq mablag‘ ajratmoqda.',
-            'Muvozanatli turmush tarzi ruhiy salomatlikka katta hissa qo‘shadi.',
-          ],
-        ),
 
         WordItem(
           word: 'Stigma',
@@ -14919,44 +14400,6 @@ final thirtyDaysCollection = WordCollection(
           ],
         ),
 
-        WordItem(
-          word: 'Burnout',
-          partOfSpeech: 'noun',
-          pronunciation: '/ˈbɜːnaʊt/',
-          translation: 'Ishdan charchash (burnout)',
-          definition:
-              'A state of physical, emotional, and mental exhaustion caused by prolonged stress, especially from work.',
-          definitionUz:
-              'Ishdan charchash — uzoq muddatli stress, ayniqsa ish tufayli yuzaga keladigan jismoniy, his-tuyg‘u va ruhiy charchoq holati.',
-          example1:
-              'After working 12-hour days for months, he experienced burnout.',
-          example1Translation:
-              'Bir necha oy davomida 12 soatlik ish kunlaridan keyin u ishdan charchash holatini boshdan kechirdi.',
-          example2: 'Taking a vacation helped her recover from burnout.',
-          example2Translation:
-              'Ta’til unga ishdan charchashdan tiklanishga yordam berdi.',
-          example3: 'Many teachers suffer from burnout due to heavy workloads.',
-          example3Translation:
-              'Ko‘p o‘qituvchilar katta ish yuki tufayli ishdan charchashdan aziyat chekishadi.',
-          extraExamples: [
-            'Burnout can lead to decreased productivity and health problems.',
-            'Setting boundaries at work helps prevent burnout.',
-            'Recognizing early signs of burnout is very important.',
-            'Burnout is increasingly common in high-pressure jobs.',
-            'Companies are creating wellness programs to reduce employee burnout.',
-            'Rest and hobbies are good ways to recover from burnout.',
-            'Burnout affects both mental and physical health.',
-          ],
-          extraExampleTranslations: [
-            'Ishdan charchash samaradorlikning pasayishi va sog‘liq muammolariga olib kelishi mumkin.',
-            'Ishda chegaralarni belgilash ishdan charchashning oldini olishga yordam beradi.',
-            'Ishdan charchashning dastlabki belgilarini tan olish juda muhim.',
-            'Yuqori bosimli ishlarda ishdan charchash tobora ko‘proq uchramoqda.',
-            'Kompaniyalar xodimlarning ishdan charchashini kamaytirish uchun salomatlik dasturlarini yaratmoqda.',
-            'Dam olish va sevimli mashg‘ulotlar ishdan charchashdan tiklanishning yaxshi usullaridir.',
-            'Ishdan charchash ruhiy va jismoniy salomatlikka ta’sir qiladi.',
-          ],
-        ),
 
         WordItem(
           word: 'Mindfulness',
@@ -15817,46 +15260,6 @@ final thirtyDaysCollection = WordCollection(
           ],
         ),
 
-        WordItem(
-          word: 'Sedentary lifestyle',
-          partOfSpeech: 'noun phrase',
-          pronunciation: '/ˈsedənteri ˈlaɪfstaɪl/',
-          translation: 'Harakatsiz hayot tarzi',
-          definition:
-              'A way of living that involves very little physical activity, often characterized by sitting for long hours at work, watching screens, and avoiding exercise.',
-          definitionUz:
-              'Ko\'p vaqtni o\'tirib o\'tkazish, ekran ko\'rish va jismoniy mashqlardan qochish bilan xarakterlanadigan jismoniy faollik deyarli bo\'lmagan hayot tarzi.',
-          example1:
-              'A sedentary lifestyle increases the risk of heart disease and obesity.',
-          example1Translation:
-              'Harakatsiz hayot tarzi yurak kasalligi va semirish xavfini oshiradi.',
-          example2:
-              'Many office workers struggle to avoid a sedentary lifestyle due to long hours at a desk.',
-          example2Translation:
-              'Ko\'plab ofis xodimlari stolda ko\'p vaqt o\'tkazish tufayli harakatsiz hayot tarzidan qochishga qiynaladi.',
-          example3:
-              'Health experts recommend breaking up a sedentary lifestyle with short activity breaks throughout the day.',
-          example3Translation:
-              'Sog\'liqni saqlash mutaxassislari harakatsiz hayot tarzini kun davomida qisqa faollik tanaffuslari bilan buzishni tavsiya qiladi.',
-          extraExamples: [
-            'Children are increasingly adopting a sedentary lifestyle due to screen time and online gaming.',
-            'A sedentary lifestyle has been linked to depression and poor mental health.',
-            'Even light physical activity can significantly offset the effects of a sedentary lifestyle.',
-            'Urban environments can unintentionally encourage a sedentary lifestyle through car dependency.',
-            'Regular walking is one of the simplest ways to break a sedentary lifestyle.',
-            'A sedentary lifestyle combined with poor diet greatly increases health risks.',
-            'Employers are introducing standing desks to help workers avoid a sedentary lifestyle.',
-          ],
-          extraExampleTranslations: [
-            'Bolalar ekran vaqti va onlayn o\'yinlar tufayli tobora harakatsiz hayot tarzini qabul qilmoqda.',
-            'Harakatsiz hayot tarzi depressiya va yomon ruhiy salomatlik bilan bog\'liq.',
-            'Hatto engil jismoniy faollik ham harakatsiz hayot tarzining ta\'sirini sezilarli darajada qoplashi mumkin.',
-            'Shahar muhiti avtomobilga qaramlik orqali bilmasdan harakatsiz hayot tarzini rag\'batlantirishi mumkin.',
-            'Muntazam yurish harakatsiz hayot tarzini buzishning eng oddiy usullaridan biri.',
-            'Harakatsiz hayot tarzi va yomon ovqatlanishning kombinatsiyasi sog\'liq xavflarini katta oshiradi.',
-            'Ish beruvchilar xodimlarning harakatsiz hayot tarzidan qochishiga yordam berish uchun tik turish stollarini joriy etmoqda.',
-          ],
-        ),
 
         WordItem(
           word: 'Physical literacy',
@@ -16637,87 +16040,7 @@ final thirtyDaysCollection = WordCollection(
           ],
         ),
 
-        WordItem(
-          word: 'Algorithmic bias',
-          partOfSpeech: 'noun phrase',
-          pronunciation: '/ˌælɡəˈrɪðmɪk ˈbaɪəs/',
-          translation: 'Algoritmik noxolislik',
-          definition:
-              'Systematic and unfair errors in AI or automated systems caused by biased or unrepresentative training data.',
-          definitionUz:
-              'Sun\'iy intellekt tizimlarida noto\'g\'ri yoki bir yoqlama ma\'lumotlar ishlatilishi natijasida kelib chiqadigan tizimli va adolatsiz xatolar.',
-          example1:
-              'Algorithmic bias in hiring software led to fewer women being shortlisted for jobs.',
-          example1Translation:
-              'Ishga qabul qilish dasturidagi algoritmik noxolislik ish uchun tanlangan ayollar sonining kamayishiga olib keldi.',
-          example2:
-              'Researchers discovered algorithmic bias in a facial recognition system used by police.',
-          example2Translation:
-              'Tadqiqotchilar politsiya ishlatgan yuz tanish tizimida algoritmik noxolislikni aniqladilar.',
-          example3:
-              'Addressing algorithmic bias requires diverse and representative training datasets.',
-          example3Translation:
-              'Algoritmik noxolislikni bartaraf etish xilma-xil va vakillik qiladigan o\'quv ma\'lumotlar to\'plamlarini talab qiladi.',
-          extraExamples: [
-            'Algorithmic bias can reinforce existing social inequalities if left unchecked.',
-            'The company was criticized for algorithmic bias in its loan approval system.',
-            'Algorithmic bias is harder to detect than human bias because it is hidden in code.',
-            'Regulators are calling for audits to identify and reduce algorithmic bias.',
-            'Algorithmic bias in criminal justice systems has raised serious ethical concerns.',
-            'Developers must test their models carefully to reduce the risk of algorithmic bias.',
-            'Algorithmic bias often reflects the prejudices present in historical data.',
-          ],
-          extraExampleTranslations: [
-            'Algoritmik noxolislik nazorat qilinmasa mavjud ijtimoiy tengsizliklarni kuchaytirishi mumkin.',
-            'Kompaniya kredit berish tizimidagi algoritmik noxolislik uchun tanqidga uchradi.',
-            'Algoritmik noxolislikni aniqlash insoniy noxolislikdan qiyinroq, chunki u kodda yashiringan.',
-            'Tartibga soluvchilar algoritmik noxolislikni aniqlash va kamaytirish uchun tekshiruvlar o\'tkazishni talab qilmoqda.',
-            'Jinoiy adolat tizimlaridagi algoritmik noxolislik jiddiy axloqiy tashvishlarni yuzaga keltirdi.',
-            'Dasturchilar algoritmik noxolislik xavfini kamaytirish uchun modellarini ehtiyotkorlik bilan sinab ko\'rishlari kerak.',
-            'Algoritmik noxolislik ko\'pincha tarixiy ma\'lumotlarda mavjud bo\'lgan xurofotlarni aks ettiradi.',
-          ],
-        ),
 
-        WordItem(
-          word: 'Automation',
-          partOfSpeech: 'noun',
-          pronunciation: '/ˌɔːtəˈmeɪʃən/',
-          translation: 'Avtomatlashtirish',
-          definition:
-              'The use of technology and machines to perform tasks that previously required human input, with minimal ongoing human involvement.',
-          definitionUz:
-              'Avval inson bajargan ishlarni texnologiya va mashinalar yordamida minimal insoniy ishtirok bilan bajarish.',
-          example1:
-              'Automation has dramatically increased production speed in manufacturing factories.',
-          example1Translation:
-              'Avtomatlashtirish ishlab chiqarish zavodlarida ishlab chiqarish tezligini keskin oshirdi.',
-          example2:
-              'Many routine office tasks, such as data entry, are being replaced by automation.',
-          example2Translation:
-              'Ma\'lumotlarni kiritish kabi ko\'plab oddiy ofis vazifalari avtomatlashtirish bilan almashtirilmoqda.',
-          example3:
-              'Automation can improve efficiency but raises concerns about job losses.',
-          example3Translation:
-              'Avtomatlashtirish samaradorlikni oshirishi mumkin, lekin ish o\'rinlari yo\'qolishi haqida tashvishlarni yuzaga keltiradi.',
-          extraExamples: [
-            'Automation in agriculture allows farmers to manage larger areas with fewer workers.',
-            'The banking sector has embraced automation to process transactions faster.',
-            'Automation is reshaping entire industries, from retail to logistics.',
-            'Small businesses are using automation tools to reduce administrative workload.',
-            'Governments are debating how to support workers displaced by automation.',
-            'Automation increases consistency and reduces the risk of human error.',
-            'The pace of automation is accelerating due to advances in AI.',
-          ],
-          extraExampleTranslations: [
-            'Qishloq xo\'jaligidagi avtomatlashtirish fermerlarga kamroq ishchilar bilan kattaroq maydonlarni boshqarish imkonini beradi.',
-            'Bank sektori tranzaksiyalarni tezroq qayta ishlash uchun avtomatlashtirishni qabul qildi.',
-            'Avtomatlashtirish chakana savdodan logistikagacha bo\'lgan butun tarmoqlarni qayta shakllantirmoqda.',
-            'Kichik korxonalar ma\'muriy ish yukini kamaytirish uchun avtomatlashtirish vositalaridan foydalanmoqda.',
-            'Hukumatlar avtomatlashtirish tufayli ishsiz qolgan ishchilarga qanday qo\'llab-quvvatlash haqida munozara qilmoqda.',
-            'Avtomatlashtirish izchillikni oshiradi va inson xatosi xavfini kamaytiradi.',
-            'Avtomatlashtirishning sur\'ati sun\'iy intellekt sohasidagi yutuqlar tufayli tezlashmoqda.',
-          ],
-        ),
 
         WordItem(
           word: 'Technological singularity',
@@ -17421,46 +16744,6 @@ final thirtyDaysCollection = WordCollection(
           ],
         ),
 
-        WordItem(
-          word: 'Cybersecurity',
-          partOfSpeech: 'noun',
-          pronunciation: '/ˌsaɪ.bəsɪˈkjʊər.ɪ.ti/',
-          translation: 'Kiberhavfsizlik',
-          definition:
-              'The practice of protecting computers, servers, mobile devices, electronic systems, networks, and data from digital attacks, damage, or unauthorized access.',
-          definitionUz:
-              'Kompyuterlar, serverlar, mobil qurilmalar, elektron tizimlar, tarmoqlar va ma\'lumotlarni raqamli hujumlar, zarar yoki ruxsatsiz kirishdan himoya qilish amaliyoti.',
-          example1:
-              'Cybersecurity experts warn that many businesses are underprepared for a serious cyberattack.',
-          example1Translation:
-              'Kiberhavfsizlik mutaxassislari ko\'plab korxonalar jiddiy kiberhujumga yetarlicha tayyorlanmaganligidan ogohlantirishadi.',
-          example2:
-              'Good cybersecurity practices include regular software updates and using strong passwords.',
-          example2Translation:
-              'Yaxshi kiberhavfsizlik amaliyotlariga muntazam dasturiy ta\'minot yangilanishlari va kuchli parollardan foydalanish kiradi.',
-          example3:
-              'Governments are investing heavily in cybersecurity to protect critical national infrastructure.',
-          example3Translation:
-              'Hukumatlar muhim milliy infratuzilmani himoya qilish uchun kiberhavfsizlikka katta sarmoya kiritmoqda.',
-          extraExamples: [
-            'The demand for cybersecurity professionals has grown rapidly as cyber threats have increased.',
-            'A weak cybersecurity policy can leave even large organizations exposed to attacks.',
-            'Cybersecurity training for all employees is essential, not just for the IT department.',
-            'Small businesses are often targeted by hackers because of weaker cybersecurity measures.',
-            'Cybersecurity threats include malware, ransomware, phishing, and denial-of-service attacks.',
-            'International cooperation is increasingly important for tackling cross-border cybersecurity threats.',
-            'Cybersecurity is now considered a matter of national security in most developed countries.',
-          ],
-          extraExampleTranslations: [
-            'Kiber tahdidlar ortishi bilan kiberhavfsizlik mutaxassislariga talab tezda o\'sdi.',
-            'Zaif kiberhavfsizlik siyosati hatto yirik tashkilotlarni ham hujumlarga ochiq qoldirishi mumkin.',
-            'Barcha xodimlar uchun kiberhavfsizlik bo\'yicha trening faqat IT bo\'limi uchun emas, balki muhim.',
-            'Kichik korxonalar ko\'pincha zaifroq kiberhavfsizlik choralari sababli xakerlar tomonidan nishonga olinadi.',
-            'Kiberhavfsizlik tahdidlariga zararli dasturlar, to\'lov dasturlari, fishing va xizmatni rad etish hujumlari kiradi.',
-            'Xalqaro hamkorlik chegaralararo kiberhavfsizlik tahdidlarini hal qilish uchun tobora muhim bo\'lib bormoqda.',
-            'Kiberhavfsizlik ko\'pgina rivojlangan mamlakatlarda milliy xavfsizlik masalasi sifatida ko\'riladi.',
-          ],
-        ),
 
         WordItem(
           word: 'Biometric data',
@@ -17626,46 +16909,6 @@ final thirtyDaysCollection = WordCollection(
           ],
         ),
 
-        WordItem(
-          word: 'Digital footprint',
-          partOfSpeech: 'noun phrase',
-          pronunciation: '/ˈdɪdʒ.ɪ.təl ˈfʊt.prɪnt/',
-          translation: 'Raqamli iz',
-          definition:
-              'The record of all data traces a person leaves behind through their online activities, including websites visited, social media posts, emails sent, and purchases made.',
-          definitionUz:
-              'Odamning onlayn faoliyati orqali qoldirgan barcha ma\'lumot izlari yozuvi, shu jumladan tashrif buyurilgan veb-saytlar, ijtimoiy media postlari, yuborilgan elektron pochta xabarlari va amalga oshirilgan xaridlar.',
-          example1:
-              'Everything you post online contributes to your digital footprint and can last indefinitely.',
-          example1Translation:
-              'Onlaynda joylashtiradigan har bir narsa raqamli izingizga hissa qo\'shadi va cheksiz davom etishi mumkin.',
-          example2:
-              'Employers often search candidates\' digital footprint before making hiring decisions.',
-          example2Translation:
-              'Ish beruvchilar ko\'pincha yollash qarorlarini qabul qilishdan oldin nomzodlarning raqamli izini qidiradi.',
-          example3:
-              'Using private browsing mode reduces but does not completely eliminate your digital footprint.',
-          example3Translation:
-              'Xususiy ko\'rish rejimidan foydalanish raqamli izingizni kamaytiradi, ammo uni to\'liq yo\'q qilmaydi.',
-          extraExamples: [
-            'Your digital footprint includes both the information you share and the data collected without your knowledge.',
-            'Children should be taught early about the long-term implications of their digital footprint.',
-            'Advertisers use your digital footprint to target you with personalized content and products.',
-            'Reducing your digital footprint involves regularly deleting old accounts and limiting data sharing.',
-            'A large digital footprint can make individuals more vulnerable to identity theft and hacking.',
-            'Many people are unaware of how extensive their digital footprint has become over the years.',
-            'Governments and corporations can build detailed profiles of individuals using their digital footprint.',
-          ],
-          extraExampleTranslations: [
-            'Raqamli izingiz siz ulashgan ma\'lumotlar ham, sizning xabarsizligingizda to\'plangan ma\'lumotlarni ham o\'z ichiga oladi.',
-            'Bolalarga raqamli izlarining uzoq muddatli oqibatlari haqida erta o\'rgatilishi kerak.',
-            'Reklamchilar sizni maqsadli kontent va mahsulotlar bilan nishonga olish uchun raqamli izingizdan foydalanadi.',
-            'Raqamli izingizni kamaytirish eski hisoblarni muntazam o\'chirish va ma\'lumot almashishni cheklashni o\'z ichiga oladi.',
-            'Katta raqamli iz shaxslarni shaxsini o\'g\'irlash va xakerlikka ko\'proq moyil qilishi mumkin.',
-            'Ko\'p odamlar yillar davomida raqamli izlari qanchalik keng bo\'lib ketganini bilishmaydi.',
-            'Hukumatlar va korporatsiyalar raqamli izidan foydalanib shaxslarning batafsil profillarini tuzishi mumkin.',
-          ],
-        ),
 
         WordItem(
           word: 'Hacktivism',
@@ -17877,45 +17120,6 @@ final thirtyDaysCollection = WordCollection(
           ],
         ),
 
-        WordItem(
-          word: 'work-life balance',
-          partOfSpeech: 'noun',
-          pronunciation: '/wɜːrk laɪf ˈbæləns/',
-          translation: 'ish va shaxsiy hayot muvozanati',
-          definition:
-              'The equilibrium between professional responsibilities and personal life.',
-          definitionUz:
-              'Ish majburiyatlari va shaxsiy hayot o\'rtasidagi muvozanat, ikkalasiga ham yetarli vaqt ajratish.',
-          example1:
-              'She left her job to focus on improving her work-life balance.',
-          example1Translation:
-              'U ish va shaxsiy hayot muvozanatini yaxshilashga e\'tibor qaratish uchun ishidan ketdi.',
-          example2: 'A poor work-life balance can lead to burnout over time.',
-          example2Translation:
-              'Yomon ish va shaxsiy hayot muvozanati vaqt o\'tishi bilan his-tuyg\'u tugashiga olib kelishi mumkin.',
-          example3:
-              'Many companies now offer flexible hours to support work-life balance.',
-          example3Translation:
-              'Ko\'plab kompaniyalar endi ish va shaxsiy hayot muvozanatini qo\'llab-quvvatlash uchun moslashuvchan ish vaqtini taklif qilishadi.',
-          extraExamples: [
-            'Finding a good work-life balance is harder in demanding careers.',
-            'He prioritizes work-life balance over a higher salary.',
-            'Remote work has changed how people think about work-life balance.',
-            'Their company culture strongly supports work-life balance.',
-            'Lack of work-life balance is a common reason for job dissatisfaction.',
-            'She set strict boundaries to protect her work-life balance.',
-            'Work-life balance looks different for everyone depending on their priorities.',
-          ],
-          extraExampleTranslations: [
-            'Talabchan kasblarda yaxshi ish va shaxsiy hayot muvozanatini topish qiyinroq.',
-            'U yuqori maoshdan ko\'ra ish va shaxsiy hayot muvozanatiga ustuvorlik beradi.',
-            'Masofadan ishlash odamlarning ish va shaxsiy hayot muvozanati haqidagi fikrini o\'zgartirdi.',
-            'Ularning kompaniya madaniyati ish va shaxsiy hayot muvozanatini qattiq qo\'llab-quvvatlaydi.',
-            'Ish va shaxsiy hayot muvozanatining yetishmasligi ishdan norozilikning keng tarqalgan sababidir.',
-            'U o\'z ish va shaxsiy hayot muvozanatini himoya qilish uchun qat\'iy chegaralar o\'rnatdi.',
-            'Ish va shaxsiy hayot muvozanati har bir kishi uchun ustuvorliklarga qarab boshqacha ko\'rinadi.',
-          ],
-        ),
 
         WordItem(
           word: 'mindfulness',
@@ -17957,46 +17161,6 @@ final thirtyDaysCollection = WordCollection(
           ],
         ),
 
-        WordItem(
-          word: 'consumerism',
-          partOfSpeech: 'noun',
-          pronunciation: '/kənˈsuːmərɪzəm/',
-          translation: 'iste\'molchilik',
-          definition:
-              'A social and economic order that encourages the constant acquisition of goods.',
-          definitionUz:
-              'Doimiy ravishda yangi narsalarni sotib olishni rag\'batlantiradigan ijtimoiy-iqtisodiy tartib.',
-          example1:
-              'Critics argue that consumerism contributes to environmental damage.',
-          example1Translation:
-              'Tanqidchilar iste\'molchilik atrof-muhitga zarar yetkazishga hissa qo\'shishini ta\'kidlashadi.',
-          example2:
-              'Consumerism is fueled by advertising and the desire for new products.',
-          example2Translation:
-              'Iste\'molchilik reklama va yangi mahsulotlarga bo\'lgan istak orqali rivojlanadi.',
-          example3:
-              'She decided to reject consumerism and live a simpler life.',
-          example3Translation:
-              'U iste\'molchilikni rad etib, soddaroq hayot kechirishga qaror qildi.',
-          extraExamples: [
-            'Consumerism encourages people to define happiness through material goods.',
-            'The documentary criticizes the effects of consumerism on society.',
-            'Black Friday is often seen as a symbol of modern consumerism.',
-            'Consumerism has increased significantly with the rise of online shopping.',
-            'Some movements promote alternatives to consumerism, like sustainable living.',
-            'Consumerism can lead to excessive debt and financial stress.',
-            'Children are exposed to consumerism through advertising from a young age.',
-          ],
-          extraExampleTranslations: [
-            'Iste\'molchilik odamlarni baxtni moddiy narsalar orqali aniqlashga undaydi.',
-            'Hujjatli film iste\'molchilikning jamiyatga ta\'sirini tanqid qiladi.',
-            'Qora juma ko\'pincha zamonaviy iste\'molchilikning ramzi sifatida qaraladi.',
-            'Onlayn xarid qilishning o\'sishi bilan iste\'molchilik sezilarli darajada oshdi.',
-            'Ba\'zi harakatlar barqaror turmush tarzi kabi iste\'molchilikka muqobillarni targ\'ib qiladi.',
-            'Iste\'molchilik haddan tashqari qarz va moliyaviy stressga olib kelishi mumkin.',
-            'Bolalar yoshligidan boshlab reklama orqali iste\'molchilikka duch kelishadi.',
-          ],
-        ),
 
         WordItem(
           word: 'hedonic adaptation',
@@ -24273,46 +23437,6 @@ final vocabularyChallengeCollection = WordCollection(
           ],
         ),
 
-        WordItem(
-          word: 'Endurance',
-          partOfSpeech: 'noun',
-          pronunciation: '/ɪnˈdjʊərəns/',
-          translation: 'Chidamlilik, bardoshlilik',
-          definition:
-              'The ability to sustain prolonged physical or mental effort, pain, or difficult conditions without giving up.',
-          definitionUz:
-              'Uzoq davom etadigan jismoniy yoki ruhiy kuch-g\'ayrat, og\'riq yoki qiyin sharoitlarga taslim bo\'lmasdan bardosh berish qobiliyati.',
-          example1:
-              'Marathon runners need exceptional endurance to complete the race.',
-          example1Translation:
-              'Marafon yuguruvchilari poygani yakunlash uchun g\'ayritabiiy chidamlilikka ega bo\'lishlari kerak.',
-          example2:
-              'The soldiers were trained to build mental endurance as well as physical strength.',
-          example2Translation:
-              'Askarlar jismoniy kuchga qo\'shimcha ravishda ruhiy chidamlilikni mustahkamlash uchun o\'qitildi.',
-          example3:
-              'Her endurance during the illness inspired everyone around her.',
-          example3Translation:
-              'Kasallik davrida uning chidamliligi atrofidagilarning barchasiga ilhom berdi.',
-          extraExamples: [
-            'Climbing the mountain tested the team\'s endurance to its limit.',
-            'Endurance training helps athletes perform consistently over long periods.',
-            'Working two jobs while raising children requires enormous endurance.',
-            'The endurance of the early explorers under extreme conditions was remarkable.',
-            'Swimming long distances builds both muscle strength and cardiovascular endurance.',
-            'His endurance in the face of repeated failure eventually led to great success.',
-            'Endurance sports like cycling and rowing are becoming increasingly popular.',
-          ],
-          extraExampleTranslations: [
-            'Tog\'ga chiqish jamoaning chidamliligini oxirigacha sinadi.',
-            'Chidamlilikni mashq qilish sportchilarga uzoq vaqt davomida izchil natijalar ko\'rsatishga yordam beradi.',
-            'Bolalarni tarbiyalash bilan birga ikki joyda ishlash ulkan chidamlilikni talab qiladi.',
-            'Dastlabki tadqiqotchilarning ekstremal sharoitlardagi chidamliligi ajoyib edi.',
-            'Uzoq masofaga suzish ham mushak kuchini, ham yurak-qon tomir chidamliligini oshiradi.',
-            'Takroriy muvaffaqiyatsizlik yuzasida uning chidamliligi oxir-oqibat katta muvaffaqiyatga olib keldi.',
-            'Velosiped haydash va eshkak eshish kabi chidamlilik sporti tobora ommalashib bormoqda.',
-          ],
-        ),
 
         WordItem(
           word: 'Be a disgrace to',
@@ -36860,42 +35984,6 @@ final vocabularyChallengeCollection = WordCollection(
           ],
         ),
 
-        WordItem(
-          word: 'Petty crime',
-          partOfSpeech: 'noun phrase',
-          pronunciation: '/ˈpeti kraɪm/',
-          translation: 'Mayda jinoyat',
-          definition:
-              'minor criminal offences, such as theft or vandalism, causing limited harm',
-          definitionUz:
-              'O‘g‘rilik, vandalizm kabi kichik zarar yetkazadigan mayda jinoyatlar',
-          example1: 'Petty crime is common in big cities.',
-          example1Translation:
-              'Katta shaharlarda mayda jinoyatlar ko‘p uchraydi.',
-          example2: 'The police focus on reducing petty crime.',
-          example2Translation:
-              'Politsiya mayda jinoyatlarni kamaytirishga e’tibor qaratmoqda.',
-          example3: 'He was arrested for petty crime.',
-          example3Translation: 'U mayda jinoyat uchun qo‘lga olindi.',
-          extraExamples: [
-            'Petty crime affects the quality of life.',
-            'Many young people get involved in petty crime.',
-            'The area has a problem with petty crime.',
-            'Petty crime includes shoplifting and graffiti.',
-            'Efforts to prevent petty crime are increasing.',
-            'She was a victim of petty crime.',
-            'Petty crime can lead to more serious offences.',
-          ],
-          extraExampleTranslations: [
-            'Mayda jinoyatlar hayot sifatiga ta’sir qiladi.',
-            'Ko‘p yoshlar mayda jinoyatlarga aralashib qoladi.',
-            'Bu hududda mayda jinoyatlar muammosi bor.',
-            'Mayda jinoyatlar do‘kon o‘g‘irlash va devor yozuvlarini o‘z ichiga oladi.',
-            'Mayda jinoyatlarning oldini olish choralari kuchaymoqda.',
-            'U mayda jinoyat qurboni bo‘ldi.',
-            'Mayda jinoyatlar jiddiyroq jinoyatlarga olib kelishi mumkin.',
-          ],
-        ),
 
         WordItem(
           word: 'Outbreak',
@@ -43007,43 +42095,6 @@ final vocabularyChallengeCollection = WordCollection(
           ],
         ),
         WordItem(
-          word: 'Off the beaten track',
-          partOfSpeech: 'phrase',
-          pronunciation: '/ɒf ðə ˈbiː.tən træk/',
-          translation: 'Odam kam boradigan joy',
-          definition: 'In a remote, unusual, or less-known location.',
-          definitionUz:
-              'Odam kam boradigan joy — olis, g‘ayrioddiy yoki kam ma’lum joyda.',
-          example1: 'We found a beautiful village off the beaten track.',
-          example1Translation:
-              'Biz odam kam boradigan go‘zal qishloqni topdik.',
-          example2:
-              'The restaurant is off the beaten track but worth visiting.',
-          example2Translation:
-              'Restoran odam kam boradigan joyda, lekin borishga arziydi.',
-          example3: 'They like traveling off the beaten track.',
-          example3Translation:
-              'Ular odam kam boradigan joylarga sayohat qilishni yaxshi ko‘rishadi.',
-          extraExamples: [
-            'The beach is off the beaten track.',
-            'We discovered a cafe off the beaten track.',
-            'Off the beaten track places are more peaceful.',
-            'She prefers destinations off the beaten track.',
-            'The temple is off the beaten track.',
-            'Exploring off the beaten track is adventurous.',
-            'The hotel is a bit off the beaten track.',
-          ],
-          extraExampleTranslations: [
-            'Plyaj odam kam boradigan joyda.',
-            'Biz odam kam boradigan kafeni topdik.',
-            'Odam kam boradigan joylar tinchroq.',
-            'U odam kam boradigan manzillarni afzal ko‘radi.',
-            'Ibodatxona odam kam boradigan joyda.',
-            'Odam kam boradigan joylarni o‘rganish sarguzashtli.',
-            'Mehmonxona biroz odam kam boradigan joyda.',
-          ],
-        ),
-        WordItem(
           word: 'Muddled thinking',
           partOfSpeech: 'noun',
           pronunciation: '/ˈmʌd.əld ˈθɪŋ.kɪŋ/',
@@ -48719,45 +47770,6 @@ final wordMasteryCollection = WordCollection(
           ],
         ),
 
-        WordItem(
-          word: 'Cynical',
-          partOfSpeech: 'adjective',
-          pronunciation: '/ˈsɪn.ɪ.kəl/',
-          translation: 'kinik, hamma narsaga shubha bilan qaraydigan',
-          definition:
-              'Believing that people only act out of selfish motives and that nothing is genuinely good',
-          definitionUz:
-              'Odamlarning yaxshi niyatlariga ishonmaydigan va hamma narsani shubha bilan ko\'radigan odamni tasvirlaydi',
-          example1: 'He has a very cynical view of politics and politicians.',
-          example1Translation:
-              'Uning siyosat va siyosatchilarga nisbatan juda kinik qarashi bor.',
-          example2:
-              'She became cynical after years of broken promises from her employer.',
-          example2Translation:
-              'U ish beruvchisining yillar davomida bajarilmagan va\'dalaridan keyin kinik bo\'lib qoldi.',
-          example3:
-              'His cynical comments ruined the positive mood of the entire team meeting.',
-          example3Translation:
-              'Uning kinik izohlari butun jamoa yig\'ilishining ijobiy kayfiyatini buzdi.',
-          extraExamples: [
-            'Don\'t be so cynical — some people genuinely want to help others.',
-            'A cynical attitude can stop you from trusting people who actually deserve it.',
-            'He grew cynical after watching the same politicians make the same empty promises.',
-            'She\'s not negative — she\'s just cynical about marketing claims.',
-            'Being cynical sometimes protects you, but it can also isolate you.',
-            'His cynical outlook on relationships made it hard for him to fall in love.',
-            'Even the most cynical people can be surprised by genuine kindness.',
-          ],
-          extraExampleTranslations: [
-            'Bu qadar kinik bo\'lmang — ba\'zi odamlar chindan ham boshqalarga yordam bermoqchi bo\'ladi.',
-            'Kinik munosabat chindan ham ishonchga loyiq odamlarga ishonishingizni to\'xtatishi mumkin.',
-            'U bir xil siyosatchilar bir xil bo\'sh va\'dalar berishini ko\'rgandan keyin kinik bo\'ldi.',
-            'U salbiy emas — u shunchaki marketing da\'volariga kinik.',
-            'Kinik bo\'lish ba\'zan sizni himoya qiladi, lekin shuningdek sizni yolg\'iz qoldirishi mumkin.',
-            'Munosabatlarga nisbatan kinik qarashi uning sevishini qiyinlashtirdi.',
-            'Hatto eng kinik odamlar ham chinakam mehribonlikdan hayratda qolishi mumkin.',
-          ],
-        ),
 
         WordItem(
           word: 'Self-centered',
@@ -49593,44 +48605,6 @@ final wordMasteryCollection = WordCollection(
       dayNumber: 13,
       topic: 'Unit 13 - C1 Phrases',
       words: [
-        WordItem(
-          word: 'in the long run',
-          partOfSpeech: 'phrase',
-          pronunciation: '/ɪn ðə lɒŋ rʌn/',
-          translation: 'oxir-oqibat, uzoq kelajakda',
-          definition: 'Over a long period of time, eventually.',
-          definitionUz:
-              'Hozir emas, balki uzoq vaqt o\'tgandan keyin bilinadi degan ma\'noda ishlatiladi.',
-          example1:
-              'It may be hard now, but in the long run, you\'ll benefit a lot.',
-          example1Translation:
-              'Hozir qiyin bo\'lishi mumkin, lekin uzoq kelajakda siz ko\'p foyda ko\'rasiz.',
-          example2:
-              'Eating healthy is difficult at first, but in the long run it saves your health.',
-          example2Translation:
-              'Sog\'lom ovqatlanish dastlab qiyin, lekin uzoq kelajakda u sog\'ligingizni saqlaydi.',
-          example3: 'Investing early pays off in the long run.',
-          example3Translation:
-              'Erta investitsiya qilish uzoq muddatda o\'z samarasini beradi.',
-          extraExamples: [
-            'Learning a new skill is time-consuming, but in the long run it opens many doors.',
-            'Cheap products cost more in the long run because they break easily.',
-            'In the long run, honesty builds stronger relationships.',
-            'Working hard now will pay off in the long run.',
-            'In the long run, regular exercise improves your quality of life.',
-            'Cutting costs too much can hurt the business in the long run.',
-            'In the long run, education is the best investment you can make.',
-          ],
-          extraExampleTranslations: [
-            'Yangi ko\'nikma o\'rganish vaqt talab qiladi, lekin uzoq kelajakda ko\'p eshiklarni ochadi.',
-            'Arzon mahsulotlar tez sinishi sababli uzoq kelajakda qimmatga tushadi.',
-            'Uzoq muddatda halollik mustahkamroq munosabatlar qurishga yordam beradi.',
-            'Hozir qattiq mehnat qilish uzoq kelajakda o\'z samarasini beradi.',
-            'Uzoq muddatda muntazam jismoniy mashqlar hayot sifatingizni oshiradi.',
-            'Xarajatlarni haddan tashqari qisqartirish uzoq kelajakda biznesga zarar yetkazishi mumkin.',
-            'Uzoq kelajakda ta\'lim siz qila oladigan eng yaxshi investitsiyadir.',
-          ],
-        ),
 
         WordItem(
           word: 'be in charge of',
@@ -51200,46 +50174,6 @@ final wordMasteryCollection = WordCollection(
           ],
         ),
 
-        WordItem(
-          word: 'Come to terms with',
-          partOfSpeech: 'collocation (verb phrase)',
-          pronunciation: '/kʌm tə tɜːmz wɪð/',
-          translation: 'qabul qilmoq, ko\'nikmoq, rozi bo\'lmoq',
-          definition:
-              'To accept a difficult or painful situation after a period of struggle',
-          definitionUz:
-              'Qiyin yoki og\'riqli vaziyatni bir muddat kurashgandan keyin qabul qilib, unga ko\'nikish',
-          example1:
-              'It took her years to come to terms with her father\'s death.',
-          example1Translation:
-              'Unga otasining o\'limini qabul qilish uchun yillar kerak bo\'ldi.',
-          example2:
-              'He still hasn\'t come to terms with losing his job after fifteen years.',
-          example2Translation:
-              'U o\'n besh yildan keyin ishini yo\'qotganini hali ham qabul qilmagan.',
-          example3:
-              'Coming to terms with failure is the first step toward real growth.',
-          example3Translation:
-              'Muvaffaqiyatsizlikni qabul qilish haqiqiy o\'sishga qarab qo\'yilgan birinchi qadam.',
-          extraExamples: [
-            'She is slowly coming to terms with the fact that the relationship is over.',
-            'He found it hard to come to terms with his diagnosis at first.',
-            'You need to come to terms with the fact that not everything goes as planned.',
-            'Coming to terms with change is a skill that takes time to develop.',
-            'After months of grief, she finally came to terms with moving on.',
-            'He came to terms with his limitations and focused on his strengths instead.',
-            'The team had to come to terms with the project being cancelled.',
-          ],
-          extraExampleTranslations: [
-            'U asta-sekin munosabat tugaganini qabul qilib bormoqda.',
-            'Dastlab u o\'z tashxisini qabul qilishni qiyin deb topdi.',
-            'Hamma narsa rejalashtirilganidek ketmasligini qabul qilishingiz kerak.',
-            'O\'zgarishlarni qabul qilish rivojlanishi vaqt talab qiladigan ko\'nikmа.',
-            'Oylar davom etgan qayg\'udan so\'ng u nihoyat davom etishni qabul qildi.',
-            'U o\'z cheklovlarini qabul qildi va buning o\'rniga kuchli tomonlariga e\'tibor qaratdi.',
-            'Jamoa loyiha bekor qilinganini qabul qilishga majbur bo\'ldi.',
-          ],
-        ),
 
         WordItem(
           word: 'Raise concerns',
@@ -51850,45 +50784,6 @@ final wordMasteryCollection = WordCollection(
           ],
         ),
 
-        WordItem(
-          word: 'implication',
-          partOfSpeech: 'noun',
-          pronunciation: '/ˌɪmplɪˈkeɪʃən/',
-          translation: 'Ma\'no / oqibat',
-          definition:
-              'A possible effect or consequence of an action, or something suggested without being directly stated',
-          definitionUz:
-              'Biror harakatning yashirin ma\'nosi yoki keltirib chiqarishi mumkin bo\'lgan oqibat — to\'g\'ridan-to\'g\'ri aytilmagan narsa',
-          example1:
-              'The implications of this research are significant for public health.',
-          example1Translation:
-              'Bu tadqiqotning oqibatlari jamoat salomatligi uchun muhim ahamiyatga ega.',
-          example2:
-              'I don\'t think he understood the full implications of his decision.',
-          example2Translation:
-              'U qarorining barcha oqibatlarini to\'liq tushunmagan deb o\'ylayman.',
-          example3: 'The implication of his silence was that he disagreed.',
-          example3Translation:
-              'Uning jimligining ma\'nosi shunda ediki, u rozi emasdi.',
-          extraExamples: [
-            'We need to consider the long-term implications of this strategy.',
-            'The implication of the new law is that prices will rise.',
-            'She raised questions about the ethical implications of the study.',
-            'There are serious financial implications to this choice.',
-            'The report outlines the implications for future policy.',
-            'His tone carried the implication that he was not satisfied.',
-            'They failed to see the broader implications of the change.',
-          ],
-          extraExampleTranslations: [
-            'Bu strategiyaning uzoq muddatli oqibatlarini ko\'rib chiqishimiz kerak.',
-            'Yangi qonunning ma\'nosi shundaki, narxlar ko\'tariladi.',
-            'U tadqiqotning axloqiy oqibatlari haqida savollar ko\'tardi.',
-            'Bu tanlovning jiddiy moliyaviy oqibatlari bor.',
-            'Hisobot kelajakdagi siyosat uchun oqibatlarni bayon etadi.',
-            'Uning ohangida u mamnun emasligining ma\'nosi yashiringan edi.',
-            'Ular o\'zgarishning keng oqibatlarini ko\'ra olmadilar.',
-          ],
-        ),
 
         WordItem(
           word: 'aspect',
@@ -52013,46 +50908,6 @@ final wordMasteryCollection = WordCollection(
           ],
         ),
 
-        WordItem(
-          word: 'common sense',
-          partOfSpeech: 'noun phrase',
-          pronunciation: '/ˈkɒmən sens/',
-          translation: 'farosat',
-          definition:
-              'the basic ability to make good judgments and behave sensibly in everyday situations',
-          definitionUz:
-              'Kundalik hayotda to\'g\'ri qaror qabul qilish va aqlli harakat qilish qobiliyati — bu maktabda o\'rgatiladigan narsa emas, balki hayotiy idrok',
-          example1:
-              'It is just common sense to wear a seatbelt every time you get in a car.',
-          example1Translation:
-              'Mashinaga o\'tirganda har doim xavfsizlik kamarini taqqan — bu oddiy farosat.',
-          example2:
-              'She used common sense to calm the situation before it got out of hand.',
-          example2Translation:
-              'U vaziyat nazoratdan chiqib ketishidan oldin uni tinchitish uchun farosatidan foydalandi.',
-          example3:
-              'You do not always need a rule for everything — sometimes common sense is enough.',
-          example3Translation:
-              'Har bir narsa uchun har doim ham qoida kerak emas — ba\'zan farosat yetarli.',
-          extraExamples: [
-            'Common sense tells you not to spend more money than you earn.',
-            'A little common sense in the kitchen can prevent most cooking accidents.',
-            'The new employee impressed the team with her practical common sense.',
-            'Common sense is often more useful in real life than academic knowledge.',
-            'Using common sense, he realized the shortcut would actually take longer.',
-            'Good parenting involves teaching children common sense alongside academic skills.',
-            'Common sense means knowing when to ask for help instead of struggling alone.',
-          ],
-          extraExampleTranslations: [
-            'Farosat sizga topgandan ko\'proq sarflamaslikni aytadi.',
-            'Oshxonada bir oz farosat ko\'pgina oshpazlik baxtsizliklarining oldini olishi mumkin.',
-            'Yangi xodim o\'zining amaliy farosati bilan jamoani hayratga qoldirdi.',
-            'Farosat ko\'pincha haqiqiy hayotda akademik bilimdan foydali.',
-            'Farosatini ishlatib, u yorliq aslida uzoqroq vaqt olishini anglab yetdi.',
-            'Yaxshi ota-onalik farzandlarga akademik ko\'nikmalar bilan birga farosatni ham o\'rgatishni o\'z ichiga oladi.',
-            'Farosat — yolg\'iz kurashish o\'rniga qachon yordam so\'rash kerakligini bilish.',
-          ],
-        ),
 
         WordItem(
           word: 'fun-loving',
@@ -52964,44 +51819,6 @@ final wordMasteryCollection = WordCollection(
           ],
         ),
 
-        WordItem(
-          word: 'in all honesty',
-          partOfSpeech: 'phrase',
-          pronunciation: '/ɪn ɔːl ˈɒnəsti/',
-          translation: 'rostini aytsam / ochig\'ini aytganda',
-          definition:
-              'Used to emphasize that you are about to say something completely true, even if it is uncomfortable.',
-          definitionUz:
-              'Haqiqatni aytishni ta\'kidlash uchun ishlatiladigan ibora — hatto bu noqulay bo\'lsa ham, to\'liq rostini aytmoqchi ekanligingizni bildiradi.',
-          example1: 'In all honesty, I was not ready for the interview.',
-          example1Translation:
-              'Rostini aytsam, men intervyuga tayyor emas edim.',
-          example2:
-              'In all honesty, I think the plan has some serious problems.',
-          example2Translation:
-              'Ochig\'ini aytganda, menimcha, rejada bir qancha jiddiy muammolar bor.',
-          example3: 'In all honesty, I had no idea what I was doing at first.',
-          example3Translation:
-              'Rostini aytsam, boshida nima qilayotganimni bilmasdim.',
-          extraExamples: [
-            'In all honesty, I do not think this approach will work.',
-            'In all honesty, the presentation could have been much better.',
-            'She said, in all honesty, that she preferred her old job.',
-            'In all honesty, I was relieved when the trip was cancelled.',
-            'In all honesty, I never fully understood the topic until last week.',
-            'In all honesty, his feedback hurt, but it was exactly what I needed.',
-            'In all honesty, I expected more from the new product launch.',
-          ],
-          extraExampleTranslations: [
-            'Rostini aytsam, bu yondashuv ishlaydi deb o\'ylamayman.',
-            'Rostini aytsam, taqdimot ancha yaxshiroq bo\'lishi mumkin edi.',
-            'U rostini aytsam, dedi va eski ishini afzal ko\'rishini bildirdi.',
-            'Rostini aytsam, sayohat bekor qilinganda men yengillik his qildim.',
-            'Rostini aytsam, o\'tkan haftaga qadar mavzuni to\'liq tushunmagan edim.',
-            'Rostini aytsam, uning fikr-mulohazasi og\'riqli edi, lekin ayni keragim shu edi.',
-            'Rostini aytsam, yangi mahsulot taqdimotidan ko\'proq narsa kutgan edim.',
-          ],
-        ),
 
         WordItem(
           word: 'on reflection',
@@ -53453,46 +52270,6 @@ final wordMasteryCollection = WordCollection(
           ],
         ),
 
-        WordItem(
-          word: 'work-life balance',
-          partOfSpeech: 'noun phrase',
-          pronunciation: '/wɜːrk laɪf ˈbæləns/',
-          translation: 'ish va shaxsiy hayot muvozanati',
-          definition:
-              'the ability to divide your time and energy fairly between work responsibilities and personal life',
-          definitionUz:
-              'ish va shaxsiy hayot o\'rtasida vaqt va energiyani to\'g\'ri taqsimlash qobiliyati',
-          example1:
-              'Good work-life balance is essential for long-term health and happiness.',
-          example1Translation:
-              'Yaxshi ish va shaxsiy hayot muvozanati uzoq muddatli salomatlik va baxt uchun muhimdir.',
-          example2:
-              'She left her previous job because it offered no work-life balance.',
-          example2Translation:
-              'U oldingi ishini tark etdi, chunki u ish va shaxsiy hayot muvozanatini ta\'minlamadi.',
-          example3:
-              'Many companies now invest in programs to improve work-life balance.',
-          example3Translation:
-              'Ko\'p kompaniyalar endi ish va shaxsiy hayot muvozanatini yaxshilash dasturlariga sarmoya kiritmoqda.',
-          extraExamples: [
-            'Achieving work-life balance is harder when you work from home.',
-            'He struggled with work-life balance during his first year as a manager.',
-            'A healthy work-life balance reduces stress and prevents burnout.',
-            'She set strict boundaries at work to protect her work-life balance.',
-            'Remote work can improve work-life balance if managed correctly.',
-            'Young professionals today rate work-life balance above salary when choosing jobs.',
-            'The company lost several employees because of its poor work-life balance culture.',
-          ],
-          extraExampleTranslations: [
-            'Uydan ishlaganda ish va shaxsiy hayot muvozanatiga erishish qiyinroq.',
-            'U menejer sifatida birinchi yilida ish va shaxsiy hayot muvozanati bilan kurashdi.',
-            'Sog\'lom ish va shaxsiy hayot muvozanati stressni kamaytiradi va kasb charchoqining oldini oladi.',
-            'U ish va shaxsiy hayot muvozanatini himoya qilish uchun ishda qat\'iy chegara qo\'ydi.',
-            'Masofaviy ish to\'g\'ri boshqarilsa, ish va shaxsiy hayot muvozanatini yaxshilashi mumkin.',
-            'Bugungi yosh mutaxassislar ish tanlashda ish va shaxsiy hayot muvozanatini maoshdan yuqori qo\'yadilar.',
-            'Kompaniya yomon ish va shaxsiy hayot muvozanati madaniyati sababli bir nechta xodimini yo\'qotdi.',
-          ],
-        ),
 
         WordItem(
           word: 'career advancement',
@@ -54231,46 +53008,6 @@ final wordMasteryCollection = WordCollection(
           ],
         ),
 
-        WordItem(
-          word: 'Irrational',
-          partOfSpeech: 'adjective',
-          pronunciation: '/ɪˈræʃ.ən.əl/',
-          translation: 'mantiqsiz, asossiz',
-          definition:
-              'Not based on clear thinking or logic, often driven by emotion rather than reason',
-          definitionUz:
-              'Mantiq va aqlga asoslanmagan, ko\'pincha his-tuyg\'ular yoki qo\'rquv bilan boshqariladigan fikr yoki xulq',
-          example1:
-              'It\'s irrational to worry constantly about things that are out of your control.',
-          example1Translation:
-              'Nazorating tashqarisidagi narsalar haqida doim tashvishlanish mantiqsiz.',
-          example2:
-              'His irrational fear of flying stops him from taking many opportunities.',
-          example2Translation:
-              'Uning uchishdan irrational qo\'rquvi ko\'p imkoniyatlardan foydalanishiga to\'sqinlik qiladi.',
-          example3:
-              'Making irrational decisions during a crisis can make things much worse.',
-          example3Translation:
-              'Inqiroz davrida mantiqsiz qarorlar qabul qilish vaziyatni yanada yomonlashtirishi mumkin.',
-          extraExamples: [
-            'She knew her anger was irrational but couldn\'t control it.',
-            'Irrational beliefs can hold people back from reaching their potential.',
-            'He made an irrational purchase and spent his rent money on a watch.',
-            'Fear often makes people behave in irrational ways.',
-            'Therapy helps people identify and challenge their irrational thoughts.',
-            'It\'s completely irrational to blame yourself for things outside your control.',
-            'The crowd\'s irrational panic made the situation far more dangerous.',
-          ],
-          extraExampleTranslations: [
-            'U g\'azabi mantiqsiz ekanini bilardi, lekin nazorat qila olmasdi.',
-            'Irrational e\'tiqodlar odamlarni o\'z salohiyatiga erishishdan to\'sib qo\'yishi mumkin.',
-            'U mantiqsiz xarid qildi va ijara pulini soatga sarfladi.',
-            'Qo\'rquv ko\'pincha odamlarni mantiqsiz tarzda harakat qilishiga majbur qiladi.',
-            'Terapiya odamlarga irrational fikrlarini aniqlash va ularga qarshi turishga yordam beradi.',
-            'O\'z nazorating tashqarisidagi narsalar uchun o\'zingizni ayblash butunlay mantiqsiz.',
-            'Olomon irrational vahimasi vaziyatni ancha xavfliroq qildi.',
-          ],
-        ),
 
         WordItem(
           word: 'Significant',
@@ -55121,85 +53858,7 @@ final wordMasteryCollection = WordCollection(
           ],
         ),
 
-        WordItem(
-          word: 'at the end of the day',
-          partOfSpeech: 'phrase',
-          pronunciation: '/æt ðə end ɒv ðə deɪ/',
-          translation: 'oxir-oqibat, natijada, eng muhimi',
-          definition:
-              'used to introduce the most important fact or conclusion after considering everything',
-          definitionUz:
-              'hamma narsani hisobga olgandan keyin eng muhim xulosa yoki haqiqatni aytish uchun ishlatiladi',
-          example1:
-              'At the end of the day, what matters most is that you tried your best.',
-          example1Translation:
-              'Oxir-oqibat, eng muhimi siz qo\'lingizdan kelganini qilganingizdir.',
-          example2: 'At the end of the day, the customer always comes first.',
-          example2Translation:
-              'Oxir-oqibat, mijoz doim birinchi o\'rinda turadi.',
-          example3:
-              'We debated for hours, but at the end of the day we all agreed.',
-          example3Translation:
-              'Soatlab bahslashdik, lekin oxir-oqibat barchamiz rozi bo\'ldik.',
-          extraExamples: [
-            'At the end of the day, you are responsible for your own happiness.',
-            'We can plan all we want, but at the end of the day results are what count.',
-            'At the end of the day, kindness costs nothing.',
-            'They had many differences, but at the end of the day they were family.',
-            'At the end of the day, the decision is yours and yours alone.',
-            'Arguments aside, at the end of the day we want the same thing.',
-            'At the end of the day, hard work and patience always pay off.',
-          ],
-          extraExampleTranslations: [
-            'Oxir-oqibat, o\'z baxtingiz uchun siz mas\'ulsiz.',
-            'Xohlagancha reja qilishimiz mumkin, lekin oxir-oqibat natijalar muhimdir.',
-            'Oxir-oqibat, mehribonlik hech narsaga tushmaydigan.',
-            'Ularning ko\'p farqlari bor edi, lekin oxir-oqibat ular oila edi.',
-            'Oxir-oqibat, qaror faqat sizniki va faqat sizniki.',
-            'Bahslar yoqlab, oxir-oqibat biz bir xil narsani xohlaymiz.',
-            'Oxir-oqibat, mehnat va sabr-toqat har doim o\'z mevasini beradi.',
-          ],
-        ),
 
-        WordItem(
-          word: 'when push comes to shove',
-          partOfSpeech: 'idiom',
-          pronunciation: '/wen pʊʃ kʌmz tuː ʃʌv/',
-          translation: 'og\'ir paytda, haqiqiy sinov vaqti kelganda',
-          definition:
-              'when a situation becomes very serious or difficult and you are forced to act or make a decision',
-          definitionUz:
-              'vaziyat jiddiy tus olganda va harakat qilishga yoki qaror qabul qilishga majbur bo\'lganda',
-          example1: 'When push comes to shove, she always knows what to do.',
-          example1Translation:
-              'Og\'ir payt kelganda, u har doim nima qilishni biladi.',
-          example2:
-              'We argue a lot, but when push comes to shove, we support each other.',
-          example2Translation:
-              'Biz ko\'p bahslashamiz, lekin qiyin vaqtda bir-birimizni qo\'llaymiz.',
-          example3:
-              'When push comes to shove, he always chooses the safe option.',
-          example3Translation:
-              'Haqiqiy sinov vaqti kelganda, u har doim xavfsiz variantni tanlaydi.',
-          extraExamples: [
-            'When push comes to shove, most people prioritize family over work.',
-            'She seemed confident, but when push came to shove, she froze.',
-            'When push comes to shove, you find out who your real friends are.',
-            'He talks big, but when push comes to shove, he never delivers.',
-            'When push comes to shove, teamwork is what saves the project.',
-            'I was not sure I could do it, but when push came to shove, I managed.',
-            'When push comes to shove, good preparation makes all the difference.',
-          ],
-          extraExampleTranslations: [
-            'Qiyin vaqtda ko\'pchilik oilani ishdan ustun qo\'yadi.',
-            'U ishonchli ko\'rinardi, lekin haqiqiy sinov vaqti kelganda, u qotib qoldi.',
-            'Qiyin paytda haqiqiy do\'stlaringiz kimligini bilib olasiz.',
-            'U katta gapiradi, lekin haqiqiy sinov vaqti kelganda, hech qachon bajarmaydi.',
-            'Qiyin vaqtda loyihani qutqaradigan narsa jamoaviy ish.',
-            'Uddasidan chiqa olarmikanman deb bilmas edim, lekin qiyin payt kelganda, uddasidan chiqdim.',
-            'Qiyin sinov vaqtida yaxshi tayyorgarlik hamma narsani hal qiladi.',
-          ],
-        ),
       ],
     ),
     WordDay(
@@ -55483,46 +54142,6 @@ final wordMasteryCollection = WordCollection(
           ],
         ),
 
-        WordItem(
-          word: 'in the long run',
-          partOfSpeech: 'phrase',
-          pronunciation: '/ɪn ðə lɒŋ rʌn/',
-          translation: 'uzoq muddatda, oxir-oqibat',
-          definition:
-              'Over a long period of time — used to describe what will happen or what will be true eventually, not immediately.',
-          definitionUz:
-              'Hozir emas, balki uzoq vaqt o\'tgandan keyin ko\'rinadigan natija yoki haqiqat haqida aytiladi — qisqa muddatda emas, kelajakda.',
-          example1:
-              'Eating well and exercising regularly will benefit you in the long run.',
-          example1Translation:
-              'To\'g\'ri ovqatlanish va muntazam mashq qilish sizga uzoq muddatda foyda beradi.',
-          example2:
-              'In the long run, investing in quality is always cheaper than buying cheap products.',
-          example2Translation:
-              'Uzoq muddatda sifatga sarmoya kiritish doim arzon mahsulot sotib olishdan ko\'ra arzonroq.',
-          example3:
-              'The decision was hard, but in the long run, it was the right one.',
-          example3Translation:
-              'Qaror qiyin edi, lekin uzoq muddatda bu to\'g\'ri qaror bo\'ldi.',
-          extraExamples: [
-            'In the long run, building good habits matters more than short-term results.',
-            'Cutting costs now may hurt the company in the long run.',
-            'In the long run, honesty in business builds stronger customer loyalty.',
-            'Learning a second language is hard at first, but it pays off in the long run.',
-            'In the long run, strong relationships are more valuable than money.',
-            'Skipping sleep to work more will damage your productivity in the long run.',
-            'In the long run, companies that invest in their employees perform better.',
-          ],
-          extraExampleTranslations: [
-            'Uzoq muddatda yaxshi odatlar shakllantirish qisqa muddatli natijalardan muhimroq.',
-            'Hozir xarajatlarni qisqartirish uzoq muddatda kompaniyaga zarar yetkazishi mumkin.',
-            'Uzoq muddatda biznesdagi halollik mustahkamroq mijozlar sadoqatini shakllantiradi.',
-            'Ikkinchi tilni o\'rganish dastlab qiyin, lekin uzoq muddatda o\'z natijasini beradi.',
-            'Uzoq muddatda kuchli munosabatlar puldan qimmatroq.',
-            'Ko\'proq ishlash uchun uyquni qisqartirish uzoq muddatda mahsuldorligingizga zarar yetkazadi.',
-            'Uzoq muddatda xodimlarga sarmoya kiritadigan kompaniyalar yaxshiroq ishlaydi.',
-          ],
-        ),
 
         WordItem(
           word: 'once in a blue moon',
@@ -56017,89 +54636,7 @@ final wordMasteryCollection = WordCollection(
       dayNumber: 29,
       topic: 'Unit 29 - Personality Adjectives',
       words: [
-        WordItem(
-          word: 'open-minded',
-          partOfSpeech: 'adjective',
-          pronunciation: '/ˌoʊpən ˈmaɪndɪd/',
-          translation:
-              'keng fikrlaydigan, boshqalarning fikrini ham inobatga oladigan',
-          definition:
-              'willing to consider different ideas, opinions, and ways of thinking without rejecting them unfairly',
-          definitionUz:
-              'Boshqalarning fikrlarini inkor etmasdan ko\'rib chiqishga tayyor bo\'lish — o\'z fikridan boshqacha g\'oyalarga ham quloq soladigan odam',
-          example1:
-              'An open-minded teacher encourages students to question ideas rather than just accept them.',
-          example1Translation:
-              'Keng fikrlaydigan o\'qituvchi o\'quvchilarni g\'oyalarni shunchaki qabul qilish o\'rniga savol berishga undaydi.',
-          example2:
-              'You need to be open-minded when working in a team with people from different backgrounds.',
-          example2Translation:
-              'Turli xil tarixga ega odamlar bilan jamoada ishlashda keng fikrli bo\'lish kerak.',
-          example3:
-              'She remained open-minded during the debate and even changed her view after hearing new arguments.',
-          example3Translation:
-              'U munozara davomida keng fikrli bo\'lib qoldi va yangi dalillarni eshitgandan so\'ng fikrini ham o\'zgartirdi.',
-          extraExamples: [
-            'Being open-minded helped him discover career paths he had never considered before.',
-            'Open-minded people tend to have more interesting and diverse friendships.',
-            'Try to stay open-minded when receiving feedback — it can help you grow.',
-            'An open-minded approach to problem-solving leads to more creative solutions.',
-            'She became more open-minded after living abroad for a year.',
-            'Open-minded leaders create workplaces where people feel safe sharing their ideas.',
-            'Being open-minded does not mean having no opinions — it means holding them loosely.',
-          ],
-          extraExampleTranslations: [
-            'Keng fikrli bo\'lish unga ilgari hech qachon ko\'rib chiqmagan martaba yo\'llarini kashf etishga yordam berdi.',
-            'Keng fikrli odamlar ko\'proq qiziqarli va xilma-xil do\'stliklarga ega bo\'ladi.',
-            'Fikr-mulohaza olganda keng fikrli bo\'lishga harakat qiling — bu rivojlanishga yordam berishi mumkin.',
-            'Muammolarni hal qilishga keng fikrli yondashuv ko\'proq ijodiy yechimlarga olib keladi.',
-            'U bir yil chet elda yashagandan so\'ng ko\'proq keng fikrli bo\'lib qoldi.',
-            'Keng fikrli rahbarlar odamlar o\'z g\'oyalarini baham ko\'rishda o\'zlarini xavfsiz his qiladigan ish joylari yaratadi.',
-            'Keng fikrli bo\'lish fikrsiz bo\'lish degani emas — bu ularni qattiq ushlab turmaslik demak.',
-          ],
-        ),
 
-        WordItem(
-          word: 'ambitious',
-          partOfSpeech: 'adjective',
-          pronunciation: '/æmˈbɪʃəs/',
-          translation:
-              'kuchli xohishli; katta maqsadlar qo\'yib faqat olg\'a intiladigan',
-          definition:
-              'having a strong desire to achieve success, power, or a high level of achievement',
-          definitionUz:
-              'Muvaffaqiyat yoki yuqori natijalarga erishish uchun kuchli istak va intilishga ega bo\'lish — katta maqsadlari bor va ular uchun harakat qiladigan odam',
-          example1:
-              'She is so ambitious that she became a manager before the age of thirty.',
-          example1Translation:
-              'U shunchalik kuchli xohishli ediki, o\'ttiz yoshdan oldin menejer bo\'ldi.',
-          example2:
-              'Being ambitious is a great quality, but it needs to be balanced with patience.',
-          example2Translation:
-              'Kuchli xohishli bo\'lish ajoyib xususiyat, lekin uni sabr bilan muvozanatlash kerak.',
-          example3:
-              'The company set an ambitious goal to expand into ten new markets within three years.',
-          example3Translation:
-              'Kompaniya uch yil ichida o\'nta yangi bozorga kengayish bo\'yicha katta maqsad qo\'ydi.',
-          extraExamples: [
-            'Ambitious people are often willing to take risks that others avoid.',
-            'His ambitious plans for the startup impressed every investor he met.',
-            'Being ambitious means you never settle for less than what you are capable of.',
-            'She was ambitious from a young age and always pushed herself to improve.',
-            'Ambitious students stay after class and ask extra questions to get ahead.',
-            'An ambitious goal without a clear plan is just a wish.',
-            'He was ambitious but also knew the importance of lifting others up along the way.',
-          ],
-          extraExampleTranslations: [
-            'Kuchli xohishli odamlar ko\'pincha boshqalar qochadigan tavakkalchilikka tayyor bo\'ladi.',
-            'Uning startap uchun katta rejalari uchrashgan har bir investorni hayratga qoldirdi.',
-            'Kuchli xohishli bo\'lish qobiliyatingizdan past narsaga rozi bo\'lmasligingiz degani.',
-            'U yoshligidan kuchli xohishli edi va doimo o\'zini takomillashtirishga undardi.',
-            'Kuchli xohishli o\'quvchilar darsdan keyin qolishadi va oldinga chiqish uchun qo\'shimcha savollar berishadi.',
-            'Aniq rejasiz katta maqsad faqat xolos.',
-            'U kuchli xohishli edi, lekin yo\'l davomida boshqalarni ko\'tarish muhimligini ham bilardi.',
-          ],
-        ),
 
         WordItem(
           word: 'optimistic',
@@ -56953,46 +55490,6 @@ final wordMasteryCollection = WordCollection(
           ],
         ),
 
-        WordItem(
-          word: 'charismatic',
-          partOfSpeech: 'adjective',
-          pronunciation: '/ˌkærɪzˈmætɪk/',
-          translation: 'Xarizmatik / boshqalarni o\'ziga tortadigan',
-          definition:
-              'Having a natural ability to attract, inspire, and influence other people through personal charm and confidence',
-          definitionUz:
-              'Tabiiy joziba va ishonch orqali boshqalarni o\'ziga tortish, ilhom berish va ta\'sir o\'tkazish qobiliyatiga ega bo\'lish',
-          example1:
-              'The charismatic speaker held the audience\'s attention for two hours.',
-          example1Translation:
-              'Xarizmatik notiq ikki soat davomida tomoshabinlar diqqatini o\'zida ushlab turdi.',
-          example2:
-              'She\'s so charismatic that people naturally follow her lead.',
-          example2Translation:
-              'U shunchalik xarizmatikki, odamlar o\'z-o\'zidan uning ketidan ergashadi.',
-          example3:
-              'He was charismatic and convincing — everyone believed in his vision.',
-          example3Translation:
-              'U xarizmatik va ishonchli edi — hamma uning tasavvuriga ishondi.',
-          extraExamples: [
-            'Charismatic leaders tend to inspire loyalty in their teams.',
-            'She walked into the room and everyone noticed — she\'s incredibly charismatic.',
-            'He used his charismatic personality to win the debate.',
-            'Being charismatic doesn\'t always mean being loud — it can be subtle.',
-            'The charismatic CEO made investors feel confident about the company.',
-            'People are drawn to him because he\'s so charismatic and genuine.',
-            'She was charismatic enough to turn a boring topic into an engaging talk.',
-          ],
-          extraExampleTranslations: [
-            'Xarizmatik rahbarlar ko\'pincha jamoalarida sadoqatni ilhom qiladi.',
-            'U xonaga kirdi va hamma uni payqadi — u ajoyib darajada xarizmatik.',
-            'U xarizmatik shaxsiyatini tortishuvda g\'alaba qozonish uchun ishlatdi.',
-            'Xarizmatik bo\'lish har doim shovqinli bo\'lishni anglatmaydi — bu nozik bo\'lishi mumkin.',
-            'Xarizmatik bosh direktor investorlarni kompaniya haqida ishonchli his qildirdi.',
-            'Odamlar unga tortiladi, chunki u juda xarizmatik va samimiy.',
-            'U zerikarli mavzuni qiziqarli nutqqa aylantira oladigan darajada xarizmatik edi.',
-          ],
-        ),
 
         WordItem(
           word: 'have a sense of humor',

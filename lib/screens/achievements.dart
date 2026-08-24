@@ -86,6 +86,50 @@ final List<_AchDef> _allAchs = [
   ..._gen('qs', 'quiz_streak',  '🧠', _qsNames, (n) => 'Do a quiz $n days in a row'),
 ];
 
+// _allAchs' title/description fields are hardcoded English, always — they
+// were never localized despite the app supporting Uzbek elsewhere. These
+// resolve the real display text via tr(), falling back to the hardcoded
+// English when no achv_* key exists (e.g. an unnamed milestone, whose
+// "title" is just its bare number, or a category not covered below).
+// tr(key) == key is how l10n.dart signals a missing key (see its own
+// fallback chain), so that's used as the "does a translation exist" check
+// instead of hand-maintaining a duplicate list of which ids have one.
+String _achTitle(_AchDef d) {
+  final key = 'achv_${d.id}';
+  final t = tr(key);
+  return t == key ? d.title : t;
+}
+
+const _descTemplateKeyByCategory = {
+  'study_days': 'achv_desc_study_days',
+  'study_streak': 'achv_desc_study_streak',
+  'flash_days': 'achv_desc_flash_days',
+  'flash_streak': 'achv_desc_flash_streak',
+  'quiz_days': 'achv_desc_quiz_days',
+  'quiz_streak': 'achv_desc_quiz_streak',
+};
+
+String _achDesc(_AchDef d) {
+  final directKey = 'achv_${d.id}_desc';
+  final direct = tr(directKey);
+  if (direct != directKey) return direct;
+  // Generated achievements (study/flashcard/quiz days-or-streak) all share
+  // one of 6 description templates per category instead of a per-milestone
+  // key — {n} is substituted with the milestone's count.
+  final templateKey = _descTemplateKeyByCategory[d.category];
+  if (templateKey == null) return d.description;
+  final template = tr(templateKey);
+  if (template == templateKey) return d.description;
+  final n = int.tryParse(d.id.split('_').last) ?? 0;
+  return template.replaceFirst('{n}', '$n');
+}
+
+String _achCatName(String cat) {
+  final key = 'achv_cat_$cat';
+  final t = tr(key);
+  return t == key ? (_catMeta[cat]?.$2 ?? cat) : t;
+}
+
 const _catMeta = {
   'words':        ('📚', 'Words Learned'),
   'xp':           ('✨', 'XP Earned'),
@@ -227,7 +271,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     final Map<String, String?> dates = {};
     for (final d in _allAchs) {
       if (_isUnlocked(d, stats)) {
-        dates[d.id] = await StorageService.checkAndUnlockAchievement(d.id, d.xp * 10, d.title);
+        dates[d.id] = await StorageService.checkAndUnlockAchievement(d.id, d.xp * 10, _achTitle(d));
       }
     }
     final lockedIds = _allAchs.where((d) => !dates.containsKey(d.id)).map((d) => d.id).toList();
@@ -417,7 +461,7 @@ class _CategoryHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final meta = _catMeta[cat];
     final icon  = meta?.$1 ?? '🏅';
-    final label = meta?.$2 ?? cat;
+    final label = _achCatName(cat);
     final unlockedCount = achs.where((d) => _isUnlocked(d, stats)).length;
     final pct = achs.isEmpty ? 0.0 : unlockedCount / achs.length;
     return Container(
@@ -537,7 +581,7 @@ class _AchCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 // Title
-                Text(def.title,
+                Text(_achTitle(def),
                   style: TextStyle(
                     fontSize: 12, fontWeight: FontWeight.bold,
                     color: unlocked ? context.appText : context.textMuted,
@@ -546,7 +590,7 @@ class _AchCard extends StatelessWidget {
                   maxLines: 2, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 3),
                 // Description hint (always visible — key UX improvement)
-                Text(def.description,
+                Text(_achDesc(def),
                   style: TextStyle(
                     fontSize: 9.5, height: 1.3,
                     color: unlocked
@@ -626,9 +670,9 @@ class _DetailSheet extends StatelessWidget {
           const SizedBox(height: 20),
           Text(def.emoji, style: TextStyle(fontSize: 52, color: unlocked ? null : Colors.grey)),
           const SizedBox(height: 12),
-          Text(def.title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
+          Text(_achTitle(def), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
           const SizedBox(height: 4),
-          Text(def.description, style: TextStyle(fontSize: 14, color: context.textMuted), textAlign: TextAlign.center),
+          Text(_achDesc(def), style: TextStyle(fontSize: 14, color: context.textMuted), textAlign: TextAlign.center),
           const SizedBox(height: 16),
           // XP reward
           Container(

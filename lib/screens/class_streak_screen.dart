@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
 import '../date_utils.dart';
+import '../l10n.dart' as l10n;
 import '../services/supabase_service.dart';
 
 /// Computes a deterministic color for a class from its ID — mirrors the
@@ -160,10 +161,7 @@ class _ClassStreakScreenState extends State<ClassStreakScreen> {
     final now = streakAdjustedNow();
     final todayStr = formatStreakDate(now);
     final canGoNext = !(_month.year == now.year && _month.month == now.month);
-    final monthName = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ][_month.month - 1];
+    final monthName = l10n.monthName(_month.month);
     final mm = _month.month.toString().padLeft(2, '0');
     final daysInMonth = DateTime(_month.year, _month.month + 1, 0).day;
     final offset = DateTime(_month.year, _month.month, 1).weekday - 1;

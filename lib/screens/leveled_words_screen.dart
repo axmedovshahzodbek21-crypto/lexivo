@@ -289,7 +289,13 @@ class _FoundationScreenState extends State<FoundationScreen> {
         'color': const Color(0xFF2ECC71),
         'description': 'Basic everyday words and phrases',
         'collection': ContentService.a1,
-        'total': ContentService.a1.days.length,
+        // Excludes placeholder days with no words yet, matching
+        // CollectionsScreen's own unit picker (nonEmptyDays) which already
+        // hides them from being opened at all — counting them here made
+        // 100% completion mathematically impossible for a level with any
+        // unfinished units (a student could complete every real unit and
+        // still see e.g. "12/30 units complete" forever).
+        'total': ContentService.a1.days.where((d) => d.words.isNotEmpty).length,
       },
       {
         'label': 'A2',
@@ -298,7 +304,7 @@ class _FoundationScreenState extends State<FoundationScreen> {
         'color': const Color(0xFF27AE60),
         'description': 'Common vocabulary for simple situations',
         'collection': ContentService.a2,
-        'total': ContentService.a2.days.length,
+        'total': ContentService.a2.days.where((d) => d.words.isNotEmpty).length,
       },
       {
         'label': 'B1',
@@ -307,7 +313,7 @@ class _FoundationScreenState extends State<FoundationScreen> {
         'color': const Color(0xFF3498DB),
         'description': 'Everyday topics and familiar situations',
         'collection': ContentService.b1,
-        'total': ContentService.b1.days.length,
+        'total': ContentService.b1.days.where((d) => d.words.isNotEmpty).length,
       },
     ];
 

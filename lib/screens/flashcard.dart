@@ -408,6 +408,12 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
     with TickerProviderStateMixin {
   final FlutterTts _tts = FlutterTts();
   final AudioPlayer _audioPlayer = AudioPlayer();
+  // Tracks the temp mp3 written by _speakInLanguage() so it can be deleted
+  // once superseded/no longer needed — each call writes a uniquely-named
+  // file (see the comment there) and none of them were ever cleaned up,
+  // silently accumulating orphaned files in temp storage every time a word
+  // with cloud TTS audio was played.
+  File? _lastTtsTempFile;
   late List<WordItem> _sessionWords;
   late List<WordItem> _hardWords;
   late List<WordItem> _easyWords;
@@ -423,6 +429,16 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
   // while the first is still in flight could double-add the same word to
   // _easyWords/_hardWords, or fire _showFinishScreen() twice.
   bool _processingCard = false;
+
+  // Guards _onPanEnd against a second swipe gesture arriving while the
+  // first swipe's 300ms overlay delay is still pending. _processingCard
+  // alone doesn't cover this window — it's only set once the delayed
+  // callback actually starts running, so two swipes within 300ms of each
+  // other could each schedule their own Future.delayed(_markEasy)-style
+  // call; by the time the second one fired, _currentIndex had already
+  // advanced from the first, so it silently applied to whatever card had
+  // become current instead of the one the user actually swiped.
+  bool _swipePending = false;
 
   Color _swipeOverlayColor = Colors.transparent;
   String _swipeOverlayText = '';
@@ -460,6 +476,7 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
     _tts.stop();
     _audioPlayer.dispose();
     _flipController.dispose();
+    _lastTtsTempFile?.delete().catchError((_) => _lastTtsTempFile!);
     super.dispose();
   }
 
@@ -489,24 +506,30 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
       _tapCard();
       return;
     }
+    if (_swipePending) return;
     final vx = details.velocity.pixelsPerSecond.dx;
     final vy = details.velocity.pixelsPerSecond.dy;
 
+    void schedule(Color color, String text, VoidCallback action) {
+      _swipePending = true;
+      _showSwipeOverlay(color, text);
+      Future.delayed(const Duration(milliseconds: 300), () {
+        _swipePending = false;
+        action();
+      });
+    }
+
     if (vx.abs() > vy.abs()) {
       if (vx > 300) {
-        _showSwipeOverlay(Colors.green.withValues(alpha: 0.85), tr('easy'));
-        Future.delayed(const Duration(milliseconds: 300), _markEasy);
+        schedule(Colors.green.withValues(alpha: 0.85), tr('easy'), _markEasy);
       } else if (vx < -300) {
-        _showSwipeOverlay(Colors.red.withValues(alpha: 0.85), tr('hard'));
-        Future.delayed(const Duration(milliseconds: 300), _markHard);
+        schedule(Colors.red.withValues(alpha: 0.85), tr('hard'), _markHard);
       }
     } else {
       if (vy > 300) {
-        _showSwipeOverlay(Colors.grey.withValues(alpha: 0.85), '⏭ ${tr('skip')}');
-        Future.delayed(const Duration(milliseconds: 300), _skipCard);
+        schedule(Colors.grey.withValues(alpha: 0.85), '⏭ ${tr('skip')}', _skipCard);
       } else if (vy < -300) {
-        _showSwipeOverlay(Colors.amber.withValues(alpha: 0.85), '⭐ ${tr('star_label')}');
-        Future.delayed(const Duration(milliseconds: 300), _toggleStar);
+        schedule(Colors.amber.withValues(alpha: 0.85), '⭐ ${tr('star_label')}', _toggleStar);
       }
     }
   }
@@ -594,22 +617,29 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
     if (!widget.noXP) await StorageService.recordStudySession();
     if (!widget.noXP) await StorageService.recordFlashcardSession();
     await StorageService.markFlashcardCompleted();
-    if (_hardWords.isEmpty) {
-      if (!widget.noXP) {
-        final alreadyAwarded = await StorageService.hasFlashcardXPAwarded(
+    // XP is for finishing the session, not for a clean pass — Quiz and
+    // Learn both award XP unconditionally on completion regardless of
+    // wrong answers, but this used to forfeit the *entire* session's XP
+    // over a single "Hard" mark. Awarded once per unit either way (still
+    // gated by hasFlashcardXPAwarded), independent of the hard-word count
+    // below, which only controls whether the unit is marked fully complete
+    // or left with hard words to retry.
+    if (!widget.noXP) {
+      final alreadyAwarded = await StorageService.hasFlashcardXPAwarded(
+        widget.collectionName, widget.wordDay.dayNumber);
+      if (!alreadyAwarded) {
+        final wordCount = widget.wordDay.words.length;
+        xpEarned = (wordCount * 3).round();
+        await StorageService.addXP(
+          xpEarned,
+          reason: 'Flashcard',
+          source: 'Unit ${widget.wordDay.dayNumber} · ${widget.collectionName}',
+        );
+        await StorageService.markFlashcardXPAwarded(
           widget.collectionName, widget.wordDay.dayNumber);
-        if (!alreadyAwarded) {
-          final wordCount = widget.wordDay.words.length;
-          xpEarned = (wordCount * 3).round();
-          await StorageService.addXP(
-            xpEarned,
-            reason: 'Flashcard',
-            source: 'Unit ${widget.wordDay.dayNumber} · ${widget.collectionName}',
-          );
-          await StorageService.markFlashcardXPAwarded(
-            widget.collectionName, widget.wordDay.dayNumber);
-        }
       }
+    }
+    if (_hardWords.isEmpty) {
       await StorageService.markFlashcardComplete(
         widget.collectionName,
         widget.wordDay.dayNumber,
@@ -702,10 +732,22 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
+              // Must match the meaning _saveProgress() gives this same slot
+              // on a normal finish: "words from this day not yet cleanly
+              // gotten through." A completed session's remaining set is
+              // just its hard-marked words (nothing is left unprocessed by
+              // definition); this early-exit path used to save only the
+              // untouched _sessionWords, silently dropping any words
+              // already marked Hard earlier in *this* session from the
+              // resume list (they still land in the separate cross-day Hard
+              // Words feature via _saveExitProgress below, but not here).
               await StorageService.saveFlashcardProgress(
                 widget.collectionName,
                 widget.wordDay.dayNumber,
-                _sessionWords.map((w) => w.word).toList(),
+                [
+                  ..._hardWords.map((w) => w.word),
+                  ..._sessionWords.map((w) => w.word),
+                ],
               );
               await _saveExitProgress();
               if (!mounted) return;
@@ -786,6 +828,13 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
         final file = File('${dir.path}/tts_output_${DateTime.now().microsecondsSinceEpoch}.mp3');
         await file.writeAsBytes(audioContent);
         await _audioPlayer.stop();
+        // The previous temp file is done playing now that we've stopped and
+        // are about to replace it — safe to delete.
+        final previous = _lastTtsTempFile;
+        _lastTtsTempFile = file;
+        if (previous != null) {
+          previous.delete().catchError((_) => previous);
+        }
         await _audioPlayer.play(DeviceFileSource(file.path));
         return;
       }

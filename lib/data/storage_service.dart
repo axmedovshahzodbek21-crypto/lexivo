@@ -123,7 +123,12 @@ class SRSWord {
   }
 
   bool get isDueToday {
-    final today = DateTime.now();
+    // Must use the same streak-adjusted day boundary as _nextDateFromNow/
+    // _todayStr above — a plain DateTime.now() here disagreed with the rest
+    // of the SRS queue for ~2 hours after local midnight (the boundary
+    // window), showing a word as not-yet-due (or due) a day earlier/later
+    // than getDueWords() and the rest of the app agreed on.
+    final today = streakAdjustedNow();
     final review = DateTime.parse(nextReviewDate);
     return !review.isAfter(DateTime(today.year, today.month, today.day));
   }

@@ -137,6 +137,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     ServicesBinding.instance.keyboard.removeHandler(_handleKey);
     appLangNotifier.removeListener(_onLangChange);
     _flipCtrl.dispose();
+    _tts.stop();
     super.dispose();
   }
 
@@ -281,6 +282,12 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
 
   String _stageProgress(SRSWord word) {
     if (word is DueSRSWord) return 'Review · Day ${word.dueInterval}';
+    // getDueWords() never returns a mastered word (it only yields
+    // DueSRSWord, handled above), but a plain SRSWord reaching this screen
+    // through some other path (e.g. Manage Deck) can still be mastered —
+    // reviewStage is frozen at 5 for those, and "Stage ${5 + 1} of 5" read
+    // as "Stage 6 of 5".
+    if (word.isMastered) return 'Mastered';
     return 'Stage ${word.reviewStage + 1} of 5';
   }
 
@@ -299,7 +306,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   void _openInUnit() {
     final word = _current;
     final col = _collectionFor(word);
-    if (col == null) return;
+    if (col == null || col.days.isEmpty) return;
     WordDay wordDay;
     try {
       wordDay = col.days.firstWhere((d) => d.dayNumber == word.dayNumber);

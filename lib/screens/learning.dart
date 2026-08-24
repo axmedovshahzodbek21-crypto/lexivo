@@ -59,6 +59,12 @@ class LearningScreen extends StatefulWidget {
 class _LearningScreenState extends State<LearningScreen> {
   final FlutterTts _tts = FlutterTts();
   final AudioPlayer _audioPlayer = AudioPlayer();
+  // Tracks the temp mp3 written by _speakWithGoogle() so it can be deleted
+  // once superseded — each call writes a uniquely-named file (see the
+  // comment there) and none of them were ever cleaned up, silently
+  // accumulating orphaned files in temp storage every time a word with
+  // cloud TTS audio was played.
+  File? _lastTtsTempFile;
   final ScrollController _scrollController = ScrollController();
   late int _currentIndex;
   bool _sessionComplete = false;
@@ -172,6 +178,7 @@ class _LearningScreenState extends State<LearningScreen> {
     _audioPlayer.dispose();
     _scrollController.dispose();
     _cardDrag.dispose();
+    _lastTtsTempFile?.delete().catchError((_) => _lastTtsTempFile!);
     super.dispose();
   }
 
@@ -202,6 +209,13 @@ class _LearningScreenState extends State<LearningScreen> {
         final file = File('${dir.path}/tts_output_${DateTime.now().microsecondsSinceEpoch}.mp3');
         await file.writeAsBytes(audioContent);
         await _audioPlayer.stop();
+        // The previous temp file is done playing now that we've stopped and
+        // are about to replace it — safe to delete.
+        final previous = _lastTtsTempFile;
+        _lastTtsTempFile = file;
+        if (previous != null) {
+          previous.delete().catchError((_) => previous);
+        }
         await _audioPlayer.play(DeviceFileSource(file.path));
       }
     } catch (e) {
@@ -358,9 +372,18 @@ class _LearningScreenState extends State<LearningScreen> {
             // this session's own summary screen.
             _sessionXP += xp;
           }
-        } catch (_) {
+        } catch (e) {
           // Sync failed (network/RPC) — don't strand the student on this
           // card; the lesson still advances, just without server credit.
+          // Still tell them, though — silently dropping class XP with zero
+          // feedback (unlike library_unit_study_screen's equivalent catch)
+          // left students unable to tell a sync failure apart from just not
+          // having earned anything yet.
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Could not save progress: $e')),
+            );
+          }
         }
       }
     } else {

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'leveled_words_screen.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:flutter/material.dart';
@@ -55,11 +56,44 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
   final ValueNotifier<double> _dragOffset = ValueNotifier(0.0);
 
   String get _sessionKey => 'leveled_position_${widget.collection.id}';
-  String get _dailyLearnedKey => 'daily_learned_leveled_${_todayString()}';
-  String get _dailyLearnedWordsKey =>
-      'daily_learned_words_${widget.collection.id}_${_todayString()}';
+
+  // The daily count (global, across every leveled collection — an
+  // anti-burnout cap on the whole "Leveled" mode for the day) and this
+  // collection's learned-word list used to live in two separate
+  // SharedPreferences keys, written by two separate calls in
+  // _onWordLearned. A crash between those two writes could leave the count
+  // incremented with no matching word in the list, or vice versa. Both now
+  // live together in one JSON blob under a single key, written in one call.
+  String get _dailyProgressKey => 'daily_progress_leveled_${_todayString()}';
 
   String _todayString() => todayForStreaks();
+
+  Future<({int count, List<String> words})> _readDailyProgress(SharedPreferences prefs) async {
+    final raw = prefs.getString(_dailyProgressKey);
+    if (raw == null) return (count: 0, words: <String>[]);
+    try {
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      final count = decoded['count'] as int? ?? 0;
+      final byCollection = (decoded['wordsByCollection'] as Map<String, dynamic>?) ?? {};
+      final words = (byCollection[widget.collection.id] as List?)?.cast<String>() ?? <String>[];
+      return (count: count, words: words);
+    } catch (_) {
+      return (count: 0, words: <String>[]);
+    }
+  }
+
+  Future<void> _writeDailyProgress(SharedPreferences prefs, int count, List<String> words) async {
+    final raw = prefs.getString(_dailyProgressKey);
+    Map<String, dynamic> byCollection = {};
+    if (raw != null) {
+      try {
+        final decoded = jsonDecode(raw) as Map<String, dynamic>;
+        byCollection = (decoded['wordsByCollection'] as Map<String, dynamic>?) ?? {};
+      } catch (_) {}
+    }
+    byCollection[widget.collection.id] = words;
+    await prefs.setString(_dailyProgressKey, jsonEncode({'count': count, 'wordsByCollection': byCollection}));
+  }
 
   @override
   void initState() {
@@ -87,11 +121,10 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
     _skippedAllTime = await StorageService.getSkippedWordsCount(levelId);
 
     final prefs = await SharedPreferences.getInstance();
-    _learnedToday = prefs.getInt(_dailyLearnedKey) ?? 0;
-
-    final savedWordStrings = prefs.getStringList(_dailyLearnedWordsKey) ?? [];
+    final progress = await _readDailyProgress(prefs);
+    _learnedToday = progress.count;
     _learnedThisSession = widget.collection.words
-        .where((w) => savedWordStrings.contains(w.word))
+        .where((w) => progress.words.contains(w.word))
         .toList();
 
     if (_learnedToday >= _dailyLimit) {
@@ -174,14 +207,6 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
           totalCount: total,
         ),
       ),
-    );
-  }
-
-  Future<void> _saveLearnedWordsToPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(
-      _dailyLearnedWordsKey,
-      _learnedThisSession.map((w) => w.word).toList(),
     );
   }
 
@@ -505,8 +530,11 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
         );
 
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt(_dailyLearnedKey, _learnedToday);
-        await _saveLearnedWordsToPrefs();
+        await _writeDailyProgress(
+          prefs,
+          _learnedToday,
+          _learnedThisSession.map((w) => w.word).toList(),
+        );
         if (!mounted) return;
 
         if (_learnedToday == _dailyLimit) {

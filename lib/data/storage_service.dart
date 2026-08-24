@@ -1481,6 +1481,39 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     await prefs.setString(_reviewLogKey, jsonEncode(log));
   }
 
+  // Effective review stage (0-5), derived from the review log — the log is
+  // the sole source of truth for review progress. SRSWord.reviewStage is
+  // frozen at construction and must never be used for display; call sites
+  // that need a word's current stage (mastery heatmap, stage indicators,
+  // story-unlock thresholds) should fetch the log once and use this instead.
+  static int stageFromLog(SRSWord word, Map<String, List<int>> log) {
+    final key = '${word.collectionName}::${word.word}';
+    return (log[key]?.length ?? 0).clamp(0, 5);
+  }
+
+  // Effective next-review date, derived from learnedAt + the next uncompleted
+  // interval in the review log — mirrors the due-date logic in getDueWords().
+  // SRSWord.nextReviewDate is frozen at construction (always learnedAt + 1
+  // day) and must never be used for display.
+  static DateTime effectiveNextReviewDate(SRSWord word, Map<String, List<int>> log) {
+    const intervals = [1, 3, 7, 14, 30];
+    final key = '${word.collectionName}::${word.word}';
+    final completed = log[key] ?? const <int>[];
+    final nextInterval = intervals.firstWhere(
+      (i) => !completed.contains(i),
+      orElse: () => intervals.last,
+    );
+    return DateTime.parse(word.learnedAt).add(Duration(days: nextInterval));
+  }
+
+  // Effective isDueToday, derived from the review log (same basis as
+  // getDueWords()/checkAndUnlearn(), including the streak-adjusted "today").
+  static bool isDueTodayFromLog(SRSWord word, Map<String, List<int>> log) {
+    final today = DateTime.parse(SRSWord._todayStr());
+    final due = effectiveNextReviewDate(word, log);
+    return !due.isAfter(today);
+  }
+
   // One-time migration: converts existing reviewStage data into reviewLog entries
   // so existing users keep their progress when upgrading to the log-based system.
   static Future<void> migrateReviewLogIfNeeded() async {
@@ -1965,8 +1998,13 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
   }
 
   static Future<int> getMasteredSRSCount() async {
-    final words = await getSRSWords();
-    return words.where((w) => w.isMastered).length;
+    // Graduated words are moved out of the active list (getSRSWords()) into
+    // the mastered list by markIntervalDone() the moment all 5 intervals are
+    // complete, so getMasteredWords() — not a reviewStage filter on the
+    // active list, which can never contain a mastered word — is the correct
+    // source of truth here.
+    final mastered = await getMasteredWords();
+    return mastered.length;
   }
 
   static Future<List<String>> getStudyDays() async {
@@ -2594,7 +2632,16 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     String collectionName,
     List<WordDay> days,
   ) async {
+    // A word graduated to stage 5 is moved out of the active SRS list
+    // (getSRSWords()) into the mastered list by markIntervalDone() the
+    // moment all 5 intervals are complete, so an active word can never
+    // itself reach reviewStage 5 — mastered words must be counted from
+    // getMasteredWords() separately. Active words' progress is derived from
+    // the review log (stageFromLog), not the frozen SRSWord.reviewStage
+    // field, which never advances past its construction-time value of 0.
     final srsWords = await getSRSWords();
+    final masteredWords = await getMasteredWords();
+    final log = await getReviewLog();
     final prefs = await SharedPreferences.getInstance();
     final today = _todayString();
     final result = <int, StoryUnlockInfo>{};
@@ -2607,15 +2654,23 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
                 w.dayNumber == day.dayNumber,
           )
           .toList();
+      final masteredUnitWords = masteredWords
+          .where(
+            (w) =>
+                w.collectionName == collectionName &&
+                w.dayNumber == day.dayNumber,
+          )
+          .toList();
 
-      if (unitWords.isEmpty) {
+      if (unitWords.isEmpty && masteredUnitWords.isEmpty) {
         result[day.dayNumber] = const StoryUnlockInfo();
         continue;
       }
 
       final threshold = (day.words.length * 0.8).ceil();
-      final stage4Count = unitWords.where((w) => w.reviewStage >= 4).length;
-      final stage5Count = unitWords.where((w) => w.reviewStage >= 5).length;
+      final stage4Count = masteredUnitWords.length +
+          unitWords.where((w) => stageFromLog(w, log) >= 4).length;
+      final stage5Count = masteredUnitWords.length;
 
       final story1 = stage4Count >= threshold;
       final story2 = stage5Count >= threshold;

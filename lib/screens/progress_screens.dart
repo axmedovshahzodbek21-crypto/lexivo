@@ -1279,6 +1279,7 @@ class ReviewsDueScreen extends StatefulWidget {
 class _ReviewsDueScreenState extends State<ReviewsDueScreen> {
   List<SRSWord> _dueWords = [];
   List<SRSWord> _allWords = [];
+  Map<String, List<int>> _reviewLog = {};
   bool _loading = true;
 
   @override
@@ -1297,17 +1298,19 @@ class _ReviewsDueScreenState extends State<ReviewsDueScreen> {
   void _onLangChange() { if (mounted) setState(() {}); }
 
   Future<void> _load() async {
-    // Independent reads — parallelized instead of two sequential awaits.
-    final results = await Future.wait([
-      StorageService.getDueWords(),
-      StorageService.getSRSWords(),
-    ]);
+    // Independent reads — parallelized instead of sequential awaits.
+    final due = await StorageService.getDueWords();
+    final all = await StorageService.getSRSWords();
+    final log = await StorageService.getReviewLog();
     if (!mounted) return;
-    final due = results[0];
-    final all = results[1];
     setState(() {
       _dueWords = due;
-      _allWords = all.where((w) => !w.isMastered).toList();
+      // getSRSWords() already excludes graduated (mastered) words — they're
+      // moved into a separate mastered list the moment they complete all 5
+      // intervals — so this filter is defense-in-depth, not the primary
+      // exclusion mechanism.
+      _allWords = all;
+      _reviewLog = log;
       _loading = false;
     });
   }
@@ -1320,24 +1323,33 @@ class _ReviewsDueScreenState extends State<ReviewsDueScreen> {
     return const Color(0xFF2ECC71);
   }
 
+  // w.isDueToday/w.nextReviewDate/w.reviewStage are frozen at construction
+  // and never advance — these three helpers derive the real, current values
+  // from the review log instead (StorageService.effectiveNextReviewDate/
+  // isDueTodayFromLog/stageFromLog), the source of truth for review progress.
+
   String _stageLabel(SRSWord w) {
-    if (w.isDueToday) return tr('due_today');
-    final days =
-        DateTime.parse(w.nextReviewDate).difference(DateTime.now()).inDays + 1;
+    if (StorageService.isDueTodayFromLog(w, _reviewLog)) return tr('due_today');
+    final days = StorageService.effectiveNextReviewDate(w, _reviewLog)
+            .difference(DateTime.now())
+            .inDays +
+        1;
     if (days == 1) return tr('due_tomorrow');
     return tr('due_in_days').replaceFirst('{n}', days.toString());
   }
 
   Color _stageColor(SRSWord w) {
-    if (w.isDueToday) return Colors.red;
-    final days =
-        DateTime.parse(w.nextReviewDate).difference(DateTime.now()).inDays + 1;
+    if (StorageService.isDueTodayFromLog(w, _reviewLog)) return Colors.red;
+    final days = StorageService.effectiveNextReviewDate(w, _reviewLog)
+            .difference(DateTime.now())
+            .inDays +
+        1;
     if (days <= 3) return Colors.orange;
     return Colors.green;
   }
 
   String _stageIndicator(SRSWord w) {
-    switch (w.reviewStage) {
+    switch (StorageService.stageFromLog(w, _reviewLog)) {
       case 0:
         return 'D1';
       case 1:
@@ -1471,7 +1483,7 @@ class _ReviewsDueScreenState extends State<ReviewsDueScreen> {
                               decoration: BoxDecoration(
                                 color: context.surface,
                                 borderRadius: BorderRadius.circular(14),
-                                border: w.isDueToday
+                                border: StorageService.isDueTodayFromLog(w, _reviewLog)
                                     ? Border.all(
                                         color: Colors.red.shade200,
                                         width: 1.5,

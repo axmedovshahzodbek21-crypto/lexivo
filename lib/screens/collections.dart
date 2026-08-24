@@ -1112,18 +1112,25 @@ class _MasteryHeatmapSectionState extends State<_MasteryHeatmapSection> {
   }
 
   Future<void> _load() async {
-    // Independent reads — parallelized instead of two sequential awaits.
+    // Independent reads — parallelized instead of sequential awaits.
     final srsWordsFuture = StorageService.getSRSWords();
     final learnedWordsFuture = StorageService.getLearnedWords();
+    final reviewLogFuture = StorageService.getReviewLog();
     final srsWords = await srsWordsFuture;
     final learnedWords = await learnedWordsFuture;
+    final reviewLog = await reviewLogFuture;
     final colName = widget.collection.name;
 
     final srsMap = <String, double>{};
     for (final w in srsWords.where((w) => w.collectionName == colName)) {
       // Denominator 6: learn session = stage 0, plus 5 review intervals.
-      // reviewStage 0 → 1/6 ≈ 0.17 (red), 5 (mastered) → 1.0 (dark green).
-      srsMap[w.word] = ((w.reviewStage + 1) / 6.0).clamp(0.0, 1.0);
+      // Stage is derived from the review log (the source of truth for
+      // review progress), not SRSWord.reviewStage, which is frozen at
+      // construction and never advances — using it here made every
+      // in-progress word show the same lightest shade regardless of how
+      // many intervals it had actually completed.
+      final stage = StorageService.stageFromLog(w, reviewLog);
+      srsMap[w.word] = ((stage + 1) / 6.0).clamp(0.0, 1.0);
     }
     for (final lw in learnedWords.where((w) => w.collectionName == colName)) {
       if (!srsMap.containsKey(lw.word)) srsMap[lw.word] = 1.0; // graduated

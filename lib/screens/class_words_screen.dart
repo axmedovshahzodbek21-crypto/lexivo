@@ -246,40 +246,60 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
 
   Future<void> _loadWords() async {
     if (_words.isEmpty && mounted) setState(() { _loading = true; _loadError = false; });
+    // Word list and stats (due/learned/hard/starred counts) are fetched and
+    // caught independently: they used to share one try/catch, so a failure
+    // in the stats fetch — which runs after the word fetch has already
+    // succeeded — replaced an already-successfully-loaded word list with the
+    // full "Couldn't load words" error screen, hiding real data behind a
+    // transient failure of an unrelated, secondary fetch.
     try {
       final data = await supabase.from('class_words')
         .select('id, word, translation, definition, example1, example1_translation, example2, example2_translation, examples, folder_name, collection_name')
         .eq('class_id', widget.classId)
         .order('created_at', ascending: true);
-      if (mounted) setState(() { _words = (data as List).map((e) => _WordEntry.fromMap(Map<String, dynamic>.from(e as Map))).toList(); _loading = false; });
-
-      final user = currentUser;
-      if (user != null) {
-        final dueF     = getClassDueWords(userId: user.id, classId: widget.classId);
-        final allF     = getClassSRSAll(userId: user.id, classId: widget.classId);
-        final hardF    = supabase.from('class_hard_words').select('id').eq('user_id', user.id).eq('class_id', widget.classId);
-        final starredF = getClassStarredWordIds(userId: user.id, classId: widget.classId);
-        final due      = await dueF;
-        final all      = await allF;
-        final hard     = await hardF as List;
-        final starred  = await starredF;
-        if (mounted) {
-          setState(() {
-            _dueCount     = due.length;
-            _learnedCount = all.length;
-            _hardCount    = hard.length;
-            _starredIds   = starred;
-            _starredCount = starred.length;
-          });
-        }
+      if (mounted) {
+        setState(() {
+          _words = (data as List).map((e) => _WordEntry.fromMap(Map<String, dynamic>.from(e as Map))).toList();
+          _loading = false;
+          _loadError = false;
+        });
       }
     } catch (e) {
       // ignore: avoid_print
-      print('[ClassWordsScreen._loadWords] failed: $e');
+      print('[ClassWordsScreen._loadWords] word fetch failed: $e');
       // Previously left _words at whatever it was (empty on first load) with
       // no way to tell "this class genuinely has no words" apart from
       // "the fetch failed" — both rendered the identical empty state.
       if (mounted) setState(() { _loading = false; _loadError = true; });
+      return; // stats are meaningless without a loaded word list
+    }
+
+    final user = currentUser;
+    if (user == null) return;
+    try {
+      final dueF     = getClassDueWords(userId: user.id, classId: widget.classId);
+      final allF     = getClassSRSAll(userId: user.id, classId: widget.classId);
+      final hardF    = supabase.from('class_hard_words').select('id').eq('user_id', user.id).eq('class_id', widget.classId);
+      final starredF = getClassStarredWordIds(userId: user.id, classId: widget.classId);
+      final due      = await dueF;
+      final all      = await allF;
+      final hard     = await hardF as List;
+      final starred  = await starredF;
+      if (mounted) {
+        setState(() {
+          _dueCount     = due.length;
+          _learnedCount = all.length;
+          _hardCount    = hard.length;
+          _starredIds   = starred;
+          _starredCount = starred.length;
+        });
+      }
+    } catch (e) {
+      // ignore: avoid_print
+      print('[ClassWordsScreen._loadWords] stats fetch failed: $e');
+      // Word list already loaded successfully above — leave it displayed and
+      // just leave the stat badges (due/learned/hard/starred counts) at
+      // their previous values rather than showing a full-screen error.
     }
   }
 

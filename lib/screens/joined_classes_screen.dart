@@ -57,6 +57,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
   String? _expandedLeaderboard;
   String? _leaderboardLoading;
   bool _loading = true;
+  bool _loadError = false;
   // A fast double-tap on a card could fire Navigator.push twice before the
   // first push's route transition even begins, stacking a duplicate route.
   bool _navigating = false;
@@ -134,7 +135,9 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
             if (note.readAt == null) unreadIds.add(note.id);
           }
           if (unreadIds.isNotEmpty) {
-            supabase.from('class_notes').update({'read_at': DateTime.now().toIso8601String()}).inFilter('id', unreadIds).then((_) {}).catchError((_) {});
+            supabase.from('class_notes').update({'read_at': DateTime.now().toIso8601String()}).inFilter('id', unreadIds)
+                .then((_) {})
+                .catchError((e) { print('[JoinedClassesScreen] mark-notes-read failed: $e'); });
           }
 
           for (final t in parallel[2] as List) {
@@ -154,10 +157,15 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
         classAnnouncements: announcements,
       );
       _cache[user.id] = snapshot;
-      if (mounted) setState(() => _applySnapshot(snapshot));
+      if (mounted) setState(() { _applySnapshot(snapshot); _loadError = false; });
       WidgetService.pushClasses(joinedClasses, {});
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
+    } catch (e) {
+      // Only surface an error state when there's nothing cached to fall
+      // back on — a failed background refresh keeps showing stale-but-
+      // valid data instead. Previously always looked identical to "you
+      // haven't joined any classes yet" regardless of which one it was.
+      print('[JoinedClassesScreen] load failed: $e');
+      if (mounted) setState(() { _loading = false; _loadError = _joinedClasses.isEmpty; });
     }
   }
 
@@ -259,9 +267,16 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
                   onRefresh: _load,
                   child: _joinedClasses.isEmpty
                       ? _buildEmpty()
-                      : ListView(
+                      // .builder + a stable key per card (above) instead of
+                      // an eager .map().toList() — toggling one card's
+                      // leaderboard expand/loading state (both live in this
+                      // State, shared across every card) used to rebuild
+                      // every other card's full widget tree too on each
+                      // setState call, not just the one that changed.
+                      : ListView.builder(
                           padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-                          children: _joinedClasses.map(_buildJoinedClassCard).toList(),
+                          itemCount: _joinedClasses.length,
+                          itemBuilder: (_, i) => _buildJoinedClassCard(_joinedClasses[i]),
                         ),
                 ),
         ),
@@ -338,11 +353,11 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
     child: Padding(
       padding: const EdgeInsets.all(32),
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        const Text('🎓', style: TextStyle(fontSize: 56)),
+        Text(_loadError ? '⚠️' : '🎓', style: const TextStyle(fontSize: 56)),
         const SizedBox(height: 16),
-        Text('Not enrolled yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
+        Text(_loadError ? "Couldn't load your classes" : 'Not enrolled yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
         const SizedBox(height: 8),
-        Text('Go back and use "Join a Class" to enroll', textAlign: TextAlign.center, style: TextStyle(color: context.textMuted, fontSize: 14)),
+        Text(_loadError ? 'Pull down to retry' : 'Go back and use "Join a Class" to enroll', textAlign: TextAlign.center, style: TextStyle(color: context.textMuted, fontSize: 14)),
       ]),
     ),
   );
@@ -374,6 +389,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
     final colors = _joinedCardColors(cls.id);
 
     return Container(
+      key: ValueKey(cls.id),
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: context.surface,

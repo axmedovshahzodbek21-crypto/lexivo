@@ -360,8 +360,15 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
     ));
     ctrl.dispose();
     if (name == null || name.isEmpty) return;
-    await supabase.from('class_word_units').insert({'class_id': widget.classId, 'teacher_id': user.id, 'name': name});
-    _load();
+    try {
+      await supabase.from('class_word_units').insert({'class_id': widget.classId, 'teacher_id': user.id, 'name': name});
+      if (mounted) _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to create unit: $e'), duration: const Duration(seconds: 3)));
+      }
+    }
   }
 
   Future<void> _renameClassUnit(_ClassWordUnit unit) async {
@@ -385,8 +392,15 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
     ));
     ctrl.dispose();
     if (name == null || name.isEmpty || name == unit.name) return;
-    await supabase.from('class_word_units').update({'name': name}).eq('id', unit.id);
-    _load();
+    try {
+      await supabase.from('class_word_units').update({'name': name}).eq('id', unit.id);
+      if (mounted) _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to rename unit: $e'), duration: const Duration(seconds: 3)));
+      }
+    }
   }
 
   Future<void> _deleteClassUnit(_ClassWordUnit unit) async {
@@ -982,9 +996,16 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                     ],
                   ));
                   if (ok == true) {
-                    await supabase.from('class_homework').delete().eq('id', hw.id).eq('class_id', widget.classId);
-                    ClassHomeScreen.invalidate(widget.classId);
-                    _load();
+                    try {
+                      await supabase.from('class_homework').delete().eq('id', hw.id).eq('class_id', widget.classId);
+                      ClassHomeScreen.invalidate(widget.classId);
+                      if (mounted) _load();
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to delete: $e'), duration: const Duration(seconds: 3)));
+                      }
+                    }
                   }
                 },
                 child: Container(

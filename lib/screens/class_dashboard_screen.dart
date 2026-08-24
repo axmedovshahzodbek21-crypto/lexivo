@@ -324,13 +324,25 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   // don't teach. Re-verified independently here, defense-in-depth, the same
   // way ClassShell._verifyRole() does it.
   bool _verifiedTeacher = false;
+  DateTime? _verifiedTeacherAt;
+  // How long a successful verification is trusted before _checkTeacher()
+  // re-queries — without this, _verifiedTeacher was cached for the whole
+  // session once true, so a teacher whose access to this class was revoked
+  // mid-session (removed as teacher, class reassigned) kept sailing past
+  // every client-side gate below until they force-closed and reopened the
+  // screen. RLS is still the real backstop against an actual write landing,
+  // but the UI shouldn't keep offering actions indefinitely once revoked.
+  static const _teacherVerificationTtl = Duration(minutes: 5);
 
   Future<void> _verifyTeacher() async {
     final user = currentUser;
     if (user == null) return;
     try {
       final cls = await supabase.from('classes').select('teacher_id').eq('id', widget.classId).maybeSingle();
-      if (mounted) setState(() => _verifiedTeacher = cls != null && cls['teacher_id'] == user.id);
+      if (mounted) setState(() {
+        _verifiedTeacher = cls != null && cls['teacher_id'] == user.id;
+        _verifiedTeacherAt = DateTime.now();
+      });
     } catch (_) {
       if (mounted) setState(() => _verifiedTeacher = false);
     }
@@ -343,7 +355,9 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   // in-flight (or have hit a transient error) by the time the teacher taps
   // Send, which silently blocked every write with no visible feedback.
   Future<bool> _checkTeacher() async {
-    if (_verifiedTeacher) return true;
+    final verifiedRecently = _verifiedTeacher && _verifiedTeacherAt != null &&
+        DateTime.now().difference(_verifiedTeacherAt!) < _teacherVerificationTtl;
+    if (verifiedRecently) return true;
     await _verifyTeacher();
     if (_verifiedTeacher) return true;
     if (mounted) {
@@ -392,7 +406,9 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       final data = await supabase.rpc('get_active_students', params: {'p_class_id': widget.classId});
       final rows = (data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
       if (mounted) setState(() => _activeStudents = rows);
-    } catch (_) {}
+    } catch (e) {
+      print('[ClassDashboardScreen] _loadActiveStudents failed: $e');
+    }
   }
 
   Future<void> _loadAnalytics() async {
@@ -400,7 +416,9 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       final data = await supabase.rpc('get_class_analytics', params: {'p_class_id': widget.classId});
       final rows = (data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
       if (mounted) setState(() => _analyticsData = rows);
-    } catch (_) {}
+    } catch (e) {
+      print('[ClassDashboardScreen] _loadAnalytics failed: $e');
+    }
   }
 
   List<Map<String, dynamic>> get _speedFlagged =>
@@ -411,7 +429,9 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       final data = await supabase.rpc('get_class_progress_over_time', params: {'p_class_id': widget.classId, 'p_days': 30});
       final rows = (data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
       if (mounted) setState(() => _progressPoints = rows);
-    } catch (_) {}
+    } catch (e) {
+      print('[ClassDashboardScreen] _loadProgressOverTime failed: $e');
+    }
   }
 
   // Slowest words: derived client-side from each student's per_word_data_all
@@ -445,6 +465,12 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   // server-side) — no Flutter-side secret needed, just the Supabase auth
   // token proving this caller actually teaches the class.
   Future<void> _generateDigest() async {
+    // Every other teacher-only action here re-verifies via _checkTeacher()
+    // before proceeding — this one didn't, sending the class's full
+    // analytics payload to the digest endpoint with only the initState-time
+    // _verifiedTeacher flag (which could still be in-flight or stale) as a
+    // gate.
+    if (!await _checkTeacher()) return;
     if (mounted) setState(() => _digestLoading = true);
     try {
       final nameById = {for (final s in _students) s.studentId: s.name};
@@ -1500,12 +1526,27 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     if (_srsError != null) return _buildErrorState(_srsError!, _loadSRS);
 
     final today = DateTime.now().toIso8601String().substring(0, 10);
-    final studentIds = _srsStates.map((e) => e['user_id'] as String).toSet().toList();
+    // Unguarded `as String` casts here used to be safe only because
+    // today's insert path (advance_class_srs_word) always populates
+    // user_id/next_due — the same landmine already flagged elsewhere in
+    // this codebase: a future change to that insert logic (or a malformed
+    // row from anywhere else) would throw straight out of build(), crashing
+    // this whole tab instead of just excluding the one bad row.
+    final studentIds = _srsStates.map((e) => e['user_id']).whereType<String>().toSet().toList();
 
-    // Hard word counts
+    // Hard word counts — deduped by (user_id, word), not a raw row count.
+    // class_hard_words has no unique constraint enforced client-side; if a
+    // student's word ever ended up inserted more than once (a retry after a
+    // timeout that actually succeeded, etc.), counting rows directly would
+    // overcount that student multiple times for the same word instead of
+    // once, inflating "how many students struggle with this word."
     final hardCounts = <String, int>{};
+    final seenHardPairs = <String>{};
     for (final h in _hardWordsClass) {
-      final w = h['word'] as String;
+      final uid = h['user_id'];
+      final w = h['word'];
+      if (uid is! String || w is! String) continue;
+      if (!seenHardPairs.add('$uid::$w')) continue;
       hardCounts[w] = (hardCounts[w] ?? 0) + 1;
     }
     final hardSorted = (hardCounts.entries.toList()..sort((a, b) => b.value.compareTo(a.value))).take(10).toList();
@@ -1530,7 +1571,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
           )
         else
           ...studentIds.map((uid) {
-            final entries = _srsStates.where((e) => e['user_id'] == uid).toList();
+            final entries = _srsStates.where((e) => e['user_id'] == uid && e['next_due'] is String).toList();
             final dueToday  = entries.where((e) => (e['next_due'] as String).compareTo(today) <= 0 && _clampSrsStage(e['stage']) < 5).length;
             final overdue   = entries.where((e) => (e['next_due'] as String).compareTo(today) <  0 && _clampSrsStage(e['stage']) < 5).length;
             final stageCounts = List.generate(6, (s) => entries.where((e) => _clampSrsStage(e['stage']) == s).length);
@@ -1704,19 +1745,25 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     }
 
     final today = _ymd(DateTime.now());
+    // Same landmine as _buildSRSTab above — guard each row instead of
+    // trusting user_id/created_at/next_due are always well-formed.
     final entriesByStudent = <String, List<DateTime>>{};
     for (final e in _reviewEntries) {
-      final uid = e['user_id'] as String;
-      final created = DateTime.parse(e['created_at'] as String).toLocal();
+      final uid = e['user_id'];
+      final createdAt = e['created_at'];
+      if (uid is! String || createdAt is! String) continue;
+      final created = DateTime.tryParse(createdAt)?.toLocal();
+      if (created == null) continue;
       entriesByStudent.putIfAbsent(uid, () => []).add(created);
     }
     final overdueByStudent = <String, int>{};
     final dueByStudent = <String, int>{};
     for (final r in _reviewSrsRows) {
-      final nextDue = r['next_due'] as String;
+      final nextDue = r['next_due'];
+      final uid = r['user_id'];
+      if (nextDue is! String || uid is! String) continue;
       final stage = _clampSrsStage(r['stage']);
       if (stage >= 5) continue;
-      final uid = r['user_id'] as String;
       if (nextDue.compareTo(today) <= 0) dueByStudent[uid] = (dueByStudent[uid] ?? 0) + 1;
       if (nextDue.compareTo(today) < 0) overdueByStudent[uid] = (overdueByStudent[uid] ?? 0) + 1;
     }
@@ -2023,6 +2070,7 @@ class _CollectionDetailSheet extends StatefulWidget {
 class _CollectionDetailSheetState extends State<_CollectionDetailSheet> {
   List<Map<String, dynamic>> _rows = [];
   bool _loading = true;
+  bool _loadError = false;
 
   @override
   void initState() {
@@ -2043,8 +2091,9 @@ class _CollectionDetailSheetState extends State<_CollectionDetailSheet> {
           _loading = false;
         });
       }
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
+    } catch (e) {
+      print('[CollectionDetailSheet] load failed: $e');
+      if (mounted) setState(() { _loading = false; _loadError = true; });
     }
   }
 
@@ -2126,6 +2175,11 @@ class _CollectionDetailSheetState extends State<_CollectionDetailSheet> {
         Divider(color: context.border, height: 1),
         if (_loading)
           const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator()))
+        else if (_loadError)
+          Padding(
+            padding: const EdgeInsets.all(40),
+            child: Center(child: Text("Couldn't load progress", style: TextStyle(color: context.textMuted))),
+          )
         else
           Flexible(
             child: Builder(builder: (context) {
@@ -2230,6 +2284,7 @@ class _StreakCalendarSheet extends StatefulWidget {
 class _StreakCalendarSheetState extends State<_StreakCalendarSheet> {
   Set<String> _studyDates = {};
   bool _loading = true;
+  bool _loadError = false;
   late int _currentYear;
   late int _currentMonth;
 
@@ -2257,8 +2312,9 @@ class _StreakCalendarSheetState extends State<_StreakCalendarSheet> {
           _loading = false;
         });
       }
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
+    } catch (e) {
+      print('[StreakCalendarSheet] load failed: $e');
+      if (mounted) setState(() { _loading = false; _loadError = true; });
     }
   }
 
@@ -2320,6 +2376,11 @@ void _prevMonth() => setState(() {
         const SizedBox(height: 16),
         if (_loading)
           const Padding(padding: EdgeInsets.symmetric(vertical: 24), child: Center(child: CircularProgressIndicator()))
+        else if (_loadError)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: Text("Couldn't load calendar", style: TextStyle(color: context.textMuted))),
+          )
         else
           Container(
             decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(16)),

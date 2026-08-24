@@ -37,6 +37,15 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
     }
   }
 
+  // Scoped by teacher id, not just folder id — this cache is a static Map
+  // shared across the whole process lifetime, so keying it by folder id
+  // alone meant switching accounts on a shared device (without a full app
+  // restart, and independent of whether clearCache() below was actually
+  // called on every sign-out path) could show one teacher's cached unit
+  // list to whoever signs in next, before the real (teacher_id-filtered)
+  // query overwrote it.
+  String get _cacheKey => '${currentUser?.id}_${widget.folderId}';
+
   List<_Unit> _units = [];
   bool _loading = true;
   bool _hasError = false;
@@ -50,8 +59,8 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
   @override
   void initState() {
     super.initState();
-    if (_cache.containsKey(widget.folderId)) {
-      _units = _cache[widget.folderId]!;
+    if (_cache.containsKey(_cacheKey)) {
+      _units = _cache[_cacheKey]!;
       _loading = false;
     }
     _load();
@@ -75,7 +84,7 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
           wordCount: words?.isNotEmpty == true ? (words![0]['count'] as num?)?.toInt() ?? 0 : 0,
         );
       }).toList();
-      _cachePut(widget.folderId, units);
+      _cachePut(_cacheKey, units);
       if (mounted) setState(() { _units = units; _loading = false; _hasError = false; });
     } catch (_) {
       // Only surface the error state when there's nothing to show already —
@@ -197,7 +206,19 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
     List assignedHw = const [];
     try {
       assignedHw = await supabase.from('class_homework').select('id').eq('unit_id', unit.id);
-    } catch (_) {}
+    } catch (e) {
+      // A failed safety check used to silently fall through with
+      // assignedHw still empty, showing the confirmation dialog's benign
+      // "just deletes the words" wording right before an actually
+      // cascading, irreversible delete — the teacher would confidently
+      // proceed with no idea homework/student progress was also about to
+      // be wiped. Bail out of the whole delete flow instead of guessing.
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not verify homework impact — try again: $e'), duration: const Duration(seconds: 3)));
+      }
+      return;
+    }
     if (!mounted) return;
     final ok = await showDialog<bool>(
       context: context,

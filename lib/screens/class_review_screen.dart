@@ -25,6 +25,7 @@ class ClassReviewScreen extends StatefulWidget {
 class _ClassReviewScreenState extends State<ClassReviewScreen>
     with SingleTickerProviderStateMixin {
   bool _loading = true;
+  bool _loadError = false;
   List<_ReviewCard> _cards = [];
   int _index = 0;
   bool _flipped = false;
@@ -77,22 +78,35 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
             .order('created_at');
         if (mounted) {
           setState(() {
-            _cards = (data as List).map((e) {
-              final m = Map<String, dynamic>.from(e as Map);
-              return _ReviewCard(
-                word: m['word'] as String,
-                translation: m['translation'] as String? ?? '',
-                definition: m['definition'] as String?,
-                example: m['example1'] as String?,
-                exampleTranslation: m['example1_translation'] as String?,
-              );
-            }).toList();
+            // `word` used to be a non-null `as String` cast — a single
+            // malformed row (null word) threw out of this whole map(),
+            // getting caught by the generic catch below and landing on the
+            // exact same empty _cards/loading=false state as a genuinely
+            // finished review queue, which then rendered "All caught up!"
+            // for what was actually a failed load.
+            _cards = (data as List)
+                .map((e) => Map<String, dynamic>.from(e as Map))
+                .where((m) => m['word'] is String)
+                .map((m) => _ReviewCard(
+                      word: m['word'] as String,
+                      translation: m['translation'] as String? ?? '',
+                      definition: m['definition'] as String?,
+                      example: m['example1'] as String?,
+                      exampleTranslation: m['example1_translation'] as String?,
+                    ))
+                .toList();
             _loading = false;
+            _loadError = false;
           });
         }
       }
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
+    } catch (e) {
+      // A bare catch previously gave "load failed" the exact same UI as
+      // "genuinely nothing due" (both landed on _cards.isEmpty showing
+      // "All caught up!" 🎉) — now distinguished so a real failure shows a
+      // retry instead of a misleadingly cheerful success message.
+      print('[ClassReviewScreen] load failed: $e');
+      if (mounted) setState(() { _loading = false; _loadError = true; });
     }
   }
 
@@ -177,6 +191,19 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
   Widget _buildBody(BuildContext context) {
     if (_loading) {
       return Center(child: CircularProgressIndicator(color: context.primary));
+    }
+
+    if (_loadError) {
+      return Center(child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('⚠️', style: TextStyle(fontSize: 48)),
+            const SizedBox(height: 12),
+            Text("Couldn't load review words", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+            const SizedBox(height: 16),
+            ElevatedButton(onPressed: _load, child: const Text('Try again')),
+          ]),
+        ));
     }
 
     if (_cards.isEmpty) {

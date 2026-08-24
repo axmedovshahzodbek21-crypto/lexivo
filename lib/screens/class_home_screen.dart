@@ -96,6 +96,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
   Map<String, int> _readCounts = {};
   int _myClassXp = 0;
   int _classStreak = 0;
+  bool _loadError = false;
 
   static const _prefsPrefix = 'class_home_v1_';
 
@@ -227,11 +228,19 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
       final anns = (results[0] as List)
           .map((a) => ClassAnnouncement.fromMap(Map<String, dynamic>.from(a as Map)))
           .toList();
+      // get_class_member_ids() isn't tracked in this repo's migrations (it
+      // was created directly via the Supabase SQL editor), so its returned
+      // shape can't be verified here — a hard `as String` cast on a field
+      // that's actually named differently, or null for one row, would throw
+      // and abort this entire _load() over that single row, same risk class
+      // as the RPC field-mapping issue already fixed elsewhere. Skip
+      // whichever rows don't have a usable student_id instead.
       final membersList = results[1] as List;
-      final memberCount = membersList.length;
       final memberIds = membersList
-          .map((m) => (m as Map)['student_id'] as String)
+          .map((m) => (m as Map)['student_id'] as String?)
+          .whereType<String>()
           .toList();
+      final memberCount = memberIds.length;
 
       // ── Group 2: parallel dependent fetches ───────────────────────────────
       List<ClassTarget> targets = [];
@@ -353,6 +362,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
           _readCounts = readCounts;
           _myClassXp = myClassXp;
           _loading = false;
+          _loadError = false;
         });
       }
 
@@ -371,8 +381,18 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
       );
       _cache[widget.classId] = newCache;
       _saveToPrefs(newCache);
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
+    } catch (e) {
+      // Previously swallowed with zero trace. A background refresh over
+      // already-shown (cached or previously-loaded) data fails silently —
+      // there's a pull-to-refresh the user can retry, and stale-but-valid
+      // data is better than an error banner replacing it. A true first-load
+      // failure (nothing to show at all) gets a retry banner instead of
+      // silently looking like an empty class.
+      print('[ClassHomeScreen] load failed: $e');
+      if (mounted) setState(() {
+        _loading = false;
+        _loadError = _announcements.isEmpty && _targets.isEmpty && _teacherName.isEmpty;
+      });
     } finally {
       safetyNet.cancel();
     }
@@ -461,6 +481,21 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_loadError) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            const Text('⚠️', style: TextStyle(fontSize: 48)),
+            const SizedBox(height: 12),
+            Text("Couldn't load this class", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+            const SizedBox(height: 16),
+            ElevatedButton(onPressed: _load, child: const Text('Try again')),
+          ]),
+        ),
+      );
     }
 
     final color = _classColor(widget.classId);

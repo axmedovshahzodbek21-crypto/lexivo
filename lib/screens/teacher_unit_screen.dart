@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/supabase_service.dart';
@@ -135,6 +136,13 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
     }
   }
 
+  // Scoped by teacher id, not just unit id — same reasoning as
+  // TeacherFolderScreen's _cacheKey: a static, process-lifetime cache keyed
+  // only by unit id could show one teacher's cached word list to whoever
+  // signs in next on the same device, regardless of whether clearCache()
+  // was actually called on every sign-out path.
+  String get _cacheKey => '${currentUser?.id}_${widget.unitId}';
+
   late TabController _tabs;
   List<_Word> _words = [];
   bool _loading = true;
@@ -146,6 +154,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
   final _wordsInputCtrl = TextEditingController();
   final _pasteCtrl = TextEditingController();
   List<_ParsedWord> _parsed = [];
+  Timer? _parseDebounce;
 
   static const _langs = ['English', 'Uzbek', 'Russian', 'Turkish', 'German', 'French', 'Spanish', 'Korean', 'Japanese', 'Chinese', 'Arabic'];
 
@@ -155,8 +164,8 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
     _tabs = TabController(length: 2, vsync: this);
     _tabs.addListener(() { if (mounted) setState(() {}); });
     _pasteCtrl.addListener(_onPasteChange);
-    if (_cache.containsKey(widget.unitId)) {
-      _words = _cache[widget.unitId]!;
+    if (_cache.containsKey(_cacheKey)) {
+      _words = _cache[_cacheKey]!;
       _loading = false;
     }
     _load();
@@ -165,14 +174,22 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
   @override
   void dispose() {
     _tabs.dispose();
+    _parseDebounce?.cancel();
     _pasteCtrl.removeListener(_onPasteChange);
     _pasteCtrl.dispose();
     _wordsInputCtrl.dispose();
     super.dispose();
   }
 
+  // Debounced — _parseOutput does a full regex re-parse of the pasted
+  // text, and this listener fires on every keystroke (not just the single
+  // paste event), so editing a large AI-generated block afterward re-ran
+  // that parse from scratch on every character typed.
   void _onPasteChange() {
-    if (mounted) setState(() => _parsed = _parseOutput(_pasteCtrl.text));
+    _parseDebounce?.cancel();
+    _parseDebounce = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) setState(() => _parsed = _parseOutput(_pasteCtrl.text));
+    });
   }
 
   void _copyPrompt(BuildContext context, {required bool hasTranslations}) {
@@ -196,7 +213,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
           .order('position')
           .order('created_at');
       final words = (data as List).map((e) => _Word.fromMap(Map<String, dynamic>.from(e as Map))).toList();
-      _cachePut(widget.unitId, words);
+      _cachePut(_cacheKey, words);
       if (mounted) {
         setState(() {
           _words = words;
@@ -269,7 +286,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
       return;
     }
     if (mounted) setState(() => _words.removeWhere((w) => w.id == id));
-    _cachePut(widget.unitId, _words);
+    _cachePut(_cacheKey, _words);
   }
 
   bool _selectMode = false;
@@ -333,7 +350,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
           _selectMode = false;
         });
       }
-      _cachePut(widget.unitId, _words);
+      _cachePut(_cacheKey, _words);
     }
   }
 

@@ -16,6 +16,7 @@ class _ClassesScreenState extends State<ClassesScreen> {
   int _createdCount = 0;
   int _joinedCount = 0;
   bool _loading = true;
+  bool _loadError = false;
   final _joinCtrl = TextEditingController();
   String _joinError = '';
   bool _joining = false;
@@ -62,10 +63,15 @@ class _ClassesScreenState extends State<ClassesScreen> {
           _createdCount = (results[0] as List).length;
           _joinedCount = (results[1] as List).length;
           _loading = false;
+          _loadError = false;
         });
       }
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
+    } catch (e) {
+      // A failed count fetch used to leave _createdCount/_joinedCount at 0,
+      // rendered identically to "no classes yet"/"not enrolled yet" —
+      // indistinguishable from a genuinely new account.
+      print('[ClassesScreen] _loadCounts failed: $e');
+      if (mounted) setState(() { _loading = false; _loadError = true; });
     }
   }
 
@@ -185,7 +191,7 @@ class _ClassesScreenState extends State<ClassesScreen> {
                       children: [
                         _buildHubCard(
                           title: tr('my_classes'),
-                          subtitle: _createdCount == 0 ? 'No classes yet' : '$_createdCount class${_createdCount != 1 ? 'es' : ''} created',
+                          subtitle: _loadError ? "Couldn't load — pull to retry" : (_createdCount == 0 ? 'No classes yet' : '$_createdCount class${_createdCount != 1 ? 'es' : ''} created'),
                           emoji: '🏫',
                           colors: [const Color(0xFF6366F1), const Color(0xFF8B5CF6)],
                           onTap: () => _pushOnce(MaterialPageRoute(builder: (_) => const CreatedClassesScreen())).then((_) => _loadCounts()),
@@ -193,7 +199,7 @@ class _ClassesScreenState extends State<ClassesScreen> {
                         const SizedBox(height: 16),
                         _buildHubCard(
                           title: tr('joined_classes'),
-                          subtitle: _joinedCount == 0 ? 'Not enrolled yet' : '$_joinedCount class${_joinedCount != 1 ? 'es' : ''} joined',
+                          subtitle: _loadError ? "Couldn't load — pull to retry" : (_joinedCount == 0 ? 'Not enrolled yet' : '$_joinedCount class${_joinedCount != 1 ? 'es' : ''} joined'),
                           emoji: '🎓',
                           colors: [const Color(0xFF10B981), const Color(0xFF06B6D4)],
                           onTap: () => _pushOnce(MaterialPageRoute(builder: (_) => const JoinedClassesScreen())).then((_) => _loadCounts()),

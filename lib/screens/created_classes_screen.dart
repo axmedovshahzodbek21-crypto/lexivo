@@ -34,6 +34,7 @@ class CreatedClassesScreen extends StatefulWidget {
 class _CreatedClassesScreenState extends State<CreatedClassesScreen> {
   List<ClassRow> _myClasses = [];
   bool _loading = true;
+  bool _loadError = false;
   String? _copiedId;
   // A fast double-tap on a card could fire Navigator.push twice before the
   // first push's route transition even begins, stacking a duplicate route.
@@ -87,10 +88,16 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> {
         }
       }
       _cache[user.id] = myClasses;
-      if (mounted) setState(() { _myClasses = myClasses; _loading = false; });
+      if (mounted) setState(() { _myClasses = myClasses; _loading = false; _loadError = false; });
       WidgetService.pushClasses(myClasses, {});
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
+    } catch (e) {
+      // Only surface an error state when there's nothing cached to fall
+      // back on — otherwise a failed background refresh keeps showing
+      // stale-but-valid data, same convention as elsewhere in this file.
+      // Previously always looked identical to "you haven't created any
+      // classes yet" regardless of which one it actually was.
+      print('[CreatedClassesScreen] load failed: $e');
+      if (mounted) setState(() { _loading = false; _loadError = _myClasses.isEmpty; });
     }
   }
 
@@ -179,7 +186,7 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> {
                       _buildLibraryBanner(),
                       const SizedBox(height: 16),
                       if (_myClasses.isEmpty)
-                        _emptyCard('📋', tr('no_classes_yet'))
+                        _emptyCard('📋', _loadError ? "Couldn't load — pull to retry" : tr('no_classes_yet'))
                       else
                         GridView.builder(
                           shrinkWrap: true,

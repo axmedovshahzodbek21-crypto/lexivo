@@ -248,7 +248,19 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
         assignedHw = await supabase.from('class_homework').select('id').inFilter('unit_id', unitIds);
       }
       assignedClasses = await supabase.from('class_library_assignments').select('id').eq('folder_id', folder.id);
-    } catch (_) {}
+    } catch (e) {
+      // A failed safety check used to silently fall through with both
+      // lists still empty, showing the confirmation dialog's benign "just
+      // deletes the folder" wording right before an actually cascading,
+      // irreversible delete — the teacher would confidently proceed with
+      // no idea homework/class access was also about to be wiped. Bail out
+      // of the whole delete flow instead of guessing.
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not verify homework/class impact — try again: $e'), duration: const Duration(seconds: 3)));
+      }
+      return;
+    }
     if (!mounted) return;
     final warnings = <String>[];
     if (assignedHw.isNotEmpty) {

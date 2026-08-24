@@ -203,6 +203,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   Map<String, Set<String>> _completedModes = {};
   int _totalAssigned = 0;
   int _totalDone = 0;
+  bool _loadError = false;
 
   @override
   void initState() {
@@ -217,7 +218,12 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   }
 
   void _applyCache(_HwCache c) {
-    _folders = c.folders.map((f) => _AssignedFolder(id: f.id, assignmentId: f.assignmentId, name: f.name, units: List.from(f.units))).toList();
+    // showAll isn't part of the constructor (or the JSON shape below) — it
+    // has to be carried over explicitly, or every remount that hydrates
+    // from cache (in-memory or prefs) silently re-collapsed any folder the
+    // teacher had expanded, since the fresh _AssignedFolder always defaults
+    // it back to false.
+    _folders = c.folders.map((f) => _AssignedFolder(id: f.id, assignmentId: f.assignmentId, name: f.name, units: List.from(f.units))..showAll = f.showAll).toList();
     _cwUnits = c.cwUnits;
     _collHwItems = c.collHwItems;
     _passageItems = c.passageItems;
@@ -271,7 +277,12 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   }
 
   Future<void> _load({bool background = false}) async {
-    final isFirstLoad = _folders.isEmpty && _cwUnits.isEmpty && _collHwItems.isEmpty;
+    // Omitting _passageItems here meant a class with only reading-passage
+    // homework (the other three lists legitimately always empty for it)
+    // was treated as "first load" on every refresh, not just the true
+    // first one — flashing the full-screen spinner instead of doing a
+    // quiet background refresh.
+    final isFirstLoad = _folders.isEmpty && _cwUnits.isEmpty && _collHwItems.isEmpty && _passageItems.isEmpty;
     if (!background && isFirstLoad && mounted) setState(() => _loading = true);
     try {
       final userId = currentUser?.id;
@@ -357,6 +368,13 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
         else if (cwid != null) { hwByCWUnit[cwid] = h; }
         else if (collName != null) { collHwRows.add(h); }
         else if (passageId != null) { passageHwRows.add(h); }
+        else {
+          // None of the four "kind" columns is set — this row can't be
+          // classified into any bucket below and previously just vanished
+          // from the UI with no trace, making a genuinely corrupt/orphaned
+          // class_homework row indistinguishable from "everything's fine."
+          print('[ClassHomeworkTab] homework row ${h['id']} has no unit_id/class_unit_id/collection_name/passage_id — skipping');
+        }
       }
 
       // ── 7. Build library folder list ────────────────────────────────────
@@ -398,37 +416,58 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
       }).toList();
 
       // ── 9. Build collection HW items ────────────────────────────────────
+      // Each row wrapped in its own try/catch — an unguarded hard cast
+      // (e.g. a malformed day_number) previously threw straight out of this
+      // loop into the outer catch, silently aborting the *entire* load
+      // (every folder, unit, and homework item) over one bad row, which is
+      // inconsistent with the defensive teacher_folders filtering just
+      // above (phase 1) that skips one bad row instead of failing the batch.
       final collHwItems = <_CollHW>[];
       for (final h in collHwRows) {
-        final name = h['collection_name'] as String;
-        final dayNum = (h['day_number'] as num).toInt();
-        final col = collectionByName(name);
-        final day = col?.days.firstWhere((d) => d.dayNumber == dayNum, orElse: () => WordDay(dayNumber: dayNum, topic: 'Day $dayNum', words: []));
-        collHwItems.add(_CollHW(
-          homeworkId: h['id'] as String,
-          collectionName: name,
-          dayNumber: dayNum,
-          topic: day?.topic ?? 'Day $dayNum',
-          wordCount: day?.words.length ?? 0,
-          hwModes: List<String>.from(h['modes'] as List? ?? []),
-          hwDue: h['due_date'] as String?,
-        ));
+        try {
+          final name = h['collection_name'] as String;
+          final dayNum = (h['day_number'] as num).toInt();
+          final col = collectionByName(name);
+          // An unrecognized/renamed collection name silently fell back to a
+          // placeholder "Day N" topic with 0 words with no trace — logging
+          // it at least makes a stale/renamed collection reference visible
+          // instead of just quietly showing a blank-looking homework card.
+          if (col == null) {
+            print('[ClassHomeworkTab] homework ${h['id']} references unknown collection "$name"');
+          }
+          final day = col?.days.firstWhere((d) => d.dayNumber == dayNum, orElse: () => WordDay(dayNumber: dayNum, topic: 'Day $dayNum', words: []));
+          collHwItems.add(_CollHW(
+            homeworkId: h['id'] as String,
+            collectionName: name,
+            dayNumber: dayNum,
+            topic: day?.topic ?? 'Day $dayNum',
+            wordCount: day?.words.length ?? 0,
+            hwModes: List<String>.from(h['modes'] as List? ?? []),
+            hwDue: h['due_date'] as String?,
+          ));
+        } catch (e) {
+          print('[ClassHomeworkTab] failed to build collection homework item ${h['id']}: $e');
+        }
       }
 
       // ── 9b. Build reading passage HW items ──────────────────────────────
       final passageItems = <_PassageHW>[];
       for (final h in passageHwRows) {
-        final passageId = h['passage_id'] as int;
-        ReadingPassage? found;
-        for (final p in readingPassages) { if (p.id == passageId) { found = p; break; } }
-        passageItems.add(_PassageHW(
-          homeworkId: h['id'] as String,
-          passageId: passageId,
-          title: found?.title ?? 'Reading Passage',
-          topic: found?.topic ?? '',
-          hwModes: List<String>.from(h['modes'] as List? ?? ['read']),
-          hwDue: h['due_date'] as String?,
-        ));
+        try {
+          final passageId = h['passage_id'] as int;
+          ReadingPassage? found;
+          for (final p in readingPassages) { if (p.id == passageId) { found = p; break; } }
+          passageItems.add(_PassageHW(
+            homeworkId: h['id'] as String,
+            passageId: passageId,
+            title: found?.title ?? 'Reading Passage',
+            topic: found?.topic ?? '',
+            hwModes: List<String>.from(h['modes'] as List? ?? ['read']),
+            hwDue: h['due_date'] as String?,
+          ));
+        } catch (e) {
+          print('[ClassHomeworkTab] failed to build passage homework item ${h['id']}: $e');
+        }
       }
 
       // ── 10. Totals ──────────────────────────────────────────────────────
@@ -478,6 +517,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
         _totalAssigned = assigned;
         _totalDone = done;
         _loading = false;
+        _loadError = false;
       }); }
 
       final cache = _HwCache(
@@ -486,19 +526,41 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
       );
       if (_cacheKey != null) _cachePut(_cacheKey!, cache);
       _saveToPrefs(cache);
-    } catch (_) {
+    } catch (e) {
       // _folders/_cwUnits/etc. are only ever reassigned above on a full
       // success, so on error they still hold whatever was showing before
       // this call (cached data for a background refresh, or the initial
       // empty state for a true first load) — just stop the spinner rather
-      // than clearing anything.
-      if (mounted) setState(() => _loading = false);
+      // than clearing anything. Previously swallowed with zero trace — now
+      // logged, and surfaced as a retry banner when there's nothing cached
+      // to fall back on (a background refresh failure over stale-but-valid
+      // data stays silent, matching the comment above).
+      print('[ClassHomeworkTab] load failed: $e');
+      if (mounted) setState(() {
+        _loading = false;
+        _loadError = _folders.isEmpty && _cwUnits.isEmpty && _collHwItems.isEmpty && _passageItems.isEmpty;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
+
+    if (_loadError) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            const Text('⚠️', style: TextStyle(fontSize: 48)),
+            const SizedBox(height: 12),
+            Text("Couldn't load homework", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+            const SizedBox(height: 16),
+            ElevatedButton(onPressed: () => _load(), child: const Text('Try again')),
+          ]),
+        ),
+      );
+    }
 
     if (widget.isTeacher) {
       return Center(

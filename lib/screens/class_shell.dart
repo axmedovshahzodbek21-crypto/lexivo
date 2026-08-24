@@ -36,6 +36,12 @@ class _ClassShellState extends State<ClassShell> {
   bool _verifying = true;
   bool _authorized = false;
   bool _isTeacher = false;
+  // Distinguishes "verification request itself failed" (offline, timeout,
+  // transient network error) from a genuine "not a member of this class" —
+  // both used to collapse into the same _authorized = false lockout screen
+  // ("Ask the teacher for the join code..."), which is actively wrong and
+  // misleading for a legitimate member who's just offline.
+  bool _verificationError = false;
 
   @override
   void initState() {
@@ -54,11 +60,12 @@ class _ClassShellState extends State<ClassShell> {
   Future<void> _verifyRole() async {
     final user = currentUser;
     if (user == null) {
-      if (mounted) setState(() { _verifying = false; _authorized = false; });
+      if (mounted) setState(() { _verifying = false; _authorized = false; _verificationError = false; });
       return;
     }
     bool isTeacher = false;
     bool authorized = false;
+    bool verificationError = false;
     try {
       final cls = await supabase.from('classes').select('teacher_id').eq('id', widget.classId).maybeSingle();
       if (cls != null && cls['teacher_id'] == user.id) {
@@ -71,11 +78,13 @@ class _ClassShellState extends State<ClassShell> {
       }
     } catch (_) {
       authorized = false;
+      verificationError = true;
     }
     if (!mounted) return;
     setState(() {
       _isTeacher = isTeacher;
       _authorized = authorized;
+      _verificationError = verificationError;
       _verifying = false;
       if (authorized) _buildScreens();
     });
@@ -202,6 +211,7 @@ class _ClassShellState extends State<ClassShell> {
     }
 
     if (!_authorized || _screens == null) {
+      final offline = _verificationError;
       return Scaffold(
         backgroundColor: context.bg,
         appBar: AppBar(
@@ -216,14 +226,34 @@ class _ClassShellState extends State<ClassShell> {
           child: Padding(
             padding: const EdgeInsets.all(32),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Text('🔒', style: TextStyle(fontSize: 56)),
+              Text(offline ? '📡' : '🔒', style: const TextStyle(fontSize: 56)),
               const SizedBox(height: 16),
-              Text("You don't have access to this class",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
+              Text(
+                offline ? "Couldn't check your access" : "You don't have access to this class",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText),
+              ),
               const SizedBox(height: 8),
-              Text('Ask the teacher for the join code, or check that you joined the right class.',
+              Text(
+                offline
+                    ? 'Check your connection and try again.'
+                    : 'Ask the teacher for the join code, or check that you joined the right class.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: context.textMuted)),
+                style: TextStyle(color: context.textMuted),
+              ),
+              if (offline) ...[
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() => _verifying = true);
+                    _verifyRole();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: context.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Try again', style: TextStyle(color: Colors.white)),
+                ),
+              ],
             ]),
           ),
         ),

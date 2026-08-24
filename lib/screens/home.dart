@@ -96,6 +96,13 @@ class _HomeScreenState extends State<HomeScreen>
   // Class cards
   List<HomeClassCard> _homeClasses = [];
 
+  // Throttles didChangeAppLifecycleState's resume-triggered pullAll() —
+  // without this, repeatedly backgrounding/foregrounding the app (checking
+  // a notification, alt-tabbing on desktop) fired a full cloud sync every
+  // single time, hammering Supabase with redundant requests.
+  DateTime? _lastResumeSync;
+  static const _resumeSyncCooldown = Duration(seconds: 60);
+
   bool get _isDesktop =>
       defaultTargetPlatform == TargetPlatform.windows ||
       defaultTargetPlatform == TargetPlatform.macOS ||
@@ -122,6 +129,7 @@ class _HomeScreenState extends State<HomeScreen>
     _pickWordOfDay();
     _loadStats();
     _loadClasses();
+    _lastResumeSync = DateTime.now();
     SyncService.pullAll().then((_) { if (mounted) { _loadStats(); _loadClasses(); } });
     appLangNotifier.addListener(_onLangChange);
   }
@@ -149,6 +157,11 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      final now = DateTime.now();
+      if (_lastResumeSync != null && now.difference(_lastResumeSync!) < _resumeSyncCooldown) {
+        return;
+      }
+      _lastResumeSync = now;
       SyncService.pullAll().then((_) { if (mounted) { _loadStats(); _loadClasses(); } });
     }
   }
@@ -186,18 +199,33 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _loadStats() async {
-    final learned = await StorageService.getLearnedWords();
-    final reviewDays   = await StorageService.getReviewDays();
-    final wordGoalDays = await StorageService.getWordGoalDays();
+    // Matches _loadClasses' convention below: a single bad read (e.g.
+    // malformed cached JSON in one SharedPreferences key) used to throw
+    // uncaught here, leaving whichever screen's `.then((_) => _loadStats())`
+    // triggered this call with an unhandled Future error and the home
+    // screen's stats stuck on stale/default values instead of just skipping
+    // this refresh and keeping whatever was already showing.
+    final List<LearnedWord> learned;
+    final List<String> reviewDays, wordGoalDays;
+    final List<DueSRSWord> dueWords;
+    final int xp, freezes, todayCount, skippedCount;
+    final SharedPreferences prefs;
+    try {
+      learned = await StorageService.getLearnedWords();
+      reviewDays   = await StorageService.getReviewDays();
+      wordGoalDays = await StorageService.getWordGoalDays();
+      dueWords = await StorageService.getDueWords();
+      xp = await StorageService.getXP();
+      freezes = await StorageService.getFreezesAvailable();
+      prefs = await SharedPreferences.getInstance();
+      todayCount = await StorageService.getTodayLearnedCount();
+      skippedCount = await StorageService.getTotalSkippedWordsCount();
+    } catch (_) {
+      return;
+    }
     final completeDays = reviewDays.where((d) => wordGoalDays.contains(d)).toList();
     final streak = _homeCalcStreak(completeDays);
-    final dueWords = await StorageService.getDueWords();
-    final xp = await StorageService.getXP();
-    final freezes = await StorageService.getFreezesAvailable();
-    final prefs = await SharedPreferences.getInstance();
     final goal = prefs.getInt('daily_word_goal') ?? widget.dailyWordGoal;
-    final todayCount = await StorageService.getTodayLearnedCount();
-    final skippedCount = await StorageService.getTotalSkippedWordsCount();
     final userName = prefs.getString('user_name') ?? '';
     final profileImagePath = prefs.getString('profile_image_path');
     final profileImageUrl = prefs.getString('profile_image_url');
@@ -427,7 +455,12 @@ class _HomeScreenState extends State<HomeScreen>
   bool get _limitReached => _todayLearned >= _dailyGoal;
 
   void _showTodayWordsSheet() async {
-    final words = await StorageService.getTodayLearnedWords();
+    final List<LearnedWord> words;
+    try {
+      words = await StorageService.getTodayLearnedWords();
+    } catch (_) {
+      return;
+    }
     if (!mounted) return;
     showModalBottomSheet(
       context: context,

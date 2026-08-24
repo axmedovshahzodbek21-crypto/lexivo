@@ -35,21 +35,40 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   void _onLangChange() { if (mounted) setState(() {}); }
 
   void _nextPage() => setState(() => _currentPage++);
+  void _prevPage() { if (_currentPage > 0) setState(() => _currentPage--); }
 
+  // A system/gesture back press used to pop this whole route immediately
+  // regardless of which step the user was on, silently discarding
+  // _userName/_englishLevel/_dailyWordGoal entered so far. Now it steps
+  // back one page at a time instead, and only actually exits the flow
+  // (back to whatever pushed it) once already on the first page.
   @override
   Widget build(BuildContext context) {
-    switch (_currentPage) {
-      case 0:
-        return _buildNamePage(context);
-      case 1:
-        return _buildLanguageLevelPage(context);
-      case 2:
-        return _buildDailyGoalPage(context);
-      case 3:
-        return _buildHowItWorksPage(context);
-      default:
-        return _buildNamePage(context);
-    }
+    return PopScope(
+      canPop: _currentPage == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _prevPage();
+      },
+      child: switch (_currentPage) {
+        0 => _buildNamePage(context),
+        1 => _buildLanguageLevelPage(context),
+        2 => _buildDailyGoalPage(context),
+        3 => _buildHowItWorksPage(context),
+        _ => _buildNamePage(context),
+      },
+    );
+  }
+
+  Widget _buildBackButton(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: IconButton(
+        onPressed: _prevPage,
+        icon: Icon(Icons.arrow_back_rounded, color: context.appText),
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
+      ),
+    );
   }
 
   // ─── Page 1: Name ─────────────────────────────────────────────────────────
@@ -144,7 +163,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 40),
+              _buildBackButton(context),
+              const SizedBox(height: 16),
               Text(
                 tr('hi_name').replaceFirst('{name}', _userName),
                 style: TextStyle(
@@ -238,7 +258,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 40),
+              _buildBackButton(context),
+              const SizedBox(height: 16),
               Text(
                 tr('daily_word_goal_title'),
                 style: TextStyle(
@@ -316,7 +337,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 20),
+              _buildBackButton(context),
+              const SizedBox(height: 8),
               Text(
                 tr('how_lexivo_works'),
                 style: TextStyle(
@@ -371,10 +393,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                     final prefs = await SharedPreferences.getInstance();
                     await prefs.setBool('onboarding_completed', true);
                     await prefs.setString('user_name', _userName);
-                    await prefs.setString('name_updated_at', DateTime.now().toIso8601String());
                     await prefs.setString('english_level', _englishLevel);
                     await prefs.setString('language_level', _englishLevel);
-                    await prefs.setString('language_level_updated_at', DateTime.now().toIso8601String());
                     await prefs.setString('word_source', 'prebuilt');
                     await prefs.setString('example_style', 'reallife');
                     await prefs.setString('user_profile', 'general');

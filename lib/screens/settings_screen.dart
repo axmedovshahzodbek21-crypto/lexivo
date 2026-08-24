@@ -92,7 +92,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _saveName(String name) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_name', name);
-    await prefs.setString('name_updated_at', DateTime.now().toUtc().toIso8601String());
     if (mounted) setState(() => _userName = name);
     SyncService.pushSettings();
     final user = currentUser;
@@ -432,7 +431,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('english_level', level);
     await prefs.setString('language_level', level);
-    await prefs.setString('language_level_updated_at', DateTime.now().toIso8601String());
     if (mounted) setState(() => _englishLevel = level);
     // Without this, sync_settings_ts never advances for this change, so the
     // next pullAll() (fired on every app resume) can see a lower local

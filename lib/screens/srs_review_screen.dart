@@ -44,6 +44,16 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   int _shuffledKnew = 0;
   int _shuffledNotYet = 0;
 
+  // Re-entrancy guard for _toggleShuffle: unlike _gradesApplied (a one-shot
+  // flag for the whole screen), the shuffle button can be pressed many times
+  // in a session, so this is reset after each call instead of staying true
+  // forever. Without it, a fast double-tap re-enters _toggleShuffle while the
+  // first call's persistence loop is still awaiting, and the second call
+  // computes the same gradedCount from the still-unmodified _history —
+  // re-applying reviewSRSWord/failSRSWord for the same already-graded words
+  // a second time before either call reaches the _history-clearing setState.
+  bool _togglingShuffle = false;
+
   // Quiz mode
   late List<List<String>?> _cardChoices;
   String? _tappedChoice;
@@ -156,44 +166,53 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   void _onLangChange() { if (mounted) setState(() {}); }
 
   Future<void> _toggleShuffle() async {
-    // Previously this cleared _history and rebuilt the queue from the full
-    // original word list without persisting anything — any words already
-    // graded this session had their SRS updates silently discarded, with
-    // no warning, and would be shown again for a second (duplicate) grade.
-    // Now: persist the already-graded prefix immediately, and only the
-    // remaining ungraded words go back into rotation (shuffled or not).
-    final gradedCount = _history.length;
-    for (int i = 0; i < gradedCount; i++) {
-      switch (_history[i]) {
-        case _Grade.knew:
-          await StorageService.reviewSRSWord(_queue[i]);
-          _shuffledKnew++;
-        case _Grade.notYet:
-          await StorageService.failSRSWord(_queue[i]);
-          _shuffledNotYet++;
-        case _Grade.skip:
-          break;
+    // Guard set synchronously, before the first await, so a second tap
+    // arriving while this call is still persisting grades is a no-op
+    // instead of re-entering with a stale (not-yet-cleared) _history.
+    if (_togglingShuffle) return;
+    _togglingShuffle = true;
+    try {
+      // Previously this cleared _history and rebuilt the queue from the full
+      // original word list without persisting anything — any words already
+      // graded this session had their SRS updates silently discarded, with
+      // no warning, and would be shown again for a second (duplicate) grade.
+      // Now: persist the already-graded prefix immediately, and only the
+      // remaining ungraded words go back into rotation (shuffled or not).
+      final gradedCount = _history.length;
+      for (int i = 0; i < gradedCount; i++) {
+        switch (_history[i]) {
+          case _Grade.knew:
+            await StorageService.reviewSRSWord(_queue[i]);
+            _shuffledKnew++;
+          case _Grade.notYet:
+            await StorageService.failSRSWord(_queue[i]);
+            _shuffledNotYet++;
+          case _Grade.skip:
+            break;
+        }
       }
+      if (!mounted) return;
+      // Filter graded words out of _originalQueue (not just take the tail of
+      // the possibly-already-shuffled _queue) so toggling shuffle back OFF
+      // still restores the words' true original order, not whatever order
+      // they happened to be left in.
+      final gradedWords = _queue.sublist(0, gradedCount).toSet();
+      final remaining = _originalQueue.where((w) => !gradedWords.contains(w)).toList();
+      setState(() {
+        _shuffled = !_shuffled;
+        _originalQueue = remaining;
+        _queue = _shuffled ? (List.from(remaining)..shuffle()) : List.from(remaining);
+        _currentIndex = 0;
+        _revealed = false;
+        _tappedChoice = null;
+        _choicesRevealed = false;
+        _history.clear();
+        _cardChoices = List.generate(_queue.length, (i) => _buildChoicesFor(i, {}));
+      });
+      if (_autoPlay && _queue.isNotEmpty) _speak(_queue[0].word);
+    } finally {
+      _togglingShuffle = false;
     }
-    if (!mounted) return;
-    // Filter graded words out of _originalQueue (not just take the tail of
-    // the possibly-already-shuffled _queue) so toggling shuffle back OFF
-    // still restores the words' true original order, not whatever order
-    // they happened to be left in.
-    final gradedWords = _queue.sublist(0, gradedCount).toSet();
-    final remaining = _originalQueue.where((w) => !gradedWords.contains(w)).toList();
-    setState(() {
-      _shuffled = !_shuffled;
-      _originalQueue = remaining;
-      _queue = _shuffled ? (List.from(remaining)..shuffle()) : List.from(remaining);
-      _currentIndex = 0;
-      _revealed = false;
-      _tappedChoice = null;
-      _choicesRevealed = false;
-      _history.clear();
-      _cardChoices = List.generate(_queue.length, (i) => _buildChoicesFor(i, {}));
-    });
-    if (_autoPlay && _queue.isNotEmpty) _speak(_queue[0].word);
   }
 
   SRSWord get _current => _queue[_currentIndex];

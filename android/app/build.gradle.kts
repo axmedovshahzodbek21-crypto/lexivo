@@ -15,6 +15,10 @@ compileOptions {
     isCoreLibraryDesugaringEnabled = true
 }
 
+buildFeatures {
+    resValues = true
+}
+
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.lexivo.app"
@@ -41,26 +45,32 @@ compileOptions {
     productFlavors {
         create("original") {
             dimension = "account"
+            resValue("string", "app_name", "Lexivo")
         }
         create("clone2") {
             dimension = "account"
             applicationIdSuffix = ".clone2"
+            resValue("string", "app_name", "Lexivo C2")
         }
         create("clone3") {
             dimension = "account"
             applicationIdSuffix = ".clone3"
+            resValue("string", "app_name", "Lexivo C3")
         }
         create("clone4") {
             dimension = "account"
             applicationIdSuffix = ".clone4"
+            resValue("string", "app_name", "Lexivo C4")
         }
         create("clone5") {
             dimension = "account"
             applicationIdSuffix = ".clone5"
+            resValue("string", "app_name", "Lexivo C5")
         }
         create("clone6") {
             dimension = "account"
             applicationIdSuffix = ".clone6"
+            resValue("string", "app_name", "Lexivo C6")
         }
     }
 }

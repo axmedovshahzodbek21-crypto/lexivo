@@ -100,7 +100,7 @@ class _ClassShellState extends State<ClassShell> {
         onGoToDashboard: _isTeacher ? () => setState(() => _tab = 4) : null,
         onGoToHomework: _isTeacher ? null : () => setState(() => _tab = 4),
       ),
-      ClassWordsScreen(classId: widget.classId, className: widget.className, isTeacher: _isTeacher, onGoHome: () => setState(() => _tab = 0)),
+      ClassWordsScreen(classId: widget.classId, className: widget.className, isTeacher: _isTeacher),
       if (!_isTeacher)
         ClassReviewScreen(classId: widget.classId, className: widget.className, embedded: true),
       // isVisible is patched in per-build by _screensForTab below — always

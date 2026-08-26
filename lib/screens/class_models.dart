@@ -133,6 +133,28 @@ class ClassDashboardStudent {
   );
 }
 
+/// A library-folder unit or class-word unit as shown in the homework tab,
+/// with its optional current-homework-assignment info attached. Previously
+/// redeclared twice in class_homework_tab.dart as byte-for-byte identical
+/// `_FolderUnit` and `_CWUnit` classes (same fields, same toJson/fromJson) —
+/// unified here since there was no actual behavioral difference between them.
+class HomeworkUnit {
+  final String id, name;
+  final int wordCount;
+  final String? homeworkId;
+  final List<String>? hwModes;
+  final String? hwDue;
+  const HomeworkUnit({required this.id, required this.name, required this.wordCount, this.homeworkId, this.hwModes, this.hwDue});
+  bool get hasHomework => homeworkId != null;
+  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'wordCount': wordCount, 'homeworkId': homeworkId, 'hwModes': hwModes, 'hwDue': hwDue};
+  static HomeworkUnit fromJson(Map<String, dynamic> m) => HomeworkUnit(
+    id: m['id'] as String, name: m['name'] as String, wordCount: m['wordCount'] as int? ?? 0,
+    homeworkId: m['homeworkId'] as String?,
+    hwModes: m['hwModes'] != null ? List<String>.from(m['hwModes'] as List) : null,
+    hwDue: m['hwDue'] as String?,
+  );
+}
+
 class ClassHomework {
   final String id, classId, teacherId, title, createdAt;
   final String? dueDate;

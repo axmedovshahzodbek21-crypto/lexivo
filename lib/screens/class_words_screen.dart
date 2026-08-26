@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/supabase_service.dart';
 import '../services/class_srs_service.dart';
+import '../services/ai_import.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import '../data/word_data.dart';
@@ -91,81 +92,31 @@ class _ParsedWord {
   List<Map<String, String>> examples = [];
 }
 
-List<_ParsedWord> _parseOutput(String text) {
-  final results = <_ParsedWord>[];
-  final blocks = text.split(RegExp(r'\n---\n|\n---$|^---\n', multiLine: true)).map((b) => b.trim()).where((b) => b.isNotEmpty).toList();
-  for (final block in blocks) {
-    final w = _ParsedWord();
-    final sentences = <int, String>{};
-    final translations = <int, String>{};
-    for (final line in block.split('\n')) {
-      final colon = line.indexOf(':');
-      if (colon < 0) continue;
-      final key = line.substring(0, colon).trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
-      final val = line.substring(colon + 1).trim();
-      switch (key) {
-        case 'word': w.word = val;
-        case 'translation': w.translation = val;
-        case 'definition': w.definition = val;
-        default:
-          final sentMatch = RegExp(r'^example (\d+)$').firstMatch(key);
-          final transMatch = RegExp(r'^example (\d+) translation$').firstMatch(key);
-          if (sentMatch != null) sentences[int.parse(sentMatch.group(1)!)] = val;
-          if (transMatch != null) translations[int.parse(transMatch.group(1)!)] = val;
-      }
-    }
-    final allNums = {...sentences.keys, ...translations.keys}.toList()..sort();
-    w.examples = allNums
-        .where((n) => sentences.containsKey(n))
-        .map((n) => {'sentence': sentences[n]!, 'translation': translations[n] ?? ''})
-        .toList();
-    if (w.word.isNotEmpty && w.translation.isNotEmpty) results.add(w);
-  }
-  return results;
-}
+// Prompt-building and response-parsing now live in
+// lib/services/ai_import.dart, shared with import_screen.dart and
+// teacher_unit_screen.dart. This screen's own copy was the least complete of
+// the three — no part of speech / pronunciation / Uzbek-definition fields,
+// and its `---`-only block splitter would silently merge multiple words into
+// one entry if the AI omitted a separator (see the shared file's doc comment
+// for details) — so switching to the shared implementation is a strict
+// improvement here, not just a dedup.
 
-String _buildPrompt(String wordLang, String translationLang, String words) {
-  final lang = wordLang.toLowerCase();
-  final tl = translationLang.toLowerCase();
-  return '''You are a vocabulary flashcard generator. Create detailed flashcard data for these $lang words, with translations in $tl.
-
-Words to process:
-$words
-
-For each word output exactly this format, separated by ---:
-
-Word: [the $lang word]
-Translation: [$tl translation]
-Definition: [short definition in $lang, max 20 words]
-Example 1: [natural sentence using the word in $lang]
-Example 1 Translation: [$tl translation of example 1]
-Example 2: [another natural sentence in $lang]
-Example 2 Translation: [$tl translation of example 2]
-Example 3: [another natural sentence in $lang]
-Example 3 Translation: [$tl translation of example 3]
-Example 4: [another natural sentence in $lang]
-Example 4 Translation: [$tl translation of example 4]
-Example 5: [another natural sentence in $lang]
-Example 5 Translation: [$tl translation of example 5]
-Example 6: [another natural sentence in $lang]
-Example 6 Translation: [$tl translation of example 6]
-Example 7: [another natural sentence in $lang]
-Example 7 Translation: [$tl translation of example 7]
-Example 8: [another natural sentence in $lang]
-Example 8 Translation: [$tl translation of example 8]
-Example 9: [another natural sentence in $lang]
-Example 9 Translation: [$tl translation of example 9]
-Example 10: [another natural sentence in $lang]
-Example 10 Translation: [$tl translation of example 10]
-
-Output only the formatted blocks. No commentary.''';
-}
+/// Converts a shared-parser result into this screen's local [_ParsedWord].
+/// partOfSpeech/pronunciation/definitionUz are dropped since class words
+/// don't have a slot for them (matching this screen's pre-existing model).
+List<_ParsedWord> _toParsedWords(List<AiParsedWord> parsed) => parsed.map((w) {
+      final pw = _ParsedWord()
+        ..word = w.word
+        ..translation = w.translation
+        ..definition = w.definition
+        ..examples = w.examples;
+      return pw;
+    }).toList();
 
 class ClassWordsScreen extends StatefulWidget {
   final String classId, className;
   final bool isTeacher;
-  final VoidCallback? onGoHome;
-  const ClassWordsScreen({super.key, required this.classId, required this.className, required this.isTeacher, this.onGoHome});
+  const ClassWordsScreen({super.key, required this.classId, required this.className, required this.isTeacher});
 
   @override
   State<ClassWordsScreen> createState() => _ClassWordsScreenState();
@@ -241,7 +192,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
   }
 
   void _onLang() { if (mounted) setState(() {}); }
-  void _onPasteChange() { if (mounted) setState(() => _parsed = _parseOutput(_pasteCtrl.text)); }
+  void _onPasteChange() { if (mounted) setState(() => _parsed = _toParsedWords(parseAiImportOutput(_pasteCtrl.text))); }
   void _onFolderGroupChange() { if (mounted) setState(() {}); }
 
   Future<void> _loadWords() async {
@@ -892,7 +843,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
             child: OutlinedButton.icon(
               onPressed: () {
                 final words = _wordsInputCtrl.text.trim();
-                final prompt = _buildPrompt(_wordLang, _translationLang, words.isEmpty ? 'apple, book, water' : words);
+                final prompt = buildAiImportPrompt(wordLang: _wordLang, translationLang: _translationLang, words: words.isEmpty ? 'apple, book, water' : words);
                 Clipboard.setData(ClipboardData(text: prompt));
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Prompt copied! Paste into AI chatbot.'), duration: Duration(seconds: 2)));
               },

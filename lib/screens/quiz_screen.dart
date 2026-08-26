@@ -309,28 +309,35 @@ class _QuizSessionScreenState extends State<QuizSessionScreen>
     _questions = shuffled;
   }
 
+  String _optionValue(WordItem w) {
+    switch (widget.quizType) {
+      case QuizType.wordToTranslation:
+        return w.translation;
+      case QuizType.translationToWord:
+      case QuizType.definitionToWord:
+        return w.word;
+    }
+  }
+
   void _buildOptions() {
     if (_currentIndex >= _questions.length) return;
 
     final correct = _questions[_currentIndex];
-    final allWords = List<WordItem>.from(widget.wordDay.words);
-    allWords.removeWhere((w) => w.word == correct.word);
-    allWords.shuffle(Random());
+    final correctValue = _optionValue(correct);
+    final candidatePool = widget.wordDay.words
+        .where((w) => w.word != correct.word)
+        .map(_optionValue);
 
-    final distractors = allWords.take(3).toList();
-    final optionsList = [correct, ...distractors]..shuffle(Random());
+    // No minOptions requirement here — a small word pool just yields fewer
+    // options, same as before this was extracted into a shared helper.
+    final options = buildQuizOptions(
+      correct: correctValue,
+      candidatePool: candidatePool,
+      distractorCount: 3,
+    )!;
 
-    _options = optionsList.map((w) {
-      switch (widget.quizType) {
-        case QuizType.wordToTranslation:
-          return w.translation;
-        case QuizType.translationToWord:
-        case QuizType.definitionToWord:
-          return w.word;
-      }
-    }).toList();
-
-    _correctOptionIndex = optionsList.indexOf(correct);
+    _options = options;
+    _correctOptionIndex = options.indexOf(correctValue);
     _selectedIndex = null;
     _answered = false;
   }

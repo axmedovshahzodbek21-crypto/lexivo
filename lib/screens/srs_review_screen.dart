@@ -98,22 +98,20 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
 
   List<String>? _buildChoicesFor(int idx, Set<String> extra) {
     final correct = _queue[idx].translation;
-    final pool = <String>{};
-    for (int i = 0; i < _queue.length; i++) {
-      if (i != idx) {
-        final t = _queue[i].translation;
-        if (t != correct) pool.add(t);
-      }
-    }
-    if (pool.length < 2) {
-      for (final t in extra) {
-        if (t != correct) pool.add(t);
-        if (pool.length >= 2) break;
-      }
-    }
-    if (pool.length < 2) return null; // fallback: flip mode
-    final wrong = (pool.toList()..shuffle()).take(2).toList();
-    return ([correct, ...wrong]..shuffle());
+    final candidatePool = [
+      for (int i = 0; i < _queue.length; i++)
+        if (i != idx) _queue[i].translation,
+    ];
+    // minOptions: 3 (correct + 2 distractors) — falls back to flip mode
+    // (returns null) when fewer than 2 distractors are available, even
+    // after drawing on `extra` (previously-learned words).
+    return buildQuizOptions(
+      correct: correct,
+      candidatePool: candidatePool,
+      distractorCount: 2,
+      fallbackPool: extra,
+      minOptions: 3,
+    );
   }
 
   Future<void> _fillFallbackChoices() async {

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import '../ai_import_samples.dart';
+import '../services/ai_import.dart';
 
 class _Word {
   final String id, word, translation;
@@ -33,81 +34,25 @@ class _ParsedWord {
   List<Map<String, String>> examples = [];
 }
 
-List<_ParsedWord> _parseOutput(String text) {
-  final results = <_ParsedWord>[];
-  final blocks = text.split(RegExp(r'\n---\n|\n---$|^---\n', multiLine: true)).map((b) => b.trim()).where((b) => b.isNotEmpty).toList();
-  for (final block in blocks) {
-    final w = _ParsedWord();
-    final sentences = <int, String>{};
-    final translations = <int, String>{};
-    for (final line in block.split('\n')) {
-      final colon = line.indexOf(':');
-      if (colon < 0) continue;
-      // Strip whitespace so "Example 1:" / "Part of speech:" (this prompt's own
-      // style) and "example1:" / "partOfSpeech:" (My Words-prompt style) both parse.
-      final key = line.substring(0, colon).trim().toLowerCase().replaceAll(RegExp(r'\s+'), '');
-      final val = line.substring(colon + 1).trim();
-      switch (key) {
-        case 'word': w.word = val;
-        case 'translation': w.translation = val;
-        case 'definition': w.definition = val;
-        case 'partofspeech': w.partOfSpeech = val;
-        case 'pronunciation': w.pronunciation = val;
-        case 'uzbekdefinition': case 'definitionuz': w.definitionUz = val;
-        default:
-          final sentMatch = RegExp(r'^example(\d+)$').firstMatch(key);
-          final transMatch = RegExp(r'^example(\d+)translation$').firstMatch(key);
-          if (sentMatch != null) sentences[int.parse(sentMatch.group(1)!)] = val;
-          if (transMatch != null) translations[int.parse(transMatch.group(1)!)] = val;
-      }
-    }
-    final allNums = {...sentences.keys, ...translations.keys}.toList()..sort();
-    w.examples = allNums
-        .where((n) => sentences.containsKey(n))
-        .map((n) => {'sentence': sentences[n]!, 'translation': translations[n] ?? ''})
-        .toList();
-    if (w.word.isNotEmpty && w.translation.isNotEmpty) results.add(w);
-  }
-  return results;
-}
+// Prompt-building and response-parsing now live in
+// lib/services/ai_import.dart, shared with import_screen.dart and
+// class_words_screen.dart (see that file's doc comment for how the three
+// copies had diverged and which behavior was kept).
 
-String _exampleBlock(String lang, String tl) {
-  return List.generate(10, (i) {
-    final n = i + 1;
-    final desc = n == 1 ? 'natural sentence using the word' : 'another natural sentence';
-    return 'Example $n: [$desc in $lang]\nExample $n Translation: [$tl translation of example $n]';
-  }).join('\n');
-}
-
-// hasTranslations: true when the pasted input is already word-translation
-// pairs (their translation is kept verbatim) rather than a bare word list.
-String _buildPrompt(String wordLang, String translationLang, String words, {bool hasTranslations = false}) {
-  final lang = wordLang.toLowerCase();
-  final tl = translationLang.toLowerCase();
-  final intro = hasTranslations
-      ? 'I have $lang-$tl word pairs. For each pair, keep my translation exactly as written. Add a short definition in $lang and 10 example sentences in $lang with their $tl translations.'
-      : 'You are a vocabulary flashcard generator. Create detailed flashcard data for these $lang words, with translations in $tl.';
-  final label = hasTranslations ? 'Word pairs to process (word - translation)' : 'Words to process';
-  final wordLine = hasTranslations ? 'Word: [the $lang word — keep exactly as given]' : 'Word: [the $lang word]';
-  final transLine = hasTranslations ? 'Translation: [keep exactly as given in my pairs]' : 'Translation: [$tl translation]';
-
-  return '''$intro
-
-$label:
-$words
-
-For each word output exactly this format, separated by ---:
-
-$wordLine
-Part of speech: [noun / verb / adjective / adverb / phrase / etc., written in $lang]
-Pronunciation: [IPA pronunciation, e.g. /wɜːrd/]
-$transLine
-Definition: [short definition in $lang, max 20 words]
-Uzbek definition: [short definition in Uzbek, max 20 words]
-${_exampleBlock(lang, tl)}
-
-Output only the formatted blocks. No commentary.''';
-}
+/// Converts a shared-parser result into this screen's local [_ParsedWord]
+/// (which uses non-nullable, default-empty-string fields rather than the
+/// shared [AiParsedWord]'s nullable ones).
+List<_ParsedWord> _toParsedWords(List<AiParsedWord> parsed) => parsed.map((w) {
+      final pw = _ParsedWord()
+        ..word = w.word
+        ..translation = w.translation
+        ..definition = w.definition
+        ..partOfSpeech = w.partOfSpeech ?? ''
+        ..pronunciation = w.pronunciation ?? ''
+        ..definitionUz = w.definitionUz ?? ''
+        ..examples = w.examples;
+      return pw;
+    }).toList();
 
 class TeacherUnitScreen extends StatefulWidget {
   final String unitId, unitName, folderName;
@@ -181,14 +126,14 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
     super.dispose();
   }
 
-  // Debounced — _parseOutput does a full regex re-parse of the pasted
+  // Debounced — parseAiImportOutput does a full regex re-parse of the pasted
   // text, and this listener fires on every keystroke (not just the single
   // paste event), so editing a large AI-generated block afterward re-ran
   // that parse from scratch on every character typed.
   void _onPasteChange() {
     _parseDebounce?.cancel();
     _parseDebounce = Timer(const Duration(milliseconds: 300), () {
-      if (mounted) setState(() => _parsed = _parseOutput(_pasteCtrl.text));
+      if (mounted) setState(() => _parsed = _toParsedWords(parseAiImportOutput(_pasteCtrl.text)));
     });
   }
 
@@ -197,7 +142,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
     final words = input.isEmpty
         ? (hasTranslations ? kSampleWordsWithTranslations : kSampleWordsPlain)
         : input;
-    final prompt = _buildPrompt(_wordLang, _translationLang, words, hasTranslations: hasTranslations);
+    final prompt = buildAiImportPrompt(wordLang: _wordLang, translationLang: _translationLang, words: words, hasTranslations: hasTranslations);
     Clipboard.setData(ClipboardData(text: prompt));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Prompt copied! Paste into AI chatbot.'), duration: Duration(seconds: 2)));

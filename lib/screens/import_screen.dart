@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../app_theme.dart';
 import '../data/storage_service.dart';
 import '../ai_import_samples.dart';
+import '../services/ai_import.dart';
 import 'import_collection_detail_screen.dart';
 
 const _languages = [
@@ -20,132 +21,27 @@ const _languages = [
   {'label': 'Uzbek',    'code': 'uz-UZ'},
 ];
 
-// Shared illustrative "enormous" example block shown to the AI, up to 10 examples.
-const _exampleFormatBlock = '''
-example1: The enormous building towered above the city.
-example1Translation: Ulkan bino shahar ustida baland turardi.
-example2: She faced an enormous challenge at work.
-example2Translation: U ishda ulkan muammoga duch keldi.
-example3: The storm caused enormous damage to the coastline.
-example3Translation: Bo'ron qirg'oqqa ulkan zarar yetkazdi.
-example4: He made an enormous effort to finish the project on time.
-example4Translation: U loyihani o'z vaqtida tugatish uchun ulkan harakat qildi.
-example5: The discovery had an enormous impact on modern science.
-example5Translation: Bu kashfiyot zamonaviy fanga ulkan ta'sir ko'rsatdi.
-example6: The company invested an enormous amount of money in research.
-example6Translation: Kompaniya tadqiqotlarga ulkan miqdorda mablag' sarfladi.
-example7: Cleaning up after the enormous storm took several weeks.
-example7Translation: Ulkan bo'rondan keyin tozalash bir necha hafta davom etdi.
-example8: The enormous crowd gathered to watch the festival.
-example8Translation: Festivalni tomosha qilish uchun ulkan olomon to'plandi.
-example9: Losing his job was an enormous setback for him.
-example9Translation: Ishini yo'qotish u uchun ulkan qiyinchilik bo'ldi.
-example10: The enormous mountain range stretched across the horizon.
-example10Translation: Ulkan tog' tizmasi ufq bo'ylab cho'zilgan edi.''';
+// Prompt-building and response-parsing now live in
+// lib/services/ai_import.dart, shared with class_words_screen.dart and
+// teacher_unit_screen.dart. This screen's own copies were the most complete
+// of the three (see that file's doc comment for what diverged) and became
+// the basis for the shared version.
 
-String _buildPrompt1(String wordLang, String transLang, String words) => '''
-I have a list of $wordLang words I want to learn. For each word, provide the translation in $transLang, a short definition in $wordLang, and up to 10 example sentences in $wordLang with their $transLang translations.
-
-Format EXACTLY like this for every word. Use plain text only — no markdown, no bold, no asterisks, no extra formatting:
-
-word: enormous
-partOfSpeech: adjective
-pronunciation: /ɪˈnɔːrməs/
-translation: ulkan
-definition: extremely large in size or extent
-definitionUz: Ulkan — juda katta yoki keng hajmga ega bo'lgan narsa yoki hodisa.
-$_exampleFormatBlock
----
-
-Important: the example above uses English/Uzbek only to show the format. In your actual response, write the definition, part of speech, and examples in $wordLang, the translations and definitionUz in $transLang.
-
-Here are my words:
-$words''';
-
-String _buildPrompt2(String wordLang, String transLang, String words) => '''
-I have $wordLang-$transLang word pairs. For each pair, keep my translation exactly as written. Add a short definition in $wordLang, a short explanation in $transLang (definitionUz), and up to 10 example sentences in $wordLang with their $transLang translations.
-
-Format EXACTLY like this for every word. Use plain text only — no markdown, no bold, no asterisks, no extra formatting:
-
-word: enormous
-partOfSpeech: adjective
-pronunciation: /ɪˈnɔːrməs/
-translation: ulkan
-definition: extremely large in size or extent
-definitionUz: Ulkan — juda katta yoki keng hajmga ega bo'lgan narsa yoki hodisa.
-$_exampleFormatBlock
----
-
-Important: the example above uses English/Uzbek only to show the format. In your actual response, write the definition, part of speech, and examples in $wordLang, the translations and definitionUz in $transLang.
-
-Here are my pairs (word - translation):
-$words''';
-
-List<ImportedWord> _parseOutput(String text, String langCode) {
-  if (text.trim().isEmpty) return [];
-  final blocks = text.split(RegExp(r'---+')).map((b) => b.trim()).where((b) => b.isNotEmpty).toList();
-  final result = <ImportedWord>[];
-  for (final block in blocks) {
-    final lines = block.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
-    // A block can still contain more than one word entry if the AI response
-    // omitted a --- separator somewhere (missing on the last block, or
-    // dropped entirely for a short reply) — previously this silently
-    // collapsed every word after the missing separator into one `fields`
-    // map, where each repeated `word:`/`translation:`/etc. line overwrote
-    // the previous value, keeping only the LAST word and discarding the
-    // rest with no error or warning shown. Starting a new field-map
-    // whenever a `word:` key repeats (not just on ---) catches this
-    // regardless of whether the source actually included separators.
-    var fields = <String, String>{};
-    final entries = <Map<String, String>>[];
-    for (final line in lines) {
-      final colonIdx = line.indexOf(':');
-      if (colonIdx == -1) continue;
-      // Strip whitespace too so "Example 1:" / "Part of speech:" (Library-prompt
-      // style) and "example1:" / "partOfSpeech:" (this prompt's own style) both parse.
-      var key = line.substring(0, colonIdx).trim().toLowerCase().replaceAll(RegExp(r'[*_`#\s]'), '');
-      if (key == 'uzbekdefinition') key = 'definitionuz';
-      final val = line.substring(colonIdx + 1).trim().replaceAll(RegExp(r'[*_`]'), '');
-      if (key == 'word' && fields.containsKey('word')) {
-        entries.add(fields);
-        fields = {};
-      }
-      fields[key] = val;
-    }
-    if (fields.isNotEmpty) entries.add(fields);
-
-    for (final fields in entries) {
-      // Checked the key was present but not that its value was actually
-      // non-empty — a response with a bare "Word:" or "Translation:" line
-      // (nothing after the colon) passed this check and got silently
-      // imported as a word/translation, showing an empty flashcard.
-      if ((fields['word'] ?? '').isEmpty || (fields['translation'] ?? '').isEmpty) continue;
-      // Capped at 10 to match StorageService.addImportedWords' storage-side
-      // limit — collecting more here previously let the preview show up to 20
-      // examples that then silently got truncated to 10 on save, so what the
-      // user approved didn't match what was actually kept.
-      final examples = <ImportedWordExample>[];
-      for (var n = 1; n <= 10; n++) {
-        final sentence = fields['example$n'];
-        if (sentence == null || sentence.isEmpty) continue;
-        examples.add(ImportedWordExample(sentence: sentence, translation: fields['example${n}translation']));
-      }
-      result.add(ImportedWord(
-        word: fields['word']!,
-        partOfSpeech: fields['partofspeech']?.isNotEmpty == true ? fields['partofspeech'] : null,
-        pronunciation: fields['pronunciation']?.isNotEmpty == true ? fields['pronunciation'] : null,
-        translation: fields['translation']!,
-        definition: fields['definition'] ?? '',
-        definitionUz: fields['definitionuz']?.isNotEmpty == true ? fields['definitionuz'] : null,
-        examples: examples,
-        language: langCode,
-        addedAt: DateTime.now().millisecondsSinceEpoch,
-        collectionName: '',
-      ));
-    }
-  }
-  return result;
-}
+/// Converts a shared-parser result into this screen's [ImportedWord] model.
+List<ImportedWord> _toImportedWords(List<AiParsedWord> parsed, String langCode) => parsed
+    .map((w) => ImportedWord(
+          word: w.word,
+          partOfSpeech: w.partOfSpeech,
+          pronunciation: w.pronunciation,
+          translation: w.translation,
+          definition: w.definition,
+          definitionUz: w.definitionUz,
+          examples: w.examples.map((e) => ImportedWordExample(sentence: e['sentence']!, translation: e['translation']?.isNotEmpty == true ? e['translation'] : null)).toList(),
+          language: langCode,
+          addedAt: DateTime.now().millisecondsSinceEpoch,
+          collectionName: '',
+        ))
+    .toList();
 
 class ImportScreen extends StatefulWidget {
   final String? prefilledCollection;
@@ -187,7 +83,7 @@ class _ImportScreenState extends State<ImportScreen> {
   }
 
   void _onPasteChanged() {
-    final parsed = _parseOutput(_pasteCtrl.text, _wordLangCode);
+    final parsed = _toImportedWords(parseAiImportOutput(_pasteCtrl.text), _wordLangCode);
     if (mounted) setState(() => _parsed = parsed);
   }
 
@@ -213,9 +109,7 @@ class _ImportScreenState extends State<ImportScreen> {
     final words = input.isEmpty
         ? (hasTranslations ? kSampleWordsWithTranslations : kSampleWordsPlain)
         : input;
-    final prompt = hasTranslations
-        ? _buildPrompt2(_wordLang, _transLang, words)
-        : _buildPrompt1(_wordLang, _transLang, words);
+    final prompt = buildAiImportPrompt(wordLang: _wordLang, translationLang: _transLang, words: words, hasTranslations: hasTranslations);
     Clipboard.setData(ClipboardData(text: prompt));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Prompt copied! Paste into AI chatbot.'), duration: Duration(seconds: 2)));

@@ -69,51 +69,19 @@ Widget _hwHero(String classId, String className) {
 
 class _AssignedFolder {
   final String id, assignmentId, name;
-  final List<_FolderUnit> units;
+  final List<HomeworkUnit> units;
   bool showAll = false;
   _AssignedFolder({required this.id, required this.assignmentId, required this.name, required this.units});
   Map<String, dynamic> toJson() => {'id': id, 'assignmentId': assignmentId, 'name': name, 'units': units.map((u) => u.toJson()).toList()};
   static _AssignedFolder fromJson(Map<String, dynamic> m) => _AssignedFolder(
     id: m['id'] as String, assignmentId: m['assignmentId'] as String, name: m['name'] as String,
-    units: (m['units'] as List).map((u) => _FolderUnit.fromJson(Map<String, dynamic>.from(u as Map))).toList(),
+    units: (m['units'] as List).map((u) => HomeworkUnit.fromJson(Map<String, dynamic>.from(u as Map))).toList(),
   );
 }
 
-class _FolderUnit {
-  final String id, name;
-  final int wordCount;
-  final String? homeworkId;
-  final List<String>? hwModes;
-  final String? hwDue;
-  const _FolderUnit({required this.id, required this.name, required this.wordCount, this.homeworkId, this.hwModes, this.hwDue});
-  bool get hasHomework => homeworkId != null;
-  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'wordCount': wordCount, 'homeworkId': homeworkId, 'hwModes': hwModes, 'hwDue': hwDue};
-  static _FolderUnit fromJson(Map<String, dynamic> m) => _FolderUnit(
-    id: m['id'] as String, name: m['name'] as String, wordCount: m['wordCount'] as int? ?? 0,
-    homeworkId: m['homeworkId'] as String?,
-    hwModes: m['hwModes'] != null ? List<String>.from(m['hwModes'] as List) : null,
-    hwDue: m['hwDue'] as String?,
-  );
-}
-
-// ── Class word unit models ─────────────────────────────────────────────────
-
-class _CWUnit {
-  final String id, name;
-  final int wordCount;
-  final String? homeworkId;
-  final List<String>? hwModes;
-  final String? hwDue;
-  const _CWUnit({required this.id, required this.name, required this.wordCount, this.homeworkId, this.hwModes, this.hwDue});
-  bool get hasHomework => homeworkId != null;
-  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'wordCount': wordCount, 'homeworkId': homeworkId, 'hwModes': hwModes, 'hwDue': hwDue};
-  static _CWUnit fromJson(Map<String, dynamic> m) => _CWUnit(
-    id: m['id'] as String, name: m['name'] as String, wordCount: m['wordCount'] as int? ?? 0,
-    homeworkId: m['homeworkId'] as String?,
-    hwModes: m['hwModes'] != null ? List<String>.from(m['hwModes'] as List) : null,
-    hwDue: m['hwDue'] as String?,
-  );
-}
+// _FolderUnit and _CWUnit used to be declared separately here — byte-for-byte
+// identical classes (same fields, same toJson/fromJson) for what is really
+// the same concept. Unified as HomeworkUnit in class_models.dart.
 
 // ── Collection homework models ─────────────────────────────────────────────
 
@@ -152,7 +120,7 @@ class _PassageHW {
 
 class _HwCache {
   final List<_AssignedFolder> folders;
-  final List<_CWUnit> cwUnits;
+  final List<HomeworkUnit> cwUnits;
   final List<_CollHW> collHwItems;
   final List<_PassageHW> passageItems;
   final Map<String, Set<String>> completedModes;
@@ -197,7 +165,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
 
   bool _loading = true;
   List<_AssignedFolder> _folders = [];
-  List<_CWUnit> _cwUnits = [];
+  List<HomeworkUnit> _cwUnits = [];
   List<_CollHW> _collHwItems = [];
   List<_PassageHW> _passageItems = [];
   Map<String, Set<String>> _completedModes = {};
@@ -243,7 +211,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
         final m = jsonDecode(raw) as Map<String, dynamic>;
         final cache = _HwCache(
           folders: (m['folders'] as List).map((e) => _AssignedFolder.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
-          cwUnits: (m['cwUnits'] as List).map((e) => _CWUnit.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
+          cwUnits: (m['cwUnits'] as List).map((e) => HomeworkUnit.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
           collHwItems: (m['collHwItems'] as List).map((e) => _CollHW.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
           passageItems: ((m['passageItems'] as List?) ?? []).map((e) => _PassageHW.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
           completedModes: (m['completedModes'] as Map).map((k, v) => MapEntry(k as String, Set<String>.from(v as List))),
@@ -389,7 +357,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
               final uid = um['id'] as String;
               final hw = hwByLibUnit[uid];
               final countList = um['teacher_unit_words'] as List?;
-              return _FolderUnit(
+              return HomeworkUnit(
                 id: uid, name: um['name'] as String,
                 wordCount: countList?.isNotEmpty == true ? (countList![0] as Map)['count'] as int? ?? 0 : 0,
                 homeworkId: hw?['id'] as String?,
@@ -406,7 +374,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
         final uid = um['id'] as String;
         final hw = hwByCWUnit[uid];
         final countList = um['class_words'] as List?;
-        return _CWUnit(
+        return HomeworkUnit(
           id: uid, name: um['name'] as String,
           wordCount: countList?.isNotEmpty == true ? (countList![0] as Map)['count'] as int? ?? 0 : 0,
           homeworkId: hw?['id'] as String?,

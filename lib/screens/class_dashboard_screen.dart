@@ -170,6 +170,9 @@ final _dashboardCache = <String, _CachedDashboard>{};
 // finishing late would leave stale data on screen for a while.
 const _dashboardCacheTtl = Duration(minutes: 5);
 
+// Web's teacher dashboard digest route — see _generateDigest() below.
+const _digestEndpoint = 'https://lexivo-web-six.vercel.app/api/digest';
+
 // ── Gradient hero helpers ─────────────────────────────────────────────────────
 
 List<Color> _dashGradColors(String id) {
@@ -370,6 +373,16 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     return false;
   }
 
+  // TabBarView builds every child eagerly by default, but this dashboard's 7
+  // tabs each carry their own charts/lists (Radar, Heatmap, SRS grid, Review
+  // Pattern) — building all of them up front on first render wastes work on
+  // tabs the teacher may never open. _builtTabs tracks which tab indices
+  // have been visited at least once; a tab not yet visited renders a cheap
+  // placeholder instead of its real (expensive) content. Once built, a tab's
+  // widget stays mounted (TabBarView's own PageView keeps it around) so
+  // switching back doesn't rebuild it from scratch.
+  final Set<int> _builtTabs = {0};
+
   @override
   void initState() {
     super.initState();
@@ -377,6 +390,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     _tabs.addListener(() {
       if (_tabs.index == 4 && !_srsLoaded && !_srsLoading) _loadSRS();
       if (_tabs.index == 5 && !_reviewLoaded && !_reviewLoading) _loadReviewPattern();
+      if (_builtTabs.add(_tabs.index)) setState(() {});
     });
     appLangNotifier.addListener(_onLang);
     _verifyTeacher();
@@ -423,8 +437,21 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     }
   }
 
-  List<Map<String, dynamic>> get _speedFlagged =>
-    _analyticsData.where((r) => ((r['speed_flag_sessions'] as num?)?.toInt() ?? 0) > 0).toList();
+  // Memoized against the _analyticsData list identity: without this, both
+  // getters below re-scanned/re-sorted the full analytics payload on every
+  // build — including the ones triggered every 30s by _activeStudentsTimer
+  // (which only ever touches _activeStudents, never _analyticsData) — even
+  // though the underlying data hadn't changed at all. Cache is invalidated
+  // only when _loadAnalytics() assigns a new list instance.
+  List<Map<String, dynamic>>? _speedFlaggedCacheSrc;
+  List<Map<String, dynamic>>? _speedFlaggedCache;
+  List<Map<String, dynamic>> get _speedFlagged {
+    if (!identical(_speedFlaggedCacheSrc, _analyticsData)) {
+      _speedFlaggedCacheSrc = _analyticsData;
+      _speedFlaggedCache = _analyticsData.where((r) => ((r['speed_flag_sessions'] as num?)?.toInt() ?? 0) > 0).toList();
+    }
+    return _speedFlaggedCache!;
+  }
 
   Future<void> _loadProgressOverTime() async {
     try {
@@ -439,7 +466,10 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   // Slowest words: derived client-side from each student's per_word_data_all
   // (same source & logic as web's AnalyticsTab) — average seconds-to-mark per
   // word across every 'learned' outcome, top 10 slowest.
+  List<Map<String, dynamic>>? _slowestWordsCacheSrc;
+  List<({String word, double avg})>? _slowestWordsCache;
   List<({String word, double avg})> get _slowestWords {
+    if (identical(_slowestWordsCacheSrc, _analyticsData)) return _slowestWordsCache!;
     final byWord = <String, List<double>>{};
     for (final row in _analyticsData) {
       final sessions = row['per_word_data_all'] as List? ?? const [];
@@ -459,7 +489,9 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       .map((e) => (word: e.key, avg: e.value.reduce((a, b) => a + b) / e.value.length))
       .toList()
       ..sort((a, b) => b.avg.compareTo(a.avg));
-    return stats.take(10).toList();
+    _slowestWordsCacheSrc = _analyticsData;
+    _slowestWordsCache = stats.take(10).toList();
+    return _slowestWordsCache!;
   }
 
   // Calls the same /api/digest endpoint web's teacher dashboard uses (a
@@ -487,7 +519,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
 
       final token = supabase.auth.currentSession?.accessToken;
       final res = await http.post(
-        Uri.parse('https://lexivo-web-six.vercel.app/api/digest'),
+        Uri.parse(_digestEndpoint),
         headers: {
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',
@@ -763,23 +795,30 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             : TabBarView(
                 controller: _tabs,
                 children: [
-                  _buildStudentsTab(),
-                  _buildActivityTab(),
-                  _buildRadarTab(),
-                  _buildHeatmapTab(),
-                  _buildSRSTab(),
-                  _buildReviewPatternTab(),
-                  ClassCurriculumTab(
+                  _lazyTab(0, _buildStudentsTab),
+                  _lazyTab(1, _buildActivityTab),
+                  _lazyTab(2, _buildRadarTab),
+                  _lazyTab(3, _buildHeatmapTab),
+                  _lazyTab(4, _buildSRSTab),
+                  _lazyTab(5, _buildReviewPatternTab),
+                  _lazyTab(6, () => ClassCurriculumTab(
                     classId: widget.classId,
                     className: widget.className,
                     students: _students.map((s) => (studentId: s.studentId, name: s.name)).toList(),
-                  ),
+                  )),
                 ],
               ),
         ),
       ],
     );
   }
+
+  // Builds the tab's real content only once it's been visited (see
+  // _builtTabs above); an unvisited tab gets a lightweight placeholder
+  // instead of paying for its charts/queries before the teacher ever swipes
+  // to it.
+  Widget _lazyTab(int index, Widget Function() builder) =>
+    _builtTabs.contains(index) ? builder() : const SizedBox.shrink();
 
   // Distinct from an empty-state message — used wherever a load's catch
   // block sets an error string, so a genuine failure doesn't look like
@@ -801,6 +840,12 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
 
   Widget _buildStudentsTab() {
     final sorted = _sortedStudents;
+    // Read each memoized getter once per build and reuse the local list —
+    // the getters themselves are now cached against _analyticsData identity
+    // (see _speedFlagged/_slowestWords above), but there's no need to call
+    // them twice in the same build pass on top of that.
+    final speedFlagged = _speedFlagged;
+    final slowestWords = _slowestWords;
     return RefreshIndicator(
       color: context.primary,
       onRefresh: _refresh,
@@ -812,8 +857,8 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
           const SizedBox(height: 12),
 
           // Speed flags (rushing detection)
-          if (_speedFlagged.isNotEmpty) ...[
-            _buildSpeedFlags(),
+          if (speedFlagged.isNotEmpty) ...[
+            _buildSpeedFlags(speedFlagged),
             const SizedBox(height: 12),
           ],
 
@@ -824,8 +869,8 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
           ],
 
           // Slowest words
-          if (_slowestWords.isNotEmpty) ...[
-            _buildSlowestWords(),
+          if (slowestWords.isNotEmpty) ...[
+            _buildSlowestWords(slowestWords),
             const SizedBox(height: 12),
           ],
 
@@ -917,13 +962,13 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     ]);
   }
 
-  Widget _buildSpeedFlags() {
+  Widget _buildSpeedFlags(List<Map<String, dynamic>> speedFlagged) {
     final nameById = {for (final s in _students) s.studentId: s.name};
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text('⚡ SPEED FLAGS (>10 WORDS/MIN)',
         style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
       const SizedBox(height: 8),
-      ..._speedFlagged.map((r) {
+      ...speedFlagged.map((r) {
         final uid = r['student_id'] as String;
         final count = (r['speed_flag_sessions'] as num).toInt();
         final mastery = (r['genuine_mastery_pct'] as num?)?.toInt();
@@ -979,8 +1024,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     ]);
   }
 
-  Widget _buildSlowestWords() {
-    final stats = _slowestWords;
+  Widget _buildSlowestWords(List<({String word, double avg})> stats) {
     final maxAvg = stats.isEmpty ? 1.0 : stats.first.avg;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text('⏱ SLOWEST WORDS (AVG SECONDS TO MARK)',

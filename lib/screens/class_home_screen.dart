@@ -258,6 +258,16 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
         () async {
           if (memberIds.isEmpty) return;
           try {
+            // `today` here is a same-day "studied at all today?" check (feeds
+            // activeToday / the "X of Y active" hero stat, and _StudentsSheet's
+            // per-row "TODAY" badge — see isActive there) — a daily engagement
+            // rate, not an inactivity flag. `threeDaysAgo` below is the one
+            // actual "inactive student" threshold on this screen
+            // (needsAttentionCount / the spotlight banner), and it intentionally
+            // matches StudentRow.isInactive's 3-day threshold in
+            // class_dashboard_screen.dart so both screens agree on what
+            // "inactive" means. This file has only these two distinct concepts;
+            // no second (e.g. 7-day) "inactive" definition exists here.
             final today = DateTime.now().toIso8601String().substring(0, 10);
             final threeDaysAgo = DateTime.now().subtract(const Duration(days: 3)).toIso8601String().substring(0, 10);
             final profilesRaw = await supabase
@@ -823,7 +833,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
             decoration: isPending ? null : TextDecoration.lineThrough)),
           if (due != null)
             Text(due, style: TextStyle(fontSize: 11,
-              color: isOverdue ? Colors.red : context.textMuted,
+              color: isOverdue ? context.dangerColor : context.textMuted,
               fontWeight: isOverdue ? FontWeight.w700 : FontWeight.normal)),
         ])),
       ]),
@@ -831,7 +841,12 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
   }
 
   Widget _buildAnnouncementRow(ClassAnnouncement a) {
-    final isNew = DateTime.now().difference(DateTime.parse(a.createdAt)).inHours < 24;
+    // timeAgo() below already guards a malformed/missing timestamp via
+    // DateTime.tryParse — this used a bare DateTime.parse() on the same
+    // a.createdAt field, so a malformed value would crash the whole screen
+    // here instead of just degrading the "NEW" badge.
+    final createdAt = DateTime.tryParse(a.createdAt);
+    final isNew = createdAt != null && DateTime.now().difference(createdAt).inHours < 24;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),

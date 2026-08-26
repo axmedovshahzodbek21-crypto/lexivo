@@ -79,9 +79,14 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
     // collections — this used to be a fully sequential nested await chain
     // (one round trip per collection, one folder at a time) against this
     // codebase's stated Future.wait preference for independent reads.
+    // Collections for every folder are also fetched in one grouped pass
+    // instead of once per folder — the per-folder version re-decodes the
+    // entire imported-words list from SharedPreferences on every call, so
+    // calling it in this folder loop was an O(folders × words) scan.
+    final groupedCols = await StorageService.getCollectionsGroupedByFolder();
     final completedCounts = <String, int>{};
     await Future.wait(folders.map((folder) async {
-      final cols = await StorageService.getCollectionsByFolder(folder.name);
+      final cols = groupedCols[folder.name] ?? const [];
       final progresses = await Future.wait(
           cols.map((col) => StorageService.getMyUnitProgress(folder.name, col.name)));
       completedCounts[folder.name] = progresses.where((p) => p.completedAt != null).length;

@@ -70,7 +70,12 @@ class _SearchScreenState extends State<SearchScreen> {
       final collection = c['collection'] as WordCollection;
       final color = c['color'] as Color;
       final icon = c['icon'] as String;
-      for (final day in collection.days) {
+      // Index tracked via the loop counter instead of collection.days.indexOf(day)
+      // inside the innermost loop — that re-scanned the whole days list from
+      // the start for every matching word, an O(days) lookup repeated once
+      // per match instead of the O(1) it is here.
+      for (var dayIndex = 0; dayIndex < collection.days.length; dayIndex++) {
+        final day = collection.days[dayIndex];
         for (final word in day.words) {
           if (word.word.toLowerCase().contains(query) ||
               word.translation.toLowerCase().contains(query) ||
@@ -83,7 +88,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 color: color,
                 icon: icon,
                 collection: collection,
-                dayIndex: collection.days.indexOf(day),
+                dayIndex: dayIndex,
               ),
             );
           }

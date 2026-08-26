@@ -492,8 +492,7 @@ class WordsLibraryScreen extends StatefulWidget {
   State<WordsLibraryScreen> createState() => _WordsLibraryScreenState();
 }
 
-class _WordsLibraryScreenState extends State<WordsLibraryScreen>
-    with SingleTickerProviderStateMixin {
+class _WordsLibraryScreenState extends State<WordsLibraryScreen> {
   // Keyed by user id so switching accounts within the same app session
   // (no restart needed) can't show the previous account's learned words
   // during the loading flash — a plain static cache doesn't know it's
@@ -502,21 +501,13 @@ class _WordsLibraryScreenState extends State<WordsLibraryScreen>
   static String? _cacheUserId;
   static bool get _cacheValid => _cache != null && _cacheUserId == currentUser?.id;
 
-  late TabController _tabController;
   List<Map<String, String>> _learnedWords = _cacheValid ? _cache! : [];
   bool _loading = !_cacheValid;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 1, vsync: this);
     _loadWords();
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadWords() async {

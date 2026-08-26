@@ -21,6 +21,13 @@ import 'teacher_library_screen.dart';
 import 'teacher_folder_screen.dart';
 import 'teacher_unit_screen.dart';
 
+// External links shown in the About section, named so they aren't scattered
+// as bare string literals through the widget tree below.
+const _kWebsiteUrl = 'https://lexivo-web-six.vercel.app';
+const _kSupportUrl = 'https://t.me/lexivo_support_bot';
+const _kAndroidApkDownloadUrl =
+    'https://github.com/axmedovshahzodbek21-crypto/lexivo-web/releases/latest/download/app-release.apk';
+
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -1099,7 +1106,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _buildAboutRow(context, '🏷️', tr('version'), '1.0.0'),
                       Divider(height: 16, color: context.border),
                       GestureDetector(
-                        onTap: () => launchUrl(Uri.parse('https://lexivo-web-six.vercel.app'), mode: LaunchMode.externalApplication),
+                        onTap: () => launchUrl(Uri.parse(_kWebsiteUrl), mode: LaunchMode.externalApplication),
                         child: Row(
                           children: [
                             const Text('🌐', style: TextStyle(fontSize: 18)),
@@ -1113,7 +1120,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       Divider(height: 16, color: context.border),
                       GestureDetector(
-                        onTap: () => launchUrl(Uri.parse('https://t.me/lexivo_support_bot'), mode: LaunchMode.externalApplication),
+                        onTap: () => launchUrl(Uri.parse(_kSupportUrl), mode: LaunchMode.externalApplication),
                         child: Row(
                           children: [
                             const Text('✈️', style: TextStyle(fontSize: 18)),
@@ -1128,7 +1135,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       Divider(height: 16, color: context.border),
                       GestureDetector(
                         onTap: () => launchUrl(
-                          Uri.parse('https://github.com/axmedovshahzodbek21-crypto/lexivo-web/releases/latest/download/app-release.apk'),
+                          Uri.parse(_kAndroidApkDownloadUrl),
                           mode: LaunchMode.externalApplication,
                         ),
                         child: Row(

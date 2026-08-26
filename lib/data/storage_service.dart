@@ -172,7 +172,6 @@ class SRSWord {
 
   Map<String, dynamic> toJson() => {
     'word': word,
-    'id': '$collectionName::$word',
     'translation': translation,
     'definition': definition,
     'example1': example1,
@@ -2560,6 +2559,37 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     )).toList();
     result.sort((a, b) => b.addedAt.compareTo(a.addedAt));
     return result;
+  }
+
+  // Same grouping as getCollectionsByFolder, but for every folder at once in
+  // a single pass over getImportedWords() — used when a caller needs
+  // per-folder collection lists for ALL folders (e.g. building a folder grid
+  // with completed-unit counts). Calling getCollectionsByFolder once per
+  // folder in a loop would re-fetch and re-decode the entire imported-words
+  // list from SharedPreferences on every iteration: O(folders × words)
+  // instead of the O(words) this does.
+  static Future<Map<String, List<ImportedCollection>>> getCollectionsGroupedByFolder() async {
+    final words = await getImportedWords();
+    final byFolder = <String, Map<String, Map<String, dynamic>>>{};
+    for (final w in words) {
+      final f = w.folderName;
+      if (f == null) continue;
+      final map = byFolder.putIfAbsent(f, () => {});
+      if (!map.containsKey(w.collectionName)) {
+        map[w.collectionName] = {'count': 0, 'addedAt': w.addedAt};
+      }
+      map[w.collectionName]!['count'] = (map[w.collectionName]!['count'] as int) + 1;
+    }
+    return byFolder.map((folderName, colMap) {
+      final result = colMap.entries.map((e) => ImportedCollection(
+        name: e.key,
+        count: e.value['count'] as int,
+        addedAt: e.value['addedAt'] as int,
+        folderName: folderName,
+      )).toList();
+      result.sort((a, b) => b.addedAt.compareTo(a.addedAt));
+      return MapEntry(folderName, result);
+    });
   }
 
   static Future<void> addImportedWords(

@@ -105,6 +105,10 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
           .from('teacher_folders')
           .select('id, name, teacher_units(count)')
           .eq('teacher_id', user.id)
+          // `position` is never written anywhere (no drag-to-reorder UI
+          // exists yet for folders in the library), so this always falls
+          // through to the created_at tiebreaker below — kept as the
+          // primary sort key for when manual reordering is built.
           .order('position')
           .order('created_at');
       var folders = (data as List).map((e) {

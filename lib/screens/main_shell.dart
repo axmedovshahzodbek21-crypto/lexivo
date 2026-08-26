@@ -39,6 +39,25 @@ class MainShell extends StatefulWidget {
 
 typedef _HwNotif = ({String title, String? dueDate, String className});
 
+typedef _NavAccent = ({Color color, Color light, Color dark});
+
+class _TabDef {
+  final IconData icon;
+  final String label;
+  final _NavAccent accent;
+  final bool showPomodoroPill;
+  final int? badge;
+  final Widget Function() build;
+  _TabDef({
+    required this.icon,
+    required this.label,
+    required this.accent,
+    required this.showPomodoroPill,
+    required this.badge,
+    required this.build,
+  });
+}
+
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
   // Tabs are built lazily — only once actually visited — instead of all 9
@@ -203,29 +222,80 @@ class _MainShellState extends State<MainShell> {
     _loadReviewCount();
   }
 
-  Widget _buildScreen(int index) {
-    switch (index) {
-      case 0: return HomeScreen(
+  // Single source of truth for the 9 tabs — screen builder, bottom-nav icon/
+  // label/accent, whether the Pomodoro pill shows on that tab, and whether
+  // its nav item carries the reviews-due badge. Previously this same 9-tab
+  // wiring was repeated 4 times below (the IndexedStack's screen count, the
+  // Pomodoro-pill visibility condition, the accent-color list, and the row
+  // of bottom-nav item calls), which meant adding/reordering a tab required
+  // editing all 4 in lockstep.
+  List<_TabDef> get _tabs => [
+    _TabDef(
+      icon: Icons.home_rounded, label: tr('nav_home'),
+      accent: (color: const Color(0xFFF97316), light: const Color(0xFFFB923C), dark: const Color(0xFFC2410C)),
+      showPomodoroPill: true, badge: null,
+      build: () => HomeScreen(
         wordSource: widget.wordSource,
         exampleStyle: widget.exampleStyle,
         userProfile: widget.userProfile,
         languageLevel: widget.languageLevel,
         dailyWordGoal: widget.dailyWordGoal,
-      );
-      case 1: return SearchScreen(userProfile: widget.userProfile);
-      case 2: return ReviewsDueScreen(userProfile: widget.userProfile);
-      case 3: return StatsScreen();
-      case 4: return const LeaderboardScreen();
-      case 5: return const ClassesScreen();
-      case 6: return const ImportedWordsScreen();
-      case 7: return const ReadingScreen();
-      case 8: return RealEnglishScreen(userProfile: widget.userProfile);
-      default: throw ArgumentError('No tab at index $index');
-    }
-  }
+      ),
+    ),
+    _TabDef(
+      icon: Icons.search_rounded, label: tr('nav_search'),
+      accent: (color: const Color(0xFF8B5CF6), light: const Color(0xFFA78BFA), dark: const Color(0xFF6D28D9)),
+      showPomodoroPill: true, badge: null,
+      build: () => SearchScreen(userProfile: widget.userProfile),
+    ),
+    _TabDef(
+      icon: Icons.refresh_rounded, label: tr('nav_review'),
+      accent: (color: const Color(0xFF06B6D4), light: const Color(0xFF22D3EE), dark: const Color(0xFF0891B2)),
+      showPomodoroPill: true, badge: _reviewsDue,
+      build: () => ReviewsDueScreen(userProfile: widget.userProfile),
+    ),
+    _TabDef(
+      icon: Icons.bar_chart_rounded, label: tr('nav_progress'),
+      accent: (color: const Color(0xFF10B981), light: const Color(0xFF34D399), dark: const Color(0xFF059669)),
+      showPomodoroPill: false, badge: null,
+      build: () => StatsScreen(),
+    ),
+    _TabDef(
+      icon: Icons.emoji_events_rounded, label: tr('nav_leaderboard'),
+      accent: (color: const Color(0xFFF59E0B), light: const Color(0xFFFCD34D), dark: const Color(0xFFB45309)),
+      showPomodoroPill: false, badge: null,
+      build: () => const LeaderboardScreen(),
+    ),
+    _TabDef(
+      icon: Icons.school_rounded, label: tr('nav_classes'),
+      accent: (color: const Color(0xFFEF4444), light: const Color(0xFFF87171), dark: const Color(0xFFB91C1C)),
+      showPomodoroPill: false, badge: null,
+      build: () => const ClassesScreen(),
+    ),
+    _TabDef(
+      icon: Icons.folder_open_rounded, label: 'My Words',
+      accent: (color: const Color(0xFF84CC16), light: const Color(0xFFA3E635), dark: const Color(0xFF4D7C0F)),
+      showPomodoroPill: false, badge: null,
+      build: () => const ImportedWordsScreen(),
+    ),
+    _TabDef(
+      icon: Icons.lightbulb_rounded, label: 'Ideas',
+      accent: (color: const Color(0xFFEAB308), light: const Color(0xFFFDE047), dark: const Color(0xFFA16207)),
+      showPomodoroPill: false, badge: null,
+      build: () => const ReadingScreen(),
+    ),
+    _TabDef(
+      icon: Icons.play_circle_outline_rounded, label: 'Real English',
+      accent: (color: const Color(0xFFEC4899), light: const Color(0xFFF472B6), dark: const Color(0xFFBE185D)),
+      showPomodoroPill: false, badge: null,
+      build: () => RealEnglishScreen(userProfile: widget.userProfile),
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
+    final tabs = _tabs;
+
     // Only build a tab once it's actually been visited — previously all 9
     // were constructed on the very first frame and kept fully alive inside
     // IndexedStack for the app's entire lifetime. TickerMode additionally
@@ -233,9 +303,9 @@ class _MainShellState extends State<MainShell> {
     // Ticker/AnimationController check, not a rebuild trigger, so it
     // doesn't fight the "keep state alive while switching tabs" behavior
     // IndexedStack is there for in the first place).
-    final screens = List.generate(9, (i) {
+    final screens = List.generate(tabs.length, (i) {
       if (!_visitedIndices.contains(i)) return const SizedBox.shrink();
-      return TickerMode(enabled: i == _currentIndex, child: _buildScreen(i));
+      return TickerMode(enabled: i == _currentIndex, child: tabs[i].build());
     });
 
     return PopScope(
@@ -251,7 +321,7 @@ class _MainShellState extends State<MainShell> {
         body: Stack(
           children: [
             IndexedStack(index: _currentIndex, children: screens),
-            if (_currentIndex != 3 && _currentIndex != 4 && _currentIndex != 5 && _currentIndex != 6 && _currentIndex != 7 && _currentIndex != 8)
+            if (tabs[_currentIndex].showPomodoroPill)
               Positioned(
                 top: MediaQuery.of(context).padding.top + 56,
                 right: 16,
@@ -286,21 +356,10 @@ class _MainShellState extends State<MainShell> {
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                 child: Row(
                   children: [
-                    _buildNavItem(context, 0, Icons.home_rounded, tr('nav_home')),
-                    _buildNavItem(context, 1, Icons.search_rounded, tr('nav_search')),
-                    _buildNavItemWithBadge(
-                      context,
-                      2,
-                      Icons.refresh_rounded,
-                      tr('nav_review'),
-                      _reviewsDue,
-                    ),
-                    _buildNavItem(context, 3, Icons.bar_chart_rounded, tr('nav_progress')),
-                    _buildNavItem(context, 4, Icons.emoji_events_rounded, tr('nav_leaderboard')),
-                    _buildNavItem(context, 5, Icons.school_rounded, tr('nav_classes')),
-                    _buildNavItem(context, 6, Icons.folder_open_rounded, 'My Words'),
-                    _buildNavItem(context, 7, Icons.lightbulb_rounded, 'Ideas'),
-                    _buildNavItem(context, 8, Icons.play_circle_outline_rounded, 'Real English'),
+                    for (var i = 0; i < tabs.length; i++)
+                      tabs[i].badge != null
+                          ? _buildNavItemWithBadge(context, i, tabs[i].icon, tabs[i].label, tabs[i].badge!)
+                          : _buildNavItem(context, i, tabs[i].icon, tabs[i].label),
                   ],
                 ),
               ),
@@ -311,21 +370,8 @@ class _MainShellState extends State<MainShell> {
     );
   }
 
-  // Per-nav-item accent colors — index matches screen order
-  static const _navAccents = <({Color color, Color light, Color dark})>[
-    (color: Color(0xFFF97316), light: Color(0xFFFB923C), dark: Color(0xFFC2410C)), // 0 Home
-    (color: Color(0xFF8B5CF6), light: Color(0xFFA78BFA), dark: Color(0xFF6D28D9)), // 1 Search
-    (color: Color(0xFF06B6D4), light: Color(0xFF22D3EE), dark: Color(0xFF0891B2)), // 2 Review
-    (color: Color(0xFF10B981), light: Color(0xFF34D399), dark: Color(0xFF059669)), // 3 Progress
-    (color: Color(0xFFF59E0B), light: Color(0xFFFCD34D), dark: Color(0xFFB45309)), // 4 Leaderboard
-    (color: Color(0xFFEF4444), light: Color(0xFFF87171), dark: Color(0xFFB91C1C)), // 5 Classes
-    (color: Color(0xFF84CC16), light: Color(0xFFA3E635), dark: Color(0xFF4D7C0F)), // 6 My Words
-    (color: Color(0xFFEAB308), light: Color(0xFFFDE047), dark: Color(0xFFA16207)), // 7 Ideas
-    (color: Color(0xFFEC4899), light: Color(0xFFF472B6), dark: Color(0xFFBE185D)), // 8 Real English
-  ];
-
   BoxDecoration _activeNavDecoration(int index) {
-    final nc = _navAccents[index];
+    final nc = _tabs[index].accent;
     return BoxDecoration(
       gradient: LinearGradient(
         begin: Alignment.topLeft,
@@ -342,7 +388,7 @@ class _MainShellState extends State<MainShell> {
 
   Widget _buildNavItem(BuildContext context, int index, IconData icon, String label) {
     final isSelected = _currentIndex == index;
-    final nc = _navAccents[index];
+    final nc = _tabs[index].accent;
     return GestureDetector(
       onTap: () => _selectTab(index),
       child: AnimatedContainer(
@@ -370,7 +416,7 @@ class _MainShellState extends State<MainShell> {
 
   Widget _buildNavItemWithBadge(BuildContext context, int index, IconData icon, String label, int badge) {
     final isSelected = _currentIndex == index;
-    final nc = _navAccents[index];
+    final nc = _tabs[index].accent;
     return GestureDetector(
       onTap: () => _selectTab(index),
       child: AnimatedContainer(

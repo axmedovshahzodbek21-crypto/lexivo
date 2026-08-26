@@ -60,15 +60,6 @@ class LeaderboardEntry {
   }
 }
 
-Color _userColor(String userId) {
-  const colors = [
-    Color(0xFF6366F1), Color(0xFF8B5CF6), Color(0xFF06B6D4), Color(0xFF10B981),
-    Color(0xFFF59E0B), Color(0xFFEF4444), Color(0xFFEC4899), Color(0xFF3B82F6),
-  ];
-  final hash = userId.codeUnits.fold(0, (a, b) => a + b);
-  return colors[hash % colors.length];
-}
-
 String _fmtXp(int raw) {
   final d = raw / 10.0;
   return d == d.truncateToDouble() ? d.truncate().toString() : d.toStringAsFixed(1);
@@ -485,7 +476,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             const SizedBox(width: 4),
             const Text('⭐', style: TextStyle(fontSize: 14)),
             const SizedBox(width: 8),
-            _Avatar(name: entry.name, size: 36, avatarUrl: entry.avatarUrl, avatarColor: _userColor(entry.userId)),
+            _Avatar(name: entry.name, size: 36, avatarUrl: entry.avatarUrl, avatarColor: colorForId(entry.userId)),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -606,7 +597,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 children: [
                 Container(width: 36, height: 4, decoration: BoxDecoration(color: context.border, borderRadius: BorderRadius.circular(2))),
                 const SizedBox(height: 16),
-                _Avatar(name: entry.name, size: 60, avatarUrl: entry.avatarUrl, avatarColor: _userColor(entry.userId)),
+                _Avatar(name: entry.name, size: 60, avatarUrl: entry.avatarUrl, avatarColor: colorForId(entry.userId)),
                 const SizedBox(height: 10),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -850,7 +841,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.white, width: 2.5),
                             ),
-                            child: _Avatar(name: entry.name, size: cfg.avatarSize, avatarUrl: entry.avatarUrl, avatarColor: _userColor(entry.userId)),
+                            child: _Avatar(name: entry.name, size: cfg.avatarSize, avatarUrl: entry.avatarUrl, avatarColor: colorForId(entry.userId)),
                           ),
                           const SizedBox(height: 6),
                           if (_savedIds.contains(entry.userId)) const Text('⭐', style: TextStyle(fontSize: 10)),
@@ -938,7 +929,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               child: Text('${isTied ? '=' : ''}$rank', style: TextStyle(fontWeight: FontWeight.w900, color: rankColor, fontSize: 13)),
             ),
             const SizedBox(width: 10),
-            _Avatar(name: entry.name, size: 38, avatarUrl: entry.avatarUrl, avatarColor: _userColor(entry.userId)),
+            _Avatar(name: entry.name, size: 38, avatarUrl: entry.avatarUrl, avatarColor: colorForId(entry.userId)),
             const SizedBox(width: 10),
             Expanded(
               child: Column(

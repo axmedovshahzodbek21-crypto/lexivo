@@ -73,6 +73,10 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
           .from('teacher_units')
           .select('id, name, teacher_unit_words(count)')
           .eq('folder_id', widget.folderId)
+          // `position` is never written anywhere (no drag-to-reorder UI
+          // exists yet for units within a folder), so this always falls
+          // through to the created_at tiebreaker below — kept as the
+          // primary sort key for when manual reordering is built.
           .order('position')
           .order('created_at');
       final units = (data as List).map((e) {

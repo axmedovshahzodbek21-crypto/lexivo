@@ -25,6 +25,11 @@ class DeepLinkService {
     _sub = _appLinks.uriLinkStream.listen(_handleUri);
   }
 
+  // Not currently called anywhere — this is a static, app-lifetime service
+  // initialized once from main() before runApp() (see main.dart), with no
+  // corresponding root widget whose dispose() would be a natural teardown
+  // point (the app process simply ends). Kept for symmetry/tests and in
+  // case a future entry point needs to re-init this service mid-session.
   static void dispose() => _sub?.cancel();
 
   static void _handleUri(Uri uri) {

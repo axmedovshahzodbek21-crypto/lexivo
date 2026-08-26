@@ -1066,7 +1066,20 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
                   children: [
                     AnimatedBuilder(
                       animation: _flipAnimation,
+                      // Front/back subtrees are built once per outer build()
+                      // (e.g. on flip toggle, card change, star toggle) and
+                      // handed down via `child`, rather than being rebuilt
+                      // inside `builder` — which fires on every animation
+                      // tick (~60x/sec over the 450ms flip). `child` is
+                      // never actually built as a widget itself; it's used
+                      // purely as a typed carrier so `builder` can pull the
+                      // two pre-built sides back out without rebuilding them.
+                      child: _FlipCardSides(
+                        front: _buildFront(),
+                        back: _buildBack(context),
+                      ),
                       builder: (context, child) {
+                        final sides = child! as _FlipCardSides;
                         final angle = _flipAnimation.value * pi;
                         final isFrontVisible = angle < pi / 2;
                         return Transform(
@@ -1075,11 +1088,11 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
                             ..setEntry(3, 2, 0.001)
                             ..rotateY(angle),
                           child: isFrontVisible
-                              ? _buildFront()
+                              ? sides.front
                               : Transform(
                                   alignment: Alignment.center,
                                   transform: Matrix4.identity()..rotateY(pi),
-                                  child: _buildBack(context),
+                                  child: sides.back,
                                 ),
                         );
                       },
@@ -1368,6 +1381,22 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
       ),
     );
   }
+}
+
+// Typed carrier for the flip card's pre-built front/back widgets — passed
+// as the `child` of an AnimatedBuilder so those subtrees are built once per
+// outer build() instead of on every animation frame. It is never actually
+// built as a widget in its own right (build() is unused); AnimatedBuilder
+// hands the raw instance straight through to `builder`, which reads
+// `.front`/`.back` off of it directly.
+class _FlipCardSides extends StatelessWidget {
+  final Widget front;
+  final Widget back;
+
+  const _FlipCardSides({required this.front, required this.back});
+
+  @override
+  Widget build(BuildContext context) => front;
 }
 
 class FlashcardFinishScreen extends StatelessWidget {

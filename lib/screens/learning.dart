@@ -480,8 +480,15 @@ class _LearningScreenState extends State<LearningScreen> {
     if (_allWords.length < 2) { _markLearned(); return; }
     _wordGateAttempts++;
     final correct = _currentWord.translation;
-    final pool = (_allWords.where((w) => w.word != _currentWord.word).toList()..shuffle(Random()));
-    final opts = ([correct, ...pool.take(3).map((w) => w.translation)])..shuffle(Random());
+    // Guarded above by `_allWords.length < 2`, so this pool always has at
+    // least one candidate — no minOptions requirement needed.
+    final opts = buildQuizOptions(
+      correct: correct,
+      candidatePool: _allWords
+          .where((w) => w.word != _currentWord.word)
+          .map((w) => w.translation),
+      distractorCount: 3,
+    )!;
     setState(() {
       _inQuizGate = true;
       _gateOptions = opts;
@@ -521,8 +528,13 @@ class _LearningScreenState extends State<LearningScreen> {
     final checkIdx = learnedList[Random().nextInt(learnedList.length)];
     final checkWord = _allWords[checkIdx];
     final correct = checkWord.translation;
-    final pool = (_allWords.where((w) => w.word != checkWord.word).toList()..shuffle(Random()));
-    final opts = ([correct, ...pool.take(3).map((w) => w.translation)])..shuffle(Random());
+    final opts = buildQuizOptions(
+      correct: correct,
+      candidatePool: _allWords
+          .where((w) => w.word != checkWord.word)
+          .map((w) => w.translation),
+      distractorCount: 3,
+    )!;
     setState(() {
       _inQuizGate = false;
       _inSpotCheck = true;

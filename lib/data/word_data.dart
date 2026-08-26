@@ -1,3 +1,58 @@
+import 'dart:math';
+
+/// Picks a multiple-choice quiz option set: [correct] plus up to
+/// [distractorCount] wrong-but-plausible distractors drawn from
+/// [candidatePool], all shuffled together into one list.
+///
+/// Shared by srs_review_screen.dart, quiz_screen.dart, and learning.dart,
+/// which each used to carry their own independent copy of this logic (#168
+/// audit). Comparing them turned up a real behavioral divergence:
+/// srs_review_screen deduplicated its candidate pool by value (via a Set)
+/// so two words sharing an identical translation could never produce two
+/// indistinguishable wrong answers on screen, while quiz_screen and
+/// learning.dart did not dedupe — a duplicate-translation distractor could
+/// silently sit right next to the correct answer, showing the same text
+/// twice with no way to tell them apart. This shared implementation always
+/// dedupes (the more correct behavior), so quiz_screen and learning.dart
+/// pick up a small behavior fix as a side effect of the merge.
+///
+/// [fallbackPool], if given, supplies extra candidates to draw on when
+/// [candidatePool] alone doesn't have enough distinct values — used by
+/// srs_review_screen to pull from the user's previously-learned words.
+///
+/// [minOptions] is the minimum total option count (correct + distractors)
+/// required to return a non-null result. If the combined pool (after
+/// dedup/fallback) can't reach it, this returns null so the caller can fall
+/// back to a non-quiz presentation (e.g. flip mode) instead of showing an
+/// under-filled question. Defaults to 1 (no minimum — just return whatever
+/// fits), matching quiz_screen's and learning.dart's original behavior of
+/// silently using fewer options when the pool is small. srs_review_screen
+/// passes `distractorCount + 1` to preserve its original fallback-to-flip
+/// behavior when fewer than 2 distractors are available.
+List<String>? buildQuizOptions({
+  required String correct,
+  required Iterable<String> candidatePool,
+  required int distractorCount,
+  Iterable<String>? fallbackPool,
+  int minOptions = 1,
+  Random? random,
+}) {
+  final rng = random ?? Random();
+  final pool = <String>{};
+  for (final c in candidatePool) {
+    if (c != correct) pool.add(c);
+  }
+  if (pool.length < distractorCount && fallbackPool != null) {
+    for (final c in fallbackPool) {
+      if (c != correct) pool.add(c);
+      if (pool.length >= distractorCount) break;
+    }
+  }
+  if (pool.length + 1 < minOptions) return null;
+  final wrong = (pool.toList()..shuffle(rng)).take(distractorCount).toList();
+  return [correct, ...wrong]..shuffle(rng);
+}
+
 class LeveledCollection {
   final String id;
   final String title;

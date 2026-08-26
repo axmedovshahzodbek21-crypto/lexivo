@@ -34,7 +34,7 @@ List<String> _shuffleIds(List<String> ids) {
 }
 
 String _fmt(int s) =>
-    '${(s ~/ 60).toString().padLeft(1, '0')}:${(s % 60).toString().padLeft(2, '0')}';
+    '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
 
 class MatchingScreen extends StatefulWidget {
   final WordDay wordDay;

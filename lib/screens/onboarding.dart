@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'main_shell.dart';
 import '../app_theme.dart';
+import '../data/storage_service.dart';
 import '../l10n.dart';
 
 class OnboardingFlow extends StatefulWidget {
@@ -15,7 +16,9 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   int _currentPage = 0;
   String _userName = '';
   String _englishLevel = '';
-  int _dailyWordGoal = 15;
+  // Matches web onboarding's initial slider value (app/onboarding/page.tsx)
+  // and StorageService.defaultDailyWordGoal.
+  int _dailyWordGoal = StorageService.defaultDailyWordGoal;
 
   final _nameController = TextEditingController();
 

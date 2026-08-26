@@ -812,8 +812,6 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
   static const _reviewLogKey     = 'srs_review_log';
   static const _masteredSRSKey   = 'mastered_srs_words';
 
-  static const int defaultDailyLimit = 20;
-
   // ── Unit Progress ──────────────────────────
 
   static String _unitKey(String collectionName, int dayNumber) =>
@@ -1213,6 +1211,20 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
 
   // ── Daily Word Limit ───────────────────────
 
+  // Single default for the "unset" case — every daily-word-goal read across
+  // the app used to fall back to a different hardcoded number depending on
+  // which screen read it (5 in Settings, 15 in Home/login/signup, 10 in
+  // Progress, 20 here), so a pref that hadn't synced yet (fresh install,
+  // cleared storage, a pull still in flight) showed a different goal on
+  // every screen. Matches web's SETTINGS_DEFAULTS.dailyGoal (lib/storage.ts).
+  static const int defaultDailyWordGoal = 10;
+
+  static int dailyWordGoalOf(SharedPreferences prefs) =>
+      prefs.getInt('daily_word_goal') ?? defaultDailyWordGoal;
+
+  static Future<int> getDailyWordGoal() async =>
+      dailyWordGoalOf(await SharedPreferences.getInstance());
+
   static Future<int> getTodayLearnedCount() async {
     return (await getTodayLearnedWords()).length;
   }
@@ -1224,8 +1236,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
   }
 
   static Future<bool> canLearnMore() async {
-    final prefs = await SharedPreferences.getInstance();
-    final goal = prefs.getInt('daily_word_goal') ?? defaultDailyLimit;
+    final goal = await getDailyWordGoal();
     final count = await getTodayLearnedCount();
     return count < goal;
   }
@@ -2056,7 +2067,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
 
   static Future<void> _checkAndRecordWordGoalDay(SharedPreferences prefs) async {
     final today = _todayString();
-    final goal = prefs.getInt('daily_word_goal') ?? 10;
+    final goal = dailyWordGoalOf(prefs);
     final lastDate = prefs.getString(_dailyLimitDateKey);
     final count = lastDate == today ? (prefs.getInt(_dailyLimitKey) ?? 0) : 0;
     if (count < goal) return;

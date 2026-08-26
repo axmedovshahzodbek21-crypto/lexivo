@@ -198,7 +198,7 @@ class _SplashRouterState extends State<SplashRouter> {
             exampleStyle: prefs.getString('example_style') ?? 'reallife',
             userProfile: prefs.getString('user_profile') ?? 'worker',
             languageLevel: prefs.getString('language_level') ?? 'intermediate',
-            dailyWordGoal: prefs.getInt('daily_word_goal') ?? 15,
+            dailyWordGoal: StorageService.dailyWordGoalOf(prefs),
           ),
         ),
       );
@@ -216,7 +216,7 @@ class _SplashRouterState extends State<SplashRouter> {
             exampleStyle: prefs.getString('example_style') ?? 'reallife',
             userProfile: prefs.getString('user_profile') ?? 'worker',
             languageLevel: prefs.getString('language_level') ?? 'intermediate',
-            dailyWordGoal: prefs.getInt('daily_word_goal') ?? 15,
+            dailyWordGoal: StorageService.dailyWordGoalOf(prefs),
           ),
         ),
       );

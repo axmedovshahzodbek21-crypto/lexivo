@@ -586,7 +586,7 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
       _wordGoalDays    = wordGoalDays;
       _todayWordsCount = results[2] as int;
       _srsLockedDays   = results[3] as List<String>;
-      _dailyGoal       = prefs.getInt('daily_word_goal') ?? 10;
+      _dailyGoal       = StorageService.dailyWordGoalOf(prefs);
       _longestStreak   = _calcLongest(completeDays);
       _activeDays      = completeDays.length;
       _loading         = false;

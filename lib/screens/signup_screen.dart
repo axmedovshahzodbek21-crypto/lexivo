@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../app_theme.dart';
+import '../data/storage_service.dart';
 import '../l10n.dart';
 import '../services/sync_service.dart';
 import 'main_shell.dart';
@@ -137,7 +138,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 exampleStyle: prefs.getString('example_style') ?? 'reallife',
                 userProfile: prefs.getString('user_profile') ?? 'worker',
                 languageLevel: prefs.getString('language_level') ?? 'intermediate',
-                dailyWordGoal: prefs.getInt('daily_word_goal') ?? 15,
+                dailyWordGoal: StorageService.dailyWordGoalOf(prefs),
               )
             : const OnboardingFlow(),
       ),

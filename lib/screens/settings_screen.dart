@@ -38,7 +38,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
   String _notifTime = '20:00';
-  int _dailyWordGoal = 5;
+  int _dailyWordGoal = StorageService.defaultDailyWordGoal;
   String _englishLevel = 'B1';
   String _userName = '';
   String? _profileImagePath;
@@ -77,7 +77,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
       _notifTime = prefs.getString('notif_time') ?? '20:00';
-      _dailyWordGoal = prefs.getInt('daily_word_goal') ?? 5;
+      _dailyWordGoal = StorageService.dailyWordGoalOf(prefs);
       _englishLevel = prefs.getString('english_level') ?? 'B1';
       _userName = prefs.getString('user_name') ?? '';
       _profileImagePath = prefs.getString('profile_image_path');
@@ -1457,7 +1457,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         exampleStyle: prefs.getString('example_style') ?? 'reallife',
                         userProfile: prefs.getString('user_profile') ?? 'worker',
                         languageLevel: prefs.getString('language_level') ?? 'intermediate',
-                        dailyWordGoal: prefs.getInt('daily_word_goal') ?? 15,
+                        dailyWordGoal: StorageService.dailyWordGoalOf(prefs),
                       ),
                     ),
                     (_) => false,

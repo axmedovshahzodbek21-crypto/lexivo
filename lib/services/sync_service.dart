@@ -175,7 +175,7 @@ class SyncService {
       // supabase/migrations/2026-08-19_sync_profile_settings.sql.
       await _sb.rpc('sync_profile_settings', params: {
         'p_user_id': uid,
-        'p_daily_word_goal': prefs.getInt('daily_word_goal') ?? 15,
+        'p_daily_word_goal': StorageService.dailyWordGoalOf(prefs),
         'p_quiz_direction': prefs.getString('quiz_direction') ?? 'word-to-uz',
         'p_reduce_motion': prefs.getBool('reduce_motion') ?? false,
         'p_show_on_leaderboard': showOnLeaderboard,

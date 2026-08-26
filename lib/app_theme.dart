@@ -1,5 +1,21 @@
 import 'package:flutter/material.dart';
 
+/// Fixed palette used to derive a deterministic color from an id string
+/// (class id, user id, etc.) via a simple char-code hash. Shared across
+/// screens that need consistent avatar/class colors (leaderboards, class
+/// home, streak screens) so they don't each keep their own copy.
+const List<Color> kIdColorPalette = [
+  Color(0xFF6366F1), Color(0xFFEC4899), Color(0xFF22C55E),
+  Color(0xFF3B82F6), Color(0xFFF59E0B), Color(0xFF8B5CF6),
+  Color(0xFFEF4444), Color(0xFF06B6D4),
+];
+
+/// Deterministic color for an id string, picked from [kIdColorPalette].
+Color colorForId(String id) {
+  final hash = id.codeUnits.fold(0, (a, b) => a + b);
+  return kIdColorPalette[hash % kIdColorPalette.length];
+}
+
 extension AppTheme on BuildContext {
   bool get isDark => Theme.of(this).brightness == Brightness.dark;
 

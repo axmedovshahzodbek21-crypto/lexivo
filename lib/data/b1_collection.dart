@@ -345,7 +345,7 @@ final WordCollection b1Collection = WordCollection(
 
         WordItem(
           word: 'freelance',
-          partOfSpeech: 'adjective/noun',
+          partOfSpeech: 'adjective / noun',
           pronunciation: '/ˈfriːlæns/',
           translation: 'frilanser',
           definition: 'Working independently for different clients.',

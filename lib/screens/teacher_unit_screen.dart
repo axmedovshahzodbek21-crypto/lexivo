@@ -155,6 +155,10 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
           .from('teacher_unit_words')
           .select('id, word, translation, definition, part_of_speech, pronunciation, definition_uz, examples')
           .eq('unit_id', widget.unitId)
+          // `position` is never written anywhere (no drag-to-reorder UI
+          // exists yet for words within a unit), so this always falls
+          // through to the created_at tiebreaker below — kept as the
+          // primary sort key for when manual reordering is built.
           .order('position')
           .order('created_at');
       final words = (data as List).map((e) => _Word.fromMap(Map<String, dynamic>.from(e as Map))).toList();

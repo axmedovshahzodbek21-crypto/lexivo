@@ -4,6 +4,8 @@ import '../app_theme.dart';
 import '../l10n.dart';
 import 'created_classes_screen.dart';
 import 'joined_classes_screen.dart';
+import '../widgets/create_class_sheet.dart';
+import '../widgets/navigate_once.dart';
 
 class ClassesScreen extends StatefulWidget {
   const ClassesScreen({super.key});
@@ -12,7 +14,7 @@ class ClassesScreen extends StatefulWidget {
   State<ClassesScreen> createState() => _ClassesScreenState();
 }
 
-class _ClassesScreenState extends State<ClassesScreen> {
+class _ClassesScreenState extends State<ClassesScreen> with NavigateOnceMixin {
   int _createdCount = 0;
   int _joinedCount = 0;
   bool _loading = true;
@@ -20,18 +22,6 @@ class _ClassesScreenState extends State<ClassesScreen> {
   final _joinCtrl = TextEditingController();
   String _joinError = '';
   bool _joining = false;
-  // A fast double-tap on a hub card could fire Navigator.push twice before
-  // the first push's route transition even begins, stacking a duplicate route.
-  bool _navigating = false;
-  Future<void> _pushOnce(Route route) async {
-    if (_navigating) return;
-    _navigating = true;
-    try {
-      await Navigator.push(context, route);
-    } finally {
-      _navigating = false;
-    }
-  }
 
   @override
   void initState() {
@@ -194,7 +184,7 @@ class _ClassesScreenState extends State<ClassesScreen> {
                           subtitle: _loadError ? "Couldn't load — pull to retry" : (_createdCount == 0 ? 'No classes yet' : '$_createdCount class${_createdCount != 1 ? 'es' : ''} created'),
                           emoji: '🏫',
                           colors: [const Color(0xFF6366F1), const Color(0xFF8B5CF6)],
-                          onTap: () => _pushOnce(MaterialPageRoute(builder: (_) => const CreatedClassesScreen())).then((_) => _loadCounts()),
+                          onTap: () => pushOnce(MaterialPageRoute(builder: (_) => const CreatedClassesScreen())).then((_) => _loadCounts()),
                         ),
                         const SizedBox(height: 16),
                         _buildHubCard(
@@ -202,7 +192,7 @@ class _ClassesScreenState extends State<ClassesScreen> {
                           subtitle: _loadError ? "Couldn't load — pull to retry" : (_joinedCount == 0 ? 'Not enrolled yet' : '$_joinedCount class${_joinedCount != 1 ? 'es' : ''} joined'),
                           emoji: '🎓',
                           colors: [const Color(0xFF10B981), const Color(0xFF06B6D4)],
-                          onTap: () => _pushOnce(MaterialPageRoute(builder: (_) => const JoinedClassesScreen())).then((_) => _loadCounts()),
+                          onTap: () => pushOnce(MaterialPageRoute(builder: (_) => const JoinedClassesScreen())).then((_) => _loadCounts()),
                         ),
                         const SizedBox(height: 28),
                         _buildCreateButton(),
@@ -314,49 +304,5 @@ class _ClassesScreenState extends State<ClassesScreen> {
     ],
   );
 
-  void _showCreateSheet() {
-    final ctrl = TextEditingController();
-    showModalBottomSheet(
-      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-        child: Container(
-          decoration: BoxDecoration(color: context.surface, borderRadius: const BorderRadius.vertical(top: Radius.circular(24))),
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(width: 36, height: 4, decoration: BoxDecoration(color: context.border, borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 16),
-            Text(tr('create_class'), style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: context.appText)),
-            const SizedBox(height: 14),
-            TextField(
-              controller: ctrl, autofocus: true,
-              style: TextStyle(color: context.appText),
-              decoration: InputDecoration(
-                hintText: 'e.g. English B1 — Group A',
-                hintStyle: TextStyle(color: context.textMuted),
-                filled: true, fillColor: context.surface2,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              ),
-              onSubmitted: (v) { Navigator.pop(ctx); _createClass(v); },
-            ),
-            const SizedBox(height: 14),
-            Row(children: [
-              Expanded(child: OutlinedButton(
-                onPressed: () => Navigator.pop(ctx),
-                style: OutlinedButton.styleFrom(foregroundColor: context.textMuted, side: BorderSide(color: context.border), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: const EdgeInsets.symmetric(vertical: 12)),
-                child: Text(tr('cancel')),
-              )),
-              const SizedBox(width: 10),
-              Expanded(child: ElevatedButton(
-                onPressed: () { final v = ctrl.text; Navigator.pop(ctx); _createClass(v); },
-                style: ElevatedButton.styleFrom(backgroundColor: context.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: const EdgeInsets.symmetric(vertical: 12)),
-                child: Text(tr('create_class'), style: const TextStyle(fontWeight: FontWeight.bold)),
-              )),
-            ]),
-          ]),
-        ),
-      ),
-    );
-  }
+  void _showCreateSheet() => showCreateClassSheet(context, _createClass);
 }

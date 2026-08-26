@@ -4,17 +4,6 @@ import '../date_utils.dart';
 import '../l10n.dart' as l10n;
 import '../services/supabase_service.dart';
 
-/// Computes a deterministic color for a class from its ID — mirrors the
-/// formula used in class_home_screen.dart so colors stay consistent.
-Color classColorFromId(String classId) {
-  const colors = [
-    Color(0xFF6366F1), Color(0xFFEC4899), Color(0xFF22C55E),
-    Color(0xFF3B82F6), Color(0xFFF59E0B), Color(0xFF8B5CF6),
-    Color(0xFFEF4444), Color(0xFF06B6D4),
-  ];
-  return colors[classId.codeUnits.fold(0, (a, b) => a + b) % colors.length];
-}
-
 class ClassStreakScreen extends StatefulWidget {
   final String classId;
   final String className;

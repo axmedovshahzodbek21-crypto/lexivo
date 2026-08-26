@@ -1329,7 +1329,7 @@ final WordCollection a2Collection = WordCollection(
 
         WordItem(
           word: 'exercise',
-          partOfSpeech: 'noun/verb',
+          partOfSpeech: 'noun / verb',
           pronunciation: '/ˈɛksərsaɪz/',
           translation: 'sport bilan shug‘ullanish',
           definition: 'Physical activity to keep the body healthy.',
@@ -14838,7 +14838,7 @@ final WordCollection a2Collection = WordCollection(
 
         WordItem(
           word: 'wish',
-          partOfSpeech: 'noun/verb',
+          partOfSpeech: 'noun / verb',
           pronunciation: '/wɪʃ/',
           translation: 'orzu qilmoq',
           definition: 'A desire for something to happen.',

@@ -7,6 +7,8 @@ import '../l10n.dart';
 import 'class_models.dart';
 import 'class_shell.dart';
 import 'teacher_library_screen.dart';
+import '../widgets/create_class_sheet.dart';
+import '../widgets/navigate_once.dart';
 
 const _kGradients = [
   [Color(0xFF6366F1), Color(0xFF8B5CF6)],
@@ -22,7 +24,17 @@ const _kGradients = [
 List<Color> _cardColors(String id) =>
     _kGradients[id.codeUnits.fold(0, (a, b) => a + b) % _kGradients.length];
 
+// Keyed by user id, so this normally holds 1 entry — but a shared/test
+// device that signs in and out of several accounts would otherwise grow
+// this forever for the lifetime of the process. Cap it defensively.
+const _cacheCap = 20;
 final _cache = <String, List<ClassRow>>{};
+void _cachePut(String key, List<ClassRow> value) {
+  _cache[key] = value;
+  while (_cache.length > _cacheCap) {
+    _cache.remove(_cache.keys.first);
+  }
+}
 
 class CreatedClassesScreen extends StatefulWidget {
   const CreatedClassesScreen({super.key});
@@ -31,23 +43,11 @@ class CreatedClassesScreen extends StatefulWidget {
   State<CreatedClassesScreen> createState() => _CreatedClassesScreenState();
 }
 
-class _CreatedClassesScreenState extends State<CreatedClassesScreen> {
+class _CreatedClassesScreenState extends State<CreatedClassesScreen> with NavigateOnceMixin {
   List<ClassRow> _myClasses = [];
   bool _loading = true;
   bool _loadError = false;
   String? _copiedId;
-  // A fast double-tap on a card could fire Navigator.push twice before the
-  // first push's route transition even begins, stacking a duplicate route.
-  bool _navigating = false;
-  Future<void> _pushOnce(Route route) async {
-    if (_navigating) return;
-    _navigating = true;
-    try {
-      await Navigator.push(context, route);
-    } finally {
-      _navigating = false;
-    }
-  }
 
   @override
   void initState() {
@@ -87,7 +87,7 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> {
           ));
         }
       }
-      _cache[user.id] = myClasses;
+      _cachePut(user.id, myClasses);
       if (mounted) setState(() { _myClasses = myClasses; _loading = false; _loadError = false; });
       WidgetService.pushClasses(myClasses, {});
     } catch (e) {
@@ -293,7 +293,7 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> {
   }
 
   Widget _buildLibraryBanner() => GestureDetector(
-    onTap: () => _pushOnce(MaterialPageRoute(builder: (_) => const TeacherLibraryScreen())),
+    onTap: () => pushOnce(MaterialPageRoute(builder: (_) => const TeacherLibraryScreen())),
     child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -320,7 +320,7 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> {
   Widget _buildMyClassCard(ClassRow cls) {
     final colors = _cardColors(cls.id);
     return GestureDetector(
-      onTap: () => _pushOnce(MaterialPageRoute(
+      onTap: () => pushOnce(MaterialPageRoute(
         builder: (_) => ClassShell(classId: cls.id, className: cls.name, isTeacher: true),
       )).then((_) => _load()),
       child: Container(
@@ -412,51 +412,7 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> {
     ])),
   );
 
-  void _showCreateSheet() {
-    final ctrl = TextEditingController();
-    showModalBottomSheet(
-      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-        child: Container(
-          decoration: BoxDecoration(color: context.surface, borderRadius: const BorderRadius.vertical(top: Radius.circular(24))),
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(width: 36, height: 4, decoration: BoxDecoration(color: context.border, borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 16),
-            Text(tr('create_class'), style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: context.appText)),
-            const SizedBox(height: 14),
-            TextField(
-              controller: ctrl, autofocus: true,
-              style: TextStyle(color: context.appText),
-              decoration: InputDecoration(
-                hintText: 'e.g. English B1 — Group A',
-                hintStyle: TextStyle(color: context.textMuted),
-                filled: true, fillColor: context.surface2,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              ),
-              onSubmitted: (v) { Navigator.pop(ctx); _createClass(v); },
-            ),
-            const SizedBox(height: 14),
-            Row(children: [
-              Expanded(child: OutlinedButton(
-                onPressed: () => Navigator.pop(ctx),
-                style: OutlinedButton.styleFrom(foregroundColor: context.textMuted, side: BorderSide(color: context.border), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: const EdgeInsets.symmetric(vertical: 12)),
-                child: Text(tr('cancel')),
-              )),
-              const SizedBox(width: 10),
-              Expanded(child: ElevatedButton(
-                onPressed: () { final v = ctrl.text; Navigator.pop(ctx); _createClass(v); },
-                style: ElevatedButton.styleFrom(backgroundColor: context.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: const EdgeInsets.symmetric(vertical: 12)),
-                child: Text(tr('create_class'), style: const TextStyle(fontWeight: FontWeight.bold)),
-              )),
-            ]),
-          ]),
-        ),
-      ),
-    );
-  }
+  void _showCreateSheet() => showCreateClassSheet(context, _createClass);
 
   void _showRenameDialog(ClassRow cls) {
     final ctrl = TextEditingController(text: cls.name);
@@ -473,7 +429,7 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> {
         TextButton(onPressed: () => Navigator.pop(ctx), child: Text(tr('cancel'), style: TextStyle(color: context.textMuted))),
         TextButton(onPressed: () { final v = ctrl.text; Navigator.pop(ctx); _renameClass(cls.id, v); }, child: Text(tr('save'), style: TextStyle(color: context.primary, fontWeight: FontWeight.bold))),
       ],
-    ));
+    )).whenComplete(ctrl.dispose);
   }
 
   void _confirmDeleteClass(ClassRow cls) => showDialog(

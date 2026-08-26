@@ -10,16 +10,6 @@ import 'class_models.dart';
 import 'class_streak_screen.dart';
 import 'class_xp_calendar_screen.dart';
 
-Color _classColor(String classId) {
-  const colors = [
-    Color(0xFF6366F1), Color(0xFFEC4899), Color(0xFF22C55E),
-    Color(0xFF3B82F6), Color(0xFFF59E0B), Color(0xFF8B5CF6),
-    Color(0xFFEF4444), Color(0xFF06B6D4),
-  ];
-  final idx = classId.codeUnits.fold(0, (a, b) => a + b) % colors.length;
-  return colors[idx];
-}
-
 class ClassHomeScreen extends StatefulWidget {
   final String classId;
   final String className;
@@ -82,6 +72,16 @@ class _ClassHomeCache {
 
 class _ClassHomeScreenState extends State<ClassHomeScreen> {
   static final _cache = <String, _ClassHomeCache>{};
+  // Unbounded otherwise — one entry per class ever visited, for the app's
+  // entire lifetime. Evict the oldest (Map preserves insertion order) once
+  // over the cap instead of growing forever.
+  static const _cacheCap = 20;
+  static void _cachePut(String key, _ClassHomeCache value) {
+    _cache[key] = value;
+    while (_cache.length > _cacheCap) {
+      _cache.remove(_cache.keys.first);
+    }
+  }
 
   bool _loading = true;
   List<ClassAnnouncement> _announcements = [];
@@ -389,7 +389,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
         needsAttentionCount: needsAttentionCount, readCounts: readCounts,
         myClassXp: myClassXp, classStreak: _classStreak,
       );
-      _cache[widget.classId] = newCache;
+      _cachePut(widget.classId, newCache);
       _saveToPrefs(newCache);
     } catch (e) {
       // Previously swallowed with zero trace. A background refresh over
@@ -445,7 +445,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
             needsAttentionCount: c.needsAttentionCount, readCounts: c.readCounts,
             myClassXp: c.myClassXp, classStreak: streak,
           );
-          _cache[widget.classId] = updated;
+          _cachePut(widget.classId, updated);
           _saveToPrefs(updated);
         }
       }
@@ -510,7 +510,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
       );
     }
 
-    final color = _classColor(widget.classId);
+    final color = colorForId(widget.classId);
     final pending = _targets.where((t) => t.completedAt == null).toList();
 
     return RefreshIndicator(
@@ -543,7 +543,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
                         onTap: _showTeacherBioSheet,
                         child: CircleAvatar(
                           radius: 22,
-                          backgroundColor: _classColor(_teacherId.isNotEmpty ? _teacherId : widget.classId),
+                          backgroundColor: colorForId(_teacherId.isNotEmpty ? _teacherId : widget.classId),
                           child: Text(
                             _teacherName.isNotEmpty ? _teacherName[0].toUpperCase() : 'T',
                             style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
@@ -681,7 +681,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
   }
 
   void _showTeacherBioSheet() {
-    final color = _classColor(_teacherId.isNotEmpty ? _teacherId : widget.classId);
+    final color = colorForId(_teacherId.isNotEmpty ? _teacherId : widget.classId);
     final initial = _teacherName.isNotEmpty ? _teacherName[0].toUpperCase() : 'T';
     showModalBottomSheet(
       context: context,

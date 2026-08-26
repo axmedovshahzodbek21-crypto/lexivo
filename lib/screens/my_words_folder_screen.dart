@@ -27,6 +27,16 @@ class MyWordsFolderScreen extends StatefulWidget {
 
 class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
   static final Map<String, List<ImportedCollection>> _cache = {};
+  // Unbounded otherwise — one entry per folder ever visited, for the app's
+  // entire lifetime. Evict the oldest (Map preserves insertion order) once
+  // over the cap instead of growing forever.
+  static const _cacheCap = 20;
+  static void _cachePut(String key, List<ImportedCollection> value) {
+    _cache[key] = value;
+    while (_cache.length > _cacheCap) {
+      _cache.remove(_cache.keys.first);
+    }
+  }
 
   List<ImportedCollection> _collections = [];
   final Set<String> _completedUnits = {};
@@ -55,7 +65,7 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
     if (mounted) {
       setState(() {
         _collections = cols;
-        _cache[widget.folderName] = cols;
+        _cachePut(widget.folderName, cols);
         _completedUnits..clear()..addAll(completed);
         _loading = false;
       });

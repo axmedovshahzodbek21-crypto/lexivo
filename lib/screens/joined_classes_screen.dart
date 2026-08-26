@@ -6,6 +6,7 @@ import '../l10n.dart';
 import 'class_models.dart';
 import 'class_shell.dart';
 import 'class_home_screen.dart';
+import '../widgets/navigate_once.dart';
 
 String _timeAgo(String iso) {
   final diff = DateTime.now().difference(DateTime.parse(iso));
@@ -38,7 +39,17 @@ typedef _Snapshot = ({
   Map<String, List<ClassTarget>> classTargets,
   Map<String, List<ClassAnnouncement>> classAnnouncements,
 });
+// Keyed by user id, so this normally holds 1 entry — but a shared/test
+// device that signs in and out of several accounts would otherwise grow
+// this forever for the lifetime of the process. Cap it defensively.
+const _cacheCap = 20;
 final _cache = <String, _Snapshot>{};
+void _cachePut(String key, _Snapshot value) {
+  _cache[key] = value;
+  while (_cache.length > _cacheCap) {
+    _cache.remove(_cache.keys.first);
+  }
+}
 
 class JoinedClassesScreen extends StatefulWidget {
   const JoinedClassesScreen({super.key});
@@ -47,7 +58,7 @@ class JoinedClassesScreen extends StatefulWidget {
   State<JoinedClassesScreen> createState() => _JoinedClassesScreenState();
 }
 
-class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
+class _JoinedClassesScreenState extends State<JoinedClassesScreen> with NavigateOnceMixin {
   List<ClassRow> _joinedClasses = [];
   Map<String, String> _teacherNames = {};
   Map<String, List<ClassNote>> _classNotes = {};
@@ -58,18 +69,6 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
   String? _leaderboardLoading;
   bool _loading = true;
   bool _loadError = false;
-  // A fast double-tap on a card could fire Navigator.push twice before the
-  // first push's route transition even begins, stacking a duplicate route.
-  bool _navigating = false;
-  Future<void> _pushOnce(Route route) async {
-    if (_navigating) return;
-    _navigating = true;
-    try {
-      await Navigator.push(context, route);
-    } finally {
-      _navigating = false;
-    }
-  }
 
   @override
   void initState() {
@@ -156,7 +155,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
         classNotes: notes, classTargets: targets,
         classAnnouncements: announcements,
       );
-      _cache[user.id] = snapshot;
+      _cachePut(user.id, snapshot);
       if (mounted) setState(() { _applySnapshot(snapshot); _loadError = false; });
       WidgetService.pushClasses(joinedClasses, {});
     } catch (e) {
@@ -244,11 +243,11 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
     if (user != null) {
       final cached = _cache[user.id];
       if (cached != null) {
-        _cache[user.id] = (
+        _cachePut(user.id, (
           joinedClasses: cached.joinedClasses, teacherNames: cached.teacherNames,
           classNotes: cached.classNotes, classTargets: _classTargets,
           classAnnouncements: cached.classAnnouncements,
-        );
+        ));
       }
     }
   }
@@ -447,7 +446,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
           child: GestureDetector(
-            onTap: () => _pushOnce(MaterialPageRoute(
+            onTap: () => pushOnce(MaterialPageRoute(
               builder: (_) => ClassShell(classId: cls.id, className: cls.name, isTeacher: false),
             )).then((_) => _load()),
             child: Container(

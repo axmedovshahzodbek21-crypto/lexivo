@@ -6,6 +6,17 @@ import '../app_theme.dart';
 
 const _kBreakColor = Color(0xFF10B981);
 
+// Pomodoro session length bounds/defaults for this setup screen, named so
+// they aren't scattered as bare numeric literals across initial state and
+// the custom-duration sliders below.
+const _kDefaultWorkMinutes = 25;
+const _kDefaultBreakMinutes = 5;
+const double _kMinWorkMinutes = 5;
+const double _kMaxWorkMinutes = 60;
+const double _kMinBreakMinutes = 1;
+const double _kMaxBreakMinutes = 20;
+const _kAutoSkipSeconds = 5;
+
 class PomodoroSetupScreen extends StatefulWidget {
   final VoidCallback onSkip;
   final VoidCallback onStart;
@@ -21,9 +32,9 @@ class PomodoroSetupScreen extends StatefulWidget {
 }
 
 class _PomodoroSetupScreenState extends State<PomodoroSetupScreen> {
-  int _workMinutes = 25;
-  int _breakMinutes = 5;
-  int _autoSkipSeconds = 5;
+  int _workMinutes = _kDefaultWorkMinutes;
+  int _breakMinutes = _kDefaultBreakMinutes;
+  int _autoSkipSeconds = _kAutoSkipSeconds;
   Timer? _autoSkipTimer;
   int? _selectedPreset = 0;
 
@@ -342,8 +353,8 @@ class _PomodoroSetupScreenState extends State<PomodoroSetupScreen> {
                         _SliderRow(
                           label: 'Focus',
                           value: _workMinutes.toDouble(),
-                          min: 5,
-                          max: 60,
+                          min: _kMinWorkMinutes,
+                          max: _kMaxWorkMinutes,
                           divisions: 11,
                           color: primary,
                           onChanged: (v) => setState(() => _workMinutes = v.round()),
@@ -352,8 +363,8 @@ class _PomodoroSetupScreenState extends State<PomodoroSetupScreen> {
                         _SliderRow(
                           label: 'Break',
                           value: _breakMinutes.toDouble(),
-                          min: 1,
-                          max: 20,
+                          min: _kMinBreakMinutes,
+                          max: _kMaxBreakMinutes,
                           divisions: 19,
                           color: _kBreakColor,
                           onChanged: (v) => setState(() => _breakMinutes = v.round()),

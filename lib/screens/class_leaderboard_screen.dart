@@ -5,15 +5,6 @@ import '../l10n.dart';
 import 'class_models.dart';
 import 'class_streak_screen.dart';
 
-Color _avatarColor(String id) {
-  const cols = [
-    Color(0xFF6366F1), Color(0xFFEC4899), Color(0xFF22C55E),
-    Color(0xFF3B82F6), Color(0xFFF59E0B), Color(0xFF8B5CF6),
-    Color(0xFFEF4444), Color(0xFF06B6D4),
-  ];
-  return cols[id.codeUnits.fold(0, (a, b) => a + b) % cols.length];
-}
-
 List<Color> _lbGradColors(String id) {
   const grads = <List<Color>>[
     [Color(0xFF6366F1), Color(0xFF8B5CF6)],
@@ -236,7 +227,7 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
           Container(
             width: 42, height: 42,
             decoration: BoxDecoration(
-              color: _avatarColor(row.studentId),
+              color: colorForId(row.studentId),
               shape: BoxShape.circle,
               border: isMe ? Border.all(color: ctx.primary, width: 2.5) : null,
               boxShadow: [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 4))],
@@ -314,7 +305,7 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
         const SizedBox(width: 10),
         Container(
           width: 34, height: 34,
-          decoration: BoxDecoration(color: _avatarColor(row.studentId), shape: BoxShape.circle),
+          decoration: BoxDecoration(color: colorForId(row.studentId), shape: BoxShape.circle),
           child: Center(child: Text(initials,
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14))),
         ),
@@ -328,7 +319,7 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
               builder: (_) => ClassStreakScreen(
                 classId: widget.classId,
                 className: widget.className,
-                classColor: classColorFromId(widget.classId),
+                classColor: colorForId(widget.classId),
                 viewUserId: row.studentId,
                 viewUserName: row.name,
               ),

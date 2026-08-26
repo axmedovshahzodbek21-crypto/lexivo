@@ -170,6 +170,18 @@ final _dashboardCache = <String, _CachedDashboard>{};
 // finishing late would leave stale data on screen for a while.
 const _dashboardCacheTtl = Duration(minutes: 5);
 
+// Unbounded otherwise — one entry per class ever visited, for the app's
+// entire lifetime. Evict the oldest (Map preserves insertion order) once
+// over the cap instead of growing forever — same pattern as
+// class_home_screen.dart's _cache.
+const _dashboardCacheCap = 20;
+void _dashboardCachePut(String key, _CachedDashboard value) {
+  _dashboardCache[key] = value;
+  while (_dashboardCache.length > _dashboardCacheCap) {
+    _dashboardCache.remove(_dashboardCache.keys.first);
+  }
+}
+
 // Web's teacher dashboard digest route — see _generateDigest() below.
 const _digestEndpoint = 'https://lexivo-web-six.vercel.app/api/digest';
 
@@ -589,13 +601,13 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         .map((e) => Map<String, dynamic>.from(e as Map))
         .toList();
 
-      _dashboardCache[widget.classId] = (
+      _dashboardCachePut(widget.classId, (
         students: students,
         activity: activity,
         collections: collections,
         hardWords: hardWords,
         cachedAt: DateTime.now(),
-      );
+      ));
       if (mounted) setState(() { _students = students; _activity = activity; _collections = collections; _hardWords = hardWords; _loading = false; _error = null; });
     } catch (_) {
       // A failed refresh of data that's already on screen (cache hit) just

@@ -508,6 +508,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
       builder: (_) => MatchingScreen(
         wordDay: _buildWordDay(),
         collectionName: widget.className,
+        noXP: true,
         onWrongPair: user == null ? null : (word) =>
             addClassHardWord(userId: user.id, classId: widget.classId, word: word),
       ),

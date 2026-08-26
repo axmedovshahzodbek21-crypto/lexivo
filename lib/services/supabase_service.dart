@@ -89,45 +89,56 @@ Future<void> recordClassActivity(
   int xp = 0,
   String reason = '',
 }) async {
-  try {
-    // Same streak day boundary as computeStreak() (date_utils.dart) — recording (or
-    // querying, see getHomeClassCards) a study day with a plain
-    // DateTime.now() instead would disagree with the streak calculation for
-    // a session between midnight and the boundary hour.
-    final today = todayForStreaks();
-    // Atomic upsert instead of select-then-insert: two near-simultaneous
-    // calls (e.g. finishing two homework modes back to back) could otherwise
-    // both see "not exists" and both attempt insert, one hitting a
-    // duplicate-key violation. Matches recordClassStudyDay's upsert in the
-    // web app (lib/class-xp.ts) for the same table.
-    await supabase.from('class_study_days').upsert(
-      {'student_id': userId, 'class_id': classId, 'study_date': today},
-      onConflict: 'student_id,class_id,study_date',
-      ignoreDuplicates: true,
-    );
-  } catch (e, st) {
-    // ignore: avoid_print
-    print('[recordClassActivity] study_days error: $e\n$st');
-  }
+  // The study-day upsert and the XP RPC don't depend on each other's result,
+  // so they run concurrently instead of one-after-another — this was
+  // previously two sequential round-trips on every single flashcard/word
+  // answered in a Class, which is what made Class sessions feel slow.
+  final futures = <Future<void>>[
+    () async {
+      try {
+        // Same streak day boundary as computeStreak() (date_utils.dart) — recording (or
+        // querying, see getHomeClassCards) a study day with a plain
+        // DateTime.now() instead would disagree with the streak calculation for
+        // a session between midnight and the boundary hour.
+        final today = todayForStreaks();
+        // Atomic upsert instead of select-then-insert: two near-simultaneous
+        // calls (e.g. finishing two homework modes back to back) could otherwise
+        // both see "not exists" and both attempt insert, one hitting a
+        // duplicate-key violation. Matches recordClassStudyDay's upsert in the
+        // web app (lib/class-xp.ts) for the same table.
+        await supabase.from('class_study_days').upsert(
+          {'student_id': userId, 'class_id': classId, 'study_date': today},
+          onConflict: 'student_id,class_id,study_date',
+          ignoreDuplicates: true,
+        );
+      } catch (e, st) {
+        // ignore: avoid_print
+        print('[recordClassActivity] study_days error: $e\n$st');
+      }
+    }(),
+  ];
   if (xp > 0) {
-    // record_class_xp does a single atomic UPDATE (class_xp = class_xp + xp)
-    // instead of a client-side read-then-write, which could otherwise lose
-    // an increment when two XP awards for the same student land close
-    // together — replaces separate class_members/class_xp_history calls.
-    try {
-      await supabase.rpc('record_class_xp', params: {
-        'p_student_id': userId,
-        'p_class_id': classId,
-        'p_xp': xp,
-        'p_reason': reason.isNotEmpty ? reason : 'Study',
-      });
-      // ignore: avoid_print
-      print('[recordClassActivity] OK xp=$xp classId=$classId');
-    } catch (e, st) {
-      // ignore: avoid_print
-      print('[recordClassActivity] record_class_xp error: $e\n$st');
-    }
+    futures.add(() async {
+      // record_class_xp does a single atomic UPDATE (class_xp = class_xp + xp)
+      // instead of a client-side read-then-write, which could otherwise lose
+      // an increment when two XP awards for the same student land close
+      // together — replaces separate class_members/class_xp_history calls.
+      try {
+        await supabase.rpc('record_class_xp', params: {
+          'p_student_id': userId,
+          'p_class_id': classId,
+          'p_xp': xp,
+          'p_reason': reason.isNotEmpty ? reason : 'Study',
+        });
+        // ignore: avoid_print
+        print('[recordClassActivity] OK xp=$xp classId=$classId');
+      } catch (e, st) {
+        // ignore: avoid_print
+        print('[recordClassActivity] record_class_xp error: $e\n$st');
+      }
+    }());
   }
+  await Future.wait(futures);
 }
 
 /// Returns class cards for the homescreen (teacher + student classes).

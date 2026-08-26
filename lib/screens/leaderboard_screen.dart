@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../data/storage_service.dart';
 import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import '../date_utils.dart';
@@ -103,6 +104,19 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   void initState() {
     super.initState();
     _loadAll();
+    // This screen lives in MainShell's IndexedStack, so it's built once and
+    // initState only fires once — without this, XP/streak earned on another
+    // tab (e.g. finishing a Learn session) would never reach the leaderboard
+    // until the app relaunches. _loadAll() below already refreshes silently
+    // when a cache exists (shows cached entries immediately, fetches fresh
+    // ones in the background), so it's safe to call on every stats change.
+    statsChangedNotifier.addListener(_loadAll);
+  }
+
+  @override
+  void dispose() {
+    statsChangedNotifier.removeListener(_loadAll);
+    super.dispose();
   }
 
   Future<void> _loadAll() async {

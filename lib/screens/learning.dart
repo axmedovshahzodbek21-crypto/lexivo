@@ -69,6 +69,11 @@ class _LearningScreenState extends State<LearningScreen> {
   late int _currentIndex;
   bool _sessionComplete = false;
   int _sessionXP = 0;
+  // Class-mode reward network calls are fired without awaiting (see
+  // _grantLearnReward) so advancing between words isn't blocked on a
+  // round-trip; tracked here so _showFinishDialog can await any still
+  // in-flight ones before it reads _sessionXP for the summary dialog.
+  final List<Future<void>> _pendingClassRewards = [];
 
   final Set<int> _learnedIndices = {};
   final Set<int> _skippedIndices = {};
@@ -353,38 +358,51 @@ class _LearningScreenState extends State<LearningScreen> {
       final user = currentUser;
       if (user != null) {
         final requestedXp = widget.noXP ? 0 : 10;
-        try {
-          final isNew = await recordClassWordLearned(
-            userId: user.id,
-            classId: widget.classId!,
-            word: word.word,
-            translation: word.translation,
-            xp: requestedXp,
-          );
-          // Study-day presence only — XP was already awarded atomically above.
-          await recordClassActivity(user.id, widget.classId!, reason: 'Learn');
-          final xp = isNew ? requestedXp : 0;
-          if (xp > 0) {
-            // Class XP is scoped to the class leaderboard only (already
-            // credited via recordClassWordLearned above) — it must not also
-            // land in the personal StorageService pool the Main Lexivo
-            // homescreen/level reads from. _sessionXP still reflects it for
-            // this session's own summary screen.
-            _sessionXP += xp;
+        final classId = widget.classId!;
+        // Fired without awaiting — recordClassWordLearned and
+        // recordClassActivity used to be awaited one after another before
+        // the student could advance to the next word, which made a whole
+        // Learn session in a Class (up to 3 sequential round-trips per
+        // word) feel very slow. Tracked in _pendingClassRewards so
+        // _showFinishDialog can await any still in-flight ones before it
+        // reads _sessionXP.
+        _pendingClassRewards.add(() async {
+          try {
+            final results = await Future.wait<dynamic>([
+              recordClassWordLearned(
+                userId: user.id,
+                classId: classId,
+                word: word.word,
+                translation: word.translation,
+                xp: requestedXp,
+              ),
+              // Study-day presence only — XP was already awarded atomically above.
+              recordClassActivity(user.id, classId, reason: 'Learn'),
+            ]);
+            final isNew = results[0] as bool;
+            final xp = isNew ? requestedXp : 0;
+            if (xp > 0) {
+              // Class XP is scoped to the class leaderboard only (already
+              // credited via recordClassWordLearned above) — it must not also
+              // land in the personal StorageService pool the Main Lexivo
+              // homescreen/level reads from. _sessionXP still reflects it for
+              // this session's own summary screen.
+              if (mounted) setState(() => _sessionXP += xp);
+            }
+          } catch (e) {
+            // Sync failed (network/RPC) — don't strand the student on this
+            // card; the lesson already advanced, just without server credit.
+            // Still tell them, though — silently dropping class XP with zero
+            // feedback (unlike library_unit_study_screen's equivalent catch)
+            // left students unable to tell a sync failure apart from just not
+            // having earned anything yet.
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Could not save progress: $e')),
+              );
+            }
           }
-        } catch (e) {
-          // Sync failed (network/RPC) — don't strand the student on this
-          // card; the lesson still advances, just without server credit.
-          // Still tell them, though — silently dropping class XP with zero
-          // feedback (unlike library_unit_study_screen's equivalent catch)
-          // left students unable to tell a sync failure apart from just not
-          // having earned anything yet.
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Could not save progress: $e')),
-            );
-          }
-        }
+        }());
       }
     } else {
       final existing = await StorageService.getLearnedWords();
@@ -623,6 +641,9 @@ class _LearningScreenState extends State<LearningScreen> {
     await StorageService.markLearningComplete(widget.collectionName, widget.wordDay.dayNumber);
     StorageService.clearLearnProgress(widget.collectionName, widget.wordDay.dayNumber);
     _emitAnalytics().catchError((_) {});
+    // Make sure any still in-flight class rewards (see _grantLearnReward)
+    // land before the summary below reads _sessionXP.
+    await Future.wait(_pendingClassRewards).catchError((_) => <void>[]);
     if (!mounted) return;
     final nextUnit = _nextUnit;
     final nav = Navigator.of(context);

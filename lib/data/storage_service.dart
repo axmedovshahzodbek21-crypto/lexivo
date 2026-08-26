@@ -1,11 +1,19 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/word_data.dart';
 import '../date_utils.dart';
 import '../services/sync_service.dart';
+
+// Bumped whenever local XP/streak/study-day state changes, so screens kept
+// alive in MainShell's IndexedStack (e.g. LeaderboardScreen, which only
+// fetches in initState) can refresh without waiting for the app to relaunch.
+// Mirrors the web app's `lexivo-stats-change` window event.
+final ValueNotifier<int> statsChangedNotifier = ValueNotifier(0);
+void _notifyStatsChanged() => statsChangedNotifier.value++;
 
 // Minimal dependency-free async mutex: serializes read-modify-write
 // sequences against SharedPreferences' cached values (getX is synchronous,
@@ -1784,6 +1792,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
         await prefs.setString('streak_bonus_date', today);
       }
     }
+    _notifyStatsChanged();
   });
 
   static Future<int> getStreak() async {
@@ -2193,6 +2202,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
       await prefs.setString(_xpByDateKey, jsonEncode(byDate));
 
       SyncService.pushStats();
+      _notifyStatsChanged();
       final oldLevel = getLevelName(current);
       final newLevel = getLevelName(newXP);
       return oldLevel != newLevel;
@@ -2905,7 +2915,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
   static const List<String> progressResetKeys = [
     _learnedKey, _srsKey, _studyDaysKey, _markedHardKey, _streakKey,
     _lastStudyKey, _freezesKey, _lastFreezeWeekKey, _xpKey, _todayXpKey,
-    _lastXpDateKey, _xpHistoryKey, _dailyLimitKey, _dailyLimitDateKey,
+    _lastXpDateKey, _xpHistoryKey, _xpByDateKey, _dailyLimitKey, _dailyLimitDateKey,
     _unitProgressKey, _myUnitProgressKey, _hasCompletedQuizKey,
     _hasPerfectQuizKey, _hasCompletedFlashcardKey, _hasCompletedSRSKey,
     _unitDoneDaysKey, _reviewDaysKey, _wordGoalDaysKey, _srsLockedDaysKey,

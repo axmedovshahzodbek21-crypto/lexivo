@@ -119,30 +119,18 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
     setState(() => _flipped = !_flipped);
   }
 
-  Future<void> _answer(bool knew) async {
+  void _answer(bool knew) {
     if (_answering) return;
     _answering = true;
     try {
       final user = currentUser;
       final card = _cards[_index];
       if (widget.dueOnly && user != null && card.isSRS) {
-        try {
-          await advanceClassSRSWord(
-              userId: user.id, classId: widget.classId, word: card.word, knew: knew);
-          if (!knew) {
-            await addClassHardWord(
-                userId: user.id, classId: widget.classId, word: card.word);
-          }
-          final xp = knew ? 5 : 2;
-          // Class XP is scoped to the class leaderboard only (class_xp_history
-          // via recordClassActivity) — it must not also land in the personal
-          // StorageService pool the Main Lexivo homescreen/level reads from.
-          await recordClassActivity(user.id, widget.classId, xp: xp, reason: 'SRS Review');
-        } catch (_) {
-          // Best-effort — an SRS/XP write failing shouldn't block the student
-          // from continuing their review session.
-        }
-        if (!mounted) return;
+        // Fired without awaiting — the card advances immediately below.
+        // These network calls used to be awaited one after another (up to 3
+        // sequential round-trips) before the student could see the next
+        // card, which made Class review noticeably slow card-by-card.
+        _recordAnswer(userId: user.id, word: card.word, knew: knew);
       }
       setState(() {
         if (knew) { _knew++; } else { _didntKnow++; }
@@ -157,6 +145,23 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
     } finally {
       _answering = false;
     }
+  }
+
+  // Class XP is scoped to the class leaderboard only (class_xp_history via
+  // recordClassActivity) — it must not also land in the personal
+  // StorageService pool the Main Lexivo homescreen/level reads from.
+  void _recordAnswer({required String userId, required String word, required bool knew}) {
+    final futures = <Future<void>>[
+      advanceClassSRSWord(userId: userId, classId: widget.classId, word: word, knew: knew),
+      recordClassActivity(userId, widget.classId, xp: knew ? 5 : 2, reason: 'SRS Review'),
+    ];
+    if (!knew) {
+      futures.add(addClassHardWord(userId: userId, classId: widget.classId, word: word));
+    }
+    // Best-effort — an SRS/XP write failing shouldn't block the student from
+    // continuing their review session, which has already moved on by the
+    // time any of these resolve.
+    Future.wait(futures).catchError((_) => <void>[]);
   }
 
   // In embedded (tab) mode there's no route to pop — instead reset and

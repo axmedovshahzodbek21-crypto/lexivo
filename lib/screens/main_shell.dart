@@ -222,6 +222,83 @@ class _MainShellState extends State<MainShell> {
     _loadReviewCount();
   }
 
+  // First 5 tabs (Home, Search, Review, Progress, Ranking) keep a permanent
+  // bottom-bar slot; everything from this index onward lives behind "More".
+  static const int _corePinnedTabCount = 5;
+
+  Widget _buildMoreNavItem(BuildContext context) {
+    final isSelected = _currentIndex >= _corePinnedTabCount;
+    final color = isSelected ? context.primary : context.textMuted;
+    return GestureDetector(
+      onTap: () => _showMoreSheet(context),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? context.primaryBg : null,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.grid_view_rounded, color: color, size: 22),
+            const SizedBox(height: 2),
+            Text(
+              tr('nav_more'),
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 10, fontWeight: isSelected ? FontWeight.w800 : FontWeight.normal, color: color),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showMoreSheet(BuildContext context) {
+    final tabs = _tabs;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: context.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(color: context.border, borderRadius: BorderRadius.circular(2))),
+              for (var i = _corePinnedTabCount; i < tabs.length; i++)
+                ListTile(
+                  leading: Container(
+                    width: 40, height: 40,
+                    decoration: BoxDecoration(
+                      color: tabs[i].accent.color.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(tabs[i].icon, color: tabs[i].accent.color, size: 20),
+                  ),
+                  title: Text(tabs[i].label, style: TextStyle(fontWeight: FontWeight.w700, color: context.appText)),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _selectTab(i);
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // Single source of truth for the 9 tabs — screen builder, bottom-nav icon/
   // label/accent, whether the Pomodoro pill shows on that tab, and whether
   // its nav item carries the reviews-due badge. Previously this same 9-tab
@@ -350,18 +427,24 @@ class _MainShellState extends State<MainShell> {
             ],
           ),
           child: SafeArea(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                child: Row(
-                  children: [
-                    for (var i = 0; i < tabs.length; i++)
-                      tabs[i].badge != null
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              child: Row(
+                children: [
+                  // Only the first 5 tabs get a permanent bottom-bar slot — the
+                  // rest (Classes, My Words, Ideas, Real English) live behind
+                  // "More" instead of forcing a 9-wide scrolling bar. Each slot
+                  // is Expanded so 5 or 6 items always divide the width evenly
+                  // instead of overflowing when their intrinsic (padded) width
+                  // exceeds what's available on narrower phones.
+                  for (var i = 0; i < _corePinnedTabCount && i < tabs.length; i++)
+                    Expanded(
+                      child: tabs[i].badge != null
                           ? _buildNavItemWithBadge(context, i, tabs[i].icon, tabs[i].label, tabs[i].badge!)
                           : _buildNavItem(context, i, tabs[i].icon, tabs[i].label),
-                  ],
-                ),
+                    ),
+                  if (tabs.length > _corePinnedTabCount) Expanded(child: _buildMoreNavItem(context)),
+                ],
               ),
             ),
           ),
@@ -393,17 +476,22 @@ class _MainShellState extends State<MainShell> {
       onTap: () => _selectTab(index),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
         decoration: isSelected ? _activeNavDecoration(index) : BoxDecoration(borderRadius: BorderRadius.circular(14)),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: isSelected ? Colors.white : nc.color.withValues(alpha: 0.55), size: 24),
+            Icon(icon, color: isSelected ? Colors.white : nc.color.withValues(alpha: 0.55), size: 22),
             const SizedBox(height: 2),
             Text(
               label,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.normal,
                 color: isSelected ? Colors.white : nc.color.withValues(alpha: 0.55),
               ),
@@ -421,7 +509,8 @@ class _MainShellState extends State<MainShell> {
       onTap: () => _selectTab(index),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
         decoration: isSelected ? _activeNavDecoration(index) : BoxDecoration(borderRadius: BorderRadius.circular(14)),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -429,7 +518,7 @@ class _MainShellState extends State<MainShell> {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                Icon(icon, color: isSelected ? Colors.white : nc.color.withValues(alpha: 0.55), size: 24),
+                Icon(icon, color: isSelected ? Colors.white : nc.color.withValues(alpha: 0.55), size: 22),
                 if (badge > 0)
                   Positioned(
                     right: -6,
@@ -445,8 +534,12 @@ class _MainShellState extends State<MainShell> {
             const SizedBox(height: 2),
             Text(
               label,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.normal,
                 color: isSelected ? Colors.white : nc.color.withValues(alpha: 0.55),
               ),

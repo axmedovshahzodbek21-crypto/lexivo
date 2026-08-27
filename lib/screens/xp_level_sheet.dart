@@ -4,6 +4,36 @@ import '../app_theme.dart';
 import '../l10n.dart';
 import 'personal_xp_calendar_screen.dart';
 
+Widget _xpHistoryChip(BuildContext context, int xp) {
+  return Align(
+    alignment: Alignment.centerRight,
+    child: GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => PersonalXpCalendarScreen(totalXpRaw: xp)),
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: context.bg,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('📅', style: TextStyle(fontSize: 11)),
+            const SizedBox(width: 4),
+            Text(
+              'XP history',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: context.primary),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 void showXpLevelSheet(BuildContext context, int xp) {
   showModalBottomSheet(
     context: context,
@@ -199,19 +229,26 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
           color: context.primaryBg,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('🏆', style: TextStyle(fontSize: 28)),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(tr('master_level_reached'), style: TextStyle(fontWeight: FontWeight.bold, color: context.primary)),
-                  const SizedBox(height: 2),
-                  Text("You've conquered all levels.", style: TextStyle(fontSize: 12, color: context.textMuted)),
-                ],
-              ),
+            _xpHistoryChip(context, widget.xp),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Text('🏆', style: TextStyle(fontSize: 28)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(tr('master_level_reached'), style: TextStyle(fontWeight: FontWeight.bold, color: context.primary)),
+                      const SizedBox(height: 2),
+                      Text("You've conquered all levels.", style: TextStyle(fontSize: 12, color: context.textMuted)),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -232,6 +269,8 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
       ),
       child: Column(
         children: [
+          _xpHistoryChip(context, widget.xp),
+          const SizedBox(height: 4),
           Text(
             '${StorageService.displayXP(_xpToNext)} XP',
             style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: context.primary),

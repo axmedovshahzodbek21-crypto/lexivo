@@ -193,20 +193,23 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
     }
   }
 
-  // Class XP is scoped to the class leaderboard only (class_xp_history via
-  // recordClassActivity) — it must not also land in the personal
-  // StorageService pool the Main Lexivo homescreen/level reads from.
+  // Class XP for a correct review is awarded server-side by advanceClassSRSWord
+  // (via record_class_xp), only on a genuine stage advance — see migration
+  // 20260827_class_review_xp_server_awarded.sql. This path just advances the
+  // SRS row, records the class study day, and flags misses as hard words. Class
+  // XP is scoped to the class leaderboard (class_xp_history) and never lands in
+  // the personal StorageService pool the Main Lexivo homescreen/level reads from.
   void _recordAnswer({required String userId, required String word, required bool knew}) {
     final futures = <Future<void>>[
       advanceClassSRSWord(userId: userId, classId: widget.classId, word: word, knew: knew),
-      recordClassActivity(userId, widget.classId, xp: knew ? 5 : 2, reason: 'SRS Review'),
+      recordClassActivity(userId, widget.classId, reason: 'SRS Review'), // xp:0 default -> study-day only
     ];
     if (!knew) {
       futures.add(addClassHardWord(userId: userId, classId: widget.classId, word: word));
     }
-    // Best-effort — an SRS/XP write failing shouldn't block the student from
-    // continuing their review session, which has already moved on by the
-    // time any of these resolve.
+    // Best-effort — a write failing shouldn't block the student from continuing
+    // their review session, which has already moved on by the time any of
+    // these resolve.
     Future.wait(futures).catchError((_) => <void>[]);
   }
 

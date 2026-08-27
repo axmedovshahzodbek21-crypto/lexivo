@@ -181,12 +181,23 @@ Future<void> advanceClassSRSWord({
   required String word,
   required bool knew,
 }) async {
-  await supabase.rpc('advance_class_srs_word', params: {
-    'p_user_id': userId,
-    'p_class_id': classId,
-    'p_word': word,
-    'p_knew': knew,
-  });
+  // Log-then-rethrow: the only caller (class_review_screen.dart) fires this
+  // without awaiting and drops the rejection on the floor, so a broken RPC
+  // is otherwise completely invisible — which is exactly how a text/date
+  // type mismatch in the function body (fixed 20260827) went unnoticed in
+  // production on both platforms.
+  try {
+    await supabase.rpc('advance_class_srs_word', params: {
+      'p_user_id': userId,
+      'p_class_id': classId,
+      'p_word': word,
+      'p_knew': knew,
+    });
+  } catch (e, st) {
+    // ignore: avoid_print
+    print('[advanceClassSRSWord] failed word="$word" knew=$knew: $e\n$st');
+    rethrow;
+  }
 }
 
 // Teacher view: all students' SRS states for a class.

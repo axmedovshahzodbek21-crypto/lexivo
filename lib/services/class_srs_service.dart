@@ -2,6 +2,12 @@ import '../services/supabase_service.dart';
 
 const _intervals = [1, 3, 7, 14, 30]; // days, same as personal SRS
 
+// At most this many never-reviewed words enter one review session, so a
+// freshly-learned batch doesn't land as one wall. Genuine spaced repetitions
+// (lastReviewed set) are never capped. Keep in sync with web's
+// NEW_WORDS_PER_SESSION.
+const _newWordsPerSession = 10;
+
 // Grace period (days overdue) a word gets at each stage before it demotes one
 // stage — indexed by stage 0-4. A fresh Stage 0 word is fragile and gets a
 // generous buffer; a Stage 4 word already survived a 30-day gap once, so it
@@ -138,7 +144,9 @@ Future<void> checkAndDemoteClassSRS({
   ]);
 }
 
-// Returns words due today (or overdue) for the student in this class.
+// Returns the words to review now: every due spaced repetition, plus at most
+// _newWordsPerSession never-reviewed words (oldest first) so a big fresh batch
+// is paced instead of dumped all at once.
 Future<List<ClassSRSEntry>> getClassDueWords({
   required String userId,
   required String classId,
@@ -151,8 +159,12 @@ Future<List<ClassSRSEntry>> getClassDueWords({
       .eq('user_id', userId)
       .eq('class_id', classId)
       .lte('next_due', today)
-      .lt('stage', 5);
-  return (data as List).map((e) => ClassSRSEntry.fromMap(e as Map<String, dynamic>)).toList();
+      .lt('stage', 5)
+      .order('created_at', ascending: true);
+  final all = (data as List).map((e) => ClassSRSEntry.fromMap(e as Map<String, dynamic>)).toList();
+  final review = all.where((e) => e.lastReviewed != null).toList();
+  final fresh = all.where((e) => e.lastReviewed == null).toList();
+  return [...review, ...fresh.take(_newWordsPerSession)];
 }
 
 // Returns all SRS entries for the student in this class (all stages).

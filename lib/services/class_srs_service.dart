@@ -192,6 +192,7 @@ Future<void> advanceClassSRSWord({
       'p_class_id': classId,
       'p_word': word,
       'p_knew': knew,
+      'p_today': _todayStr(), // schedule next_due on the device's local date, matching getClassDueWords
     });
   } catch (e, st) {
     // ignore: avoid_print

@@ -1,9 +1,19 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import '../services/supabase_service.dart';
 import '../services/class_srs_service.dart';
 import '../app_theme.dart';
+
+// Kahoot-style answer tiles for SRS review — ported from the web review page
+// (app/classes/[id]/review/page.tsx). Keep the palette in sync.
+const _tilePalette = <(Color, Color, String)>[
+  (Color(0xFFE21B3C), Color(0xFFA01328), '▲'),
+  (Color(0xFF1368CE), Color(0xFF0D4FA0), '◆'),
+  (Color(0xFFD89E00), Color(0xFFA07500), '●'),
+  (Color(0xFF26890C), Color(0xFF1C6409), '■'),
+];
 
 class ClassReviewScreen extends StatefulWidget {
   final String classId;
@@ -29,10 +39,20 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
   bool _loadError = false;
   List<_ReviewCard> _cards = [];
   int _index = 0;
-  bool _flipped = false;
+  bool _flipped = false; // !dueOnly flip-card only
   int _knew = 0;
   int _didntKnow = 0;
   bool _done = false;
+
+  // MCQ state (dueOnly). _distractorPool = every class translation, drawn on
+  // for wrong answers. _choices = the current card's shuffled options, or null
+  // when there aren't enough distractors (falls back to a Reveal button).
+  // _answerShown = the answer is resolved (tile tapped, or Reveal pressed).
+  final _tts = FlutterTts();
+  List<String> _distractorPool = [];
+  List<String>? _choices;
+  String? _tappedChoice;
+  bool _answerShown = false;
   // Guards _answer() against re-entrancy — without it, a double-tap on
   // "Got it"/"Not Yet" before the first call's awaits resolve re-enters
   // with the same _index (it only advances at the very end), double-
@@ -72,8 +92,45 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
   void dispose() {
     _beatTimer?.cancel();
     _lockTimer?.cancel();
+    _tts.stop();
     _ctrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _speak(String text) async {
+    try {
+      await _tts.stop();
+      await _tts.speak(text);
+    } catch (_) {/* TTS unavailable on this device — ignore */}
+  }
+
+  // Rebuild the current card's options + reset its answer state. Call inside
+  // setState after _index or _cards changes.
+  void _syncCard() {
+    _choices = widget.dueOnly ? _buildChoices(_index) : null;
+    _tappedChoice = null;
+    _answerShown = false;
+  }
+
+  // Correct translation + up to 3 distractors, shuffled. Null when fewer than
+  // 2 distinct distractors exist. Mirrors buildChoices() in the web page.
+  List<String>? _buildChoices(int idx) {
+    if (idx < 0 || idx >= _cards.length) return null;
+    final correct = _cards[idx].translation;
+    if (correct.isEmpty) return null;
+    final pool = <String>{};
+    for (var i = 0; i < _cards.length; i++) {
+      final t = _cards[i].translation;
+      if (i != idx && t.isNotEmpty && t != correct) pool.add(t);
+    }
+    for (final t in _distractorPool) {
+      if (pool.length >= 10) break;
+      if (t != correct) pool.add(t);
+    }
+    if (pool.length < 2) return null;
+    final wrong = pool.toList()..shuffle();
+    final opts = <String>[correct, ...wrong.take(min(3, pool.length))]..shuffle();
+    return opts;
   }
 
   Future<void> _load() async {
@@ -84,12 +141,22 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
     }
     try {
       if (widget.dueOnly) {
-        final due = await getClassDueWords(userId: user.id, classId: widget.classId);
+        final fetched = await Future.wait([
+          getClassDueWords(userId: user.id, classId: widget.classId),
+          getClassSRSAll(userId: user.id, classId: widget.classId),
+        ]);
+        final due = fetched[0];
+        final all = fetched[1];
         if (mounted) {
           setState(() {
             _cards = due.map((e) => _ReviewCard(
                   word: e.word, translation: e.translation, isSRS: true, failStreak: e.failStreak,
                 )).toList();
+            _distractorPool = all
+                .map((e) => e.translation)
+                .where((t) => t.isNotEmpty)
+                .toList();
+            _syncCard();
             _loading = false;
           });
         }
@@ -133,6 +200,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
     }
   }
 
+  // !dueOnly flashcard flip. SRS review never flips — it uses MCQ tiles.
   void _flip() {
     if (_cardLocked) return;
     final willFlip = !_flipped;
@@ -141,28 +209,40 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
     } else {
       _ctrl.reverse();
     }
+    setState(() => _flipped = willFlip);
+  }
+
+  // Reveal the answer (tile tap or the fallback Reveal button) and arm the
+  // grade beat. Shared so both paths gate identically. Mirrors the web
+  // review page's reveal().
+  void _revealAnswer() {
+    if (_cardLocked || _answerShown) return;
+    _beatTimer?.cancel();
     setState(() {
-      _flipped = willFlip;
-      if (widget.dueOnly) {
-        // Arm the reveal beat when the answer comes into view; cancel it if
-        // the card is flipped back to the prompt.
-        _beatTimer?.cancel();
-        _gradeUnlocked = false;
-        _revealedAt = willFlip ? DateTime.now() : null;
-        if (willFlip) {
-          _beatTimer = Timer(_revealBeat, () {
-            if (mounted) setState(() => _gradeUnlocked = true);
-          });
-        }
-      }
+      _answerShown = true;
+      _gradeUnlocked = false;
+      _revealedAt = DateTime.now();
     });
+    _beatTimer = Timer(_revealBeat, () {
+      if (mounted) setState(() => _gradeUnlocked = true);
+    });
+  }
+
+  void _onTileTap(String choice) {
+    if (_cardLocked || _tappedChoice != null) return;
+    setState(() => _tappedChoice = choice);
+    _revealAnswer();
   }
 
   void _answer(bool knew) {
     // _cardLocked / _gradeUnlocked: see the anti-mash gate fields above. In
     // flashcard mode (!dueOnly) there's no grade to gate, so only the
     // re-entrancy guard applies.
-    if (_answering || _cardLocked || (widget.dueOnly && !_gradeUnlocked)) return;
+    if (_answering ||
+        _cardLocked ||
+        (widget.dueOnly && (!_answerShown || !_gradeUnlocked))) {
+      return;
+    }
     _answering = true;
     try {
       final user = currentUser;
@@ -194,6 +274,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
         _index++;
         _gradeUnlocked = false;
         _cardLocked = true;
+        _syncCard();
       });
       _lockTimer = Timer(_cardLockout, () {
         if (mounted) setState(() => _cardLocked = false);
@@ -244,6 +325,9 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
       _done = false;
       _gradeUnlocked = false;
       _cardLocked = false;
+      _choices = null;
+      _tappedChoice = null;
+      _answerShown = false;
     });
     _load();
   }
@@ -367,76 +451,198 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
             const SizedBox(height: 12),
           ],
 
-          // Flip card
-          Expanded(child: GestureDetector(
-            onTap: _flip,
-            child: AnimatedBuilder(
-              animation: _anim,
-              builder: (context, _) {
-                final angle = _anim.value * pi;
-                final isFront = angle <= pi / 2;
-                return Transform(
-                  alignment: Alignment.center,
-                  transform: Matrix4.identity()
-                    ..setEntry(3, 2, 0.001)
-                    ..rotateY(angle),
-                  child: isFront
-                    ? _buildFront(card)
-                    : Transform(
-                        alignment: Alignment.center,
-                        transform: Matrix4.identity()..rotateY(pi),
-                        child: _buildBack(card),
-                      ),
-                );
-              },
-            ),
-          )),
-          const SizedBox(height: 20),
-
-          if (!_flipped)
-            Text('Tap the card to reveal', style: TextStyle(fontSize: 13, color: context.textMuted))
-          else if (widget.dueOnly)
-            // Buttons stay visible but disabled until the reveal beat elapses,
-            // so the answer can't be graded before it's actually been seen.
-            Row(children: [
-              Expanded(child: ElevatedButton(
-                onPressed: _gradeUnlocked ? () => _answer(false) : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFEF4444), foregroundColor: Colors.white,
-                  disabledBackgroundColor: const Color(0xFFEF4444).withValues(alpha: 0.35),
-                  disabledForegroundColor: Colors.white70,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                child: const Text('Not yet  ✗', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-              )),
-              const SizedBox(width: 12),
-              Expanded(child: ElevatedButton(
-                onPressed: _gradeUnlocked ? () => _answer(true) : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF10B981), foregroundColor: Colors.white,
-                  disabledBackgroundColor: const Color(0xFF10B981).withValues(alpha: 0.35),
-                  disabledForegroundColor: Colors.white70,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                child: const Text('Knew it  ✓', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-              )),
-            ])
-          else
-            SizedBox(width: double.infinity, child: ElevatedButton(
-              onPressed: () => _answer(true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: context.primary, foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                padding: const EdgeInsets.symmetric(vertical: 14),
+          if (widget.dueOnly)
+            Expanded(child: _buildMcqBody(card))
+          else ...[
+            // Flip card (all-words flashcard mode)
+            Expanded(child: GestureDetector(
+              onTap: _flip,
+              child: AnimatedBuilder(
+                animation: _anim,
+                builder: (context, _) {
+                  final angle = _anim.value * pi;
+                  final isFront = angle <= pi / 2;
+                  return Transform(
+                    alignment: Alignment.center,
+                    transform: Matrix4.identity()
+                      ..setEntry(3, 2, 0.001)
+                      ..rotateY(angle),
+                    child: isFront
+                      ? _buildFront(card)
+                      : Transform(
+                          alignment: Alignment.center,
+                          transform: Matrix4.identity()..rotateY(pi),
+                          child: _buildBack(card),
+                        ),
+                  );
+                },
               ),
-              child: Text(
-                _index + 1 < _cards.length ? 'Next  →' : 'Finish  ✓',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
             )),
+            const SizedBox(height: 20),
+            if (!_flipped)
+              Text('Tap the card to reveal', style: TextStyle(fontSize: 13, color: context.textMuted))
+            else
+              SizedBox(width: double.infinity, child: ElevatedButton(
+                onPressed: () => _answer(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: context.primary, foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                child: Text(
+                  _index + 1 < _cards.length ? 'Next  →' : 'Finish  ✓',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              )),
+          ],
         ]),
       );
+  }
+
+  // ── MCQ review body (dueOnly) ──────────────────────────────────────────────
+  Widget _buildMcqBody(_ReviewCard card) {
+    final choices = _choices;
+    return SingleChildScrollView(
+      child: Column(children: [
+        // Prompt
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: context.surface,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: context.cardShadow,
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              Text('Class word',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: context.textMuted)),
+              GestureDetector(
+                onTap: () => _speak(card.word),
+                child: Container(
+                  width: 34, height: 34,
+                  decoration: BoxDecoration(color: context.primaryBg, shape: BoxShape.circle),
+                  child: Icon(Icons.volume_up_rounded, size: 18, color: context.primary),
+                ),
+              ),
+            ]),
+            const SizedBox(height: 10),
+            Text(card.word,
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: context.appText)),
+            if (_answerShown && choices == null) ...[
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: context.primaryBg, borderRadius: BorderRadius.circular(12)),
+                child: Text(card.translation,
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: context.primary)),
+              ),
+            ] else if (choices == null) ...[
+              const SizedBox(height: 14),
+              SizedBox(width: double.infinity, child: OutlinedButton(
+                onPressed: _cardLocked ? null : _revealAnswer,
+                child: const Text('Reveal'),
+              )),
+            ],
+          ]),
+        ),
+        const SizedBox(height: 16),
+        if (choices != null) _buildTiles(card, choices),
+        if (_answerShown) ...[
+          const SizedBox(height: 16),
+          _buildGradeButtons(),
+        ],
+      ]),
+    );
+  }
+
+  Widget _buildTiles(_ReviewCard card, List<String> choices) {
+    final n = choices.length;
+    Widget row(int a, int b) => Row(children: [
+          Expanded(child: _tile(a, choices[a], card)),
+          const SizedBox(width: 10),
+          Expanded(child: b < n ? _tile(b, choices[b], card) : const SizedBox()),
+        ]);
+    return Column(children: [
+      row(0, 1),
+      if (n > 2) ...[
+        const SizedBox(height: 10),
+        if (n == 3) _tile(2, choices[2], card) else row(2, 3),
+      ],
+    ]);
+  }
+
+  Widget _tile(int i, String choice, _ReviewCard card) {
+    final (baseBg, baseShadow, shape) = _tilePalette[i % 4];
+    final answered = _tappedChoice != null;
+    final isCorrect = choice == card.translation;
+    final isTapped = choice == _tappedChoice;
+    var bg = baseBg, shadow = baseShadow;
+    var opacity = 1.0;
+    if (answered) {
+      if (isCorrect) {
+        bg = const Color(0xFF26890C);
+        shadow = const Color(0xFF1C6409);
+      } else if (isTapped) {
+        bg = const Color(0xFFE21B3C);
+        shadow = const Color(0xFFA01328);
+      } else {
+        opacity = 0.35;
+      }
+    }
+    return Opacity(
+      opacity: opacity,
+      child: GestureDetector(
+        onTap: answered ? null : () => _onTileTap(choice),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 88),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [BoxShadow(color: shadow, offset: const Offset(0, 4))],
+          ),
+          child: Stack(children: [
+            Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+              Text(shape, style: const TextStyle(color: Colors.white70, fontSize: 18)),
+              const SizedBox(height: 6),
+              Text(choice,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+            ]),
+            if (answered && isCorrect)
+              const Positioned(top: 0, right: 0,
+                  child: Text('✓', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18))),
+            if (answered && isTapped && !isCorrect)
+              const Positioned(top: 0, right: 0,
+                  child: Text('✗', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18))),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGradeButtons() {
+    Widget btn(bool knew, Color color, String label) => Expanded(
+          child: ElevatedButton(
+            onPressed: _gradeUnlocked ? () => _answer(knew) : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: color, foregroundColor: Colors.white,
+              disabledBackgroundColor: color.withValues(alpha: 0.35),
+              disabledForegroundColor: Colors.white70,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+            child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+          ),
+        );
+    // Visible but disabled until the reveal beat elapses, so the card can't be
+    // graded before the answer has actually been seen.
+    return Row(children: [
+      btn(false, const Color(0xFFEF4444), 'Not yet  ✗'),
+      const SizedBox(width: 12),
+      btn(true, const Color(0xFF10B981), 'Knew it  ✓'),
+    ]);
   }
 
   AppBar _appBar() => AppBar(

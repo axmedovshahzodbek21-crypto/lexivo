@@ -66,7 +66,9 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
   // shown at least _revealBeat. _cardLocked: input is ignored for _cardLockout
   // after each grade so a queued/double tap can't fall through onto the next
   // card. Keep in sync with the web review page's REVEAL_BEAT_MS / CARD_LOCKOUT_MS.
-  static const _revealBeat = Duration(milliseconds: 800);
+  static const _revealBeat = Duration(milliseconds: 800);          // fallback (Reveal button) path
+  static const _resultRevealCorrect = Duration(milliseconds: 800); // MCQ: show green result, then advance
+  static const _resultRevealWrong = Duration(milliseconds: 1600);  // MCQ: longer on a miss to read the answer
   static const _cardLockout = Duration(milliseconds: 350);
   bool _gradeUnlocked = false;
   bool _cardLocked = false;
@@ -212,9 +214,8 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
     setState(() => _flipped = willFlip);
   }
 
-  // Reveal the answer (tile tap or the fallback Reveal button) and arm the
-  // grade beat. Shared so both paths gate identically. Mirrors the web
-  // review page's reveal().
+  // Fallback (no-tiles) path only: reveal the translation, then unlock the
+  // Not yet / Knew it buttons after the beat.
   void _revealAnswer() {
     if (_cardLocked || _answerShown) return;
     _beatTimer?.cancel();
@@ -228,20 +229,33 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
     });
   }
 
+  // MCQ path: the tap IS the grade. Show the green/red result, then auto-apply
+  // it (correct -> Knew it, wrong -> Not yet). Longer hold on a miss.
   void _onTileTap(String choice) {
     if (_cardLocked || _tappedChoice != null) return;
-    setState(() => _tappedChoice = choice);
-    _revealAnswer();
+    final correct = choice == _cards[_index].translation;
+    setState(() {
+      _tappedChoice = choice;
+      _answerShown = true;
+      _revealedAt = DateTime.now();
+    });
+    _beatTimer?.cancel();
+    _beatTimer = Timer(correct ? _resultRevealCorrect : _resultRevealWrong, () {
+      if (mounted) _answer(correct);
+    });
   }
 
   void _answer(bool knew) {
     // _cardLocked / _gradeUnlocked: see the anti-mash gate fields above. In
     // flashcard mode (!dueOnly) there's no grade to gate, so only the
     // re-entrancy guard applies.
-    if (_answering ||
-        _cardLocked ||
-        (widget.dueOnly && (!_answerShown || !_gradeUnlocked))) {
-      return;
+    if (_answering || _cardLocked) return;
+    if (widget.dueOnly) {
+      final mcq = _choices != null;
+      // MCQ: a tile must have been tapped (the _resultReveal timer enforces the
+      // pause). Fallback: answer revealed + beat elapsed.
+      if (mcq && _tappedChoice == null) return;
+      if (!mcq && (!_answerShown || !_gradeUnlocked)) return;
     }
     _answering = true;
     try {
@@ -548,8 +562,17 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
           ]),
         ),
         const SizedBox(height: 16),
-        if (choices != null) _buildTiles(card, choices),
-        if (_answerShown) ...[
+        if (choices != null) ...[
+          _buildTiles(card, choices),
+          if (_tappedChoice != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              _tappedChoice == card.translation ? 'Correct — nice' : 'Answer: ${card.translation}',
+              style: TextStyle(fontSize: 12, color: context.textMuted),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ] else if (_answerShown) ...[
           const SizedBox(height: 16),
           _buildGradeButtons(),
         ],

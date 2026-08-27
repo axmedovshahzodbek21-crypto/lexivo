@@ -52,6 +52,9 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
   bool _cardLocked = false;
   Timer? _beatTimer;
   Timer? _lockTimer;
+  // When the current card's answer was revealed, for the reveal->grade timing
+  // logged to class_review_events.
+  DateTime? _revealedAt;
 
   late final AnimationController _ctrl;
   late final Animation<double> _anim;
@@ -145,6 +148,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
         // the card is flipped back to the prompt.
         _beatTimer?.cancel();
         _gradeUnlocked = false;
+        _revealedAt = willFlip ? DateTime.now() : null;
         if (willFlip) {
           _beatTimer = Timer(_revealBeat, () {
             if (mounted) setState(() => _gradeUnlocked = true);
@@ -168,7 +172,10 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
         // These network calls used to be awaited one after another (up to 3
         // sequential round-trips) before the student could see the next
         // card, which made Class review noticeably slow card-by-card.
-        _recordAnswer(userId: user.id, word: card.word, knew: knew);
+        final responseMs = _revealedAt == null
+            ? null
+            : DateTime.now().difference(_revealedAt!).inMilliseconds;
+        _recordAnswer(userId: user.id, word: card.word, knew: knew, responseMs: responseMs);
       }
       setState(() {
         if (knew) { _knew++; } else { _didntKnow++; }
@@ -181,6 +188,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
       _ctrl.reset();
       _beatTimer?.cancel();
       _lockTimer?.cancel();
+      _revealedAt = null;
       setState(() {
         _flipped = false;
         _index++;
@@ -201,10 +209,12 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
   // SRS row, records the class study day, and flags misses as hard words. Class
   // XP is scoped to the class leaderboard (class_xp_history) and never lands in
   // the personal StorageService pool the Main Lexivo homescreen/level reads from.
-  void _recordAnswer({required String userId, required String word, required bool knew}) {
+  void _recordAnswer({required String userId, required String word, required bool knew, int? responseMs}) {
     final futures = <Future<void>>[
       advanceClassSRSWord(userId: userId, classId: widget.classId, word: word, knew: knew),
       recordClassActivity(userId, widget.classId, reason: 'SRS Review'), // xp:0 default -> study-day only
+      recordClassReviewEvent(
+        userId: userId, classId: widget.classId, word: word, knew: knew, responseMs: responseMs),
     ];
     if (!knew) {
       futures.add(addClassHardWord(userId: userId, classId: widget.classId, word: word));
@@ -224,6 +234,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
     }
     _beatTimer?.cancel();
     _lockTimer?.cancel();
+    _revealedAt = null;
     setState(() {
       _loading = true;
       _index = 0;

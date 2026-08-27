@@ -213,6 +213,29 @@ Future<void> advanceClassSRSWord({
   }
 }
 
+// One row per graded review card — reveal->grade time for pacing analytics.
+// Fire-and-forget; a failed insert must never disrupt the review session.
+Future<void> recordClassReviewEvent({
+  required String userId,
+  required String classId,
+  required String word,
+  required bool knew,
+  int? responseMs,
+}) async {
+  try {
+    await supabase.from('class_review_events').insert({
+      'user_id': userId,
+      'class_id': classId,
+      'word': word,
+      'knew': knew,
+      'response_ms': responseMs,
+    });
+  } catch (e) {
+    // ignore: avoid_print
+    print('[recordClassReviewEvent] failed: $e');
+  }
+}
+
 // Teacher view: all students' SRS states for a class.
 Future<List<ClassSRSEntry>> getClassSRSForTeacher({
   required String classId,

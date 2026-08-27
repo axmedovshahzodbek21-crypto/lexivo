@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
@@ -37,6 +38,21 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
   // with the same _index (it only advances at the very end), double-
   // awarding XP and double-recording class activity for the same card.
   bool _answering = false;
+
+  // Anti-mash gates (SRS mode only): with per-card persistence a student can
+  // otherwise clear the whole queue by hammering one grade button without
+  // reading anything, which pollutes their SRS scheduling (and, once review XP
+  // is gated on stage change, farms XP). _gradeUnlocked: the answer has been
+  // shown at least _revealBeat. _cardLocked: input is ignored for _cardLockout
+  // after each grade so a queued/double tap can't fall through onto the next
+  // card. Keep in sync with the web review page's REVEAL_BEAT_MS / CARD_LOCKOUT_MS.
+  static const _revealBeat = Duration(milliseconds: 800);
+  static const _cardLockout = Duration(milliseconds: 350);
+  bool _gradeUnlocked = false;
+  bool _cardLocked = false;
+  Timer? _beatTimer;
+  Timer? _lockTimer;
+
   late final AnimationController _ctrl;
   late final Animation<double> _anim;
 
@@ -51,6 +67,8 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
 
   @override
   void dispose() {
+    _beatTimer?.cancel();
+    _lockTimer?.cancel();
     _ctrl.dispose();
     super.dispose();
   }
@@ -111,16 +129,34 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
   }
 
   void _flip() {
-    if (_flipped) {
-      _ctrl.reverse();
-    } else {
+    if (_cardLocked) return;
+    final willFlip = !_flipped;
+    if (willFlip) {
       _ctrl.forward();
+    } else {
+      _ctrl.reverse();
     }
-    setState(() => _flipped = !_flipped);
+    setState(() {
+      _flipped = willFlip;
+      if (widget.dueOnly) {
+        // Arm the reveal beat when the answer comes into view; cancel it if
+        // the card is flipped back to the prompt.
+        _beatTimer?.cancel();
+        _gradeUnlocked = false;
+        if (willFlip) {
+          _beatTimer = Timer(_revealBeat, () {
+            if (mounted) setState(() => _gradeUnlocked = true);
+          });
+        }
+      }
+    });
   }
 
   void _answer(bool knew) {
-    if (_answering) return;
+    // _cardLocked / _gradeUnlocked: see the anti-mash gate fields above. In
+    // flashcard mode (!dueOnly) there's no grade to gate, so only the
+    // re-entrancy guard applies.
+    if (_answering || _cardLocked || (widget.dueOnly && !_gradeUnlocked)) return;
     _answering = true;
     try {
       final user = currentUser;
@@ -141,7 +177,17 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
         return;
       }
       _ctrl.reset();
-      setState(() { _flipped = false; _index++; });
+      _beatTimer?.cancel();
+      _lockTimer?.cancel();
+      setState(() {
+        _flipped = false;
+        _index++;
+        _gradeUnlocked = false;
+        _cardLocked = true;
+      });
+      _lockTimer = Timer(_cardLockout, () {
+        if (mounted) setState(() => _cardLocked = false);
+      });
     } finally {
       _answering = false;
     }
@@ -171,6 +217,8 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
       Navigator.pop(context);
       return;
     }
+    _beatTimer?.cancel();
+    _lockTimer?.cancel();
     setState(() {
       _loading = true;
       _index = 0;
@@ -178,6 +226,8 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
       _knew = 0;
       _didntKnow = 0;
       _done = false;
+      _gradeUnlocked = false;
+      _cardLocked = false;
     });
     _load();
   }
@@ -315,11 +365,15 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
           if (!_flipped)
             Text('Tap the card to reveal', style: TextStyle(fontSize: 13, color: context.textMuted))
           else if (widget.dueOnly)
+            // Buttons stay visible but disabled until the reveal beat elapses,
+            // so the answer can't be graded before it's actually been seen.
             Row(children: [
               Expanded(child: ElevatedButton(
-                onPressed: () => _answer(false),
+                onPressed: _gradeUnlocked ? () => _answer(false) : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFEF4444), foregroundColor: Colors.white,
+                  disabledBackgroundColor: const Color(0xFFEF4444).withValues(alpha: 0.35),
+                  disabledForegroundColor: Colors.white70,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
@@ -327,9 +381,11 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
               )),
               const SizedBox(width: 12),
               Expanded(child: ElevatedButton(
-                onPressed: () => _answer(true),
+                onPressed: _gradeUnlocked ? () => _answer(true) : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF10B981), foregroundColor: Colors.white,
+                  disabledBackgroundColor: const Color(0xFF10B981).withValues(alpha: 0.35),
+                  disabledForegroundColor: Colors.white70,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),

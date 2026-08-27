@@ -95,8 +95,9 @@ Future<bool> recordClassWordLearned({
 // Cascades every overdue, non-graduated word for this student down through
 // _unlearnGraceDays one stage at a time, resolving a long absence in a single
 // pass rather than needing a check every day the gap grows. A word that falls
-// through Stage 0's own grace window is unlearned (deleted) outright — same
-// hard-reset behavior as the fail-streak path in advanceClassSRSWord.
+// all the way through Stage 0's grace window is NOT deleted (unlike personal
+// SRS's checkAndUnlearn) — class words are curriculum, so it's just reset to
+// Stage 0 and made due now.
 Future<void> checkAndDemoteClassSRS({
   required String userId,
   required String classId,
@@ -111,7 +112,6 @@ Future<void> checkAndDemoteClassSRS({
   if (rows.isEmpty) return;
 
   final today = _todayStr();
-  final toDelete = <String>[];
   final toUpdate = <(String, int, String)>[];
 
   for (final row in rows) {
@@ -125,7 +125,8 @@ Future<void> checkAndDemoteClassSRS({
       changed = true;
     }
     if (stage == 0 && _daysBetween(nextDue, today) >= _unlearnGraceDays[0]) {
-      toDelete.add(row['id'] as String);
+      // Fell through Stage 0's window — keep the word, just make it due now.
+      toUpdate.add((row['id'] as String, 0, today));
       continue;
     }
     if (changed) toUpdate.add((row['id'] as String, stage, nextDue));
@@ -134,7 +135,6 @@ Future<void> checkAndDemoteClassSRS({
   await Future.wait([
     for (final u in toUpdate)
       supabase.from('class_srs_states').update({'stage': u.$2, 'next_due': u.$3, 'fail_streak': 0}).eq('id', u.$1),
-    if (toDelete.isNotEmpty) supabase.from('class_srs_states').delete().inFilter('id', toDelete),
   ]);
 }
 

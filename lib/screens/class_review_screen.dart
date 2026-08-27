@@ -84,7 +84,9 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
         final due = await getClassDueWords(userId: user.id, classId: widget.classId);
         if (mounted) {
           setState(() {
-            _cards = due.map((e) => _ReviewCard(word: e.word, translation: e.translation, isSRS: true)).toList();
+            _cards = due.map((e) => _ReviewCard(
+                  word: e.word, translation: e.translation, isSRS: true, failStreak: e.failStreak,
+                )).toList();
             _loading = false;
           });
         }
@@ -339,6 +341,21 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
           ]),
           const SizedBox(height: 20),
 
+          // "Struggling with this one" hint — fail_streak climbs on repeated
+          // stage-0 misses now that class words are never auto-unlearned.
+          if (widget.dueOnly && card.failStreak >= 2) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: const Text('Keeps tripping you up',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFFF59E0B))),
+            ),
+            const SizedBox(height: 12),
+          ],
+
           // Flip card
           Expanded(child: GestureDetector(
             onTap: _flip,
@@ -491,6 +508,7 @@ class _ReviewCard {
   final String word, translation;
   final String? definition, example, exampleTranslation;
   final bool isSRS;
+  final int failStreak; // consecutive stage-0 misses; drives the "struggling" hint
   const _ReviewCard({
     required this.word,
     required this.translation,
@@ -498,5 +516,6 @@ class _ReviewCard {
     this.example,
     this.exampleTranslation,
     this.isSRS = false,
+    this.failStreak = 0,
   });
 }

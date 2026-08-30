@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'dart:ui';
 import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'collections.dart';
 import 'learning.dart';
 import 'flashcard.dart';
@@ -2198,6 +2199,12 @@ class _HomeScreenState extends State<HomeScreen>
                       Navigator.pop(context);
                       Navigator.push(context,
                           MaterialPageRoute(builder: (context) => RealEnglishScreen(userProfile: widget.userProfile)));
+                    }),
+                    _buildDrawerTile(context, icon: '🚀', label: 'Other Projects',
+                        iconBg: const Color(0xFF10b981), onTap: () {
+                      Navigator.pop(context);
+                      launchUrl(Uri.parse('https://lexivo-projects.vercel.app'),
+                          mode: LaunchMode.externalApplication);
                     }),
                     // ── Today's goal card ──
                     Padding(

@@ -1412,43 +1412,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ElevatedButton(
                 onPressed: loading ? null : () async {
                   setS(() => loading = true);
-                  // Best-effort Supabase reset — failures don't block local clear
-                  try {
-                    final user = Supabase.instance.client.auth.currentUser;
-                    if (user != null) {
-                      final db = Supabase.instance.client;
-                      final ts = DateTime.now().toUtc().toIso8601String();
-                      await db.from('user_data').upsert({
-                        'id': user.id,
-                        'total_xp': 0, 'streak': 0, 'streak_freezes': 0,
-                        'last_study_date': null, 'last_freeze_week': null,
-                        'today_xp': 0, 'today_xp_date': null,
-                        'daily_words_learned': 0, 'daily_words_date': null,
-                        'stats_updated_at': ts,
-                        'learned_words': [], 'srs_words': [], 'starred_words': [],
-                        'hard_words': [], 'study_days': [], 'review_days': [],
-                        'word_goal_days': [], 'unit_done_days': [], 'xp_history': [],
-                        'unit_progress': {}, 'review_log': {},
-                        // Deliberately NOT clearing imported_words — Reset
-                        // Progress undoes learning progress, not vocabulary
-                        // the user typed in themselves.
-                        'achievements': [], 'lists_updated_at': ts,
-                        'reset_at': ts,
-                      });
-                      await Future.wait([
-                        db.from('srs_words').delete().eq('user_id', user.id),
-                        db.from('learned_words').delete().eq('user_id', user.id),
-                        db.from('starred_words').delete().eq('user_id', user.id),
-                        db.from('xp_history').delete().eq('user_id', user.id),
-                        db.from('user_stats').delete().eq('id', user.id),
-                        db.from('unit_progress').delete().eq('user_id', user.id),
-                      ]);
-                    }
-                  } catch (_) {}
-                  // Always clear local storage and navigate — keeps My Words
-                  // folders/words intact, only resets progress (see doc
-                  // comment on resetProgressKeepingImportedWords()).
-                  await StorageService.resetProgressKeepingImportedWords();
+                  // Clears progress locally AND in the cloud, serialized
+                  // against the fire-and-forget push pipeline, and stamps
+                  // reset_at so no later pullAll() (here or on another
+                  // device) unions the old XP history / streak back in.
+                  // Keeps My Words / imported vocabulary and settings.
+                  await SyncService.resetProgress();
                   final prefs = await SharedPreferences.getInstance();
                   outerNavigator.pushAndRemoveUntil(
                     MaterialPageRoute(

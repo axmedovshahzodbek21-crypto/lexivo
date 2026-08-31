@@ -295,6 +295,83 @@ class SyncService {
     await Future.wait([pushStats(), pushSettings(), pushLists()]);
   }
 
+  // "Reset Progress" — wipes this account's learning progress (XP, XP history,
+  // streaks, learned/SRS/starred/hard words, study days, completion flags)
+  // locally AND in the cloud, keeping My Words / imported vocabulary and
+  // settings. Runs under BOTH push mutexes so no in-flight or queued
+  // pushStats()/pushLists() (each fire-and-forget from ~19 call sites) can
+  // re-upload pre-reset data on top of the cleared cloud row the moment we
+  // finish wiping it. Local prefs are cleared first, so any push that still
+  // runs after us is built from the already-reset state and uploads nothing.
+  //
+  // Previously the reset UI did an inline user_data upsert and a separate
+  // StorageService.resetProgressKeepingImportedWords(), with no mutex and no
+  // local `last_reset_at` write — so a fire-and-forget pushStats() racing the
+  // reset could re-push the old xp_history with a fresh stats_updated_at, and
+  // the next pullAll() would union those entries straight back in.
+  static Future<void> resetProgress() {
+    return _pushStatsMutex.run(() => _pushListsMutex.run(_resetProgressImpl));
+  }
+
+  static Future<void> _resetProgressImpl() async {
+    final prefs = await SharedPreferences.getInstance();
+    final ts = _now();
+
+    // 1. Local wipe first. _clearProgress removes the same key set as
+    //    StorageService.resetProgressKeepingImportedWords() — xp_history,
+    //    xp_by_date, total_xp, streak, the sync_*_ts markers, completion
+    //    flags, per-unit/per-day progress prefixes, …
+    await _clearProgress(prefs);
+    // 2. Stamp last_reset_at with the SAME ts we write to the cloud row
+    //    below. The reset_at guard in _pullAllImpl() clears (instead of
+    //    merging) while cloud reset_at > local last_reset_at; equal ts means
+    //    our own next pull neither re-clears redundantly nor re-merges.
+    await prefs.setString('last_reset_at', ts);
+
+    final uid = _uid;
+    if (uid == null) return; // offline: local reset stands on its own
+
+    // 3. Cloud wipe. Best-effort — a failure here leaves the local reset in
+    //    place; the reset_at guard still isn't set in the cloud, so this is
+    //    retried the next time the user resets. (Matches the prior
+    //    best-effort behaviour.)
+    try {
+      await _sb.from('user_data').upsert({
+        'id': uid,
+        'total_xp': 0, 'streak': 0, 'streak_freezes': 0,
+        'last_study_date': null, 'last_freeze_week': null,
+        'streak_bonus_date': null,
+        'today_xp': 0, 'today_xp_date': null,
+        'daily_words_learned': 0, 'daily_words_date': null,
+        'learned_words': [], 'srs_words': [], 'starred_words': [],
+        'hard_words': [], 'study_days': [], 'review_days': [],
+        'word_goal_days': [], 'unit_done_days': [], 'xp_history': [],
+        'unit_progress': {}, 'my_unit_progress': {}, 'review_log': {},
+        // Deliberately NOT clearing imported_words — Reset Progress undoes
+        // learning progress, not vocabulary the user typed in themselves.
+        'achievements': [],
+        'stats_updated_at': ts,
+        'lists_updated_at': ts,
+        'reset_at': ts,
+      });
+      await Future.wait([
+        _sb.from('srs_words').delete().eq('user_id', uid),
+        _sb.from('learned_words').delete().eq('user_id', uid),
+        _sb.from('starred_words').delete().eq('user_id', uid),
+        _sb.from('xp_history').delete().eq('user_id', uid),
+        _sb.from('user_stats').delete().eq('id', uid),
+        _sb.from('unit_progress').delete().eq('user_id', uid),
+      ]);
+      // 4. Re-plant the sync markers _clearProgress() just removed, level
+      //    with the row we wrote, so the next pullAll() doesn't see the
+      //    cloud as "newer" and re-merge the (now empty) rows back.
+      await prefs.setString('sync_stats_ts', ts);
+      await prefs.setString('sync_lists_ts', ts);
+    } catch (e) {
+      debugPrint('[SyncService.resetProgress] cloud reset failed (local reset stands): $e');
+    }
+  }
+
   // ── Pull ─────────────────────────────────────────────────────────────────────
 
   // Login (_goToApp) fires pullAll() right before navigating to MainShell,

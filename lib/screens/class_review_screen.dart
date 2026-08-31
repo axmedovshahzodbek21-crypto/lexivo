@@ -65,17 +65,25 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
   // is gated on stage change, farms XP). _gradeUnlocked: the answer has been
   // shown at least _revealBeat. _cardLocked: input is ignored for _cardLockout
   // after each grade so a queued/double tap can't fall through onto the next
-  // card. Keep in sync with the web review page's REVEAL_BEAT_MS / CARD_LOCKOUT_MS.
+  // card. Keep in sync with the web review page's REVEAL_BEAT_MS /
+  // OPTIONS_BEAT_MS / CARD_LOCKOUT_MS.
   static const _revealBeat = Duration(milliseconds: 800);          // fallback (Reveal button) path
+  static const _optionsBeat = Duration(milliseconds: 450);         // MCQ: tiles visible-but-inert this long after the prompt is tapped
   static const _resultRevealCorrect = Duration(milliseconds: 800); // MCQ: show green result, then advance
   static const _resultRevealWrong = Duration(milliseconds: 1600);  // MCQ: longer on a miss to read the answer
   static const _cardLockout = Duration(milliseconds: 350);
   bool _gradeUnlocked = false;
   bool _cardLocked = false;
+  // MCQ recall gate: the option tiles stay hidden until the student taps the
+  // prompt (having tried to recall the answer first). _optionsShown once tapped;
+  // _optionsUnlocked once _optionsBeat has elapsed after that.
+  bool _optionsShown = false;
+  bool _optionsUnlocked = false;
   Timer? _beatTimer;
   Timer? _lockTimer;
-  // When the current card's answer was revealed, for the reveal->grade timing
-  // logged to class_review_events.
+  // When the current card's answer/options were revealed, for the reveal->grade
+  // timing logged to class_review_events. MCQ: set when the option tiles are
+  // shown; fallback: when the translation is revealed.
   DateTime? _revealedAt;
 
   late final AnimationController _ctrl;
@@ -112,6 +120,8 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
     _choices = widget.dueOnly ? _buildChoices(_index) : null;
     _tappedChoice = null;
     _answerShown = false;
+    _optionsShown = false;
+    _optionsUnlocked = false;
   }
 
   // Correct translation + up to 3 distractors, shuffled. Null when fewer than
@@ -229,15 +239,30 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
     });
   }
 
+  // MCQ path: reveal the option tiles. The student taps the prompt to get here,
+  // having tried to recall the answer first. Tiles stay dimmed and untappable
+  // for _optionsBeat so a queued tap can't fall straight through onto one.
+  void _showOptions() {
+    if (_cardLocked || _optionsShown) return;
+    _beatTimer?.cancel();
+    setState(() {
+      _optionsShown = true;
+      _optionsUnlocked = false;
+      _revealedAt = DateTime.now();
+    });
+    _beatTimer = Timer(_optionsBeat, () {
+      if (mounted) setState(() => _optionsUnlocked = true);
+    });
+  }
+
   // MCQ path: the tap IS the grade. Show the green/red result, then auto-apply
   // it (correct -> Knew it, wrong -> Not yet). Longer hold on a miss.
   void _onTileTap(String choice) {
-    if (_cardLocked || _tappedChoice != null) return;
+    if (_cardLocked || !_optionsUnlocked || _tappedChoice != null) return;
     final correct = choice == _cards[_index].translation;
     setState(() {
       _tappedChoice = choice;
       _answerShown = true;
-      _revealedAt = DateTime.now();
     });
     _beatTimer?.cancel();
     _beatTimer = Timer(correct ? _resultRevealCorrect : _resultRevealWrong, () {
@@ -342,6 +367,8 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
       _choices = null;
       _tappedChoice = null;
       _answerShown = false;
+      _optionsShown = false;
+      _optionsUnlocked = false;
     });
     _load();
   }
@@ -515,54 +542,68 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
   // ── MCQ review body (dueOnly) ──────────────────────────────────────────────
   Widget _buildMcqBody(_ReviewCard card) {
     final choices = _choices;
+    // Recall-first: in MCQ mode the option tiles stay hidden until the whole
+    // prompt card is tapped, so the student tries to remember the answer first.
+    final mcqGate = choices != null && !_optionsShown;
     return SingleChildScrollView(
       child: Column(children: [
-        // Prompt
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: context.surface,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: context.cardShadow,
-          ),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text('Class word',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: context.textMuted)),
-              GestureDetector(
-                onTap: () => _speak(card.word),
-                child: Container(
-                  width: 34, height: 34,
-                  decoration: BoxDecoration(color: context.primaryBg, shape: BoxShape.circle),
-                  child: Icon(Icons.volume_up_rounded, size: 18, color: context.primary),
+        // Prompt (tap to reveal the option tiles in MCQ mode)
+        GestureDetector(
+          onTap: (mcqGate && !_cardLocked) ? _showOptions : null,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: context.surface,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: context.cardShadow,
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Text('Class word',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: context.textMuted)),
+                GestureDetector(
+                  onTap: () => _speak(card.word),
+                  child: Container(
+                    width: 34, height: 34,
+                    decoration: BoxDecoration(color: context.primaryBg, shape: BoxShape.circle),
+                    child: Icon(Icons.volume_up_rounded, size: 18, color: context.primary),
+                  ),
                 ),
-              ),
+              ]),
+              const SizedBox(height: 10),
+              Text(card.word,
+                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: context.appText)),
+              if (mcqGate) ...[
+                const SizedBox(height: 14),
+                Row(children: [
+                  Icon(Icons.touch_app_outlined, size: 15, color: context.textMuted),
+                  const SizedBox(width: 6),
+                  Text('Tap to see options',
+                      style: TextStyle(fontSize: 12, color: context.textMuted)),
+                ]),
+              ] else if (_answerShown && choices == null) ...[
+                const SizedBox(height: 14),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: context.primaryBg, borderRadius: BorderRadius.circular(12)),
+                  child: Text(card.translation,
+                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: context.primary)),
+                ),
+              ] else if (choices == null) ...[
+                const SizedBox(height: 14),
+                SizedBox(width: double.infinity, child: OutlinedButton(
+                  onPressed: _cardLocked ? null : _revealAnswer,
+                  child: const Text('Reveal'),
+                )),
+              ],
             ]),
-            const SizedBox(height: 10),
-            Text(card.word,
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: context.appText)),
-            if (_answerShown && choices == null) ...[
-              const SizedBox(height: 14),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: context.primaryBg, borderRadius: BorderRadius.circular(12)),
-                child: Text(card.translation,
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: context.primary)),
-              ),
-            ] else if (choices == null) ...[
-              const SizedBox(height: 14),
-              SizedBox(width: double.infinity, child: OutlinedButton(
-                onPressed: _cardLocked ? null : _revealAnswer,
-                child: const Text('Reveal'),
-              )),
-            ],
-          ]),
+          ),
         ),
         const SizedBox(height: 16),
-        if (choices != null) ...[
+        if (choices != null && _optionsShown) ...[
           _buildTiles(card, choices),
           if (_tappedChoice != null) ...[
             const SizedBox(height: 12),
@@ -613,11 +654,13 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
       } else {
         opacity = 0.35;
       }
+    } else if (!_optionsUnlocked) {
+      opacity = 0.5; // brief post-reveal beat — visible but not yet tappable
     }
     return Opacity(
       opacity: opacity,
       child: GestureDetector(
-        onTap: answered ? null : () => _onTileTap(choice),
+        onTap: (answered || !_optionsUnlocked) ? null : () => _onTileTap(choice),
         child: Container(
           constraints: const BoxConstraints(minHeight: 88),
           padding: const EdgeInsets.all(14),

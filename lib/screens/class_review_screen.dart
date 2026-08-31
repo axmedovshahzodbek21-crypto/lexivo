@@ -63,14 +63,13 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
   // otherwise clear the whole queue by hammering one grade button without
   // reading anything, which pollutes their SRS scheduling (and, once review XP
   // is gated on stage change, farms XP). _gradeUnlocked: the answer has been
-  // shown at least _revealBeat. _cardLocked: input is ignored for _cardLockout
-  // after each grade so a queued/double tap can't fall through onto the next
-  // card. Keep in sync with the web review page's REVEAL_BEAT_MS /
-  // OPTIONS_BEAT_MS / CARD_LOCKOUT_MS.
-  static const _revealBeat = Duration(milliseconds: 800);          // fallback (Reveal button) path
-  static const _optionsBeat = Duration(milliseconds: 450);         // MCQ: tiles visible-but-inert this long after the prompt is tapped
-  static const _resultRevealCorrect = Duration(milliseconds: 800); // MCQ: show green result, then advance
-  static const _resultRevealWrong = Duration(milliseconds: 1600);  // MCQ: longer on a miss to read the answer
+  // shown at least _revealBeat — applies to both the fallback (Reveal button)
+  // path and the MCQ path (after a tile is tapped); the student self-grades in
+  // both. _cardLocked: input is ignored for _cardLockout after each grade so a
+  // queued/double tap can't fall through onto the next card. Keep in sync with
+  // the web review page's REVEAL_BEAT_MS / OPTIONS_BEAT_MS / CARD_LOCKOUT_MS.
+  static const _revealBeat = Duration(milliseconds: 800);   // answer shown -> grade buttons enable
+  static const _optionsBeat = Duration(milliseconds: 450);  // MCQ: tiles visible-but-inert this long after the prompt is tapped
   static const _cardLockout = Duration(milliseconds: 350);
   bool _gradeUnlocked = false;
   bool _cardLocked = false;
@@ -255,18 +254,19 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
     });
   }
 
-  // MCQ path: the tap IS the grade. Show the green/red result, then auto-apply
-  // it (correct -> Knew it, wrong -> Not yet). Longer hold on a miss.
+  // MCQ path: the tap reveals whether the pick was right (green/red tiles) and
+  // unlocks the Not yet / Knew it buttons after _revealBeat. It does NOT decide
+  // the SRS outcome — the student self-grades, same as the fallback path.
   void _onTileTap(String choice) {
     if (_cardLocked || !_optionsUnlocked || _tappedChoice != null) return;
-    final correct = choice == _cards[_index].translation;
+    _beatTimer?.cancel();
     setState(() {
       _tappedChoice = choice;
       _answerShown = true;
+      _gradeUnlocked = false;
     });
-    _beatTimer?.cancel();
-    _beatTimer = Timer(correct ? _resultRevealCorrect : _resultRevealWrong, () {
-      if (mounted) _answer(correct);
+    _beatTimer = Timer(_revealBeat, () {
+      if (mounted) setState(() => _gradeUnlocked = true);
     });
   }
 
@@ -276,11 +276,10 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
     // re-entrancy guard applies.
     if (_answering || _cardLocked) return;
     if (widget.dueOnly) {
-      final mcq = _choices != null;
-      // MCQ: a tile must have been tapped (the _resultReveal timer enforces the
-      // pause). Fallback: answer revealed + beat elapsed.
-      if (mcq && _tappedChoice == null) return;
-      if (!mcq && (!_answerShown || !_gradeUnlocked)) return;
+      // MCQ: a tile must have been tapped first. Both paths: the answer has been
+      // shown and the reveal beat has elapsed (so the grade buttons are live).
+      if (_choices != null && _tappedChoice == null) return;
+      if (!_answerShown || !_gradeUnlocked) return;
     }
     _answering = true;
     try {
@@ -612,6 +611,8 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
               style: TextStyle(fontSize: 12, color: context.textMuted),
               textAlign: TextAlign.center,
             ),
+            const SizedBox(height: 16),
+            _buildGradeButtons(), // student self-grades — the tile tap only shows if they were right
           ],
         ] else if (_answerShown) ...[
           const SizedBox(height: 16),

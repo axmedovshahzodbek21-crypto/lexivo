@@ -102,23 +102,35 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
       for (int i = 0; i < _queue.length; i++)
         if (i != idx) _queue[i].translation,
     ];
-    // minOptions: 3 (correct + 2 distractors) — falls back to flip mode
-    // (returns null) when fewer than 2 distractors are available, even
-    // after drawing on `extra` (previously-learned words).
+    // minOptions: 2 (correct + at least 1 distractor). The old value of 3
+    // dropped a tiny session (e.g. 1/1) to the plain flip card; now, with
+    // `extra` seeded from the whole word base (see _fillFallbackChoices), a
+    // real question is almost always possible — only an account with no other
+    // word anywhere still falls back.
     return buildQuizOptions(
       correct: correct,
       candidatePool: candidatePool,
       distractorCount: 2,
       fallbackPool: extra,
-      minOptions: 3,
+      minOptions: 2,
     );
   }
 
   Future<void> _fillFallbackChoices() async {
     if (_cardChoices.every((c) => c != null)) return;
+    // Distractor sources, widest first: the user's learned words, all their
+    // SRS words, then every built-in collection word — so even a single-card
+    // review still gets MCQ tiles instead of the flip card.
     final learned = await StorageService.getLearnedWords();
+    final srs = await StorageService.getSRSWords();
     if (!mounted) return;
-    final extra = learned.map((w) => w.translation).toSet();
+    final extra = <String>{
+      ...learned.map((w) => w.translation),
+      ...srs.map((w) => w.translation),
+      for (final col in [ContentService.a1, ContentService.a2, ContentService.b1, ContentService.advanced])
+        for (final day in col.days)
+          for (final w in day.words) w.translation,
+    }..removeWhere((t) => t.trim().isEmpty);
     bool changed = false;
     for (int i = 0; i < _cardChoices.length; i++) {
       if (_cardChoices[i] == null) {

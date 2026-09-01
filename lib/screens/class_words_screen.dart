@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../services/supabase_service.dart';
 import '../services/class_srs_service.dart';
 import '../services/ai_import.dart';
+import '../data/storage_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import '../data/word_data.dart';
@@ -438,8 +439,59 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
     return WordDay(dayNumber: 0, topic: widget.className, words: wordItems);
   }
 
-  void _studyWords() {
+  Future<void> _studyWords() async {
     if (_words.isEmpty) return;
+    // LearningScreen persists the current card index on exit under
+    // learn_progress_<className>_0 (see learning.dart's PopScope / close
+    // button). Offer to pick up where the student left off.
+    final savedIndex = await StorageService.getLearnProgress(widget.className, 0);
+    if (!mounted) return;
+    if (savedIndex != null && savedIndex > 0 && savedIndex < _words.length) {
+      _showResumeLearnDialog(savedIndex);
+    } else {
+      _openStudySheet(0);
+    }
+  }
+
+  void _showResumeLearnDialog(int savedIndex) {
+    showDialog(
+      context: context,
+      builder: (dctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('📖 Continue Learning?', textAlign: TextAlign.center),
+        content: Text(
+          'You left off at word ${savedIndex + 1} of ${_words.length}.\nContinue from where you stopped, or start over?',
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 14, color: Colors.grey),
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dctx);
+              StorageService.clearLearnProgress(widget.className, 0);
+              _openStudySheet(0);
+            },
+            child: const Text('Start from Word 1', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dctx);
+              _openStudySheet(savedIndex);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: context.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text('Continue from Word ${savedIndex + 1}'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openStudySheet(int startIndex) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -447,17 +499,17 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
       builder: (context) => PomodoroSetupScreen(
         onSkip: () {
           Navigator.pop(context);
-          _launchStudy();
+          _launchStudy(startIndex);
         },
         onStart: () {
           Navigator.pop(context);
-          _launchStudy();
+          _launchStudy(startIndex);
         },
       ),
     );
   }
 
-  void _launchStudy() {
+  void _launchStudy(int startIndex) {
     Navigator.push(context, MaterialPageRoute(
       builder: (_) => LearningScreen(
         wordDay: _buildWordDay(),
@@ -465,8 +517,9 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
         collectionName: widget.className,
         classId: widget.classId,
         dayIndex: 0,
+        startIndex: startIndex,
       ),
-    ));
+    )).then((_) => _loadWords());
   }
 
   void _startFlashcards() {
@@ -490,11 +543,12 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
         collectionName: widget.className,
         quizType: QuizType.wordToTranslation,
         questionCount: _words.length.clamp(1, 20),
-        noXP: true,
+        classId: widget.classId,
+        className: widget.className,
         onWrongWord: user == null ? null : (word) =>
             addClassHardWord(userId: user.id, classId: widget.classId, word: word),
       ),
-    ));
+    )).then((_) => _loadWords());
   }
 
   void _startMatching() {
@@ -508,11 +562,12 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
       builder: (_) => MatchingScreen(
         wordDay: _buildWordDay(),
         collectionName: widget.className,
-        noXP: true,
+        classId: widget.classId,
+        className: widget.className,
         onWrongPair: user == null ? null : (word) =>
             addClassHardWord(userId: user.id, classId: widget.classId, word: word),
       ),
-    ));
+    )).then((_) => _loadWords());
   }
 
   void _startReview() {

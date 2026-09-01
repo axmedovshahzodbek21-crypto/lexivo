@@ -1,5 +1,6 @@
 import 'break_screen.dart';
 import '../data/storage_service.dart';
+import '../services/supabase_service.dart';
 import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
 import 'dart:math';
@@ -17,6 +18,8 @@ class QuizSettingsScreen extends StatefulWidget {
   final String userProfile;
   final String collectionName;
   final bool noXP;
+  final String? classId;
+  final String? className;
   final Future<bool> Function()? onSessionComplete;
   // Forwarded into the finish screen's "Play Match" button so chaining onward
   // from Quiz still marks My Words progress for the Match activity.
@@ -32,6 +35,8 @@ class QuizSettingsScreen extends StatefulWidget {
     required this.userProfile,
     required this.collectionName,
     this.noXP = false,
+    this.classId,
+    this.className,
     this.onSessionComplete,
     this.onMatchComplete,
     this.onHomeworkCompleted,
@@ -152,6 +157,8 @@ class _QuizSettingsScreenState extends State<QuizSettingsScreen> {
                         quizType: _quizType,
                         questionCount: widget.wordDay.words.length,
                         noXP: widget.noXP,
+                        classId: widget.classId,
+                        className: widget.className,
                         onSessionComplete: widget.onSessionComplete,
                         onMatchComplete: widget.onMatchComplete,
                         onHomeworkCompleted: widget.onHomeworkCompleted,
@@ -245,6 +252,11 @@ class QuizSessionScreen extends StatefulWidget {
   final QuizType quizType;
   final int questionCount;
   final bool noXP;
+  // Class mode: when set, the finish screen awards class XP (questionCount * 5,
+  // once per completed session) via record_class_xp instead of touching the
+  // personal XP pool. Mutually exclusive with noXP.
+  final String? classId;
+  final String? className;
   final void Function(String word)? onWrongWord;
   final VoidCallback? onHomeworkCompleted;
   final Future<bool> Function()? onSessionComplete;
@@ -258,6 +270,8 @@ class QuizSessionScreen extends StatefulWidget {
     required this.quizType,
     required this.questionCount,
     this.noXP = false,
+    this.classId,
+    this.className,
     this.onWrongWord,
     this.onHomeworkCompleted,
     this.onSessionComplete,
@@ -412,6 +426,8 @@ class _QuizSessionScreenState extends State<QuizSessionScreen>
           wrongWords: _wrongWords,
           quizType: widget.quizType,
           noXP: widget.noXP,
+          classId: widget.classId,
+          className: widget.className,
           myUnitCompleted: myUnitCompleted,
           onMatchComplete: widget.onMatchComplete,
           onHomeworkCompleted: widget.onHomeworkCompleted,
@@ -629,6 +645,8 @@ class QuizFinishScreen extends StatefulWidget {
   final List<WordItem> wrongWords;
   final QuizType quizType;
   final bool noXP;
+  final String? classId;
+  final String? className;
   final bool myUnitCompleted;
   // Forwarded into the "Play Match" button so chaining onward from Quiz
   // still marks My Words progress for the Match activity.
@@ -651,6 +669,8 @@ class QuizFinishScreen extends StatefulWidget {
     required this.wrongWords,
     required this.quizType,
     this.noXP = false,
+    this.classId,
+    this.className,
     this.myUnitCompleted = false,
     this.onMatchComplete,
     this.onHomeworkCompleted,
@@ -685,7 +705,25 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
 
   void _onLangChange() { if (mounted) setState(() {}); }
 
+  // Class mode: XP is scoped to the class leaderboard only (record_class_xp),
+  // never the personal pool the Main Lexivo homescreen/level reads from —
+  // matching how a class Learn session credits XP (see learning.dart's
+  // _grantLearnReward). Awarded once per completed session, every session
+  // (no per-day/per-unit gate).
+  Future<void> _awardClassXP() async {
+    final xp = widget.totalCount * 5;
+    final user = currentUser;
+    if (user != null && xp > 0) {
+      recordClassActivity(user.id, widget.classId!, reason: 'Quiz', xp: xp);
+    }
+    if (mounted) setState(() => _xpEarned = xp);
+  }
+
   Future<void> _awardXP() async {
+    if (widget.classId != null) {
+      await _awardClassXP();
+      return;
+    }
     if (widget.noXP) return;
     final isPerfect = widget.correctCount == widget.totalCount;
     await StorageService.markQuizCompleted(perfect: isPerfect);
@@ -844,6 +882,8 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
                           wordDay: widget.wordDay,
                           collectionName: widget.collectionName,
                           noXP: widget.noXP,
+                          classId: widget.classId,
+                          className: widget.className,
                           onSessionComplete: widget.onMatchComplete,
                         ),
                       ),
@@ -914,6 +954,8 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
                             // not forwarded) — see QuizFinishScreen's own
                             // doc comment on these two fields.
                             noXP: widget.noXP,
+                            classId: widget.classId,
+                            className: widget.className,
                             onHomeworkCompleted: widget.onHomeworkCompleted,
                             onSessionComplete: widget.onSessionComplete,
                             onMatchComplete: widget.onMatchComplete,
@@ -970,6 +1012,8 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
                         userProfile: widget.userProfile,
                         collectionName: widget.collectionName,
                         noXP: widget.noXP,
+                        classId: widget.classId,
+                        className: widget.className,
                         onSessionComplete: widget.onSessionComplete,
                         onMatchComplete: widget.onMatchComplete,
                         onHomeworkCompleted: widget.onHomeworkCompleted,

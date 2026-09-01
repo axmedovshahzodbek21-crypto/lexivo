@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
 import '../data/storage_service.dart';
+import '../services/supabase_service.dart';
 import '../data/word_data.dart';
 import '../l10n.dart';
 import '../widgets/not_enough_words_screen.dart';
@@ -40,6 +41,11 @@ class MatchingScreen extends StatefulWidget {
   final WordDay wordDay;
   final String collectionName;
   final bool noXP;
+  // Class mode: when set, finishing the last round awards class XP
+  // (wordCount * 4, once per completed session) via record_class_xp instead
+  // of touching the personal XP pool. Mutually exclusive with noXP.
+  final String? classId;
+  final String? className;
 
   final void Function(String word)? onWrongPair;
   final VoidCallback? onHomeworkCompleted;
@@ -50,6 +56,8 @@ class MatchingScreen extends StatefulWidget {
     required this.wordDay,
     required this.collectionName,
     this.noXP = false,
+    this.classId,
+    this.className,
     this.onWrongPair,
     this.onHomeworkCompleted,
     this.onSessionComplete,
@@ -171,7 +179,18 @@ class _MatchingScreenState extends State<MatchingScreen> {
         final isLast = _roundIndex + 1 >= _totalRounds;
         if (isLast) {
           StorageService.markMatchComplete(widget.collectionName, widget.wordDay.dayNumber);
-          if (!widget.noXP) {
+          if (widget.classId != null) {
+            // Class mode: XP is scoped to the class leaderboard only
+            // (record_class_xp), never the personal pool — matching how a
+            // class Learn session credits XP (learning.dart's
+            // _grantLearnReward). Awarded every completed session, no gate.
+            final xp = widget.wordDay.words.length * 4;
+            final user = currentUser;
+            if (user != null && xp > 0) {
+              recordClassActivity(user.id, widget.classId!, reason: 'Match', xp: xp);
+              if (mounted) setState(() => _sessionXP = xp);
+            }
+          } else if (!widget.noXP) {
             StorageService.hasMatchXPAwarded(widget.collectionName, widget.wordDay.dayNumber).then((awarded) {
               if (!awarded) {
                 final xp = widget.wordDay.words.length * 4;

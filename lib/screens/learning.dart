@@ -69,6 +69,12 @@ class _LearningScreenState extends State<LearningScreen> {
   late int _currentIndex;
   bool _sessionComplete = false;
   int _sessionXP = 0;
+  // Transient "+N XP" chip shown just above the action bar each time a word
+  // is credited, so XP visibly accrues per card instead of only appearing as
+  // a lump sum on the finish screen. _xpFlashSeq tokenises the auto-hide
+  // timer so a fast run of marks doesn't clear a newer chip early.
+  int? _xpFlash;
+  int _xpFlashSeq = 0;
   // Class-mode reward network calls are fired without awaiting (see
   // _grantLearnReward) so advancing between words isn't blocked on a
   // round-trip; tracked here so _showFinishDialog can await any still
@@ -343,6 +349,15 @@ class _LearningScreenState extends State<LearningScreen> {
     _next();
   }
 
+  void _flashXp(int xp) {
+    if (!mounted || xp <= 0) return;
+    final seq = ++_xpFlashSeq;
+    setState(() => _xpFlash = xp);
+    Timer(const Duration(milliseconds: 1300), () {
+      if (mounted && seq == _xpFlashSeq) setState(() => _xpFlash = null);
+    });
+  }
+
   // Shared by both "Got it" and "Too Hard" — a word marked Too Hard earns the
   // same XP and goes into SRS exactly like a word marked Learned. This is
   // deliberate: if Too Hard didn't reward like Learned, students under peer
@@ -388,6 +403,7 @@ class _LearningScreenState extends State<LearningScreen> {
               // homescreen/level reads from. _sessionXP still reflects it for
               // this session's own summary screen.
               if (mounted) setState(() => _sessionXP += xp);
+              _flashXp(xp);
             }
           } catch (e) {
             // Sync failed (network/RPC) — don't strand the student on this
@@ -418,6 +434,7 @@ class _LearningScreenState extends State<LearningScreen> {
         final xp = StorageService.learnXP(learned.length);
         await StorageService.addXP(xp, reason: 'Learn', source: 'Unit ${widget.wordDay.dayNumber} · ${widget.collectionName}');
         _sessionXP += xp;
+        _flashXp(xp);
       }
     }
   }
@@ -1141,6 +1158,15 @@ class _LearningScreenState extends State<LearningScreen> {
             _buildBottomPanel(context, isLearned, isHard),
           ],
         ),
+        if (_xpFlash != null)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 92,
+            child: IgnorePointer(
+              child: Center(child: _XpFlashChip(key: ValueKey(_xpFlashSeq), xp: _xpFlash!)),
+            ),
+          ),
         if (_inSpotCheck || _inQuizGate)
           _buildFullScreenQuiz(context),
         ]),
@@ -1500,6 +1526,50 @@ class _MoreExamplesSheetState extends State<_MoreExamplesSheet> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Small "+N XP" chip that rises a little and fades over ~1.3s. Rebuilt from
+/// scratch (via a fresh ValueKey) on every award so the animation replays.
+class _XpFlashChip extends StatelessWidget {
+  final int xp;
+  const _XpFlashChip({super.key, required this.xp});
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 1300),
+      curve: Curves.easeOut,
+      builder: (context, t, child) {
+        // Fade in over the first 15%, hold, fade out over the last 30%.
+        final opacity = t < 0.15
+            ? t / 0.15
+            : (t > 0.7 ? (1 - (t - 0.7) / 0.3) : 1.0);
+        return Opacity(
+          opacity: opacity.clamp(0.0, 1.0),
+          child: Transform.translate(offset: Offset(0, -24 * t), child: child),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: const Color(0xFF2ECC71),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF2ECC71).withValues(alpha: 0.4),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Text(
+          '+${StorageService.displayXP(xp)} XP',
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
         ),
       ),
     );

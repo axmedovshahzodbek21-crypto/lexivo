@@ -711,10 +711,15 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
   // _grantLearnReward). Awarded once per completed session, every session
   // (no per-day/per-unit gate).
   Future<void> _awardClassXP() async {
-    final xp = widget.totalCount * 5;
+    final base = widget.totalCount * 5;
+    final isPerfect = widget.totalCount > 0 && widget.correctCount == widget.totalCount;
+    // +25% for a flawless run, every perfect session (class practice has no
+    // per-session gate, matching the base award).
+    final xp = base + (isPerfect ? (base * 0.25).round() : 0);
     final user = currentUser;
     if (user != null && xp > 0) {
-      recordClassActivity(user.id, widget.classId!, reason: 'Quiz', xp: xp);
+      recordClassActivity(user.id, widget.classId!,
+          reason: isPerfect ? 'Quiz (perfect)' : 'Quiz', xp: xp);
     }
     if (mounted) setState(() => _xpEarned = xp);
   }
@@ -729,18 +734,26 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
     await StorageService.markQuizCompleted(perfect: isPerfect);
     await StorageService.recordStudySession();
     await StorageService.recordQuizSession();
+    final base = widget.wordDay.words.length * 5;
+    final source = 'Unit ${widget.wordDay.dayNumber} · ${widget.collectionName}';
     final alreadyAwarded = await StorageService.hasQuizXPAwarded(
       widget.collectionName, widget.wordDay.dayNumber);
     if (!alreadyAwarded) {
-      final wordCount = widget.wordDay.words.length;
-      final xp = wordCount * 5;
-      await StorageService.addXP(
-        xp,
-        reason: 'Quiz',
-        source: 'Unit ${widget.wordDay.dayNumber} · ${widget.collectionName}',
-      );
-      if (mounted) setState(() => _xpEarned = xp);
+      await StorageService.addXP(base, reason: 'Quiz', source: source);
+      if (mounted) setState(() => _xpEarned = base);
       await StorageService.markQuizXPAwarded(
+        widget.collectionName, widget.wordDay.dayNumber);
+    }
+    // +25% bonus for a flawless run, granted right at completion, once per
+    // unit (own gate so it can still land on a later perfect run even if the
+    // base was already earned on an imperfect one).
+    if (isPerfect &&
+        !await StorageService.hasQuizPerfectXPAwarded(
+            widget.collectionName, widget.wordDay.dayNumber)) {
+      final bonus = (base * 0.25).round();
+      await StorageService.addXP(bonus, reason: 'Quiz (perfect)', source: source);
+      if (mounted) setState(() => _xpEarned += bonus);
+      await StorageService.markQuizPerfectXPAwarded(
         widget.collectionName, widget.wordDay.dayNumber);
     }
     await StorageService.markQuizComplete(

@@ -1200,7 +1200,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
   static Future<void> resetMyWordsProgress() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_myUnitProgressKey);
-    for (final key in const ['flash_xp_units', 'quiz_xp_units', 'match_xp_units']) {
+    for (final key in const ['flash_xp_units', 'quiz_xp_units', 'quiz_perfect_xp_units', 'match_xp_units']) {
       final raw = prefs.getString(key);
       if (raw == null) continue;
       final filtered = List<String>.from(jsonDecode(raw)).where((k) => !k.endsWith('_0')).toList();
@@ -1948,6 +1948,27 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     if (!list.contains(k)) {
       list.add(k);
       await prefs.setString('quiz_xp_units', jsonEncode(list));
+    }
+  }
+
+  // Separate gate from base quiz XP so the +25% perfect-run bonus can still be
+  // earned once on a later 100% attempt even if the base was already granted
+  // on an earlier imperfect run of the same unit.
+  static Future<bool> hasQuizPerfectXPAwarded(String collectionName, int dayNumber) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('quiz_perfect_xp_units');
+    if (raw == null) return false;
+    return (jsonDecode(raw) as List).contains(_unitKey(collectionName, dayNumber));
+  }
+
+  static Future<void> markQuizPerfectXPAwarded(String collectionName, int dayNumber) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('quiz_perfect_xp_units');
+    final list = raw != null ? List<String>.from(jsonDecode(raw)) : <String>[];
+    final k = _unitKey(collectionName, dayNumber);
+    if (!list.contains(k)) {
+      list.add(k);
+      await prefs.setString('quiz_perfect_xp_units', jsonEncode(list));
     }
   }
 

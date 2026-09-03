@@ -16,9 +16,45 @@ import 'l10n.dart';
 import 'screens/break_screen.dart';
 
 final ValueNotifier<double> textScaleNotifier = ValueNotifier(1.0);
-final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(ThemeMode.system);
-final ValueNotifier<String> pulseNotifier = ValueNotifier('normal'); // 'off' | 'slow' | 'normal' | 'fast'
+final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(
+  ThemeMode.system,
+);
+final ValueNotifier<String> pulseNotifier = ValueNotifier(
+  'normal',
+); // 'off' | 'slow' | 'normal' | 'fast'
+// Web has a "Reduce Motion" setting (user_data.reduce_motion, already synced
+// by sync_service.dart); this mirrors it on Flutter. When true: page-route
+// slide transitions are dropped (pageTransitionsTheme below) and the card
+// pulse is forced off regardless of pulse_enabled.
+final ValueNotifier<bool> reduceMotionNotifier = ValueNotifier(false);
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+/// PageTransitionsBuilder that renders the incoming route with no animation —
+/// used app-wide when Reduce Motion is on.
+class _NoTransitionsBuilder extends PageTransitionsBuilder {
+  const _NoTransitionsBuilder();
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return child;
+  }
+}
+
+const PageTransitionsTheme _noPageTransitions = PageTransitionsTheme(
+  builders: {
+    TargetPlatform.android: _NoTransitionsBuilder(),
+    TargetPlatform.iOS: _NoTransitionsBuilder(),
+    TargetPlatform.fuchsia: _NoTransitionsBuilder(),
+    TargetPlatform.linux: _NoTransitionsBuilder(),
+    TargetPlatform.macOS: _NoTransitionsBuilder(),
+    TargetPlatform.windows: _NoTransitionsBuilder(),
+  },
+);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,15 +98,17 @@ void main() async {
     );
     appLangNotifier.value = prefs.getString('ui_language') ?? 'en';
     textScaleNotifier.value = prefs.getDouble('text_scale') ?? 1.0;
+    final reduceMotion = prefs.getBool('reduce_motion') ?? false;
+    reduceMotionNotifier.value = reduceMotion;
     final pulseEnabled = prefs.getBool('pulse_enabled') ?? true;
     final pulseSpeed = prefs.getString('pulse_speed') ?? 'normal';
-    pulseNotifier.value = pulseEnabled ? pulseSpeed : 'off';
+    pulseNotifier.value = (pulseEnabled && !reduceMotion) ? pulseSpeed : 'off';
     final themeModeStr = prefs.getString('theme_mode') ?? 'system';
     themeModeNotifier.value = themeModeStr == 'dark'
         ? ThemeMode.dark
         : themeModeStr == 'light'
-            ? ThemeMode.light
-            : ThemeMode.system;
+        ? ThemeMode.light
+        : ThemeMode.system;
   } catch (e, st) {
     // ignore: avoid_print
     print('[main] startup init failed, continuing with defaults: $e\n$st');
@@ -93,40 +131,48 @@ class LexivoApp extends StatelessWidget {
             return ValueListenableBuilder<double>(
               valueListenable: textScaleNotifier,
               builder: (context, scale, _) {
-                return MaterialApp(
-                  title: 'Lexivo',
-                  debugShowCheckedModeBanner: false,
-                  navigatorKey: navigatorKey,
-                  theme: ThemeData(
-                    colorScheme: ColorScheme.fromSeed(
-                      seedColor: const Color(0xFF6C63FF),
-                    ),
-                    useMaterial3: true,
-                    scaffoldBackgroundColor: const Color(0xFFF8F7FF),
-                  ),
-                  darkTheme: ThemeData(
-                    colorScheme: ColorScheme.fromSeed(
-                      seedColor: const Color(0xFF8B85FF),
-                      brightness: Brightness.dark,
-                    ),
-                    useMaterial3: true,
-                    scaffoldBackgroundColor: const Color(0xFF0F0E1A),
-                  ),
-                  themeMode: themeMode,
-                  navigatorObservers: [routeObserver],
-                  builder: (context, child) {
-                    return MediaQuery(
-                      data: MediaQuery.of(context)
-                          .copyWith(textScaler: TextScaler.linear(scale)),
-                      child: Stack(
-                        children: [
-                          child!,
-                          const BreakOverlay(),
-                        ],
+                return ValueListenableBuilder<bool>(
+                  valueListenable: reduceMotionNotifier,
+                  builder: (context, reduceMotion, _) {
+                    final pageTransitions = reduceMotion
+                        ? _noPageTransitions
+                        : null;
+                    return MaterialApp(
+                      title: 'Lexivo',
+                      debugShowCheckedModeBanner: false,
+                      navigatorKey: navigatorKey,
+                      theme: ThemeData(
+                        colorScheme: ColorScheme.fromSeed(
+                          seedColor: const Color(0xFF6C63FF),
+                        ),
+                        useMaterial3: true,
+                        scaffoldBackgroundColor: const Color(0xFFF8F7FF),
+                        pageTransitionsTheme: pageTransitions,
                       ),
+                      darkTheme: ThemeData(
+                        colorScheme: ColorScheme.fromSeed(
+                          seedColor: const Color(0xFF8B85FF),
+                          brightness: Brightness.dark,
+                        ),
+                        useMaterial3: true,
+                        scaffoldBackgroundColor: const Color(0xFF0F0E1A),
+                        pageTransitionsTheme: pageTransitions,
+                      ),
+                      themeMode: themeMode,
+                      navigatorObservers: [routeObserver],
+                      builder: (context, child) {
+                        return MediaQuery(
+                          data: MediaQuery.of(
+                            context,
+                          ).copyWith(textScaler: TextScaler.linear(scale)),
+                          child: Stack(
+                            children: [child!, const BreakOverlay()],
+                          ),
+                        );
+                      },
+                      home: const SplashRouter(),
                     );
                   },
-                  home: const SplashRouter(),
                 );
               },
             );
@@ -153,7 +199,11 @@ class _SplashRouterState extends State<SplashRouter> {
 
   Future<void> _relinkPushIfEnabled(String userId) async {
     try {
-      final res = await supabase.from('profiles').select('push_enabled').eq('id', userId).maybeSingle();
+      final res = await supabase
+          .from('profiles')
+          .select('push_enabled')
+          .eq('id', userId)
+          .maybeSingle();
       if (res?['push_enabled'] == true) {
         OneSignalService.linkUser(userId);
       }
@@ -294,7 +344,10 @@ class WelcomeScreen extends StatelessWidget {
                 ),
                 child: Text(
                   tr('get_started'),
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],

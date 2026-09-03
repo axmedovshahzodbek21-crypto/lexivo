@@ -46,6 +46,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _themeMode = 'system';
   bool _pulseEnabled = true;
   String _pulseSpeed = 'normal'; // 'slow' | 'normal' | 'fast'
+  bool _reduceMotion = false;
+  bool _autoPlayOnReveal = true;
   bool _loading = true;
   bool _pushEnabled = false;
 
@@ -85,6 +87,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _themeMode = prefs.getString('theme_mode') ?? 'system';
       _pulseEnabled = prefs.getBool('pulse_enabled') ?? true;
       _pulseSpeed = prefs.getString('pulse_speed') ?? 'normal';
+      _reduceMotion = prefs.getBool('reduce_motion') ?? false;
+      _autoPlayOnReveal = prefs.getBool('auto_play_on_reveal') ?? true;
       _nameController.text = _userName;
       _loading = false;
     });
@@ -420,7 +424,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await prefs.setString('pulse_speed', speed);
       if (mounted) setState(() => _pulseSpeed = speed);
     }
-    pulseNotifier.value = _pulseEnabled ? _pulseSpeed : 'off';
+    pulseNotifier.value = (_pulseEnabled && !_reduceMotion) ? _pulseSpeed : 'off';
+  }
+
+  Future<void> _setReduceMotion(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('reduce_motion', value);
+    if (mounted) setState(() => _reduceMotion = value);
+    reduceMotionNotifier.value = value;
+    // Reduce Motion also forces the card pulse off (mirrors main.dart's
+    // startup resolution and the web behavior).
+    pulseNotifier.value = (_pulseEnabled && !value) ? _pulseSpeed : 'off';
+    SyncService.pushSettings();
+  }
+
+  Future<void> _setAutoPlayOnReveal(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('auto_play_on_reveal', value);
+    if (mounted) setState(() => _autoPlayOnReveal = value);
+    SyncService.pushSettings();
   }
 
   Future<void> _setThemeMode(String mode) async {
@@ -713,6 +735,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           _pulseSpeedOption(context, 'Fast', 'fast'),
                         ]),
                       ],
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Study Section
+                _buildSectionHeader(context, 'Study', icon: '📚',
+                  gradient: const [Color(0xFF06B6D4), Color(0xFF22D3EE)],
+                  shadowColor: const Color(0xFF0E7490)),
+                _buildCard(
+                  context,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text('Auto-play pronunciation', style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
+                        subtitle: Text('Speak the word aloud when you reveal it in Learn', style: TextStyle(fontSize: 12, color: context.textMuted)),
+                        value: _autoPlayOnReveal,
+                        activeThumbColor: context.primary,
+                        onChanged: _setAutoPlayOnReveal,
+                      ),
+                      const Divider(height: 8),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text('Reduce motion', style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
+                        subtitle: Text('Disable screen slide animations and the card pulse', style: TextStyle(fontSize: 12, color: context.textMuted)),
+                        value: _reduceMotion,
+                        activeThumbColor: context.primary,
+                        onChanged: _setReduceMotion,
+                      ),
                     ],
                   ),
                 ),

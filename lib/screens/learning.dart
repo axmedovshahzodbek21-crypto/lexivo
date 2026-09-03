@@ -9,6 +9,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../data/word_data.dart';
 import 'flashcard.dart';
 import 'package:lexivo/screens/quiz_screen.dart';
@@ -103,6 +104,9 @@ class _LearningScreenState extends State<LearningScreen> {
   bool _revealed = false;
   int _revealCountdown = 0;
   Timer? _revealTimer;
+  // Mirrors web's autoPlayOnReveal setting (synced via user_data). Loaded in
+  // initState; when true, revealing a card speaks the word aloud.
+  bool _autoPlayOnReveal = true;
 
   bool _inQuizGate = false;
   List<String> _gateOptions = [];
@@ -138,6 +142,10 @@ class _LearningScreenState extends State<LearningScreen> {
     _loadSavedMarks();
     _loadClassStarred();
     _startHeartbeat();
+    SharedPreferences.getInstance().then((prefs) {
+      final v = prefs.getBool('auto_play_on_reveal') ?? true;
+      if (mounted && v != _autoPlayOnReveal) setState(() => _autoPlayOnReveal = v);
+    });
   }
 
   // Class sessions: the star / Too Hard buttons act on the CLASS lists
@@ -538,6 +546,15 @@ class _LearningScreenState extends State<LearningScreen> {
     if (_revealed) return;
     _revealTimer?.cancel();
     setState(() { _revealed = true; _revealCountdown = 3; });
+    if (_autoPlayOnReveal) {
+      // Same choice the "Listen" / "American" buttons make below.
+      final lang = _currentWord.language;
+      if (lang != null && lang.isNotEmpty) {
+        _speakInLanguage(_currentWord.word, lang);
+      } else {
+        _speakAmerican(_currentWord.word);
+      }
+    }
     _revealTimer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) { t.cancel(); return; }
       setState(() {

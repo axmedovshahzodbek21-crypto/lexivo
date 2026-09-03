@@ -187,13 +187,13 @@ class SyncService {
         'p_settings_updated_at': ts,
         'p_clear_avatar': clearAvatar,
       });
-      // Learning prefs that sync_profile_settings doesn't carry. Flutter only
-      // has pulse on/off + speed; session_size / study_order / default_accent /
-      // font_size / auto_play_on_reveal are web-only concepts here, so pass
-      // null — the RPC coalesces null onto the existing column, leaving
-      // whatever the web set untouched. Reuses the same `ts` so pullAll's
-      // single settings_updated_at gate covers this field set too. Mirrors the
-      // web sync.ts pushSettings() call to the same RPC.
+      // Learning prefs that sync_profile_settings doesn't carry. Flutter now
+      // has pulse on/off + speed and auto_play_on_reveal; session_size /
+      // study_order / default_accent / font_size are still web-only concepts
+      // here, so pass null — the RPC coalesces null onto the existing column,
+      // leaving whatever the web set untouched. Reuses the same `ts` so
+      // pullAll's single settings_updated_at gate covers this field set too.
+      // Mirrors the web sync.ts pushSettings() call to the same RPC.
       await _sb.rpc('sync_learning_prefs', params: {
         'p_user_id': uid,
         'p_session_size': null,
@@ -202,7 +202,7 @@ class SyncService {
         'p_pulse_enabled': prefs.getBool('pulse_enabled') ?? true,
         'p_pulse_speed': prefs.getString('pulse_speed') ?? 'normal',
         'p_font_size': null,
-        'p_auto_play_on_reveal': null,
+        'p_auto_play_on_reveal': prefs.getBool('auto_play_on_reveal') ?? true,
         'p_settings_updated_at': ts,
       });
       await prefs.setString('sync_settings_ts', ts);
@@ -550,15 +550,21 @@ class SyncService {
         if (row['avatar_url'] != null) {
           await prefs.setString('profile_image_url', row['avatar_url'] as String);
         }
-        // Learning prefs (sync_learning_prefs RPC). Only the two Flutter
+        // Learning prefs (sync_learning_prefs RPC). Only the ones Flutter
         // actually has — the rest of that column set is web-only. Takes effect
         // on the next read of these keys (app launch / Settings screen open),
-        // same as the other pulled settings above.
+        // same as the other pulled settings above. reduce_motion (pulled in
+        // the block above) also gates the pulse — but re-deriving pulseNotifier
+        // here would fight a Settings screen that's open; the next app launch
+        // in main() resolves it.
         if (row['pulse_enabled'] != null) {
           await prefs.setBool('pulse_enabled', row['pulse_enabled'] as bool);
         }
         if (row['pulse_speed'] != null) {
           await prefs.setString('pulse_speed', row['pulse_speed'] as String);
+        }
+        if (row['auto_play_on_reveal'] != null) {
+          await prefs.setBool('auto_play_on_reveal', row['auto_play_on_reveal'] as bool);
         }
         await prefs.setString('sync_settings_ts', cloudSettingsTs);
       }

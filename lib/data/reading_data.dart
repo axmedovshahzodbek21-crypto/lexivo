@@ -1,3 +1,7 @@
+// GENERATED FILE — DO NOT EDIT.
+// Source of truth: lexivo-web/lib/reading-data.ts
+// Regenerate:      node scripts/ts-to-dart.js   (in the lexivo-web repo)
+
 class ReadingQuestion {
   final String question;
   final String explanation;

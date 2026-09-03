@@ -712,19 +712,34 @@ class CustomList {
   final String id;
   final String name;
   final String createdAt;
+  // Bumped on every rename / add-word / remove-word. Null on records written by
+  // an older build — treated as createdAt when merging.
+  final String? updatedAt;
+  // Present only on tombstones (soft delete), so the deletion propagates
+  // through sync instead of a stale copy on another device resurrecting it.
+  final String? deletedAt;
   final List<String> words;
 
   CustomList({
     required this.id,
     required this.name,
     required this.createdAt,
+    this.updatedAt,
+    this.deletedAt,
     List<String>? words,
   }) : words = words ?? [];
 
-  CustomList copyWith({String? name, List<String>? words}) => CustomList(
+  CustomList copyWith({
+    String? name,
+    List<String>? words,
+    String? updatedAt,
+    String? deletedAt,
+  }) => CustomList(
     id: id,
     name: name ?? this.name,
     createdAt: createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt ?? this.deletedAt,
     words: words ?? this.words,
   );
 
@@ -732,6 +747,8 @@ class CustomList {
     'id': id,
     'name': name,
     'createdAt': createdAt,
+    if (updatedAt != null) 'updatedAt': updatedAt,
+    if (deletedAt != null) 'deletedAt': deletedAt,
     'words': words,
   };
 
@@ -739,6 +756,8 @@ class CustomList {
     id: json['id'] as String,
     name: json['name'] as String,
     createdAt: json['createdAt'] as String,
+    updatedAt: json['updatedAt'] as String?,
+    deletedAt: json['deletedAt'] as String?,
     words: List<String>.from(json['words'] as List? ?? []),
   );
 }
@@ -2866,8 +2885,12 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
   // ── Custom Lists ──────────────────────────────────────────────────────────
 
   static const _customListsKey = 'custom_lists';
+  static const _customListTombstoneTtl = Duration(days: 30);
 
-  static Future<List<CustomList>> getCustomLists() async {
+  // Raw store — includes soft-deleted tombstones. Used by sync (so a delete
+  // propagates) and by the mutators below (so rewriting the array doesn't drop
+  // other devices' tombstones).
+  static Future<List<CustomList>> getCustomListsRaw() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_customListsKey);
     if (raw == null) return [];
@@ -2875,19 +2898,40 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     return list.map((e) => CustomList.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  static Future<void> saveCustomList(CustomList list) async {
+  // Live lists only — what every screen should read.
+  static Future<List<CustomList>> getCustomLists() async {
+    final all = await getCustomListsRaw();
+    return all.where((l) => l.deletedAt == null).toList();
+  }
+
+  // Prunes tombstones older than the TTL, then persists.
+  static Future<void> _persistCustomLists(List<CustomList> all) async {
     final prefs = await SharedPreferences.getInstance();
-    final all = await getCustomLists();
+    final cutoff = DateTime.now().toUtc().subtract(_customListTombstoneTtl);
+    final kept = all.where((l) {
+      if (l.deletedAt == null) return true;
+      final d = DateTime.tryParse(l.deletedAt!);
+      return d == null || d.isAfter(cutoff);
+    }).toList();
+    await prefs.setString(_customListsKey, jsonEncode(kept.map((l) => l.toJson()).toList()));
+  }
+
+  static Future<void> saveCustomList(CustomList list) async {
+    final all = await getCustomListsRaw();
+    final stamped = list.copyWith(updatedAt: DateTime.now().toUtc().toIso8601String());
     final idx = all.indexWhere((l) => l.id == list.id);
-    if (idx >= 0) { all[idx] = list; } else { all.add(list); }
-    await prefs.setString(_customListsKey, jsonEncode(all.map((l) => l.toJson()).toList()));
+    if (idx >= 0) { all[idx] = stamped; } else { all.add(stamped); }
+    await _persistCustomLists(all);
+    SyncService.pushLists();
   }
 
   static Future<void> deleteCustomList(String id) async {
-    final prefs = await SharedPreferences.getInstance();
-    final all = await getCustomLists();
-    all.removeWhere((l) => l.id == id);
-    await prefs.setString(_customListsKey, jsonEncode(all.map((l) => l.toJson()).toList()));
+    final all = await getCustomListsRaw();
+    final idx = all.indexWhere((l) => l.id == id);
+    if (idx < 0) return;
+    all[idx] = all[idx].copyWith(deletedAt: DateTime.now().toUtc().toIso8601String());
+    await _persistCustomLists(all);
+    SyncService.pushLists();
   }
 
   static Future<void> addWordToList(String listId, String word) async {
@@ -2939,11 +2983,12 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
   // the two can't drift apart. Previously this device's own reset deleted
   // every pref except a 4-key allowlist (settings included, by accident),
   // while the propagated version on another device only cleared a smaller
-  // hand-maintained list that was missing custom_lists/visited passages/
-  // completion flags — and wrongly included imported_words, which a reset
-  // is supposed to preserve. Settings (name, notifications, theme, etc.)
-  // and imported/My Words vocabulary are deliberately excluded here; a
-  // progress reset shouldn't touch either.
+  // hand-maintained list that was missing visited passages/completion flags
+  // — and wrongly included imported_words, which a reset is supposed to
+  // preserve. Settings (name, notifications, theme, etc.), imported/My Words
+  // vocabulary, AND custom lists (user-created content, synced via
+  // user_data.custom_lists which a reset does not clear — matches web) are
+  // deliberately excluded here; a progress reset shouldn't touch any of them.
   static const List<String> progressResetKeys = [
     _learnedKey, _srsKey, _studyDaysKey, _markedHardKey, _streakKey,
     _lastStudyKey, _freezesKey, _lastFreezeWeekKey, _xpKey, _todayXpKey,
@@ -2952,7 +2997,6 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     _hasPerfectQuizKey, _hasCompletedFlashcardKey, _hasCompletedSRSKey,
     _unitDoneDaysKey, _reviewDaysKey, _wordGoalDaysKey, _srsLockedDaysKey,
     _reviewLogKey, _masteredSRSKey, _starredKey, _visitedPassagesKey,
-    _customListsKey,
     'sync_stats_ts', 'sync_settings_ts', 'sync_lists_ts',
   ];
 

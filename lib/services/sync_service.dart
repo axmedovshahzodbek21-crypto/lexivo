@@ -187,6 +187,24 @@ class SyncService {
         'p_settings_updated_at': ts,
         'p_clear_avatar': clearAvatar,
       });
+      // Learning prefs that sync_profile_settings doesn't carry. Flutter only
+      // has pulse on/off + speed; session_size / study_order / default_accent /
+      // font_size / auto_play_on_reveal are web-only concepts here, so pass
+      // null — the RPC coalesces null onto the existing column, leaving
+      // whatever the web set untouched. Reuses the same `ts` so pullAll's
+      // single settings_updated_at gate covers this field set too. Mirrors the
+      // web sync.ts pushSettings() call to the same RPC.
+      await _sb.rpc('sync_learning_prefs', params: {
+        'p_user_id': uid,
+        'p_session_size': null,
+        'p_study_order': null,
+        'p_default_accent': null,
+        'p_pulse_enabled': prefs.getBool('pulse_enabled') ?? true,
+        'p_pulse_speed': prefs.getString('pulse_speed') ?? 'normal',
+        'p_font_size': null,
+        'p_auto_play_on_reveal': null,
+        'p_settings_updated_at': ts,
+      });
       await prefs.setString('sync_settings_ts', ts);
     } catch (e) {
       debugPrint('[SyncService.pushSettings] failed: $e');
@@ -216,7 +234,7 @@ class SyncService {
       // right where this one left off — nothing is lost by deferring it.
       try {
         final cloudRow = await _sb.from('user_data')
-            .select('learned_words, srs_words, starred_words, hard_words, study_days, review_days, word_goal_days, unit_done_days, xp_history, unit_progress, my_unit_progress, review_log, achievements, imported_words')
+            .select('learned_words, srs_words, starred_words, hard_words, study_days, review_days, word_goal_days, unit_done_days, xp_history, unit_progress, my_unit_progress, review_log, achievements, imported_words, custom_lists')
             .eq('id', uid).maybeSingle();
         if (cloudRow != null) await _mergeListsFromCloudRow(cloudRow, prefs);
       } catch (e) {
@@ -282,6 +300,7 @@ class SyncService {
         'my_unit_progress': obj('my_unit_progress'),
         'review_log':       obj('srs_review_log'),
         'imported_words':   arr('imported_words'),
+        'custom_lists':     arr('custom_lists'), // includes tombstones (deletedAt) so deletions propagate
         'achievements':     achievementEntries,
         'lists_updated_at': ts,
       });
@@ -529,6 +548,16 @@ class SyncService {
         }
         if (row['avatar_url'] != null) {
           await prefs.setString('profile_image_url', row['avatar_url'] as String);
+        }
+        // Learning prefs (sync_learning_prefs RPC). Only the two Flutter
+        // actually has — the rest of that column set is web-only. Takes effect
+        // on the next read of these keys (app launch / Settings screen open),
+        // same as the other pulled settings above.
+        if (row['pulse_enabled'] != null) {
+          await prefs.setBool('pulse_enabled', row['pulse_enabled'] as bool);
+        }
+        if (row['pulse_speed'] != null) {
+          await prefs.setString('pulse_speed', row['pulse_speed'] as String);
         }
         await prefs.setString('sync_settings_ts', cloudSettingsTs);
       }
@@ -992,6 +1021,46 @@ class SyncService {
         if (changed) await prefs.setString('imported_words', jsonEncode(byKey.values.toList()));
       } catch (e) {
         debugPrint('[SyncService._mergeListsFromCloudRow] imported_words merge failed: $e');
+      }
+
+      // custom_lists — per-id last-write-wins merge. Effective timestamp =
+      // max(updatedAt ?? createdAt, deletedAt). Cloud rows include tombstones
+      // (deletedAt), so a list deleted on another device isn't resurrected by
+      // a stale live copy here; a tombstone older than 30 days is dropped so
+      // they don't accumulate. Mirrors web sync.ts's custom_lists block.
+      try {
+        final cloudLists = (row['custom_lists'] as List? ?? []).cast<Map<String, dynamic>>();
+        final localRaw = prefs.getString('custom_lists') ?? '[]';
+        final localList = (jsonDecode(localRaw) as List).cast<Map<String, dynamic>>();
+        int tsOf(Map<String, dynamic> l) {
+          final upd = DateTime.tryParse(
+            (l['updatedAt'] as String?) ?? (l['createdAt'] as String? ?? ''),
+          )?.millisecondsSinceEpoch ?? 0;
+          final del = DateTime.tryParse((l['deletedAt'] as String?) ?? '')?.millisecondsSinceEpoch ?? 0;
+          return upd > del ? upd : del;
+        }
+        final byId = <String, Map<String, dynamic>>{
+          for (final l in localList) l['id'] as String: l,
+        };
+        bool changed = false;
+        for (final cl in cloudLists) {
+          final id = cl['id'] as String;
+          final existing = byId[id];
+          if (existing == null || tsOf(cl) > tsOf(existing)) {
+            byId[id] = cl;
+            changed = true;
+          }
+        }
+        final cutoff = DateTime.now().toUtc().subtract(const Duration(days: 30));
+        final merged = byId.values.where((l) {
+          final del = DateTime.tryParse((l['deletedAt'] as String?) ?? '');
+          return del == null || del.isAfter(cutoff);
+        }).toList();
+        if (changed || merged.length != localList.length) {
+          await prefs.setString('custom_lists', jsonEncode(merged));
+        }
+      } catch (e) {
+        debugPrint('[SyncService._mergeListsFromCloudRow] custom_lists merge failed: $e');
       }
   }
 }

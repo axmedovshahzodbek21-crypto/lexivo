@@ -20,6 +20,7 @@ import 'settings_screen.dart';
 import 'free_time_screen.dart';
 import 'pomodoro_setup_screen.dart';
 import 'custom_lists_screen.dart';
+import 'hard_words_screen.dart';
 import 'reading_screen.dart';
 import 'real_english_screen.dart';
 import 'teacher_library_screen.dart';
@@ -786,6 +787,16 @@ class _HomeScreenState extends State<HomeScreen>
                       context,
                       MaterialPageRoute(
                         builder: (context) => const StarredWordsScreen(),
+                      ),
+                    ),
+                  ),
+                  _buildSidebarTile(
+                    '😓',
+                    tr('hard_words'),
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const HardWordsScreen(),
                       ),
                     ),
                   ),
@@ -2181,6 +2192,12 @@ class _HomeScreenState extends State<HomeScreen>
                       Navigator.pop(context);
                       Navigator.push(context,
                           MaterialPageRoute(builder: (context) => const StarredWordsScreen()));
+                    }),
+                    _buildDrawerTile(context, icon: '😓', label: tr('hard_words'),
+                        iconBg: const Color(0xFFef4444), onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (context) => const HardWordsScreen()));
                     }),
                     _buildDrawerTile(context, icon: '📖', label: 'Library',
                         iconBg: const Color(0xFF0ea5e9), onTap: () {

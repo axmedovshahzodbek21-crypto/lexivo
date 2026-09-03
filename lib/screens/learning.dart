@@ -136,7 +136,27 @@ class _LearningScreenState extends State<LearningScreen> {
     _wordStart = DateTime.now();
     appLangNotifier.addListener(_onLangChange);
     _loadSavedMarks();
+    _loadClassStarred();
     _startHeartbeat();
+  }
+
+  // Class sessions: the star / Too Hard buttons act on the CLASS lists
+  // (class_starred_words / class_hard_words), never the personal ones — so
+  // the teacher sees them and they don't leak into personal Starred/Hard
+  // Words. Preload the starred set so the icon reflects reality.
+  Future<void> _loadClassStarred() async {
+    final classId = widget.classId;
+    final user = currentUser;
+    if (classId == null || user == null) return;
+    try {
+      final starred = await getClassStarredWordIds(userId: user.id, classId: classId);
+      if (!mounted) return;
+      setState(() {
+        for (var i = 0; i < _allWords.length; i++) {
+          if (starred.contains(_allWords[i].word)) _starredIndices.add(i);
+        }
+      });
+    } catch (_) {}
   }
 
   Future<void> _loadSavedMarks() async {
@@ -321,13 +341,23 @@ class _LearningScreenState extends State<LearningScreen> {
 
   void _toggleStar() {
     final word = _currentWord;
+    final classId = widget.classId;
+    final user = currentUser;
     setState(() {
       if (_starredIndices.contains(_currentIndex)) {
         _starredIndices.remove(_currentIndex);
-        StorageService.removeStarredWord(word.word, widget.collectionName);
+        if (classId != null && user != null) {
+          removeClassStarredWord(userId: user.id, classId: classId, word: word.word);
+        } else {
+          StorageService.removeStarredWord(word.word, widget.collectionName);
+        }
       } else {
         _starredIndices.add(_currentIndex);
-        StorageService.saveStarredWord(word, widget.collectionName);
+        if (classId != null && user != null) {
+          addClassStarredWord(userId: user.id, classId: classId, word: word.word);
+        } else {
+          StorageService.saveStarredWord(word, widget.collectionName);
+        }
       }
     });
   }
@@ -472,7 +502,15 @@ class _LearningScreenState extends State<LearningScreen> {
       'gate_attempts': 0,
       'gate_correct_first': true,
     });
-    await StorageService.addMarkedHardWord(word.word);
+    final classId = widget.classId;
+    final user = currentUser;
+    if (classId != null && user != null) {
+      // Class session: land in the CLASS hard-words list so the teacher sees
+      // it — not the personal /hard-words.
+      addClassHardWord(userId: user.id, classId: classId, word: word.word);
+    } else {
+      await StorageService.addMarkedHardWord(word.word);
+    }
     await _grantLearnReward(word);
     if (!mounted) return;
     _next();

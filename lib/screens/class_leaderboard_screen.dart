@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
+import '../widgets/member_avatar.dart';
 import 'class_models.dart';
 import 'class_streak_screen.dart';
 
@@ -217,7 +218,6 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
   Widget _podiumSlot(BuildContext ctx, ClassLeaderboardRow row, int rank, double barH, Color barColor, String medal) {
     final isMe = row.studentId == _myId;
     final color = isMe ? ctx.primary : barColor;
-    final initials = row.name.isNotEmpty ? row.name[0].toUpperCase() : '?';
 
     return Expanded(
       child: Column(
@@ -225,15 +225,17 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
         children: [
           // Avatar
           Container(
-            width: 42, height: 42,
             decoration: BoxDecoration(
-              color: colorForId(row.studentId),
               shape: BoxShape.circle,
               border: isMe ? Border.all(color: ctx.primary, width: 2.5) : null,
               boxShadow: [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 4))],
             ),
-            child: Center(child: Text(initials,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
+            child: MemberAvatar(
+              name: row.name,
+              avatarUrl: row.avatarUrl,
+              color: colorForId(row.studentId),
+              size: 42,
+            ),
           ),
           const SizedBox(height: 4),
           Text(row.name.split(' ').first,
@@ -284,7 +286,6 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
 
   Widget _buildRow(BuildContext context, int rank, ClassLeaderboardRow row) {
     final isMe = row.studentId == _myId;
-    final initials = row.name.isNotEmpty ? row.name[0].toUpperCase() : '?';
     final medals = ['🥇', '🥈', '🥉'];
 
     return Container(
@@ -303,11 +304,11 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
               : Text('#$rank', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.textMuted), textAlign: TextAlign.center),
         ),
         const SizedBox(width: 10),
-        Container(
-          width: 34, height: 34,
-          decoration: BoxDecoration(color: colorForId(row.studentId), shape: BoxShape.circle),
-          child: Center(child: Text(initials,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14))),
+        MemberAvatar(
+          name: row.name,
+          avatarUrl: row.avatarUrl,
+          color: colorForId(row.studentId),
+          size: 34,
         ),
         const SizedBox(width: 10),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

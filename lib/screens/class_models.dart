@@ -110,10 +110,12 @@ class ClassAnnouncement {
 
 class ClassLeaderboardRow {
   final String studentId, name;
+  final String? avatarUrl;
   final int xp, streak;
-  const ClassLeaderboardRow({required this.studentId, required this.name, required this.xp, required this.streak});
+  const ClassLeaderboardRow({required this.studentId, required this.name, this.avatarUrl, required this.xp, required this.streak});
   factory ClassLeaderboardRow.fromMap(Map<String, dynamic> m) => ClassLeaderboardRow(
     studentId: m['student_id'] as String? ?? '', name: m['name'] as String? ?? '?',
+    avatarUrl: m['avatar_url'] as String?,
     xp: (m['xp'] as num?)?.toInt() ?? 0, streak: (m['streak'] as num?)?.toInt() ?? 0,
   );
 }

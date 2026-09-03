@@ -10,6 +10,7 @@ import '../data/storage_service.dart';
 import '../date_utils.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
+import '../widgets/member_avatar.dart';
 import 'class_words_screen.dart';
 import 'class_curriculum_tab.dart';
 import 'class_home_screen.dart';
@@ -41,13 +42,15 @@ class CollectionMeta {
 
 class StudentRow {
   final String studentId, name;
+  final String? avatarUrl;
   final int xp, streak, totalWords;
   final Map<String, int> collectionProgress;
   final String? lastStudyDate;
-  const StudentRow({required this.studentId, required this.name, required this.xp, required this.streak, required this.totalWords, required this.collectionProgress, this.lastStudyDate});
+  const StudentRow({required this.studentId, required this.name, this.avatarUrl, required this.xp, required this.streak, required this.totalWords, required this.collectionProgress, this.lastStudyDate});
   factory StudentRow.fromMap(Map<String, dynamic> m) => StudentRow(
     studentId: m['student_id'] as String? ?? m['id'] as String? ?? '',
     name: m['name'] as String? ?? 'Student',
+    avatarUrl: m['avatar_url'] as String?,
     xp: (m['xp'] as num?)?.toInt() ?? 0,
     streak: (m['streak'] as num?)?.toInt() ?? 0,
     totalWords: (m['total_words'] as num?)?.toInt() ?? 0,
@@ -2190,13 +2193,11 @@ class _CollectionDetailSheetState extends State<_CollectionDetailSheet> {
             const SizedBox(height: 16),
             Row(children: [
               // Avatar circle
-              Container(
-                width: 42, height: 42,
-                decoration: BoxDecoration(color: accent.withValues(alpha: 0.15), shape: BoxShape.circle),
-                child: Center(child: Text(
-                  widget.student.name.isNotEmpty ? widget.student.name[0].toUpperCase() : '?',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: accent),
-                )),
+              MemberAvatar(
+                name: widget.student.name,
+                avatarUrl: widget.student.avatarUrl,
+                color: accent,
+                size: 42,
               ),
               const SizedBox(width: 12),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

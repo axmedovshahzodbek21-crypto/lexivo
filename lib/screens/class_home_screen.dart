@@ -6,6 +6,7 @@ import '../services/supabase_service.dart';
 import '../date_utils.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
+import '../widgets/member_avatar.dart';
 import 'class_models.dart';
 import 'class_streak_screen.dart';
 import 'class_xp_calendar_screen.dart';
@@ -988,11 +989,11 @@ class _StudentsSheetState extends State<_StudentsSheet> {
                             child: Center(child: Text('${i + 1}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: ctx.textMuted))),
                           ),
                           const SizedBox(width: 10),
-                          Container(
-                            width: 36, height: 36,
-                            decoration: BoxDecoration(color: _studentAvatarColor(sid), shape: BoxShape.circle),
-                            child: Center(child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14))),
+                          MemberAvatar(
+                            name: name,
+                            avatarUrl: s['avatar_url'] as String?,
+                            color: _studentAvatarColor(sid),
+                            size: 36,
                           ),
                           const SizedBox(width: 10),
                           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

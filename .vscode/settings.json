@@ -1,0 +1,21 @@
+{
+  "//": "Flutter uses the Dart extension for Android builds; keep the Red Hat Java / Gradle language server out of android/ and ios/ so it stops trying to import them as standalone Gradle projects ('Duplicate root element android').",
+  "java.import.exclusions": [
+    "**/node_modules/**",
+    "**/.metadata/**",
+    "**/archetype-resources/**",
+    "**/META-INF/maven/**",
+    "**/android/**",
+    "**/ios/**",
+    "**/.git-rewrite/**",
+    "**/.git/**"
+  ],
+  "java.import.gradle.enabled": false,
+  "java.configuration.updateBuildConfiguration": "disabled",
+  "files.watcherExclude": {
+    "**/.git-rewrite/**": true
+  },
+  "search.exclude": {
+    "**/.git-rewrite": true
+  }
+}

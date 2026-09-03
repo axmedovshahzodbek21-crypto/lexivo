@@ -10,6 +10,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config.dart';
 import '../data/word_data.dart';
 import 'flashcard.dart';
 import 'package:lexivo/screens/quiz_screen.dart';
@@ -231,7 +232,7 @@ class _LearningScreenState extends State<LearningScreen> {
     try {
       final token = supabase.auth.currentSession?.accessToken;
       final response = await http.post(
-        Uri.parse('https://lexivo-web-six.vercel.app/api/tts'),
+        Uri.parse('$kLexivoWebBase/api/tts'),
         headers: {
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',

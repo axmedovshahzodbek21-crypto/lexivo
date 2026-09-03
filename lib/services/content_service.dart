@@ -7,8 +7,9 @@ import '../data/a1_collection.dart' as col_a1;
 import '../data/a2_collection.dart' as col_a2;
 import '../data/b1_collection.dart' as col_b1;
 import '../data/advanced_collection.dart' as col_adv;
+import '../config.dart';
 
-const _base = 'https://lexivo-web-six.vercel.app/data';
+const _base = '$kLexivoWebBase/data';
 const _cacheVersion = 3; // bump this whenever bundled collection data changes
 
 const _keys = {

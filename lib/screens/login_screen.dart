@@ -170,6 +170,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       try {
                         await Supabase.instance.client.auth.resetPasswordForEmail(
                           email,
+                          // NOTE: kept as an explicit literal, not kLexivoWebBase —
+                          // this host must be in Supabase Auth's Redirect URLs
+                          // allowlist or the reset link silently breaks. Change
+                          // only after confirming the allowlist.
                           redirectTo: 'https://lexivo-web-six.vercel.app/update-password',
                         );
                         if (dialogOpen) setS(() { sent = true; _resetLoading = false; });

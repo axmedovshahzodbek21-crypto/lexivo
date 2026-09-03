@@ -1,5 +1,6 @@
 import 'quiz_screen.dart';
 import 'break_screen.dart';
+import '../config.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -813,7 +814,7 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
     try {
       final token = supabase.auth.currentSession?.accessToken;
       final response = await http.post(
-        Uri.parse('https://lexivo-web-six.vercel.app/api/tts'),
+        Uri.parse('$kLexivoWebBase/api/tts'),
         headers: {
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',

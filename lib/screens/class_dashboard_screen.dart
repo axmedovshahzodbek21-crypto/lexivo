@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import '../config.dart';
 import '../services/supabase_service.dart';
 import '../data/storage_service.dart';
 import '../date_utils.dart';
@@ -186,7 +187,7 @@ void _dashboardCachePut(String key, _CachedDashboard value) {
 }
 
 // Web's teacher dashboard digest route — see _generateDigest() below.
-const _digestEndpoint = 'https://lexivo-web-six.vercel.app/api/digest';
+const _digestEndpoint = '$kLexivoWebBase/api/digest';
 
 // ── Gradient hero helpers ─────────────────────────────────────────────────────
 

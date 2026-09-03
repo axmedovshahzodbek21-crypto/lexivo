@@ -829,6 +829,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
   static const _wordGoalDaysKey  = 'word_goal_days';
   static const _srsLockedDaysKey = 'srs_locked_days';
   static const _reviewLogKey     = 'srs_review_log';
+  static const _srsLastReviewKey = 'srs_last_review';
   static const _masteredSRSKey   = 'mastered_srs_words';
 
   // ── Unit Progress ──────────────────────────
@@ -1366,6 +1367,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     final today = DateTime.parse(SRSWord._todayStr());
     final words = await getSRSWords();
     final log = await getReviewLog();
+    final lastReview = await getSRSLastReview();
 
     final toUnlearn = <SRSWord>[];
     for (final word in words) {
@@ -1374,7 +1376,9 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
       final nextInterval = intervals.firstWhere((i) => !completed.contains(i), orElse: () => -1);
       if (nextInterval == -1) continue; // graduated
 
-      final dueDate = DateTime.parse(word.learnedAt).add(Duration(days: nextInterval));
+      // Spaced from the last review (never earlier than learnedAt — see
+      // _srsBaseDate), matching web and getDueWords() below.
+      final dueDate = _srsBaseDate(word, lastReview).add(Duration(days: nextInterval));
       final daysOverdue = today.difference(dueDate).inDays;
       if (daysOverdue < 3) continue;
 
@@ -1415,6 +1419,12 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     for (final w in toUnlearn) { updatedLog.remove('${w.collectionName}::${w.word}'); }
     await prefs.setString(_reviewLogKey, jsonEncode(updatedLog));
 
+    // Drop the last-review stamp too, so a re-learn of this word starts its
+    // spacing fresh from the new learnedAt.
+    final updatedLastReview = Map<String, String>.from(lastReview);
+    for (final w in toUnlearn) { updatedLastReview.remove('${w.collectionName}::${w.word}'); }
+    await prefs.setString(_srsLastReviewKey, jsonEncode(updatedLastReview));
+
     // Demote a unit's learnDone only if it's actually missing a word now —
     // not every unit any stale word happened to share a learn date with.
     // updatedSRS (not the pre-tombstone `words`) is the source of truth here
@@ -1452,6 +1462,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     final today = DateTime.parse(SRSWord._todayStr());
     final words = unlearned.words;
     final log = unlearned.log;
+    final lastReview = await getSRSLastReview();
 
     final result = <DueSRSWord>[];
     for (final word in words) {
@@ -1462,7 +1473,8 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
         orElse: () => -1,
       );
       if (nextInterval == -1) continue;
-      final dueDate = DateTime.parse(word.learnedAt).add(Duration(days: nextInterval));
+      // Base = last review, clamped to >= learnedAt (see _srsBaseDate).
+      final dueDate = _srsBaseDate(word, lastReview).add(Duration(days: nextInterval));
       if (!dueDate.isAfter(today)) {
         result.add(DueSRSWord._(base: word, dueInterval: nextInterval));
       }
@@ -1539,6 +1551,14 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
       await saveReviewLog(log);
     }
 
+    // Stamp the review date so the *next* interval is spaced from here, not
+    // from learnedAt (matches web's lexivo_srs_last_review). Written even if
+    // the interval was already logged — a repeat review still pushes the
+    // next one out.
+    final lastReview = await getSRSLastReview();
+    lastReview[wordKey] = SRSWord._todayStr();
+    await saveSRSLastReview(lastReview);
+
     // Mastery: all 5 intervals complete → graduate this specific word out of active SRS
     if (allIntervals.every((i) => completed.contains(i))) {
       final prefs = await SharedPreferences.getInstance();
@@ -1581,6 +1601,50 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     await prefs.setString(_reviewLogKey, jsonEncode(log));
   }
 
+  // ── SRS last-review dates ────────────────────────────────────────────────
+  // Per-word date (yyyy-MM-dd) of the most recent completed review, keyed by
+  // "collectionName::word" — the same key space as the review log and web's
+  // lexivo_srs_last_review. getDueWords()/checkAndUnlearn() count the next
+  // interval from this date (falling back to learnedAt), so spacing follows
+  // the last actual review instead of being pinned to the learn date. Synced
+  // via user_data.last_review so web and Flutter agree on what's due. Before
+  // this existed, Flutter always spaced from learnedAt while web spaced from
+  // the last review, so the two platforms disagreed on the due count.
+
+  static Future<Map<String, String>> getSRSLastReview() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_srsLastReviewKey);
+    if (raw == null) return {};
+    try {
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      return decoded.map((k, v) => MapEntry(k, v as String));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  static Future<void> saveSRSLastReview(Map<String, String> dates) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_srsLastReviewKey, jsonEncode(dates));
+  }
+
+  // Date the next interval is counted from: the last review, but only if we
+  // have one and it isn't *before* learnedAt. A corrupt or stale earlier
+  // value must never move the due date earlier — an earlier base is what
+  // made every previously-reviewed word look 3+ days overdue and triggered
+  // a mass-unlearn once before. Missing/unparseable → learnedAt.
+  static DateTime _srsBaseDate(SRSWord word, Map<String, String> lastReview) {
+    final learned = DateTime.parse(word.learnedAt);
+    final lr = lastReview['${word.collectionName}::${word.word}'];
+    if (lr == null) return learned;
+    try {
+      final parsed = DateTime.parse(lr);
+      return parsed.isAfter(learned) ? parsed : learned;
+    } catch (_) {
+      return learned;
+    }
+  }
+
   // Effective review stage (0-5), derived from the review log — the log is
   // the sole source of truth for review progress. SRSWord.reviewStage is
   // frozen at construction and must never be used for display; call sites
@@ -1591,11 +1655,14 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     return (log[key]?.length ?? 0).clamp(0, 5);
   }
 
-  // Effective next-review date, derived from learnedAt + the next uncompleted
-  // interval in the review log — mirrors the due-date logic in getDueWords().
-  // SRSWord.nextReviewDate is frozen at construction (always learnedAt + 1
-  // day) and must never be used for display.
-  static DateTime effectiveNextReviewDate(SRSWord word, Map<String, List<int>> log) {
+  // Effective next-review date: base date (last review, else learnedAt) + the
+  // next uncompleted interval in the review log — mirrors the due-date logic
+  // in getDueWords(). SRSWord.nextReviewDate is frozen at construction
+  // (always learnedAt + 1 day) and must never be used for display. Pass
+  // lastReview (from getSRSLastReview()) so this matches the queue; omitting
+  // it falls back to learnedAt-only spacing.
+  static DateTime effectiveNextReviewDate(SRSWord word, Map<String, List<int>> log,
+      [Map<String, String> lastReview = const {}]) {
     const intervals = [1, 3, 7, 14, 30];
     final key = '${word.collectionName}::${word.word}';
     final completed = log[key] ?? const <int>[];
@@ -1603,14 +1670,15 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
       (i) => !completed.contains(i),
       orElse: () => intervals.last,
     );
-    return DateTime.parse(word.learnedAt).add(Duration(days: nextInterval));
+    return _srsBaseDate(word, lastReview).add(Duration(days: nextInterval));
   }
 
   // Effective isDueToday, derived from the review log (same basis as
   // getDueWords()/checkAndUnlearn(), including the streak-adjusted "today").
-  static bool isDueTodayFromLog(SRSWord word, Map<String, List<int>> log) {
+  static bool isDueTodayFromLog(SRSWord word, Map<String, List<int>> log,
+      [Map<String, String> lastReview = const {}]) {
     final today = DateTime.parse(SRSWord._todayStr());
-    final due = effectiveNextReviewDate(word, log);
+    final due = effectiveNextReviewDate(word, log, lastReview);
     return !due.isAfter(today);
   }
 
@@ -2996,7 +3064,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     _unitProgressKey, _myUnitProgressKey, _hasCompletedQuizKey,
     _hasPerfectQuizKey, _hasCompletedFlashcardKey, _hasCompletedSRSKey,
     _unitDoneDaysKey, _reviewDaysKey, _wordGoalDaysKey, _srsLockedDaysKey,
-    _reviewLogKey, _masteredSRSKey, _starredKey, _visitedPassagesKey,
+    _reviewLogKey, _srsLastReviewKey, _masteredSRSKey, _starredKey, _visitedPassagesKey,
     'sync_stats_ts', 'sync_settings_ts', 'sync_lists_ts',
   ];
 

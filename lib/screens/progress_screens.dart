@@ -1292,6 +1292,7 @@ class _ReviewsDueScreenState extends State<ReviewsDueScreen> {
   List<SRSWord> _dueWords = [];
   List<SRSWord> _allWords = [];
   Map<String, List<int>> _reviewLog = {};
+  Map<String, String> _srsLastReview = {};
   bool _loading = true;
 
   @override
@@ -1314,6 +1315,7 @@ class _ReviewsDueScreenState extends State<ReviewsDueScreen> {
     final due = await StorageService.getDueWords();
     final all = await StorageService.getSRSWords();
     final log = await StorageService.getReviewLog();
+    final lastReview = await StorageService.getSRSLastReview();
     if (!mounted) return;
     setState(() {
       _dueWords = due;
@@ -1323,6 +1325,7 @@ class _ReviewsDueScreenState extends State<ReviewsDueScreen> {
       // exclusion mechanism.
       _allWords = all;
       _reviewLog = log;
+      _srsLastReview = lastReview;
       _loading = false;
     });
   }
@@ -1341,8 +1344,8 @@ class _ReviewsDueScreenState extends State<ReviewsDueScreen> {
   // isDueTodayFromLog/stageFromLog), the source of truth for review progress.
 
   String _stageLabel(SRSWord w) {
-    if (StorageService.isDueTodayFromLog(w, _reviewLog)) return tr('due_today');
-    final days = StorageService.effectiveNextReviewDate(w, _reviewLog)
+    if (StorageService.isDueTodayFromLog(w, _reviewLog, _srsLastReview)) return tr('due_today');
+    final days = StorageService.effectiveNextReviewDate(w, _reviewLog, _srsLastReview)
             .difference(DateTime.now())
             .inDays +
         1;
@@ -1351,8 +1354,8 @@ class _ReviewsDueScreenState extends State<ReviewsDueScreen> {
   }
 
   Color _stageColor(SRSWord w) {
-    if (StorageService.isDueTodayFromLog(w, _reviewLog)) return Colors.red;
-    final days = StorageService.effectiveNextReviewDate(w, _reviewLog)
+    if (StorageService.isDueTodayFromLog(w, _reviewLog, _srsLastReview)) return Colors.red;
+    final days = StorageService.effectiveNextReviewDate(w, _reviewLog, _srsLastReview)
             .difference(DateTime.now())
             .inDays +
         1;
@@ -1495,7 +1498,7 @@ class _ReviewsDueScreenState extends State<ReviewsDueScreen> {
                               decoration: BoxDecoration(
                                 color: context.surface,
                                 borderRadius: BorderRadius.circular(14),
-                                border: StorageService.isDueTodayFromLog(w, _reviewLog)
+                                border: StorageService.isDueTodayFromLog(w, _reviewLog, _srsLastReview)
                                     ? Border.all(
                                         color: Colors.red.shade200,
                                         width: 1.5,

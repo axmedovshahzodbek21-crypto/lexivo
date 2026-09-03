@@ -234,7 +234,7 @@ class SyncService {
       // right where this one left off — nothing is lost by deferring it.
       try {
         final cloudRow = await _sb.from('user_data')
-            .select('learned_words, srs_words, starred_words, hard_words, study_days, review_days, word_goal_days, unit_done_days, xp_history, unit_progress, my_unit_progress, review_log, achievements, imported_words, custom_lists')
+            .select('learned_words, srs_words, starred_words, hard_words, study_days, review_days, word_goal_days, unit_done_days, xp_history, unit_progress, my_unit_progress, review_log, last_review, achievements, imported_words, custom_lists')
             .eq('id', uid).maybeSingle();
         if (cloudRow != null) await _mergeListsFromCloudRow(cloudRow, prefs);
       } catch (e) {
@@ -299,6 +299,7 @@ class SyncService {
         'unit_progress':    obj('unit_progress'),
         'my_unit_progress': obj('my_unit_progress'),
         'review_log':       obj('srs_review_log'),
+        'last_review':      obj('srs_last_review'),
         'imported_words':   arr('imported_words'),
         'custom_lists':     arr('custom_lists'), // includes tombstones (deletedAt) so deletions propagate
         'achievements':     achievementEntries,
@@ -365,7 +366,7 @@ class SyncService {
         'learned_words': [], 'srs_words': [], 'starred_words': [],
         'hard_words': [], 'study_days': [], 'review_days': [],
         'word_goal_days': [], 'unit_done_days': [], 'xp_history': [],
-        'unit_progress': {}, 'my_unit_progress': {}, 'review_log': {},
+        'unit_progress': {}, 'my_unit_progress': {}, 'review_log': {}, 'last_review': {},
         // Deliberately NOT clearing imported_words — Reset Progress undoes
         // learning progress, not vocabulary the user typed in themselves.
         'achievements': [],
@@ -938,6 +939,34 @@ class SyncService {
         }
       } catch (e) {
         debugPrint('[SyncService._mergeListsFromCloudRow] review_log merge failed: $e');
+      }
+
+      // last_review (object: wordKey → yyyy-MM-dd), newest-date-wins merge.
+      // Pairs with review_log above: review_log says which intervals are
+      // done, last_review says the date the next interval is counted from.
+      // yyyy-MM-dd sorts lexically the same as chronologically, so a string
+      // compare is a date compare.
+      try {
+        final cloudLR = (row['last_review'] as Map<String, dynamic>?) ?? {};
+        if (cloudLR.isNotEmpty) {
+          final localRaw = prefs.getString('srs_last_review');
+          final localLR = localRaw != null
+              ? (jsonDecode(localRaw) as Map<String, dynamic>)
+              : <String, dynamic>{};
+          bool changed = false;
+          for (final entry in cloudLR.entries) {
+            final cloudDate = entry.value;
+            if (cloudDate is! String) continue;
+            final localDate = localLR[entry.key];
+            if (localDate is! String || cloudDate.compareTo(localDate) > 0) {
+              localLR[entry.key] = cloudDate;
+              changed = true;
+            }
+          }
+          if (changed) await prefs.setString('srs_last_review', jsonEncode(localLR));
+        }
+      } catch (e) {
+        debugPrint('[SyncService._mergeListsFromCloudRow] last_review merge failed: $e');
       }
 
       // Post-merge: any active SRS word whose review log (just merged above)

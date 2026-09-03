@@ -23,7 +23,7 @@ import 'teacher_unit_screen.dart';
 
 // External links shown in the About section, named so they aren't scattered
 // as bare string literals through the widget tree below.
-const _kWebsiteUrl = 'https://lexivo-web-six.vercel.app';
+const _kWebsiteUrl = 'https://lexivo-web-nu.vercel.app';
 const _kSupportUrl = 'https://t.me/lexivo_support_bot';
 const _kAndroidApkDownloadUrl =
     'https://github.com/axmedovshahzodbek21-crypto/lexivo-web/releases/latest/download/app-release.apk';
@@ -1112,7 +1112,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             const Text('🌐', style: TextStyle(fontSize: 18)),
                             const SizedBox(width: 12),
                             Expanded(child: Text('Website', style: TextStyle(fontWeight: FontWeight.w500, color: context.appText))),
-                            Text('lexivo-web.vercel.app', style: TextStyle(color: context.primary, fontSize: 13)),
+                            Text('lexivo-web-nu.vercel.app', style: TextStyle(color: context.primary, fontSize: 13)),
                             const SizedBox(width: 4),
                             Icon(Icons.open_in_new, size: 14, color: context.primary),
                           ],

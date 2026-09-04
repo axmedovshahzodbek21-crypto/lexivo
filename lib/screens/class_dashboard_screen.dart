@@ -335,6 +335,10 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   String _digestText = '';
   bool _digestLoading = false;
 
+  // Pending join requests (class_members.status = 'pending')
+  List<Map<String, dynamic>> _pendingMembers = [];
+  bool _pendingLoading = false;
+
   // ClassShell only ever constructs this screen once its own server-verified
   // _isTeacher check passes, so in normal use every write below is already
   // gated. But that gate lives entirely in the caller — this file has no
@@ -423,6 +427,106 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     _activeStudentsTimer = Timer.periodic(const Duration(seconds: 30), (_) => _loadActiveStudents());
     _loadAnalytics();
     _loadProgressOverTime();
+    _loadPendingMembers();
+  }
+
+  Future<void> _loadPendingMembers() async {
+    if (mounted) setState(() => _pendingLoading = true);
+    try {
+      final rows = await supabase
+          .from('class_members')
+          .select('student_id')
+          .eq('class_id', widget.classId)
+          .eq('status', 'pending');
+      final ids = (rows as List).map((r) => (r as Map)['student_id'] as String).toList();
+      var names = <String, String>{};
+      if (ids.isNotEmpty) {
+        final profiles = await supabase.from('profiles').select('id, name').inFilter('id', ids);
+        for (final p in profiles as List) {
+          final pm = Map<String, dynamic>.from(p as Map);
+          names[pm['id'] as String] = pm['name'] as String? ?? 'Student';
+        }
+      }
+      if (mounted) {
+        setState(() {
+          _pendingMembers = ids.map((id) => {'student_id': id, 'name': names[id] ?? 'Student'}).toList();
+          _pendingLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _pendingLoading = false);
+    }
+  }
+
+  Future<void> _approvePending(String studentId) async {
+    if (!await _checkTeacher()) return;
+    try {
+      await supabase.from('class_members')
+          .update({'status': 'approved'})
+          .eq('class_id', widget.classId)
+          .eq('student_id', studentId);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to approve — try again')));
+      }
+      return;
+    }
+    _dashboardCache.remove(widget.classId);
+    if (mounted) setState(() => _pendingMembers.removeWhere((m) => m['student_id'] == studentId));
+    _load();
+  }
+
+  Future<void> _rejectPending(String studentId) async {
+    if (!await _checkTeacher()) return;
+    try {
+      await supabase.from('class_members')
+          .delete()
+          .eq('class_id', widget.classId)
+          .eq('student_id', studentId);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to reject — try again')));
+      }
+      return;
+    }
+    if (mounted) setState(() => _pendingMembers.removeWhere((m) => m['student_id'] == studentId));
+  }
+
+  Widget _buildPendingSection() {
+    if (_pendingMembers.isEmpty && !_pendingLoading) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: context.primaryBg, borderRadius: BorderRadius.circular(14), border: Border.all(color: context.primary.withValues(alpha: 0.3))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Text('⏳', style: TextStyle(fontSize: 16)),
+          const SizedBox(width: 8),
+          Text('Pending approval (${_pendingMembers.length})', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+        ]),
+        const SizedBox(height: 10),
+        ..._pendingMembers.map((m) => Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(children: [
+            Expanded(child: Text(m['name'] as String, style: TextStyle(fontSize: 13, color: context.appText))),
+            TextButton(
+              onPressed: () => _rejectPending(m['student_id'] as String),
+              child: Text('Reject', style: TextStyle(color: context.dangerColor, fontSize: 12, fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(width: 4),
+            ElevatedButton(
+              onPressed: () => _approvePending(m['student_id'] as String),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: context.primary,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Approve', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+            ),
+          ]),
+        )),
+      ]),
+    );
   }
 
   @override
@@ -566,7 +670,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   Future<void> _refresh() async {
     _srsLoaded = false;
     _reviewLoaded = false;
-    final futures = <Future<void>>[_load(), _loadAnalytics(), _loadProgressOverTime()];
+    final futures = <Future<void>>[_load(), _loadAnalytics(), _loadProgressOverTime(), _loadPendingMembers()];
     if (_tabs.index == 4) futures.add(_loadSRS());
     if (_tabs.index == 5) futures.add(_loadReviewPattern());
     await Future.wait(futures);
@@ -868,6 +972,8 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
         children: [
+          _buildPendingSection(),
+
           // Studying now (live presence)
           _buildStudyingNow(),
           const SizedBox(height: 12),

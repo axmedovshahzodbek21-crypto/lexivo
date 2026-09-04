@@ -94,9 +94,12 @@ class _ClassesScreenState extends State<ClassesScreen> with NavigateOnceMixin {
       if (cls == null) { if (mounted) setState(() => _joinError = 'Class not found'); return; }
       final m = Map<String, dynamic>.from(cls as Map);
       if (m['teacher_id'] == user.id) { if (mounted) setState(() => _joinError = "Can't join your own class"); return; }
-      await supabase.from('class_members').insert({'class_id': m['id'], 'student_id': user.id});
+      await supabase.from('class_members').insert({'class_id': m['id'], 'student_id': user.id, 'status': 'pending'});
       if (!mounted) return;
       _joinCtrl.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Request sent — waiting for your teacher to approve you')),
+      );
       Navigator.push(context, MaterialPageRoute(builder: (_) => const JoinedClassesScreen()))
           .then((_) => _loadCounts());
     } catch (e) {

@@ -42,6 +42,7 @@ class _ClassShellState extends State<ClassShell> {
   // ("Ask the teacher for the join code..."), which is actively wrong and
   // misleading for a legitimate member who's just offline.
   bool _verificationError = false;
+  bool _pendingApproval = false;
 
   @override
   void initState() {
@@ -65,6 +66,7 @@ class _ClassShellState extends State<ClassShell> {
     }
     bool isTeacher = false;
     bool authorized = false;
+    bool pendingApproval = false;
     bool verificationError = false;
     try {
       final cls = await supabase.from('classes').select('teacher_id').eq('id', widget.classId).maybeSingle();
@@ -73,8 +75,10 @@ class _ClassShellState extends State<ClassShell> {
         authorized = true;
       } else {
         final membership = await supabase.from('class_members')
-            .select('class_id').eq('class_id', widget.classId).eq('student_id', user.id).maybeSingle();
-        authorized = membership != null;
+            .select('class_id, status').eq('class_id', widget.classId).eq('student_id', user.id).maybeSingle();
+        final status = membership == null ? null : (membership as Map)['status'] as String?;
+        authorized = membership != null && status == 'approved';
+        pendingApproval = membership != null && status == 'pending';
       }
     } catch (_) {
       authorized = false;
@@ -84,6 +88,7 @@ class _ClassShellState extends State<ClassShell> {
     setState(() {
       _isTeacher = isTeacher;
       _authorized = authorized;
+      _pendingApproval = pendingApproval;
       _verificationError = verificationError;
       _verifying = false;
       if (authorized) _buildScreens();
@@ -212,6 +217,7 @@ class _ClassShellState extends State<ClassShell> {
 
     if (!_authorized || _screens == null) {
       final offline = _verificationError;
+      final pending = _pendingApproval;
       return Scaffold(
         backgroundColor: context.bg,
         appBar: AppBar(
@@ -226,17 +232,23 @@ class _ClassShellState extends State<ClassShell> {
           child: Padding(
             padding: const EdgeInsets.all(32),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Text(offline ? '📡' : '🔒', style: const TextStyle(fontSize: 56)),
+              Text(offline ? '📡' : pending ? '⏳' : '🔒', style: const TextStyle(fontSize: 56)),
               const SizedBox(height: 16),
               Text(
-                offline ? "Couldn't check your access" : "You don't have access to this class",
+                offline
+                    ? "Couldn't check your access"
+                    : pending
+                        ? 'Waiting for approval'
+                        : "You don't have access to this class",
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText),
               ),
               const SizedBox(height: 8),
               Text(
                 offline
                     ? 'Check your connection and try again.'
-                    : 'Ask the teacher for the join code, or check that you joined the right class.',
+                    : pending
+                        ? "Your teacher hasn't approved your join request yet. Check back soon."
+                        : 'Ask the teacher for the join code, or check that you joined the right class.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: context.textMuted),
               ),

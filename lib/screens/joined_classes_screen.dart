@@ -38,6 +38,7 @@ typedef _Snapshot = ({
   Map<String, List<ClassNote>> classNotes,
   Map<String, List<ClassTarget>> classTargets,
   Map<String, List<ClassAnnouncement>> classAnnouncements,
+  Map<String, String> membershipStatus,
 });
 // Keyed by user id, so this normally holds 1 entry — but a shared/test
 // device that signs in and out of several accounts would otherwise grow
@@ -64,6 +65,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
   Map<String, List<ClassNote>> _classNotes = {};
   Map<String, List<ClassTarget>> _classTargets = {};
   Map<String, List<ClassAnnouncement>> _classAnnouncements = {};
+  Map<String, String> _membershipStatus = {};
   final Map<String, List<ClassLeaderboardRow>> _classLeaderboards = {};
   String? _expandedLeaderboard;
   String? _leaderboardLoading;
@@ -82,6 +84,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
     _classNotes = s.classNotes;
     _classTargets = s.classTargets;
     _classAnnouncements = s.classAnnouncements;
+    _membershipStatus = s.membershipStatus;
     _loading = false;
   }
 
@@ -97,13 +100,17 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
     }
 
     try {
-      final memberships = await supabase.from('class_members').select('class_id').eq('student_id', user.id);
+      final memberships = await supabase.from('class_members').select('class_id, status').eq('student_id', user.id);
       List<ClassRow> joinedClasses = [];
       var teacherNames = <String, String>{};
       var notes = <String, List<ClassNote>>{};
       var targets = <String, List<ClassTarget>>{};
       var announcements = <String, List<ClassAnnouncement>>{};
-      if ((memberships as List).isNotEmpty) {
+      var membershipStatus = <String, String>{
+        for (final m in (memberships as List))
+          (m as Map)['class_id'] as String: (m['status'] as String?) ?? 'approved',
+      };
+      if (memberships.isNotEmpty) {
         final classIds = memberships.map((m) => (m as Map)['class_id'] as String).toList();
         final classData = await supabase.from('classes').select('*').inFilter('id', classIds);
         joinedClasses = (classData as List)
@@ -154,6 +161,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
         joinedClasses: joinedClasses, teacherNames: teacherNames,
         classNotes: notes, classTargets: targets,
         classAnnouncements: announcements,
+        membershipStatus: membershipStatus,
       );
       _cachePut(user.id, snapshot);
       if (mounted) setState(() { _applySnapshot(snapshot); _loadError = false; });
@@ -203,11 +211,11 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
       // unexpected classId in, rather than trusting the RPC alone.
       final membership = await supabase
           .from('class_members')
-          .select('class_id')
+          .select('class_id, status')
           .eq('class_id', classId)
           .eq('student_id', user.id)
           .maybeSingle();
-      if (membership == null) {
+      if (membership == null || (membership as Map)['status'] != 'approved') {
         if (mounted) setState(() => _leaderboardLoading = null);
         return;
       }
@@ -247,6 +255,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
           joinedClasses: cached.joinedClasses, teacherNames: cached.teacherNames,
           classNotes: cached.classNotes, classTargets: _classTargets,
           classAnnouncements: cached.classAnnouncements,
+          membershipStatus: cached.membershipStatus,
         ));
       }
     }
@@ -386,6 +395,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
     final isLbExpanded = _expandedLeaderboard == cls.id;
     final leaderboard = _classLeaderboards[cls.id] ?? [];
     final colors = _joinedCardColors(cls.id);
+    final pending = _membershipStatus[cls.id] == 'pending';
 
     return Container(
       key: ValueKey(cls.id),
@@ -414,6 +424,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Wrap(spacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
                     Text(cls.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                    if (pending) Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(8)), child: const Text('⏳ Pending approval', style: TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold))),
                     if (unread > 0) Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(8)), child: Text('$unread new', style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold))),
                     if (active.isNotEmpty) Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)), child: Text('${active.length} target${active.length != 1 ? 's' : ''}', style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold))),
                   ]),

@@ -381,6 +381,13 @@ class SyncService {
         _sb.from('xp_history').delete().eq('user_id', uid),
         _sb.from('user_stats').delete().eq('id', uid),
         _sb.from('unit_progress').delete().eq('user_id', uid),
+        // Per-word Learn analytics feeds the Word Mastery Heatmap's "gate"
+        // score (collections.dart _MasteryHeatmapSection). Without this the
+        // heatmap keeps showing up to 40% mastery for every previously-
+        // learned word after a reset, since a leftover analytics row alone
+        // is enough to mark a word "studied". NB: also clears the teacher-
+        // side record of this student's Learn sessions.
+        _sb.from('learn_session_analytics').delete().eq('student_id', uid),
       ]);
       // 4. Re-plant the sync markers _clearProgress() just removed, level
       //    with the row we wrote, so the next pullAll() doesn't see the

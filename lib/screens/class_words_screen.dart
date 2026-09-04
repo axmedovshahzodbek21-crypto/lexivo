@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/supabase_service.dart';
 import '../services/class_srs_service.dart';
+import '../services/class_learn_progress.dart';
 import '../services/ai_import.dart';
 import '../data/storage_service.dart';
 import '../app_theme.dart';
@@ -442,9 +443,12 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
   Future<void> _studyWords() async {
     if (_words.isEmpty) return;
     // LearningScreen persists the current card index on exit under
-    // learn_progress_<className>_0 (see learning.dart's PopScope / close
-    // button). Offer to pick up where the student left off.
-    final savedIndex = await StorageService.getLearnProgress(widget.className, 0);
+    // learn_progress_<className>_0 locally + in class_learn_progress
+    // cross-device (see learning.dart). Offer to pick up where the student
+    // left off, on any device.
+    final savedIndex = await resolveClassLearnResume(
+      classId: widget.classId, scope: 'words',
+      localKey: widget.className, localDay: 0, total: _words.length);
     if (!mounted) return;
     if (savedIndex != null && savedIndex > 0 && savedIndex < _words.length) {
       _showResumeLearnDialog(savedIndex);
@@ -470,6 +474,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
             onPressed: () {
               Navigator.pop(dctx);
               StorageService.clearLearnProgress(widget.className, 0);
+              deleteClassLearnBookmark(classId: widget.classId, scope: 'words');
               _openStudySheet(0);
             },
             child: const Text('Start from Word 1', style: TextStyle(color: Colors.grey)),
@@ -518,6 +523,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
         classId: widget.classId,
         dayIndex: 0,
         startIndex: startIndex,
+        classProgressScope: 'words',
       ),
     )).then((_) => _loadWords());
   }

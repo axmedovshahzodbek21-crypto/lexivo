@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
 import '../services/widget_service.dart';
+import '../services/class_learn_progress.dart';
 import '../data/storage_service.dart';
 import '../app_theme.dart';
 import '../data/word_data.dart';
@@ -227,9 +228,13 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
     switch (mode) {
       case 'learn': {
         // Learn persists its card index on exit under (unitName, dayNumber)
-        // — offer to pick up where the student left off.
+        // locally + in class_learn_progress cross-device — offer to pick up
+        // where the student left off, on any device.
         final dayNum = widget.dayNumber ?? 0;
-        final savedIndex = await StorageService.getLearnProgress(widget.unitName, dayNum);
+        final scope = 'hw:${widget.homeworkId}';
+        final savedIndex = await resolveClassLearnResume(
+          classId: widget.classId, scope: scope,
+          localKey: widget.unitName, localDay: dayNum, total: wd.words.length);
         if (!mounted) return;
         int startIndex = 0;
         if (savedIndex != null && savedIndex > 0 && savedIndex < wd.words.length) {
@@ -266,12 +271,14 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
             startIndex = savedIndex;
           } else {
             StorageService.clearLearnProgress(widget.unitName, dayNum);
+            deleteClassLearnBookmark(classId: widget.classId, scope: scope);
           }
         }
         await Navigator.push(context, MaterialPageRoute(
           builder: (_) => LearningScreen(
             wordDay: wd, userProfile: '', collectionName: widget.unitName,
             classId: widget.classId, dayIndex: 0, startIndex: startIndex,
+            classProgressScope: scope,
             onHomeworkCompleted: onCompleted,
             // 'learn' XP is credited per word by _grantLearnReward's
             // recordClassWordLearned call (immediate, dedup-safe, and it

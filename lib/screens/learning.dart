@@ -31,6 +31,11 @@ class LearningScreen extends StatefulWidget {
   final bool noXP;
   // When set, this is a class learning session — SRS goes to Supabase, not personal storage.
   final String? classId;
+  // Cross-device resume: when set (alongside classId), the session mirrors its
+  // position + marks to the class_learn_progress table so the "Resume where you
+  // left off?" prompt also shows on the student's other devices. Value is
+  // 'hw:<homeworkId>' for a homework session or 'words' for a class-words one.
+  final String? classProgressScope;
   final VoidCallback? onHomeworkCompleted;
   final Future<bool> Function()? onSessionComplete;
   // Forwarded into the finish dialog's "Start Flashcards"/"Take Quiz" buttons so
@@ -48,6 +53,7 @@ class LearningScreen extends StatefulWidget {
     this.startIndex = 0,
     this.noXP = false,
     this.classId,
+    this.classProgressScope,
     this.onHomeworkCompleted,
     this.onSessionComplete,
     this.onFlashcardsComplete,
@@ -212,6 +218,45 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
     StorageService.saveLearnProgress(
       widget.collectionName, widget.wordDay.dayNumber, _currentIndex);
     _saveMarks();
+    _syncClassBookmark();
+  }
+
+  // Cross-device class Learn bookmark — mirror position + marks to
+  // class_learn_progress so the resume prompt also shows on the student's
+  // other devices. Fire-and-forget; the device-local save above is the
+  // instant / offline path. Called from every exit route and the heartbeat.
+  Future<void> _syncClassBookmark() async {
+    final classId = widget.classId;
+    final scope = widget.classProgressScope;
+    final user = currentUser;
+    if (classId == null || scope == null || user == null) return;
+    if (_sessionComplete || _currentIndex <= 0) return;
+    try {
+      await supabase.from('class_learn_progress').upsert({
+        'user_id': user.id,
+        'class_id': classId,
+        'scope': scope,
+        'word_index': _currentIndex,
+        'total': _totalWords,
+        'marks': {
+          'learned': _learnedIndices.map((i) => _allWords[i].word).toList(),
+          'tooHard': _hardIndices.map((i) => _allWords[i].word).toList(),
+          'skipped': _skippedIndices.map((i) => _allWords[i].word).toList(),
+        },
+        'updated_at': DateTime.now().toIso8601String(),
+      }, onConflict: 'user_id,class_id,scope');
+    } catch (_) {/* offline / RLS — device-local bookmark still applies */}
+  }
+
+  Future<void> _deleteClassBookmark() async {
+    final classId = widget.classId;
+    final scope = widget.classProgressScope;
+    final user = currentUser;
+    if (classId == null || scope == null || user == null) return;
+    try {
+      await supabase.from('class_learn_progress').delete()
+          .eq('user_id', user.id).eq('class_id', classId).eq('scope', scope);
+    } catch (_) {}
   }
 
   @override
@@ -681,7 +726,10 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
 
   void _startHeartbeat() {
     _sendHeartbeat();
-    _heartbeatTimer = Timer.periodic(const Duration(seconds: 30), (_) => _sendHeartbeat());
+    _heartbeatTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      _sendHeartbeat();
+      _syncClassBookmark();
+    });
   }
 
   Future<void> _sendHeartbeat() async {
@@ -734,6 +782,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
     _heartbeatTimer?.cancel();
     await StorageService.markLearningComplete(widget.collectionName, widget.wordDay.dayNumber);
     StorageService.clearLearnProgress(widget.collectionName, widget.wordDay.dayNumber);
+    _deleteClassBookmark();
     _emitAnalytics().catchError((_) {});
     // Make sure any still in-flight class rewards (see _grantLearnReward)
     // land before the summary below reads _sessionXP.

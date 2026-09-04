@@ -694,10 +694,17 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         supabase.rpc('get_class_activity', params: {'p_class_id': widget.classId}),
         supabase.from('collections').select().order('display_order'),
         supabase.rpc('get_hard_words', params: {'p_class_id': widget.classId}),
+        supabase.from('class_members').select('student_id').eq('class_id', widget.classId).eq('status', 'approved'),
       ]);
 
+      // get_class_dashboard's own definition isn't reconstructible from this
+      // repo's migrations (created directly via the Supabase dashboard), so
+      // whether it excludes pending members server-side can't be verified —
+      // cross-check against class_members.status here instead of trusting it.
+      final approvedIds = (results[4] as List).map((m) => (m as Map)['student_id'] as String).toSet();
       final students = (results[0] as List)
         .map((e) => StudentRow.fromMap(Map<String, dynamic>.from(e as Map)))
+        .where((s) => approvedIds.contains(s.studentId))
         .toList();
       final activity = (results[1] as List)
         .map((e) => ActivityRow.fromMap(Map<String, dynamic>.from(e as Map)))

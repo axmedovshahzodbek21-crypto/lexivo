@@ -235,12 +235,21 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
       // that's actually named differently, or null for one row, would throw
       // and abort this entire _load() over that single row, same risk class
       // as the RPC field-mapping issue already fixed elsewhere. Skip
-      // whichever rows don't have a usable student_id instead.
+      // whichever rows don't have a usable student_id instead. Nor is it known
+      // whether the RPC excludes pending members server-side, so cross-check
+      // against class_members.status here rather than trusting it.
       final membersList = results[1] as List;
-      final memberIds = membersList
+      final rpcMemberIds = membersList
           .map((m) => (m as Map)['student_id'] as String?)
           .whereType<String>()
-          .toList();
+          .toSet();
+      final approvedRows = await supabase
+          .from('class_members')
+          .select('student_id')
+          .eq('class_id', widget.classId)
+          .eq('status', 'approved');
+      final approvedIds = (approvedRows as List).map((m) => (m as Map)['student_id'] as String).toSet();
+      final memberIds = rpcMemberIds.intersection(approvedIds).toList();
       final memberCount = memberIds.length;
 
       // ── Group 2: parallel dependent fetches ───────────────────────────────

@@ -72,7 +72,7 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> with Naviga
 
       final myClasses = <ClassRow>[];
       if (taughtIds.isNotEmpty) {
-        final memberRows = await supabase.from('class_members').select('class_id').inFilter('class_id', taughtIds);
+        final memberRows = await supabase.from('class_members').select('class_id').inFilter('class_id', taughtIds).eq('status', 'approved');
         final countMap = <String, int>{};
         for (final m in (memberRows as List)) {
           final id = (m as Map)['class_id'] as String;

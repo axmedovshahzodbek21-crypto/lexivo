@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
 import '../services/widget_service.dart';
+import '../data/storage_service.dart';
 import '../app_theme.dart';
 import '../data/word_data.dart';
 import '../data/reading_data.dart';
@@ -224,20 +225,64 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
     if (_gatedByLearn(mode)) return;
     void onCompleted() => _recordProgress(mode);
     switch (mode) {
-      case 'learn':
+      case 'learn': {
+        // Learn persists its card index on exit under (unitName, dayNumber)
+        // — offer to pick up where the student left off.
+        final dayNum = widget.dayNumber ?? 0;
+        final savedIndex = await StorageService.getLearnProgress(widget.unitName, dayNum);
+        if (!mounted) return;
+        int startIndex = 0;
+        if (savedIndex != null && savedIndex > 0 && savedIndex < wd.words.length) {
+          final choice = await showDialog<String>(
+            context: context,
+            builder: (dctx) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Text('📖 Continue Learning?', textAlign: TextAlign.center),
+              content: Text(
+                'You left off at word ${savedIndex + 1} of ${wd.words.length}.\nContinue from where you stopped, or start over?',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+              actionsAlignment: MainAxisAlignment.center,
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dctx, 'restart'),
+                  child: const Text('Start from Word 1', style: TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(dctx, 'resume'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: context.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text('Continue from Word ${savedIndex + 1}'),
+                ),
+              ],
+            ),
+          );
+          if (!mounted || choice == null) return;
+          if (choice == 'resume') {
+            startIndex = savedIndex;
+          } else {
+            StorageService.clearLearnProgress(widget.unitName, dayNum);
+          }
+        }
         await Navigator.push(context, MaterialPageRoute(
           builder: (_) => LearningScreen(
             wordDay: wd, userProfile: '', collectionName: widget.unitName,
-            classId: widget.classId, dayIndex: 0, onHomeworkCompleted: onCompleted,
-            // record_class_homework_progress (fired via onHomeworkCompleted
-            // above, on session finish) already awards word_count * 10 class
-            // XP for 'learn' mode — without noXP, _grantLearnReward's
-            // per-word recordClassWordLearned call also awards full XP for
-            // the same words, double-paying class XP. Same bug and same fix
-            // as flashcard/quiz/match below, which already pass noXP: true.
-            noXP: true,
+            classId: widget.classId, dayIndex: 0, startIndex: startIndex,
+            onHomeworkCompleted: onCompleted,
+            // 'learn' XP is credited per word by _grantLearnReward's
+            // recordClassWordLearned call (immediate, dedup-safe, and it
+            // survives a mid-session exit). record_class_homework_progress
+            // now awards 0 class XP for 'learn' mode (see migration
+            // 20260904_class_homework_learn_xp_per_word.sql), so there is no
+            // double-pay — unlike flashcard/quiz/match, whose whole XP still
+            // comes from that completion RPC, hence their noXP: true.
           ),
         ));
+      }
       case 'flashcard':
         await Navigator.push(context, MaterialPageRoute(
           builder: (_) => FlashcardSettingsScreen(

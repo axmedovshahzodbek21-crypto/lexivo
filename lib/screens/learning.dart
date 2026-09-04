@@ -58,7 +58,7 @@ class LearningScreen extends StatefulWidget {
   State<LearningScreen> createState() => _LearningScreenState();
 }
 
-class _LearningScreenState extends State<LearningScreen> {
+class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObserver {
   final FlutterTts _tts = FlutterTts();
   final AudioPlayer _audioPlayer = AudioPlayer();
   // Tracks the temp mp3 written by _speakWithGoogle() so it can be deleted
@@ -140,6 +140,7 @@ class _LearningScreenState extends State<LearningScreen> {
     _sessionStart = DateTime.now();
     _wordStart = DateTime.now();
     appLangNotifier.addListener(_onLangChange);
+    WidgetsBinding.instance.addObserver(this);
     _loadSavedMarks();
     _loadClassStarred();
     _startHeartbeat();
@@ -201,8 +202,28 @@ class _LearningScreenState extends State<LearningScreen> {
     );
   }
 
+  // Single "save my place on the way out", shared by every exit route: the ✕
+  // button, the system back gesture (PopScope), and the app being backgrounded
+  // or about to be killed (didChangeAppLifecycleState) — dispose() is not
+  // guaranteed to run in that last case. A completed session (or one still on
+  // the first card) has nothing worth resuming.
+  void _persistProgress() {
+    if (_sessionComplete || _currentIndex <= 0) return;
+    StorageService.saveLearnProgress(
+      widget.collectionName, widget.wordDay.dayNumber, _currentIndex);
+    _saveMarks();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
+      _persistProgress();
+    }
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _heartbeatTimer?.cancel();
     if (!_sessionComplete) {
       // Session was abandoned — remove the presence row so the student
@@ -853,14 +874,7 @@ class _LearningScreenState extends State<LearningScreen> {
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (didPop, result) {
-        if (didPop && !_sessionComplete && _currentIndex > 0) {
-          StorageService.saveLearnProgress(
-            widget.collectionName,
-            widget.wordDay.dayNumber,
-            _currentIndex,
-          );
-          _saveMarks();
-        }
+        if (didPop) _persistProgress();
       },
       child: Scaffold(
         backgroundColor: context.bg,
@@ -870,14 +884,7 @@ class _LearningScreenState extends State<LearningScreen> {
           leading: IconButton(
             icon: Icon(Icons.close, color: context.primary),
             onPressed: () {
-              if (!_sessionComplete && _currentIndex > 0) {
-                StorageService.saveLearnProgress(
-                  widget.collectionName,
-                  widget.wordDay.dayNumber,
-                  _currentIndex,
-                );
-                _saveMarks();
-              }
+              _persistProgress();
               Navigator.pop(context);
             },
           ),

@@ -23,6 +23,7 @@ import 'custom_lists_screen.dart';
 import 'hard_words_screen.dart';
 import 'grammar_tips_screen.dart';
 import 'structures_hub_screen.dart';
+import 'battle_ready_hub_screen.dart';
 import 'reading_screen.dart';
 import 'real_english_screen.dart';
 import 'teacher_library_screen.dart';
@@ -819,6 +820,16 @@ class _HomeScreenState extends State<HomeScreen>
                       context,
                       MaterialPageRoute(
                         builder: (context) => const StructuresHubScreen(),
+                      ),
+                    ),
+                  ),
+                  _buildSidebarTile(
+                    '🛡️',
+                    'Battle-Ready',
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const BattleReadyHubScreen(),
                       ),
                     ),
                   ),
@@ -2232,6 +2243,12 @@ class _HomeScreenState extends State<HomeScreen>
                       Navigator.pop(context);
                       Navigator.push(context,
                           MaterialPageRoute(builder: (context) => const StructuresHubScreen()));
+                    }),
+                    _buildDrawerTile(context, icon: '🛡️', label: 'Battle-Ready',
+                        iconBg: const Color(0xFFef4444), onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (context) => const BattleReadyHubScreen()));
                     }),
                     _buildDrawerTile(context, icon: '📖', label: 'Library',
                         iconBg: const Color(0xFF0ea5e9), onTap: () {

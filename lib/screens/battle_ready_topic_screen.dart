@@ -1,15 +1,38 @@
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
 import '../data/battle_ready_data.dart';
+import '../data/battle_ready_progress_service.dart';
 import 'battle_ready_side_screen.dart';
 
-/// Port of lexivo-web's /battle-ready/[topic]: FOR / AGAINST side selector.
-class BattleReadyTopicScreen extends StatelessWidget {
+/// Port of lexivo-web's /battle-ready/[topic]: FOR / AGAINST side selector
+/// plus a Mark as Done toggle so Surprise Me can skip finished topics.
+class BattleReadyTopicScreen extends StatefulWidget {
   final BRTopic topic;
   const BattleReadyTopicScreen({super.key, required this.topic});
 
   @override
+  State<BattleReadyTopicScreen> createState() => _BattleReadyTopicScreenState();
+}
+
+class _BattleReadyTopicScreenState extends State<BattleReadyTopicScreen> {
+  bool _done = false;
+
+  @override
+  void initState() {
+    super.initState();
+    BattleReadyProgressService.isDone(widget.topic.slug).then((d) {
+      if (mounted) setState(() => _done = d);
+    });
+  }
+
+  Future<void> _toggleDone() async {
+    final next = await BattleReadyProgressService.toggleDone(widget.topic.slug);
+    if (mounted) setState(() => _done = next);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final topic = widget.topic;
     final content = kBattleReadyContent[topic.slug];
 
     return Scaffold(
@@ -33,6 +56,29 @@ class BattleReadyTopicScreen extends StatelessWidget {
             ),
           ],
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Center(
+              child: InkWell(
+                onTap: _toggleDone,
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _done ? context.successColor : context.surface2,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: _done ? context.successColor : context.border),
+                  ),
+                  child: Text(
+                    _done ? '✓ Done' : 'Mark as Done',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _done ? Colors.white : context.textMuted),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),

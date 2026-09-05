@@ -664,6 +664,69 @@ class _HomeScreenState extends State<HomeScreen>
     return _buildMobileLayout(context);
   }
 
+  /// Prominent standalone entry point for Battle-Ready — this app has no
+  /// web-style "Explore" tile grid to slot a card into, so this mirrors the
+  /// review-due banner's gradient/shadow/watermark treatment instead to get
+  /// the same visual weight.
+  Widget _battleReadyBanner(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const BattleReadyHubScreen()),
+      ),
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFF87171), Color(0xFFEF4444), Color(0xFFB91C1C)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: const [
+            BoxShadow(color: Color(0xFF7F1D1D), offset: Offset(0, 10), blurRadius: 0),
+            BoxShadow(color: Color(0x80EF4444), blurRadius: 40, offset: Offset(0, 18)),
+          ],
+        ),
+        child: Stack(
+          clipBehavior: Clip.hardEdge,
+          children: [
+            Positioned(
+              right: -4,
+              bottom: -14,
+              child: Text('🛡️', style: TextStyle(fontSize: 80, color: Colors.white.withValues(alpha: 0.12))),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('DEBATE ARENA', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1.2)),
+                  const SizedBox(height: 6),
+                  const Text('Battle-Ready', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Colors.white)),
+                  const SizedBox(height: 4),
+                  Text('101 debate topics — master both sides.', style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.85), height: 1.4)),
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Text('Start Debating ⚔️', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 15)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ─── DESKTOP LAYOUT ──────────────────────────────────────────────────────────
 
   Widget _buildDesktopLayout(BuildContext context) {
@@ -922,6 +985,9 @@ class _HomeScreenState extends State<HomeScreen>
                         ),
                       ),
                       const SizedBox(height: 32),
+
+                      _battleReadyBanner(context),
+                      const SizedBox(height: 24),
 
                       // Review banner
                       if (_reviewsDue > 0 && !_bannerDismissed)
@@ -1388,6 +1454,9 @@ class _HomeScreenState extends State<HomeScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _battleReadyBanner(context),
+              const SizedBox(height: 20),
+
               if (_reviewsDue > 0 && !_bannerDismissed)
                 Container(
                   width: double.infinity,

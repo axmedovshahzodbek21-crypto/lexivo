@@ -28,6 +28,9 @@ class _StructuresLearnScreenState extends State<StructuresLearnScreen> {
   late final List<_Mark?> _marks = List.filled(_structures.length, null);
   bool _revealed = false;
   bool _showUz = false;
+  bool _showMoreExamples = false;
+  List<bool> _exampleShown = [];
+  final Set<int> _extraRevealed = {};
   bool _done = false;
   int _sessionCount = 0;
   int _sessionXP = 0;
@@ -36,6 +39,7 @@ class _StructuresLearnScreenState extends State<StructuresLearnScreen> {
   @override
   void initState() {
     super.initState();
+    _exampleShown = List.filled(_current?.examples.take(3).length ?? 0, false);
     StructuresStorageService.getStructuresNewToday().then((n) {
       if (mounted) setState(() => _newToday = n);
     });
@@ -53,6 +57,9 @@ class _StructuresLearnScreenState extends State<StructuresLearnScreen> {
         _index++;
         _revealed = false;
         _showUz = false;
+        _showMoreExamples = false;
+        _extraRevealed.clear();
+        _exampleShown = List.filled(_current?.examples.take(3).length ?? 0, false);
       }
     });
   }
@@ -204,14 +211,78 @@ class _StructuresLearnScreenState extends State<StructuresLearnScreen> {
                               style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.primary)),
                         ),
                         const SizedBox(height: 8),
-                        for (final ex in current.examples.take(3))
-                          Container(
-                            width: double.infinity,
-                            margin: const EdgeInsets.only(top: 8),
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(12)),
-                            child: Text('"$ex"', style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: context.appText)),
+                        for (var i = 0; i < current.examples.take(3).length; i++)
+                          GestureDetector(
+                            onTap: () => setState(() => _exampleShown[i] = !_exampleShown[i]),
+                            child: Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.only(top: 8),
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(12)),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('"${current.examples[i]}"',
+                                      style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: context.appText)),
+                                  if (_exampleShown[i]) ...[
+                                    const SizedBox(height: 4),
+                                    Text(current.exampleTranslations[i],
+                                        style: TextStyle(fontSize: 12, color: context.primary)),
+                                  ] else
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Text('Tap to see translation',
+                                          style: TextStyle(fontSize: 11, color: context.textMuted)),
+                                    ),
+                                ],
+                              ),
+                            ),
                           ),
+                        if (current.examples.length > 3) ...[
+                          const SizedBox(height: 8),
+                          TextButton(
+                            onPressed: () => setState(() => _showMoreExamples = !_showMoreExamples),
+                            child: Text(_showMoreExamples
+                                ? '− Hide examples'
+                                : '+ More examples (${current.examples.length - 3})'),
+                          ),
+                          if (_showMoreExamples)
+                            for (var i = 3; i < current.examples.length; i++)
+                              GestureDetector(
+                                onTap: () => setState(() {
+                                  if (_extraRevealed.contains(i)) {
+                                    _extraRevealed.remove(i);
+                                  } else {
+                                    _extraRevealed.add(i);
+                                  }
+                                }),
+                                child: Container(
+                                  width: double.infinity,
+                                  margin: const EdgeInsets.only(top: 6),
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(12)),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Extra ${i - 2}', style: TextStyle(fontSize: 10, color: context.textMuted)),
+                                      const SizedBox(height: 2),
+                                      Text('"${current.examples[i]}"',
+                                          style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: context.appText)),
+                                      if (_extraRevealed.contains(i)) ...[
+                                        const SizedBox(height: 4),
+                                        Text(current.exampleTranslations[i],
+                                            style: TextStyle(fontSize: 12, color: context.primary)),
+                                      ] else
+                                        Padding(
+                                          padding: const EdgeInsets.only(top: 4),
+                                          child: Text('Tap to see translation',
+                                              style: TextStyle(fontSize: 11, color: context.textMuted)),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                        ],
                         const SizedBox(height: 10),
                         if (_showUz)
                           Padding(

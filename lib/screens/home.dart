@@ -22,6 +22,7 @@ import 'pomodoro_setup_screen.dart';
 import 'custom_lists_screen.dart';
 import 'hard_words_screen.dart';
 import 'grammar_tips_screen.dart';
+import 'structures_hub_screen.dart';
 import 'reading_screen.dart';
 import 'real_english_screen.dart';
 import 'teacher_library_screen.dart';
@@ -808,6 +809,16 @@ class _HomeScreenState extends State<HomeScreen>
                       context,
                       MaterialPageRoute(
                         builder: (context) => const GrammarTipsScreen(),
+                      ),
+                    ),
+                  ),
+                  _buildSidebarTile(
+                    '🧩',
+                    tr('ielts_structures'),
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const StructuresHubScreen(),
                       ),
                     ),
                   ),
@@ -2215,6 +2226,12 @@ class _HomeScreenState extends State<HomeScreen>
                       Navigator.pop(context);
                       Navigator.push(context,
                           MaterialPageRoute(builder: (context) => const GrammarTipsScreen()));
+                    }),
+                    _buildDrawerTile(context, icon: '🧩', label: tr('ielts_structures'),
+                        iconBg: const Color(0xFF6c63ff), onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (context) => const StructuresHubScreen()));
                     }),
                     _buildDrawerTile(context, icon: '📖', label: 'Library',
                         iconBg: const Color(0xFF0ea5e9), onTap: () {

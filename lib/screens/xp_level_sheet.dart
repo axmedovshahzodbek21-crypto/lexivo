@@ -72,16 +72,46 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
   // silently capping the shown "XP to next level" for users in those levels.
   int get _xpToNext => _isMaxLevel ? 0 : (_nextXP - widget.xp).clamp(0, 999999);
 
+  // Date each level was first crossed, derived from cumulative XP-per-day.
+  // Day-precision, and only as far back as xp_by_date has data.
+  Map<String, String> _reachedDates = {};
+
   @override
   void initState() {
     super.initState();
     appLangNotifier.addListener(_onLangChange);
     _loadHistory();
+    _loadReachedDates();
   }
 
   Future<void> _loadHistory() async {
     final h = await StorageService.getXPHistory();
     if (mounted) setState(() => _history = h);
+  }
+
+  Future<void> _loadReachedDates() async {
+    final byDate = await StorageService.getXPByDate();
+    final dates = byDate.keys.toList()..sort();
+    final out = <String, String>{};
+    var cum = 0;
+    var li = 0;
+    final levels = StorageService.levels;
+    for (final d in dates) {
+      cum += byDate[d] ?? 0;
+      while (li < levels.length && cum >= levels[li].$2) {
+        if (levels[li].$2 > 0) out[levels[li].$1] = d;
+        li++;
+      }
+    }
+    if (mounted) setState(() => _reachedDates = out);
+  }
+
+  static const _mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  String _fmtReached(String iso) {
+    final parts = iso.split('T').first.split('-');
+    if (parts.length != 3) return iso;
+    final m = int.tryParse(parts[1]) ?? 1;
+    return '${_mon[(m - 1).clamp(0, 11)]} ${int.tryParse(parts[2]) ?? ''}, ${parts[0]}';
   }
 
   @override
@@ -387,6 +417,11 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
                               if (isFuture)
                                 Text(
                                   isPeeked ? 'tap to close' : 'tap to preview',
+                                  style: TextStyle(fontSize: 10, color: context.textMuted),
+                                ),
+                              if (isPast && _reachedDates[name] != null)
+                                Text(
+                                  '${tr('level_reached')} ${_fmtReached(_reachedDates[name]!)}',
                                   style: TextStyle(fontSize: 10, color: context.textMuted),
                                 ),
                             ],

@@ -605,6 +605,7 @@ const Map<String, Map<String, String>> _t = {
     'go_to_flashcard': 'Go to Flashcard',
     'skipped_permanently': '↓ Skipped permanently',
     'master_level_reached': 'Master Level reached!',
+    'level_reached': 'Reached',
 
     'level_beginner': 'Beginner',
     'level_elementary': 'Elementary',
@@ -1335,6 +1336,7 @@ const Map<String, Map<String, String>> _t = {
     'go_to_flashcard': 'Flashcardga o\'tish',
     'skipped_permanently': '↓ Doimiy o\'tkazib yuborildi',
     'master_level_reached': 'Ustaxon darajasiga erishildi!',
+    'level_reached': 'Erishildi',
 
     'level_beginner': 'Boshlang\'ich',
     'level_elementary': 'Asosiy',

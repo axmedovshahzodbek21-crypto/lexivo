@@ -1520,7 +1520,7 @@ class FlashcardFinishScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: context.successColor, width: 1.5),
                   ),
-                  child: Text('🏆 Unit Complete!',
+                  child: Text(tr('unit_complete_banner'),
                     textAlign: TextAlign.center,
                     style: TextStyle(fontWeight: FontWeight.bold, color: context.successColor)),
                 ),

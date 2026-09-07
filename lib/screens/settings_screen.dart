@@ -603,7 +603,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _userName.isNotEmpty ? _userName : 'Learner',
+                              _userName.isNotEmpty ? _userName : tr('learner'),
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -641,7 +641,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Row(
                         children: [
-                          Text('Bio', style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
+                          Text(tr('bio'), style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
                           const Spacer(),
                           TextButton(
                             onPressed: _bioSaving ? null : _saveBio,
@@ -653,7 +653,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                             child: _bioSaving
                                 ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                                : const Text('Save', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                : Text(tr('save'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                           ),
                         ],
                       ),
@@ -663,7 +663,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         maxLines: 3,
                         maxLength: 200,
                         decoration: InputDecoration(
-                          hintText: 'Tell others about yourself…',
+                          hintText: tr('bio_hint'),
                           counterStyle: TextStyle(fontSize: 10, color: context.textMuted),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -676,7 +676,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           contentPadding: const EdgeInsets.all(12),
                         ),
                       ),
-                      Text('Shared on leaderboard and in classes',
+                      Text(tr('bio_shared_note'),
                           style: TextStyle(fontSize: 11, color: context.textMuted)),
                     ],
                   ),
@@ -716,7 +716,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 24),
 
                 // Pulse Section
-                _buildSectionHeader(context, 'Card Pulse', icon: '💓',
+                _buildSectionHeader(context, tr('card_pulse'), icon: '💓',
                   gradient: const [Color(0xFFEC4899), Color(0xFFF472B6)],
                   shadowColor: const Color(0xFFBE185D)),
                 _buildCard(
@@ -726,22 +726,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: Text('Animate cards', style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
-                        subtitle: Text('Cards gently pulse on home & library screens', style: TextStyle(fontSize: 12, color: context.textMuted)),
+                        title: Text(tr('animate_cards'), style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
+                        subtitle: Text(tr('animate_cards_sub'), style: TextStyle(fontSize: 12, color: context.textMuted)),
                         value: _pulseEnabled,
                         activeThumbColor: context.primary,
                         onChanged: (v) => _setPulse(enabled: v),
                       ),
                       if (_pulseEnabled) ...[
                         const SizedBox(height: 8),
-                        Text('Speed', style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
+                        Text(tr('pulse_speed'), style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
                         const SizedBox(height: 10),
                         Row(children: [
-                          _pulseSpeedOption(context, 'Slow', 'slow'),
+                          _pulseSpeedOption(context, tr('speed_slow'), 'slow'),
                           const SizedBox(width: 8),
-                          _pulseSpeedOption(context, 'Normal', 'normal'),
+                          _pulseSpeedOption(context, tr('speed_normal'), 'normal'),
                           const SizedBox(width: 8),
-                          _pulseSpeedOption(context, 'Fast', 'fast'),
+                          _pulseSpeedOption(context, tr('speed_fast'), 'fast'),
                         ]),
                       ],
                     ],
@@ -751,7 +751,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 24),
 
                 // Study Section
-                _buildSectionHeader(context, 'Study', icon: '📚',
+                _buildSectionHeader(context, tr('study_section'), icon: '📚',
                   gradient: const [Color(0xFF06B6D4), Color(0xFF22D3EE)],
                   shadowColor: const Color(0xFF0E7490)),
                 _buildCard(
@@ -761,8 +761,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: Text('Auto-play pronunciation', style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
-                        subtitle: Text('Speak the word aloud when you reveal it in Learn', style: TextStyle(fontSize: 12, color: context.textMuted)),
+                        title: Text(tr('autoplay_pron'), style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
+                        subtitle: Text(tr('autoplay_pron_sub'), style: TextStyle(fontSize: 12, color: context.textMuted)),
                         value: _autoPlayOnReveal,
                         activeThumbColor: context.primary,
                         onChanged: _setAutoPlayOnReveal,
@@ -770,8 +770,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const Divider(height: 8),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: Text('Reduce motion', style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
-                        subtitle: Text('Disable screen slide animations and the card pulse', style: TextStyle(fontSize: 12, color: context.textMuted)),
+                        title: Text(tr('reduce_motion_title'), style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
+                        subtitle: Text(tr('reduce_motion_sub'), style: TextStyle(fontSize: 12, color: context.textMuted)),
                         value: _reduceMotion,
                         activeThumbColor: context.primary,
                         onChanged: _setReduceMotion,
@@ -779,8 +779,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const Divider(height: 8),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: Text('Show Battle-Ready', style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
-                        subtitle: Text('Show the debate-practice entry point on Home and in More', style: TextStyle(fontSize: 12, color: context.textMuted)),
+                        title: Text(tr('show_battle_ready'), style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
+                        subtitle: Text(tr('show_battle_ready_sub'), style: TextStyle(fontSize: 12, color: context.textMuted)),
                         value: _showBattleReady,
                         activeThumbColor: context.primary,
                         onChanged: _setShowBattleReady,
@@ -859,8 +859,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Good morning!', style: TextStyle(fontWeight: FontWeight.bold, color: context.appText, fontSize: 13)),
-                                  Text('Start your day with a few words', style: TextStyle(color: context.textMuted, fontSize: 11)),
+                                  Text(tr('notif_morning_title'), style: TextStyle(fontWeight: FontWeight.bold, color: context.appText, fontSize: 13)),
+                                  Text(tr('notif_morning_sub'), style: TextStyle(color: context.textMuted, fontSize: 11)),
                                 ],
                               ),
                             ),
@@ -877,8 +877,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Streak at Risk', style: TextStyle(fontWeight: FontWeight.bold, color: context.appText, fontSize: 13)),
-                                  Text('Don\'t forget to study today', style: TextStyle(color: context.textMuted, fontSize: 11)),
+                                  Text(tr('notif_streak_risk_title'), style: TextStyle(fontWeight: FontWeight.bold, color: context.appText, fontSize: 13)),
+                                  Text(tr('notif_streak_risk_sub'), style: TextStyle(color: context.textMuted, fontSize: 11)),
                                 ],
                               ),
                             ),
@@ -901,7 +901,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(tr('reminder_time'), style: TextStyle(fontWeight: FontWeight.bold, color: context.appText, fontSize: 13)),
-                                    Text('Tap to change', style: TextStyle(color: context.textMuted, fontSize: 11)),
+                                    Text(tr('tap_to_change'), style: TextStyle(color: context.textMuted, fontSize: 11)),
                                   ],
                                 ),
                               ),
@@ -922,15 +922,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: Text(
-                      'Class notifications',
+                      tr('class_notifications'),
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: context.appText,
                       ),
                     ),
-                    subtitle: const Text(
-                      'Notified when a teacher assigns homework or posts an announcement',
-                      style: TextStyle(fontSize: 12),
+                    subtitle: Text(
+                      tr('class_notifications_sub'),
+                      style: const TextStyle(fontSize: 12),
                     ),
                     value: _pushEnabled,
                     activeThumbColor: context.primary,
@@ -1183,7 +1183,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           children: [
                             const Text('🌐', style: TextStyle(fontSize: 18)),
                             const SizedBox(width: 12),
-                            Expanded(child: Text('Website', style: TextStyle(fontWeight: FontWeight.w500, color: context.appText))),
+                            Expanded(child: Text(tr('website'), style: TextStyle(fontWeight: FontWeight.w500, color: context.appText))),
                             Text('lexivo-web-nu.vercel.app', style: TextStyle(color: context.primary, fontSize: 13)),
                             const SizedBox(width: 4),
                             Icon(Icons.open_in_new, size: 14, color: context.primary),
@@ -1197,7 +1197,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           children: [
                             const Text('✈️', style: TextStyle(fontSize: 18)),
                             const SizedBox(width: 12),
-                            Expanded(child: Text('Contact Support', style: TextStyle(fontWeight: FontWeight.w500, color: context.appText))),
+                            Expanded(child: Text(tr('contact_support'), style: TextStyle(fontWeight: FontWeight.w500, color: context.appText))),
                             Text('@lexivo_support_bot', style: TextStyle(color: context.primary, fontSize: 13)),
                             const SizedBox(width: 4),
                             Icon(Icons.open_in_new, size: 14, color: context.primary),
@@ -1214,17 +1214,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           children: [
                             const Text('🤖', style: TextStyle(fontSize: 18)),
                             const SizedBox(width: 12),
-                            Expanded(child: Text('Download Android App', style: TextStyle(fontWeight: FontWeight.w500, color: context.appText))),
-                            Text('Latest APK', style: TextStyle(color: const Color(0xFF3DDC84), fontSize: 13, fontWeight: FontWeight.bold)),
+                            Expanded(child: Text(tr('download_android'), style: TextStyle(fontWeight: FontWeight.w500, color: context.appText))),
+                            Text(tr('latest_apk'), style: TextStyle(color: const Color(0xFF3DDC84), fontSize: 13, fontWeight: FontWeight.bold)),
                             const SizedBox(width: 4),
                             const Icon(Icons.download, size: 14, color: Color(0xFF3DDC84)),
                           ],
                         ),
                       ),
                       Divider(height: 16, color: context.border),
-                      _buildAboutRow(context, '📚', tr('collections'), '3 collections'),
+                      _buildAboutRow(context, '📚', tr('collections'), tr('collections_count').replaceFirst('{n}', '3')),
                       Divider(height: 16, color: context.border),
-                      _buildAboutRow(context, '🔤', tr('total_words'), '700+ words'),
+                      _buildAboutRow(context, '🔤', tr('total_words'), tr('total_words_about')),
                     ],
                   ),
                 ),

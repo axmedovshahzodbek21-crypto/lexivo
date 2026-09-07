@@ -80,8 +80,8 @@ class _WordsLearnedScreenState extends State<WordsLearnedScreen> {
           children: [
             _HintRow(
               emoji: '✅',
-              title: 'Tap "✓ Learned" while studying',
-              desc: 'The main way. Tap the green ✓ Learned button on any word during a session — it\'s saved here instantly, even if you never start flashcards.',
+              title: tr('how_words_added_desc'),
+              desc: tr('how_words_added_body'),
               color: const Color(0xFF2ECC71),
             ),
           ],
@@ -677,7 +677,7 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
           icon: Icon(Icons.arrow_back, color: context.primary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Calendar', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+        title: Text(tr('calendar'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
@@ -687,17 +687,17 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
             // ── Stat tiles ──────────────────────────────────
             Row(
               children: [
-                _StatTile(emoji: '🔥', value: '$_streak',        label: 'Streak',        color: const Color(0xFFBE123C),
-                  infoTitle: 'Current Streak',
-                  infoBody: 'Days in a row where you completed BOTH SRS review and your word goal. Miss a day without a streak freeze and it resets to 0.'),
+                _StatTile(emoji: '🔥', value: '$_streak',        label: tr('streak'),        color: const Color(0xFFBE123C),
+                  infoTitle: tr('current_streak'),
+                  infoBody: tr('info_current_streak_body')),
                 const SizedBox(width: 10),
-                _StatTile(emoji: '⚡', value: '$_longestStreak', label: 'Longest streak', color: const Color(0xFF0369A1),
-                  infoTitle: 'Longest Streak',
-                  infoBody: 'Your all-time personal best — the longest consecutive run of perfect days you\'ve ever achieved. It never resets.'),
+                _StatTile(emoji: '⚡', value: '$_longestStreak', label: tr('longest_streak_label'), color: const Color(0xFF0369A1),
+                  infoTitle: tr('longest_streak'),
+                  infoBody: tr('info_longest_streak_body')),
                 const SizedBox(width: 10),
-                _StatTile(emoji: '🏆', value: '$_activeDays',    label: 'Full days',      color: const Color(0xFFB45309),
-                  infoTitle: 'Full Days',
-                  infoBody: 'Total count of days where you completed both tasks. Every perfect day adds 1 — this is your lifetime tally of fully productive days.'),
+                _StatTile(emoji: '🏆', value: '$_activeDays',    label: tr('full_days_label'),      color: const Color(0xFFB45309),
+                  infoTitle: tr('full_days'),
+                  infoBody: tr('info_full_days_body')),
               ],
             ),
             const SizedBox(height: 4),
@@ -710,7 +710,7 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('Task breakdown',
+                    Text(tr('task_breakdown'),
                         style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.textMuted)),
                     const SizedBox(width: 4),
                     Icon(_showBreakdown ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
@@ -721,7 +721,7 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
             ),
             if (_showBreakdown) ...[
               _BreakdownRow(
-                label: 'Words',
+                label: tr('track_words'),
                 color: _kWordsColor,
                 current: _calcCurrentStreak(_wordGoalDays),
                 longest: _calcLongest(_wordGoalDays),
@@ -729,7 +729,7 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
               ),
               const SizedBox(height: 8),
               _BreakdownRow(
-                label: 'SRS',
+                label: tr('track_srs'),
                 color: _kSrsColor,
                 current: _calcCurrentStreak(_reviewDays),
                 longest: _calcLongest(_reviewDays),
@@ -740,25 +740,27 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
             const SizedBox(height: 8),
 
             // ── Today task cards ─────────────────────────────
-            Text('Today', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.textMuted)),
+            Text(tr('today'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.textMuted)),
             const SizedBox(height: 8),
             Row(
               children: [
                 _TaskCard(
-                  label: 'Review', done: reviewToday, color: _kSrsColor,
-                  infoTitle: 'SRS Review',
-                  infoBody: 'Spaced Repetition System — words you\'ve learned come back for review at growing intervals. Complete all words due today to mark the blue half of your day circle.',
+                  label: tr('track_review'), done: reviewToday, color: _kSrsColor,
+                  infoTitle: tr('info_srs_review_title'),
+                  infoBody: tr('info_srs_review_body'),
                 ),
                 const SizedBox(width: 8),
                 _TaskCard(
-                  label: 'Words',
+                  label: tr('track_words'),
                   done: wordsToday,
                   color: _kWordsColor,
                   subtitle: wordsToday
-                      ? '$_dailyGoal words ✓'
-                      : '${_todayWordsCount.clamp(0, _dailyGoal)}/$_dailyGoal words',
-                  infoTitle: 'Daily Word Goal',
-                  infoBody: 'Learn new words each day to hit your personal target. Set the number in Settings. Reach it to mark the green half of your day circle.',
+                      ? tr('goal_words_done').replaceFirst('{n}', '$_dailyGoal')
+                      : tr('goal_words_progress')
+                          .replaceFirst('{n}', '${_todayWordsCount.clamp(0, _dailyGoal)}')
+                          .replaceFirst('{goal}', '$_dailyGoal'),
+                  infoTitle: tr('info_daily_goal_title'),
+                  infoBody: tr('info_daily_goal_body'),
                 ),
               ],
             ),
@@ -896,7 +898,7 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
                   if (_selectedDay == null)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
-                      child: Text('Tap a day to see track breakdown',
+                      child: Text(tr('tap_day_breakdown'),
                           style: TextStyle(fontSize: 11, color: context.textMuted)),
                     ),
                 ],
@@ -913,12 +915,12 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Track breakdown',
+                        Text(tr('track_breakdown_title'),
                             style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.textMuted)),
                         const SizedBox(height: 8),
-                        _MiniCalendar(title: 'SRS',    color: _kSrsColor,   days: _reviewDays,    month: _month, lockedDays: _srsLockedDays),
+                        _MiniCalendar(title: tr('track_srs'),    color: _kSrsColor,   days: _reviewDays,    month: _month, lockedDays: _srsLockedDays),
                         const SizedBox(height: 10),
-                        _MiniCalendar(title: 'Words',  color: _kWordsColor, days: _wordGoalDays,  month: _month),
+                        _MiniCalendar(title: tr('track_words'),  color: _kWordsColor, days: _wordGoalDays,  month: _month),
                         const SizedBox(height: 16),
                       ],
                     ),
@@ -931,11 +933,11 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('How to mark a day', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+                  Text(tr('how_to_mark_day'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
                   const SizedBox(height: 10),
-                  _LegendRow(color: _kSrsColor,   text: 'Complete all due SRS reviews'),
+                  _LegendRow(color: _kSrsColor,   text: tr('legend_complete_srs')),
                   const SizedBox(height: 6),
-                  _LegendRow(color: _kWordsColor, text: 'Reach your self-set daily word goal'),
+                  _LegendRow(color: _kWordsColor, text: tr('legend_reach_goal')),
                 ],
               ),
             ),
@@ -985,7 +987,7 @@ void _showInfoDialog(BuildContext context, {
                   padding: const EdgeInsets.symmetric(vertical: 10),
                 ),
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Got it', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                child: Text(tr('got_it'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
               ),
             ),
           ],
@@ -1232,9 +1234,9 @@ class _BreakdownRow extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _StatChip(value: current, label: 'Current'),
-                _StatChip(value: longest, label: 'Longest'),
-                _StatChip(value: total,   label: 'Days'),
+                _StatChip(value: current, label: tr('chip_current')),
+                _StatChip(value: longest, label: tr('chip_longest')),
+                _StatChip(value: total,   label: tr('chip_days')),
               ],
             ),
           ),

@@ -251,7 +251,7 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
                       padding: const EdgeInsets.symmetric(vertical: 32),
                       child: Center(
                         child: Text(
-                          'No completed units yet.\nFinish Learn → Flashcards → Quiz to unlock free time for a unit.',
+                          tr('no_completed_units'),
                           textAlign: TextAlign.center,
                           style: TextStyle(fontSize: 13, color: context.textMuted, height: 1.5),
                         ),
@@ -419,9 +419,9 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
     bool unlocked,
   ) {
     const emojis = ['📖', '📕', '📗'];
-    const labels = ['Stage 4 Unlocked', 'Mastered', '30 Days Later'];
+    final labels = [tr('story_stage4_unlocked'), tr('story_mastered_label'), tr('story_30_days_later')];
     final emoji = emojis[storyNumber - 1];
-    final label = 'Story $storyNumber · ${labels[storyNumber - 1]}';
+    final label = '${tr('story_n').replaceFirst('{n}', '$storyNumber')} · ${labels[storyNumber - 1]}';
     const amber = Color(0xFFF59E0B);
 
     return GestureDetector(
@@ -719,9 +719,11 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('📖 Continue Learning?', textAlign: TextAlign.center),
+        title: Text(tr('continue_learning'), textAlign: TextAlign.center),
         content: Text(
-          'You left off at word ${savedIndex + 1} of ${day.words.length}.\nContinue from where you stopped, or start over?',
+          tr('continue_learning_body')
+              .replaceFirst('{n}', '${savedIndex + 1}')
+              .replaceFirst('{total}', '${day.words.length}'),
           textAlign: TextAlign.center,
           style: const TextStyle(fontSize: 14, color: Colors.grey),
         ),
@@ -732,7 +734,7 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
               Navigator.pop(context);
               _startLearning(context, day, index);
             },
-            child: const Text('Start from Word 1', style: TextStyle(color: Colors.grey)),
+            child: Text(tr('start_from_word_1'), style: const TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -756,7 +758,7 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: Text('Continue from Word ${savedIndex + 1}'),
+            child: Text(tr('continue_from_word').replaceFirst('{n}', '${savedIndex + 1}')),
           ),
         ],
       ),
@@ -768,33 +770,33 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('🕯️ How Units Get Marked', textAlign: TextAlign.center),
+        title: Text(tr('how_units_marked'), textAlign: TextAlign.center),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             InfoRow(
               icon: '📖',
-              label: 'Learn',
-              desc: 'Marked ✓ when you finish going through all the words in the session.',
+              label: tr('learn'),
+              desc: tr('learn_mark_desc'),
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             InfoRow(
               icon: '🃏',
-              label: 'Flashcards',
-              desc: 'Marked ✓ only when there are zero hard words left at the end of a session.',
+              label: tr('flashcards'),
+              desc: tr('flashcard_mark_desc'),
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             InfoRow(
               icon: '🧠',
-              label: 'Quiz',
-              desc: 'Marked ✓ after completing one full run — even if some answers were wrong.',
+              label: tr('quiz'),
+              desc: tr('quiz_mark_desc'),
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             InfoRow(
               icon: '🏆',
-              label: 'Unit Complete',
-              desc: 'All three sections must be marked ✓ for the unit to be fully complete.',
+              label: tr('unit_complete'),
+              desc: tr('unit_complete_desc'),
             ),
           ],
         ),
@@ -890,7 +892,7 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
     if (locked) {
       return ElevatedButton(
         onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Complete Learn first')),
+          SnackBar(content: Text(tr('complete_learn_first'))),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: context.surface2,
@@ -979,9 +981,11 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('🃏 Continue Flashcards?', textAlign: TextAlign.center),
+        title: Text(tr('continue_flashcards'), textAlign: TextAlign.center),
         content: Text(
-          'You have $remaining / $total cards remaining.\nContinue where you left off, or start over?',
+          tr('continue_flashcards_body')
+              .replaceFirst('{remaining}', '$remaining')
+              .replaceFirst('{total}', '$total'),
           textAlign: TextAlign.center,
           style: const TextStyle(fontSize: 14, color: Colors.grey),
         ),
@@ -1016,7 +1020,7 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: Text('Continue ($remaining left)'),
+            child: Text(tr('continue_remaining').replaceFirst('{remaining}', '$remaining')),
           ),
         ],
       ),
@@ -1181,12 +1185,12 @@ class _MasteryHeatmapSectionState extends State<_MasteryHeatmapSection> {
   }
 
   String _label(double score) {
-    if (score == 0) return 'Not studied';
-    if (score < 0.2) return 'Needs work';
-    if (score < 0.4) return 'Struggling';
-    if (score < 0.6) return 'Learning';
-    if (score < 0.8) return 'Good';
-    return 'Mastered';
+    if (score == 0) return tr('mastery_not_studied');
+    if (score < 0.2) return tr('mastery_needs_work');
+    if (score < 0.4) return tr('mastery_struggling');
+    if (score < 0.6) return tr('mastery_learning');
+    if (score < 0.8) return tr('mastery_good');
+    return tr('mastery_mastered');
   }
 
   @override
@@ -1220,10 +1224,13 @@ class _MasteryHeatmapSectionState extends State<_MasteryHeatmapSection> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('🗺 Word Mastery Heatmap',
+                    Text(tr('heatmap_title'),
                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: context.appText)),
                     const SizedBox(height: 2),
-                    Text('$studiedWords/$totalWords studied · ${(avgScore * 100).round()}% avg mastery',
+                    Text(tr('heatmap_subtitle')
+                        .replaceFirst('{studied}', '$studiedWords')
+                        .replaceFirst('{total}', '$totalWords')
+                        .replaceFirst('{pct}', '${(avgScore * 100).round()}'),
                       style: TextStyle(fontSize: 11, color: context.textMuted)),
                   ],
                 ),
@@ -1231,7 +1238,7 @@ class _MasteryHeatmapSectionState extends State<_MasteryHeatmapSection> {
               if (drillDay != null)
                 GestureDetector(
                   onTap: () => setState(() => _selectedUnit = null),
-                  child: Text('← All units',
+                  child: Text(tr('all_units'),
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: context.primary)),
                 ),
             ],
@@ -1240,7 +1247,9 @@ class _MasteryHeatmapSectionState extends State<_MasteryHeatmapSection> {
 
           if (drillDay != null) ...[
             // ── Per-word drill-down ──
-            Text('Unit ${drillDay.dayNumber} · ${drillDay.topic}',
+            Text(tr('heatmap_unit_topic')
+                .replaceFirst('{n}', '${drillDay.dayNumber}')
+                .replaceFirst('{topic}', drillDay.topic),
               style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: context.textMuted)),
             const SizedBox(height: 10),
             ...drillDay.words.map((w) {
@@ -1318,11 +1327,11 @@ class _MasteryHeatmapSectionState extends State<_MasteryHeatmapSection> {
               spacing: 12,
               runSpacing: 6,
               children: [
-                (Colors.grey.shade300, 'Not studied'),
-                (const Color(0xFFef4444), 'Needs work'),
-                (const Color(0xFFeab308), 'Learning'),
-                (const Color(0xFF84cc16), 'Good'),
-                (const Color(0xFF22c55e), 'Mastered'),
+                (Colors.grey.shade300, tr('mastery_not_studied')),
+                (const Color(0xFFef4444), tr('mastery_needs_work')),
+                (const Color(0xFFeab308), tr('mastery_learning')),
+                (const Color(0xFF84cc16), tr('mastery_good')),
+                (const Color(0xFF22c55e), tr('mastery_mastered')),
               ].map((e) => Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1333,7 +1342,7 @@ class _MasteryHeatmapSectionState extends State<_MasteryHeatmapSection> {
               )).toList(),
             ),
             const SizedBox(height: 6),
-            Text('Tap a unit to see word-by-word breakdown',
+            Text(tr('heatmap_hint'),
               style: TextStyle(fontSize: 9, color: context.textMuted)),
           ],
         ],

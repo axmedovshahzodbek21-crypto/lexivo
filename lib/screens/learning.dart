@@ -519,7 +519,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
             // having earned anything yet.
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Could not save progress: $e')),
+                SnackBar(content: Text('${tr('could_not_save_progress')}: $e')),
               );
             }
           }
@@ -807,7 +807,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: context.successColor, width: 1.5),
                 ),
-                child: Text('🏆 Unit Complete!',
+                child: Text(tr('unit_complete_banner'),
                   textAlign: TextAlign.center,
                   style: TextStyle(fontWeight: FontWeight.bold, color: context.successColor)),
               ),
@@ -1160,12 +1160,12 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                                         color: Colors.white.withValues(alpha: 0.2),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
-                                      child: const Row(
+                                      child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Icon(Icons.visibility_outlined, color: Colors.white, size: 16),
-                                          SizedBox(width: 8),
-                                          Text('Tap to reveal', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                                          const Icon(Icons.visibility_outlined, color: Colors.white, size: 16),
+                                          const SizedBox(width: 8),
+                                          Text(tr('tap_to_reveal_short'), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
                                         ],
                                       ),
                                     ),
@@ -1237,7 +1237,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                               child: OutlinedButton.icon(
                                 onPressed: () => _showMoreExamples(context),
                                 icon: const Icon(Icons.expand_more),
-                                label: const Text('+ More examples'),
+                                label: Text(tr('more_examples')),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: context.primary,
                                   side: BorderSide(color: context.primary),
@@ -1383,7 +1383,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  isSpot ? 'What does this word mean?' : 'What is the translation?',
+                  isSpot ? tr('whats_the_meaning') : tr('choose_answer'),
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: context.textMuted),
                 ),
                 const Spacer(),
@@ -1496,7 +1496,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                     children: [
                       Icon(Icons.visibility_outlined, size: 14, color: context.primary),
                       const SizedBox(width: 6),
-                      Text('Show translation', style: TextStyle(color: context.primary, fontSize: 13, fontWeight: FontWeight.w500)),
+                      Text(tr('show_translation'), style: TextStyle(color: context.primary, fontSize: 13, fontWeight: FontWeight.w500)),
                     ],
                   ),
                 ),
@@ -1620,7 +1620,7 @@ class _MoreExamplesSheetState extends State<_MoreExamplesSheet> {
                                   children: [
                                     Icon(Icons.visibility_outlined, size: 13, color: context.primary),
                                     const SizedBox(width: 5),
-                                    Text('Show translation', style: TextStyle(color: context.primary, fontSize: 12, fontWeight: FontWeight.w500)),
+                                    Text(tr('show_translation'), style: TextStyle(color: context.primary, fontSize: 12, fontWeight: FontWeight.w500)),
                                   ],
                                 ),
                               ),

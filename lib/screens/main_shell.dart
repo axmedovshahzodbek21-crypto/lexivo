@@ -118,9 +118,9 @@ class _MainShellState extends State<MainShell> {
             if (!mounted) return;
             final row = Map<String, dynamic>.from(payload.newRecord);
             final classId = row['class_id'] as String? ?? '';
-            final className = _classNames[classId] ?? 'Class';
+            final className = _classNames[classId] ?? tr('class_word');
             setState(() => _hwToast = (
-              title: row['title'] as String? ?? 'New homework',
+              title: row['title'] as String? ?? tr('new_homework'),
               dueDate: row['due_date'] as String?,
               className: className,
             ));
@@ -148,19 +148,19 @@ class _MainShellState extends State<MainShell> {
     String dueLabel;
     bool urgent;
     if (due == null) {
-      dueLabel = 'No deadline set';
+      dueLabel = tr('no_deadline_set');
       urgent = false;
     } else if (due.compareTo(today) < 0) {
-      dueLabel = 'Overdue · $due';
+      dueLabel = tr('overdue_on').replaceFirst('{date}', due);
       urgent = true;
     } else if (due == today) {
-      dueLabel = 'Due today';
+      dueLabel = tr('due_today');
       urgent = true;
     } else if (due == tomorrow) {
-      dueLabel = 'Due tomorrow';
+      dueLabel = tr('due_tomorrow');
       urgent = false;
     } else {
-      dueLabel = 'Due $due';
+      dueLabel = tr('due_on').replaceFirst('{date}', due);
       urgent = false;
     }
 
@@ -185,7 +185,7 @@ class _MainShellState extends State<MainShell> {
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(notif.className, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: context.primary, letterSpacing: 0.4)),
             const SizedBox(height: 1),
-            Text('New homework assigned', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+            Text(tr('new_homework_assigned'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
             const SizedBox(height: 1),
             Text(notif.title, style: TextStyle(fontSize: 11, color: context.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 2),

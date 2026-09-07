@@ -551,7 +551,7 @@ class _HomeScreenState extends State<HomeScreen>
                           children: [
                             const Text('📚', style: TextStyle(fontSize: 40)),
                             const SizedBox(height: 12),
-                            Text('No words learned yet today', style: TextStyle(fontSize: 15, color: context.textMuted)),
+                            Text(tr('no_words_today'), style: TextStyle(fontSize: 15, color: context.textMuted)),
                           ],
                         ),
                       )
@@ -726,11 +726,11 @@ class _HomeScreenState extends State<HomeScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('DEBATE ARENA', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1.2)),
+                  Text(tr('debate_arena'), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1.2)),
                   const SizedBox(height: 6),
-                  const Text('Battle-Ready', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Colors.white)),
+                  Text(tr('more_battle_ready'), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Colors.white)),
                   const SizedBox(height: 4),
-                  Text('101 debate topics — master both sides.', style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.85), height: 1.4)),
+                  Text(tr('battle_ready_tagline'), style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.85), height: 1.4)),
                   const SizedBox(height: 14),
                   Container(
                     width: double.infinity,
@@ -741,7 +741,7 @@ class _HomeScreenState extends State<HomeScreen>
                       border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
                     ),
                     alignment: Alignment.center,
-                    child: const Text('Start Debating ⚔️', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 15)),
+                    child: Text(tr('start_debating'), style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 15)),
                   ),
                 ],
               ),
@@ -1930,10 +1930,10 @@ class _HomeScreenState extends State<HomeScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('XP History', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white)),
+                              Text(tr('xp_history'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white)),
                               const SizedBox(height: 3),
                               Text(
-                                '${StorageService.displayXP(_xp)} XP earned',
+                                tr('xp_earned_amount').replaceFirst('{n}', StorageService.displayXP(_xp).toString()),
                                 style: const TextStyle(fontSize: 13, color: Colors.white70, fontWeight: FontWeight.w600),
                               ),
                             ],
@@ -2040,7 +2040,7 @@ class _HomeScreenState extends State<HomeScreen>
                         color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: const Text('Teacher', style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w700)),
+                      child: Text(tr('teacher'), style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w700)),
                     ),
                     const SizedBox(height: 6),
                     Text(
@@ -2273,7 +2273,7 @@ class _HomeScreenState extends State<HomeScreen>
                       Navigator.push(context,
                           MaterialPageRoute(builder: (context) => MoreScreen(userProfile: widget.userProfile)));
                     }),
-                    _buildDrawerTile(context, icon: '🚀', label: 'Other Projects',
+                    _buildDrawerTile(context, icon: '🚀', label: tr('other_projects'),
                         iconBg: const Color(0xFF10b981), onTap: () {
                       Navigator.pop(context);
                       launchUrl(Uri.parse('https://lexivo-projects.vercel.app'),
@@ -2346,7 +2346,7 @@ class _HomeScreenState extends State<HomeScreen>
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       child: Divider(color: context.border),
                     ),
-                    _buildDrawerTile(context, icon: '⚙️', label: 'Settings',
+                    _buildDrawerTile(context, icon: '⚙️', label: tr('settings'),
                         iconBg: const Color(0xFF6b7280), onTap: () {
                       Navigator.pop(context);
                       Navigator.push(context,
@@ -2513,7 +2513,7 @@ class _HomeScreenState extends State<HomeScreen>
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   ),
-                  child: const Text('Start', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text(tr('start'), style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -2577,7 +2577,7 @@ class _HomeScreenState extends State<HomeScreen>
                     elevation: 0,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text('Learn anyway', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text(tr('learn_anyway'), style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -2647,7 +2647,7 @@ class _HomeScreenState extends State<HomeScreen>
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('Free Time Activities ✨', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: Text(tr('free_time_activities'), style: const TextStyle(fontWeight: FontWeight.bold)),
               ),
               const SizedBox(height: 8),
               TextButton(
@@ -2892,7 +2892,7 @@ class _StarredWordsScreenState extends State<StarredWordsScreen> {
                       controller: _searchCtrl,
                       onChanged: (v) => setState(() => _search = v),
                       decoration: InputDecoration(
-                        hintText: 'Search words...',
+                        hintText: tr('search_words'),
                         hintStyle: TextStyle(color: context.textMuted),
                         prefixIcon: Icon(Icons.search, color: context.textMuted, size: 20),
                         suffixIcon: _search.isNotEmpty
@@ -3003,7 +3003,7 @@ class _StarredWordsScreenState extends State<StarredWordsScreen> {
                                         child: ElevatedButton.icon(
                                           onPressed: () => _startLearn(unitIndex, unit),
                                           icon: const Icon(Icons.school, size: 16),
-                                          label: const Text('Learn'),
+                                          label: Text(tr('learn')),
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: context.primary,
                                             foregroundColor: Colors.white,
@@ -3018,7 +3018,7 @@ class _StarredWordsScreenState extends State<StarredWordsScreen> {
                                         child: OutlinedButton.icon(
                                           onPressed: () => _startFlashcard(unitIndex, unit),
                                           icon: const Icon(Icons.style, size: 16),
-                                          label: const Text('Flashcard'),
+                                          label: Text(tr('flashcards')),
                                           style: OutlinedButton.styleFrom(
                                             foregroundColor: context.primary,
                                             side: BorderSide(color: context.primary),
@@ -3106,7 +3106,7 @@ class _WordCard extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.star, color: Colors.amber, size: 20),
                   onPressed: onUnstar,
-                  tooltip: 'Remove from starred',
+                  tooltip: tr('unstar'),
                 ),
               ],
             ),

@@ -452,12 +452,12 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
                   color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.school_outlined, color: Colors.white, size: 13),
-                    SizedBox(width: 4),
-                    Text('Unit', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                    const Icon(Icons.school_outlined, color: Colors.white, size: 13),
+                    const SizedBox(width: 4),
+                    Text(tr('unit'), style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
                   ],
                 ),
               ),
@@ -511,7 +511,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
               child: TextButton.icon(
                 onPressed: _openInUnit,
                 icon: const Icon(Icons.school_outlined, size: 14),
-                label: const Text('Open in unit', style: TextStyle(fontSize: 12)),
+                label: Text(tr('open_in_unit'), style: const TextStyle(fontSize: 12)),
                 style: TextButton.styleFrom(
                   foregroundColor: context.primary,
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -683,9 +683,9 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
                     color: Colors.green.withValues(alpha: (_cardDx / 200).clamp(0.0, 0.75)),
                     borderRadius: BorderRadius.circular(24),
                   ),
-                  child: const Center(
-                    child: Text('✓  KNEW',
-                        style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
+                  child: Center(
+                    child: Text(tr('srs_knew_btn'),
+                        style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ),
@@ -696,9 +696,9 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
                     color: Colors.red.withValues(alpha: (-_cardDx / 200).clamp(0.0, 0.75)),
                     borderRadius: BorderRadius.circular(24),
                   ),
-                  child: const Center(
-                    child: Text('✕  NOT YET',
-                        style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
+                  child: Center(
+                    child: Text(tr('srs_not_yet_btn'),
+                        style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ),
@@ -803,9 +803,9 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
                   color: Colors.green.withValues(alpha: (_cardDx / 200).clamp(0.0, 0.75)),
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: const Center(
-                  child: Text('✓  KNEW',
-                      style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
+                child: Center(
+                  child: Text(tr('srs_knew_btn'),
+                      style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
                 ),
               ),
             ),
@@ -816,9 +816,9 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
                   color: Colors.red.withValues(alpha: (-_cardDx / 200).clamp(0.0, 0.75)),
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: const Center(
-                  child: Text('✕  NOT YET',
-                      style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
+                child: Center(
+                  child: Text(tr('srs_not_yet_btn'),
+                      style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
                 ),
               ),
             ),
@@ -887,7 +887,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
               color: _shuffled ? context.primary : context.textMuted,
               size: 20,
             ),
-            tooltip: _shuffled ? 'Shuffled' : 'In order',
+            tooltip: _shuffled ? tr('shuffled') : tr('in_order'),
             onPressed: _toggleShuffle,
           ),
           IconButton(
@@ -979,7 +979,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'All words scheduled for their next review. Keep studying daily to master them all!',
+                        tr('srs_all_scheduled'),
                         style: TextStyle(color: Colors.blue.shade700, fontSize: 13),
                       ),
                     ),

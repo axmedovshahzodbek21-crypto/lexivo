@@ -22,6 +22,9 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final _controller = TextEditingController();
   List<_SearchResult> _results = [];
+  // Random sample shown on the empty search screen (mirrors the web
+  // "Discover" grid). Reshuffled by the Shuffle button.
+  List<_SearchResult> _discover = [];
 
   final List<Map<String, dynamic>> _collections = [
     {
@@ -46,6 +49,85 @@ class _SearchScreenState extends State<SearchScreen> {
     super.initState();
     appLangNotifier.addListener(_onLangChange);
     _controller.addListener(_search);
+    _shuffleDiscover();
+  }
+
+  List<_SearchResult> _allWords() {
+    final all = <_SearchResult>[];
+    for (final c in _collections) {
+      final collection = c['collection'] as WordCollection;
+      final color = c['color'] as Color;
+      final icon = c['icon'] as String;
+      for (var dayIndex = 0; dayIndex < collection.days.length; dayIndex++) {
+        final day = collection.days[dayIndex];
+        for (final word in day.words) {
+          all.add(_SearchResult(
+            word: word,
+            wordDay: day,
+            collectionName: collection.name,
+            color: color,
+            icon: icon,
+            collection: collection,
+            dayIndex: dayIndex,
+          ));
+        }
+      }
+    }
+    return all;
+  }
+
+  void _shuffleDiscover() {
+    final all = _allWords()..shuffle();
+    setState(() => _discover = all.take(18).toList());
+  }
+
+  Widget _discoverCard(BuildContext context, _SearchResult r) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => WordDetailScreen(
+            word: r.word,
+            collectionName: r.collectionName,
+            color: r.color,
+            icon: r.icon,
+            wordDay: r.wordDay,
+            userProfile: widget.userProfile,
+            collection: r.collection,
+            dayIndex: r.dayIndex,
+          ),
+        ),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [r.color, Color.lerp(r.color, Colors.black, 0.28)!],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              r.word.word,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white),
+            ),
+            Text(
+              r.word.translation,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12, color: Colors.white70),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -164,11 +246,49 @@ class _SearchScreenState extends State<SearchScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Type a word, translation, or definition',
+                    tr('search_type_hint'),
                     style: TextStyle(fontSize: 14, color: context.textMuted),
                   ),
-                  const SizedBox(height: 48),
-                  Center(child: Text('🔍', style: TextStyle(fontSize: 80, color: const Color(0xFF8B5CF6).withValues(alpha: 0.3)))),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          tr('search_discover_from'),
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: context.textMuted),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: _shuffleDiscover,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF8B5CF6),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(tr('search_shuffle'),
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white)),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.refresh_rounded, size: 15, color: Colors.white),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: 1.55,
+                    children: [for (final r in _discover) _discoverCard(context, r)],
+                  ),
                 ],
               ),
             )

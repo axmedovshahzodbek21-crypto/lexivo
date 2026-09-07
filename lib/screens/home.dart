@@ -1948,7 +1948,11 @@ class _HomeScreenState extends State<HomeScreen>
               ],
 
               if (sid == 'battle_ready' && battleReadyVisibleNotifier.value) ...[
-                _battleReadyBanner(context),
+                AnimatedBuilder(
+                  animation: _heartbeat,
+                  builder: (_, child) => Transform.scale(scale: _heartbeat.value, child: child),
+                  child: _battleReadyBanner(context),
+                ),
                 const SizedBox(height: 14),
               ],
 

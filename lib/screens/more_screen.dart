@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
-import '../main.dart' show battleReadyVisibleNotifier;
+import '../main.dart' show battleReadyVisibleNotifier, homeLayoutNotifier;
 import 'home.dart' show StarredWordsScreen;
 import 'hard_words_screen.dart';
 import 'custom_lists_screen.dart';
@@ -114,6 +115,81 @@ class MoreScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
               ],
+              _homeLayoutCard(context),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _homeLayoutCard(BuildContext context) {
+    return ValueListenableBuilder<String>(
+      valueListenable: homeLayoutNotifier,
+      builder: (context, mode, _) {
+        Widget seg(String value, String label) {
+          final active = mode == value;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () async {
+                homeLayoutNotifier.value = value;
+                final p = await SharedPreferences.getInstance();
+                await p.setString('home_layout', value);
+              },
+              child: Container(
+                margin: const EdgeInsets.all(3),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: active ? context.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: active ? Colors.white : context.textMuted,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: context.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: context.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                const Text('🏠', style: TextStyle(fontSize: 16)),
+                const SizedBox(width: 8),
+                Text(tr('more_home_layout'),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: context.appText)),
+              ]),
+              const SizedBox(height: 10),
+              Container(
+                decoration: BoxDecoration(
+                  color: context.bg,
+                  borderRadius: BorderRadius.circular(11),
+                  border: Border.all(color: context.border),
+                ),
+                child: Row(children: [
+                  seg('full', tr('more_layout_learner')),
+                  seg('class', tr('more_layout_classes')),
+                ]),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                mode == 'class' ? tr('more_layout_hint_classes') : tr('more_layout_hint_learner'),
+                style: TextStyle(fontSize: 11, color: context.textMuted),
+              ),
             ],
           ),
         );

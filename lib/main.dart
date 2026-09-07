@@ -32,6 +32,10 @@ final ValueNotifier<bool> reduceMotionNotifier = ValueNotifier(false);
 // only takes up space (the Home banner, the desktop/drawer quick-link tiles,
 // and the bottom-nav "More" sheet entry) once a user opts in from Settings.
 final ValueNotifier<bool> battleReadyVisibleNotifier = ValueNotifier(false);
+// Home layout: 'full' (default) shows the personal-study home; 'class' shows
+// a class-first home (classes + homework only) for users who only use the
+// app for a class. Toggled from the "More" screen. Pref: home_layout.
+final ValueNotifier<String> homeLayoutNotifier = ValueNotifier('full');
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 /// PageTransitionsBuilder that renders the incoming route with no animation —
@@ -106,6 +110,7 @@ void main() async {
     final reduceMotion = prefs.getBool('reduce_motion') ?? false;
     reduceMotionNotifier.value = reduceMotion;
     battleReadyVisibleNotifier.value = prefs.getBool('show_battle_ready') ?? false;
+    homeLayoutNotifier.value = prefs.getString('home_layout') ?? 'full';
     final pulseEnabled = prefs.getBool('pulse_enabled') ?? true;
     final pulseSpeed = prefs.getString('pulse_speed') ?? 'normal';
     pulseNotifier.value = (pulseEnabled && !reduceMotion) ? pulseSpeed : 'off';

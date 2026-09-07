@@ -95,6 +95,14 @@ class _HomeScreenState extends State<HomeScreen>
   // Class cards
   List<HomeClassCard> _homeClasses = [];
 
+  // "Class mode" (set from the More screen) shows a class-first home — just
+  // the classes section — for users who only use the app for a class. Falls
+  // back to the normal layout until at least one class has loaded.
+  List<String> get _effectiveSectionOrder =>
+      (homeLayoutNotifier.value == 'class' && _homeClasses.isNotEmpty)
+          ? const ['classes']
+          : _sectionOrder;
+
   // Throttles didChangeAppLifecycleState's resume-triggered pullAll() —
   // without this, repeatedly backgrounding/foregrounding the app (checking
   // a notification, alt-tabbing on desktop) fired a full cloud sync every
@@ -132,6 +140,7 @@ class _HomeScreenState extends State<HomeScreen>
     SyncService.pullAll().then((_) { if (mounted) { _loadStats(); _loadClasses(); } });
     appLangNotifier.addListener(_onLangChange);
     battleReadyVisibleNotifier.addListener(_onBattleReadyVisibilityChange);
+    homeLayoutNotifier.addListener(_onBattleReadyVisibilityChange);
   }
 
   void _onBattleReadyVisibilityChange() { if (mounted) setState(() {}); }
@@ -151,6 +160,7 @@ class _HomeScreenState extends State<HomeScreen>
     WidgetsBinding.instance.removeObserver(this);
     appLangNotifier.removeListener(_onLangChange);
     battleReadyVisibleNotifier.removeListener(_onBattleReadyVisibilityChange);
+    homeLayoutNotifier.removeListener(_onBattleReadyVisibilityChange);
     pulseNotifier.removeListener(_onPulseChange);
     _heartbeatController.dispose();
     _controller.dispose();
@@ -1546,7 +1556,7 @@ class _HomeScreenState extends State<HomeScreen>
               ),
               const SizedBox(height: 16),
 
-              for (final sid in _sectionOrder) ...[
+              for (final sid in _effectiveSectionOrder) ...[
               if (sid == 'goal' && !_hideGoalLevel) ...[
               // Daily Goal + Level — side by side gradient cards
               IntrinsicHeight(child: Row(

@@ -19,14 +19,8 @@ import 'search_screen.dart';
 import 'settings_screen.dart';
 import 'free_time_screen.dart';
 import 'pomodoro_setup_screen.dart';
-import 'custom_lists_screen.dart';
-import 'hard_words_screen.dart';
-import 'grammar_tips_screen.dart';
-import 'structures_hub_screen.dart';
 import 'battle_ready_hub_screen.dart';
-import 'reading_screen.dart';
-import 'real_english_screen.dart';
-import 'teacher_library_screen.dart';
+import 'more_screen.dart';
 import '../data/word_data.dart';
 import '../data/storage_service.dart';
 import '../services/sync_service.dart';
@@ -867,74 +861,15 @@ class _HomeScreenState extends State<HomeScreen>
                     endIndent: 20,
                   ),
                   const SizedBox(height: 8),
+                  // Word lists, reading, speaking and focus tools were
+                  // consolidated into MoreScreen (mirrors the web "More" hub).
                   _buildSidebarTile(
-                    '⭐',
-                    tr('starred_words'),
+                    '✨',
+                    tr('nav_more'),
                     () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const StarredWordsScreen(),
-                      ),
-                    ),
-                  ),
-                  _buildSidebarTile(
-                    '😓',
-                    tr('hard_words'),
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const HardWordsScreen(),
-                      ),
-                    ),
-                  ),
-                  _buildSidebarTile(
-                    '📚',
-                    tr('grammar_tips'),
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const GrammarTipsScreen(),
-                      ),
-                    ),
-                  ),
-                  _buildSidebarTile(
-                    '🧩',
-                    tr('ielts_structures'),
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const StructuresHubScreen(),
-                      ),
-                    ),
-                  ),
-                  if (battleReadyVisibleNotifier.value)
-                    _buildSidebarTile(
-                      '🛡️',
-                      'Battle-Ready',
-                      () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const BattleReadyHubScreen(),
-                        ),
-                      ),
-                    ),
-                  _buildSidebarTile(
-                    '📋',
-                    tr('my_lists'),
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const CustomListsScreen(),
-                      ),
-                    ),
-                  ),
-                  _buildSidebarTile(
-                    '📖',
-                    tr('word_library'),
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const WordsLibraryScreen(),
+                        builder: (context) => MoreScreen(userProfile: widget.userProfile),
                       ),
                     ),
                   ),
@@ -2315,54 +2250,14 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                     const SizedBox(height: 12),
                     // ── Nav tiles ──
-                    _buildDrawerTile(context, icon: '⭐', label: 'Starred Words',
-                        iconBg: const Color(0xFFf59e0b), onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(context,
-                          MaterialPageRoute(builder: (context) => const StarredWordsScreen()));
-                    }),
-                    _buildDrawerTile(context, icon: '😓', label: tr('hard_words'),
-                        iconBg: const Color(0xFFef4444), onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(context,
-                          MaterialPageRoute(builder: (context) => const HardWordsScreen()));
-                    }),
-                    _buildDrawerTile(context, icon: '📚', label: tr('grammar_tips'),
-                        iconBg: const Color(0xFF10b981), onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(context,
-                          MaterialPageRoute(builder: (context) => const GrammarTipsScreen()));
-                    }),
-                    _buildDrawerTile(context, icon: '🧩', label: tr('ielts_structures'),
-                        iconBg: const Color(0xFF6c63ff), onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(context,
-                          MaterialPageRoute(builder: (context) => const StructuresHubScreen()));
-                    }),
-                    if (battleReadyVisibleNotifier.value)
-                      _buildDrawerTile(context, icon: '🛡️', label: 'Battle-Ready',
-                          iconBg: const Color(0xFFef4444), onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(context,
-                            MaterialPageRoute(builder: (context) => const BattleReadyHubScreen()));
-                      }),
-                    _buildDrawerTile(context, icon: '📖', label: 'Library',
-                        iconBg: const Color(0xFF0ea5e9), onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(context,
-                          MaterialPageRoute(builder: (context) => const TeacherLibraryScreen()));
-                    }),
-                    _buildDrawerTile(context, icon: '💡', label: 'Ideas',
+                    // Reading / speaking / word-list entries were consolidated
+                    // into MoreScreen (mirrors the web "More" hub) so the
+                    // drawer stays short.
+                    _buildDrawerTile(context, icon: '✨', label: tr('nav_more'),
                         iconBg: const Color(0xFFa855f7), onTap: () {
                       Navigator.pop(context);
                       Navigator.push(context,
-                          MaterialPageRoute(builder: (context) => const ReadingScreen()));
-                    }),
-                    _buildDrawerTile(context, icon: '🎬', label: 'Real English',
-                        iconBg: const Color(0xFFef4444), onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(context,
-                          MaterialPageRoute(builder: (context) => RealEnglishScreen(userProfile: widget.userProfile)));
+                          MaterialPageRoute(builder: (context) => MoreScreen(userProfile: widget.userProfile)));
                     }),
                     _buildDrawerTile(context, icon: '🚀', label: 'Other Projects',
                         iconBg: const Color(0xFF10b981), onTap: () {

@@ -11,11 +11,13 @@ import 'classes_screen.dart';
 import 'imported_words_screen.dart';
 import 'reading_screen.dart';
 import 'real_english_screen.dart';
+import 'battle_ready_hub_screen.dart';
 import 'pomodoro_service.dart';
 import 'break_screen.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import '../services/supabase_service.dart';
+import '../main.dart';
 
 class MainShell extends StatefulWidget {
   final String wordSource;
@@ -79,6 +81,7 @@ class _MainShellState extends State<MainShell> {
     PomodoroService().initialize();
     PomodoroService().addListener(_onPomodoroChanged);
     appLangNotifier.addListener(_onLangChange);
+    battleReadyVisibleNotifier.addListener(_onBattleReadyVisibilityChange);
     _subscribeHomework();
   }
 
@@ -87,7 +90,16 @@ class _MainShellState extends State<MainShell> {
     _hwChannel?.unsubscribe();
     PomodoroService().removeListener(_onPomodoroChanged);
     appLangNotifier.removeListener(_onLangChange);
+    battleReadyVisibleNotifier.removeListener(_onBattleReadyVisibilityChange);
     super.dispose();
+  }
+
+  void _onBattleReadyVisibilityChange() {
+    // The Battle-Ready tab lives at a fixed index appended after the core 9
+    // tabs (see _tabs below); toggling it in Settings can shrink the list
+    // out from under whatever index the More sheet/current tab was on.
+    if (!mounted) return;
+    setState(() { if (_currentIndex >= _tabs.length) _currentIndex = 0; });
   }
 
   Future<void> _subscribeHomework() async {
@@ -367,6 +379,16 @@ class _MainShellState extends State<MainShell> {
       showPomodoroPill: false, badge: null,
       build: () => RealEnglishScreen(userProfile: widget.userProfile),
     ),
+    // Off by default (Settings → "Show Battle-Ready") — only appended to the
+    // list, and therefore only reachable from the "More" sheet, once the
+    // user opts in. See battleReadyVisibleNotifier in main.dart.
+    if (battleReadyVisibleNotifier.value)
+      _TabDef(
+        icon: Icons.shield_rounded, label: 'Battle-Ready',
+        accent: (color: const Color(0xFFEF4444), light: const Color(0xFFF87171), dark: const Color(0xFFB91C1C)),
+        showPomodoroPill: false, badge: null,
+        build: () => const BattleReadyHubScreen(),
+      ),
   ];
 
   @override

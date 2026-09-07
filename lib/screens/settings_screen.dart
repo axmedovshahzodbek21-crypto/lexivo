@@ -47,6 +47,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _pulseEnabled = true;
   String _pulseSpeed = 'normal'; // 'slow' | 'normal' | 'fast'
   bool _reduceMotion = false;
+  bool _showBattleReady = false;
   bool _autoPlayOnReveal = true;
   bool _loading = true;
   bool _pushEnabled = false;
@@ -88,6 +89,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _pulseEnabled = prefs.getBool('pulse_enabled') ?? true;
       _pulseSpeed = prefs.getString('pulse_speed') ?? 'normal';
       _reduceMotion = prefs.getBool('reduce_motion') ?? false;
+      _showBattleReady = prefs.getBool('show_battle_ready') ?? false;
       _autoPlayOnReveal = prefs.getBool('auto_play_on_reveal') ?? true;
       _nameController.text = _userName;
       _loading = false;
@@ -438,6 +440,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     SyncService.pushSettings();
   }
 
+  Future<void> _setShowBattleReady(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('show_battle_ready', value);
+    if (mounted) setState(() => _showBattleReady = value);
+    battleReadyVisibleNotifier.value = value;
+  }
+
   Future<void> _setAutoPlayOnReveal(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('auto_play_on_reveal', value);
@@ -766,6 +775,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         value: _reduceMotion,
                         activeThumbColor: context.primary,
                         onChanged: _setReduceMotion,
+                      ),
+                      const Divider(height: 8),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text('Show Battle-Ready', style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
+                        subtitle: Text('Show the debate-practice entry point on Home and in More', style: TextStyle(fontSize: 12, color: context.textMuted)),
+                        value: _showBattleReady,
+                        activeThumbColor: context.primary,
+                        onChanged: _setShowBattleReady,
                       ),
                     ],
                   ),

@@ -27,6 +27,11 @@ final ValueNotifier<String> pulseNotifier = ValueNotifier(
 // slide transitions are dropped (pageTransitionsTheme below) and the card
 // pulse is forced off regardless of pulse_enabled.
 final ValueNotifier<bool> reduceMotionNotifier = ValueNotifier(false);
+// Battle-Ready (Debate Arena) used to have a full-width promo banner at the
+// top of Home; that was relocated behind this off-by-default switch so it
+// only takes up space (the Home banner, the desktop/drawer quick-link tiles,
+// and the bottom-nav "More" sheet entry) once a user opts in from Settings.
+final ValueNotifier<bool> battleReadyVisibleNotifier = ValueNotifier(false);
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 /// PageTransitionsBuilder that renders the incoming route with no animation —
@@ -100,6 +105,7 @@ void main() async {
     textScaleNotifier.value = prefs.getDouble('text_scale') ?? 1.0;
     final reduceMotion = prefs.getBool('reduce_motion') ?? false;
     reduceMotionNotifier.value = reduceMotion;
+    battleReadyVisibleNotifier.value = prefs.getBool('show_battle_ready') ?? false;
     final pulseEnabled = prefs.getBool('pulse_enabled') ?? true;
     final pulseSpeed = prefs.getString('pulse_speed') ?? 'normal';
     pulseNotifier.value = (pulseEnabled && !reduceMotion) ? pulseSpeed : 'off';

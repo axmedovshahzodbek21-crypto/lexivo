@@ -96,7 +96,7 @@ class _HomeScreenState extends State<HomeScreen>
   bool _hideSession = false;
   bool _hideStats = false;
   bool _hideXpHistory = false;
-  List<String> _sectionOrder = ['goal', 'wod', 'session', 'stats', 'xp_history', 'classes'];
+  List<String> _sectionOrder = ['goal', 'wod', 'session', 'stats', 'xp_history', 'battle_ready', 'classes'];
 
   // Class cards
   List<HomeClassCard> _homeClasses = [];
@@ -137,7 +137,10 @@ class _HomeScreenState extends State<HomeScreen>
     _lastResumeSync = DateTime.now();
     SyncService.pullAll().then((_) { if (mounted) { _loadStats(); _loadClasses(); } });
     appLangNotifier.addListener(_onLangChange);
+    battleReadyVisibleNotifier.addListener(_onBattleReadyVisibilityChange);
   }
+
+  void _onBattleReadyVisibilityChange() { if (mounted) setState(() {}); }
 
   void _applyPulse(String value) {
     _heartbeatController.stop();
@@ -153,6 +156,7 @@ class _HomeScreenState extends State<HomeScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     appLangNotifier.removeListener(_onLangChange);
+    battleReadyVisibleNotifier.removeListener(_onBattleReadyVisibilityChange);
     pulseNotifier.removeListener(_onPulseChange);
     _heartbeatController.dispose();
     _controller.dispose();
@@ -254,9 +258,10 @@ class _HomeScreenState extends State<HomeScreen>
       final orderStr = prefs.getString('home_section_order');
       var order = orderStr != null
           ? orderStr.split(',')
-          : ['goal', 'wod', 'session', 'stats', 'xp_history', 'classes'];
+          : ['goal', 'wod', 'session', 'stats', 'xp_history', 'battle_ready', 'classes'];
       if (!order.contains('classes')) order = [...order, 'classes'];
       if (!order.contains('xp_history')) order = [...order.where((id) => id != 'classes'), 'xp_history', 'classes'];
+      if (!order.contains('battle_ready')) order = [...order.where((id) => id != 'classes'), 'battle_ready', 'classes'];
       _sectionOrder = order;
     });
   }
@@ -307,13 +312,19 @@ class _HomeScreenState extends State<HomeScreen>
     await prefs.setString('home_section_order', _sectionOrder.join(','));
   }
 
+  Future<void> _saveBattleReadyVisible(bool visible) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('show_battle_ready', visible);
+  }
+
   void _showCustomizeSheet() {
     const sectionIcons = {
-      'goal': '🎯', 'wod': '✨', 'session': '▶️', 'stats': '📊', 'xp_history': '📅',
+      'goal': '🎯', 'wod': '✨', 'session': '▶️', 'stats': '📊', 'xp_history': '📅', 'battle_ready': '🛡️',
     };
     const sectionLabels = {
       'goal': 'Daily Goal & Level', 'wod': 'Word of the Day',
       'session': 'Start Learning', 'stats': 'Stats Row', 'xp_history': 'XP History',
+      'battle_ready': 'Battle-Ready',
     };
 
     // Only the 4 known toggleable sections — exclude 'classes' and any unknown IDs
@@ -332,6 +343,10 @@ class _HomeScreenState extends State<HomeScreen>
               case 'session': return _hideSession;
               case 'stats': return _hideStats;
               case 'xp_history': return _hideXpHistory;
+              // Battle-Ready has one shared visibility flag (also toggled from
+              // Settings and gating the desktop/drawer entry points), rather
+              // than its own home_hide_* pref, so both places stay in sync.
+              case 'battle_ready': return !battleReadyVisibleNotifier.value;
               default: return false;
             }
           }
@@ -344,10 +359,12 @@ class _HomeScreenState extends State<HomeScreen>
                 case 'session': _hideSession = hidden; break;
                 case 'stats': _hideStats = hidden; break;
                 case 'xp_history': _hideXpHistory = hidden; break;
+                case 'battle_ready': battleReadyVisibleNotifier.value = !hidden; break;
               }
             });
             setSheet(() {});
             _saveLayout();
+            if (key == 'battle_ready') _saveBattleReadyVisible(!hidden);
           }
 
           return Container(
@@ -431,15 +448,19 @@ class _HomeScreenState extends State<HomeScreen>
                     TextButton(
                       onPressed: () {
                         setState(() {
-                          _sectionOrder = ['goal', 'wod', 'session', 'stats', 'xp_history', 'classes'];
+                          _sectionOrder = ['goal', 'wod', 'session', 'stats', 'xp_history', 'battle_ready', 'classes'];
                           _hideGoalLevel = false;
                           _hideWordOfDay = false;
                           _hideSession   = false;
                           _hideStats     = false;
                           _hideXpHistory = false;
+                          // Battle-Ready alone stays hidden on reset — it's
+                          // off by default app-wide, not just in this sheet.
+                          battleReadyVisibleNotifier.value = false;
                         });
                         setSheet(() {});
                         _saveLayout();
+                        _saveBattleReadyVisible(false);
                       },
                       child: Text(
                         'Reset to default',
@@ -886,16 +907,17 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                     ),
                   ),
-                  _buildSidebarTile(
-                    '🛡️',
-                    'Battle-Ready',
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const BattleReadyHubScreen(),
+                  if (battleReadyVisibleNotifier.value)
+                    _buildSidebarTile(
+                      '🛡️',
+                      'Battle-Ready',
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const BattleReadyHubScreen(),
+                        ),
                       ),
                     ),
-                  ),
                   _buildSidebarTile(
                     '📋',
                     tr('my_lists'),
@@ -986,8 +1008,10 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                       const SizedBox(height: 32),
 
-                      _battleReadyBanner(context),
-                      const SizedBox(height: 24),
+                      if (battleReadyVisibleNotifier.value) ...[
+                        _battleReadyBanner(context),
+                        const SizedBox(height: 24),
+                      ],
 
                       // Review banner
                       if (_reviewsDue > 0 && !_bannerDismissed)
@@ -1454,9 +1478,6 @@ class _HomeScreenState extends State<HomeScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _battleReadyBanner(context),
-              const SizedBox(height: 20),
-
               if (_reviewsDue > 0 && !_bannerDismissed)
                 Container(
                   width: double.infinity,
@@ -1981,6 +2002,11 @@ class _HomeScreenState extends State<HomeScreen>
                 const SizedBox(height: 14),
               ],
 
+              if (sid == 'battle_ready' && battleReadyVisibleNotifier.value) ...[
+                _battleReadyBanner(context),
+                const SizedBox(height: 14),
+              ],
+
               if (sid == 'classes' && _homeClasses.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
@@ -2313,12 +2339,13 @@ class _HomeScreenState extends State<HomeScreen>
                       Navigator.push(context,
                           MaterialPageRoute(builder: (context) => const StructuresHubScreen()));
                     }),
-                    _buildDrawerTile(context, icon: '🛡️', label: 'Battle-Ready',
-                        iconBg: const Color(0xFFef4444), onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(context,
-                          MaterialPageRoute(builder: (context) => const BattleReadyHubScreen()));
-                    }),
+                    if (battleReadyVisibleNotifier.value)
+                      _buildDrawerTile(context, icon: '🛡️', label: 'Battle-Ready',
+                          iconBg: const Color(0xFFef4444), onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(context,
+                            MaterialPageRoute(builder: (context) => const BattleReadyHubScreen()));
+                      }),
                     _buildDrawerTile(context, icon: '📖', label: 'Library',
                         iconBg: const Color(0xFF0ea5e9), onTap: () {
                       Navigator.pop(context);

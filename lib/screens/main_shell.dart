@@ -5,19 +5,14 @@ import 'home.dart';
 import 'progress_screens.dart';
 import 'search_screen.dart';
 import '../data/storage_service.dart';
-import 'stats_screen.dart';
 import 'leaderboard_screen.dart';
 import 'classes_screen.dart';
-import 'imported_words_screen.dart';
-import 'reading_screen.dart';
-import 'real_english_screen.dart';
-import 'battle_ready_hub_screen.dart';
+import 'more_screen.dart';
 import 'pomodoro_service.dart';
 import 'break_screen.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import '../services/supabase_service.dart';
-import '../main.dart';
 
 class MainShell extends StatefulWidget {
   final String wordSource;
@@ -81,7 +76,6 @@ class _MainShellState extends State<MainShell> {
     PomodoroService().initialize();
     PomodoroService().addListener(_onPomodoroChanged);
     appLangNotifier.addListener(_onLangChange);
-    battleReadyVisibleNotifier.addListener(_onBattleReadyVisibilityChange);
     _subscribeHomework();
   }
 
@@ -90,16 +84,7 @@ class _MainShellState extends State<MainShell> {
     _hwChannel?.unsubscribe();
     PomodoroService().removeListener(_onPomodoroChanged);
     appLangNotifier.removeListener(_onLangChange);
-    battleReadyVisibleNotifier.removeListener(_onBattleReadyVisibilityChange);
     super.dispose();
-  }
-
-  void _onBattleReadyVisibilityChange() {
-    // The Battle-Ready tab lives at a fixed index appended after the core 9
-    // tabs (see _tabs below); toggling it in Settings can shrink the list
-    // out from under whatever index the More sheet/current tab was on.
-    if (!mounted) return;
-    setState(() { if (_currentIndex >= _tabs.length) _currentIndex = 0; });
   }
 
   Future<void> _subscribeHomework() async {
@@ -236,21 +221,22 @@ class _MainShellState extends State<MainShell> {
 
   // First 5 tabs (Home, Search, Review, Progress, Ranking) keep a permanent
   // bottom-bar slot; everything from this index onward lives behind "More".
+  // The bottom bar shows all _tabs (now 5) plus a fixed "More" button that
+  // pushes the grouped MoreScreen.
   static const int _corePinnedTabCount = 5;
 
   Widget _buildMoreNavItem(BuildContext context) {
-    final isSelected = _currentIndex >= _corePinnedTabCount;
-    final color = isSelected ? context.primary : context.textMuted;
+    final color = context.textMuted;
     return GestureDetector(
-      onTap: () => _showMoreSheet(context),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => MoreScreen(userProfile: widget.userProfile)),
+      ),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         margin: const EdgeInsets.symmetric(horizontal: 2),
         padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? context.primaryBg : null,
-          borderRadius: BorderRadius.circular(14),
-        ),
+        decoration: const BoxDecoration(),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -262,50 +248,9 @@ class _MainShellState extends State<MainShell> {
               softWrap: false,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 10, fontWeight: isSelected ? FontWeight.w800 : FontWeight.normal, color: color),
+              style: TextStyle(fontSize: 10, fontWeight: FontWeight.normal, color: color),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  void _showMoreSheet(BuildContext context) {
-    final tabs = _tabs;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: context.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(color: context.border, borderRadius: BorderRadius.circular(2))),
-              for (var i = _corePinnedTabCount; i < tabs.length; i++)
-                ListTile(
-                  leading: Container(
-                    width: 40, height: 40,
-                    decoration: BoxDecoration(
-                      color: tabs[i].accent.color.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(tabs[i].icon, color: tabs[i].accent.color, size: 20),
-                  ),
-                  title: Text(tabs[i].label, style: TextStyle(fontWeight: FontWeight.w700, color: context.appText)),
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    _selectTab(i);
-                  },
-                ),
-            ],
-          ),
         ),
       ),
     );
@@ -318,6 +263,9 @@ class _MainShellState extends State<MainShell> {
   // Pomodoro-pill visibility condition, the accent-color list, and the row
   // of bottom-nav item calls), which meant adding/reordering a tab required
   // editing all 4 in lockstep.
+  // Bottom-nav tabs — trimmed to the three priority areas (core study,
+  // Search, classes) plus Leaderboard. Progress, My Words, Ideas, Real
+  // English and everything else now live in the "More" screen.
   List<_TabDef> get _tabs => [
     _TabDef(
       icon: Icons.home_rounded, label: tr('nav_home'),
@@ -332,28 +280,16 @@ class _MainShellState extends State<MainShell> {
       ),
     ),
     _TabDef(
-      icon: Icons.search_rounded, label: tr('nav_search'),
-      accent: (color: const Color(0xFF8B5CF6), light: const Color(0xFFA78BFA), dark: const Color(0xFF6D28D9)),
-      showPomodoroPill: true, badge: null,
-      build: () => SearchScreen(userProfile: widget.userProfile),
-    ),
-    _TabDef(
       icon: Icons.refresh_rounded, label: tr('nav_review'),
       accent: (color: const Color(0xFF06B6D4), light: const Color(0xFF22D3EE), dark: const Color(0xFF0891B2)),
       showPomodoroPill: true, badge: _reviewsDue,
       build: () => ReviewsDueScreen(userProfile: widget.userProfile),
     ),
     _TabDef(
-      icon: Icons.bar_chart_rounded, label: tr('nav_progress'),
-      accent: (color: const Color(0xFF10B981), light: const Color(0xFF34D399), dark: const Color(0xFF059669)),
-      showPomodoroPill: false, badge: null,
-      build: () => StatsScreen(),
-    ),
-    _TabDef(
-      icon: Icons.emoji_events_rounded, label: tr('nav_leaderboard'),
-      accent: (color: const Color(0xFFF59E0B), light: const Color(0xFFFCD34D), dark: const Color(0xFFB45309)),
-      showPomodoroPill: false, badge: null,
-      build: () => const LeaderboardScreen(),
+      icon: Icons.search_rounded, label: tr('nav_search'),
+      accent: (color: const Color(0xFF8B5CF6), light: const Color(0xFFA78BFA), dark: const Color(0xFF6D28D9)),
+      showPomodoroPill: true, badge: null,
+      build: () => SearchScreen(userProfile: widget.userProfile),
     ),
     _TabDef(
       icon: Icons.school_rounded, label: tr('nav_classes'),
@@ -362,33 +298,11 @@ class _MainShellState extends State<MainShell> {
       build: () => const ClassesScreen(),
     ),
     _TabDef(
-      icon: Icons.folder_open_rounded, label: 'My Words',
-      accent: (color: const Color(0xFF84CC16), light: const Color(0xFFA3E635), dark: const Color(0xFF4D7C0F)),
+      icon: Icons.emoji_events_rounded, label: tr('nav_leaderboard'),
+      accent: (color: const Color(0xFFF59E0B), light: const Color(0xFFFCD34D), dark: const Color(0xFFB45309)),
       showPomodoroPill: false, badge: null,
-      build: () => const ImportedWordsScreen(),
+      build: () => const LeaderboardScreen(),
     ),
-    _TabDef(
-      icon: Icons.lightbulb_rounded, label: 'Ideas',
-      accent: (color: const Color(0xFFEAB308), light: const Color(0xFFFDE047), dark: const Color(0xFFA16207)),
-      showPomodoroPill: false, badge: null,
-      build: () => const ReadingScreen(),
-    ),
-    _TabDef(
-      icon: Icons.play_circle_outline_rounded, label: 'Real English',
-      accent: (color: const Color(0xFFEC4899), light: const Color(0xFFF472B6), dark: const Color(0xFFBE185D)),
-      showPomodoroPill: false, badge: null,
-      build: () => RealEnglishScreen(userProfile: widget.userProfile),
-    ),
-    // Off by default (Settings → "Show Battle-Ready") — only appended to the
-    // list, and therefore only reachable from the "More" sheet, once the
-    // user opts in. See battleReadyVisibleNotifier in main.dart.
-    if (battleReadyVisibleNotifier.value)
-      _TabDef(
-        icon: Icons.shield_rounded, label: 'Battle-Ready',
-        accent: (color: const Color(0xFFEF4444), light: const Color(0xFFF87171), dark: const Color(0xFFB91C1C)),
-        showPomodoroPill: false, badge: null,
-        build: () => const BattleReadyHubScreen(),
-      ),
   ];
 
   @override
@@ -465,7 +379,7 @@ class _MainShellState extends State<MainShell> {
                           ? _buildNavItemWithBadge(context, i, tabs[i].icon, tabs[i].label, tabs[i].badge!)
                           : _buildNavItem(context, i, tabs[i].icon, tabs[i].label),
                     ),
-                  if (tabs.length > _corePinnedTabCount) Expanded(child: _buildMoreNavItem(context)),
+                  Expanded(child: _buildMoreNavItem(context)),
                 ],
               ),
             ),

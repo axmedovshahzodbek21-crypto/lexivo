@@ -236,7 +236,7 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, 'continue'),
-            child: Text('Continue', style: TextStyle(color: context.primary)),
+            child: Text(tr('continue_label'), style: TextStyle(color: context.primary)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, 'discard'),

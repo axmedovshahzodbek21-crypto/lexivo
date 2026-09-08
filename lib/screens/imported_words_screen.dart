@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../app_theme.dart';
 import '../data/storage_service.dart';
@@ -108,17 +109,16 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: context.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Reset My Words progress?', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+        title: Text(tr('reset_my_words_q'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
         content: Text(
-          'This clears the Learn/Flashcards/Quiz/Match checkmarks and completion badges on every folder and unit, '
-          'so you can study them again from scratch. Your words and folders are not deleted.',
+          tr('reset_my_words_body'),
           style: TextStyle(color: context.textMuted),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel', style: TextStyle(color: context.textMuted))),
+            child: Text(tr('cancel'), style: TextStyle(color: context.textMuted))),
           TextButton(onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Reset', style: TextStyle(color: context.dangerColor))),
+            child: Text(tr('reset'), style: TextStyle(color: context.dangerColor))),
         ],
       ),
     );
@@ -129,7 +129,7 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to reset progress: $e')));
+            SnackBar(content: Text('${tr('failed_to_reset_progress')}: $e')));
         }
       }
     }
@@ -153,14 +153,14 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: context.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Delete folder?', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
-        content: Text('This will permanently delete "$folderName" and all its collections.',
+        title: Text(tr('delete_folder_q'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+        content: Text(tr('delete_folder_confirm').replaceFirst('{name}', folderName),
           style: TextStyle(color: context.textMuted)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel', style: TextStyle(color: context.textMuted))),
+            child: Text(tr('cancel'), style: TextStyle(color: context.textMuted))),
           TextButton(onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Delete', style: TextStyle(color: context.dangerColor))),
+            child: Text(tr('delete'), style: TextStyle(color: context.dangerColor))),
         ],
       ),
     );
@@ -172,7 +172,7 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to delete folder: $e')));
+            SnackBar(content: Text('${tr('failed_to_delete_folder')}: $e')));
         }
       }
     }
@@ -186,12 +186,12 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         automaticallyImplyLeading: false,
-        title: Text('My Words', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold, fontSize: 20)),
+        title: Text(tr('more_my_words'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold, fontSize: 20)),
         actions: [
           if (_folders.isNotEmpty)
             IconButton(
               icon: Icon(Icons.restart_alt, color: context.textMuted, size: 24),
-              tooltip: 'Reset My Words progress',
+              tooltip: tr('reset_my_words_tooltip'),
               onPressed: _resetProgress,
             ),
           IconButton(
@@ -230,7 +230,7 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
               autofocus: true,
               onSubmitted: (_) => _createFolder(),
               decoration: InputDecoration(
-                hintText: 'Folder name...',
+                hintText: tr('folder_name_hint'),
                 hintStyle: TextStyle(color: context.textMuted),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(color: context.border)),
@@ -250,12 +250,12 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
-            child: const Text('Create', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: Text(tr('create'), style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
           const SizedBox(width: 6),
           TextButton(
             onPressed: _cancelCreating,
-            child: Text('Cancel', style: TextStyle(color: context.textMuted)),
+            child: Text(tr('cancel'), style: TextStyle(color: context.textMuted)),
           ),
         ],
       ),
@@ -271,10 +271,10 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
           children: [
             const Text('📁', style: TextStyle(fontSize: 64)),
             const SizedBox(height: 16),
-            Text('No folders yet',
+            Text(tr('no_folders_yet'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
             const SizedBox(height: 8),
-            Text('Create a folder to organize your imported words.',
+            Text(tr('create_folder_organize'),
               textAlign: TextAlign.center,
               style: TextStyle(color: context.textMuted, height: 1.5, fontSize: 14)),
             const SizedBox(height: 24),
@@ -290,7 +290,7 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: const Text('Create Folder', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                child: Text(tr('create_folder'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
               ),
             ),
           ],
@@ -304,7 +304,7 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
     child: Opacity(
       opacity: 0.7,
       child: Column(children: [
-        Text('HOW IT WORKS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.5)),
+        Text(tr('how_it_works'), style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.5)),
         const SizedBox(height: 10),
         Wrap(
           alignment: WrapAlignment.center,
@@ -347,7 +347,7 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
       itemCount: _folders.length + 1,
       itemBuilder: (context, i) {
         if (i == _folders.length) {
-          return AddTile(label: 'New Folder', onTap: _startCreating);
+          return AddTile(label: tr('new_folder'), onTap: _startCreating);
         }
         final folder = _folders[i];
         final color = myWordsCardColors[i % myWordsCardColors.length];

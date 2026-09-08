@@ -55,7 +55,7 @@ class _CustomListsScreenState extends State<CustomListsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create list: $e')));
+          SnackBar(content: Text('${tr('failed_to_create_list')}: $e')));
       }
       return;
     }
@@ -80,7 +80,7 @@ class _CustomListsScreenState extends State<CustomListsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete list: $e')));
+          SnackBar(content: Text('${tr('failed_to_delete_list')}: $e')));
       }
     }
   }
@@ -287,7 +287,7 @@ class _CustomListsScreenState extends State<CustomListsScreen> {
                 child: FilledButton(
                   onPressed: () => _delete(list.id),
                   style: FilledButton.styleFrom(backgroundColor: context.dangerColor),
-                  child: const Text('Yes, delete'),
+                  child: Text(tr('yes_delete')),
                 ),
               ),
               const SizedBox(width: 8),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/storage_service.dart';
 import '../widgets/my_words_shared.dart';
@@ -128,10 +129,10 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
           children: [
             const Text('📖', style: TextStyle(fontSize: 64)),
             const SizedBox(height: 16),
-            Text('No units yet',
+            Text(tr('no_units_yet'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
             const SizedBox(height: 8),
-            Text('Import words from AI to add a unit to this folder.',
+            Text(tr('import_from_ai_add_unit'),
               textAlign: TextAlign.center,
               style: TextStyle(color: context.textMuted, height: 1.5, fontSize: 14)),
             const SizedBox(height: 24),
@@ -145,7 +146,7 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: const Text('Import Words', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                child: Text(tr('import_words'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
               ),
             ),
           ],
@@ -166,7 +167,7 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
       itemCount: _collections.length + 1,
       itemBuilder: (context, i) {
         if (i == _collections.length) {
-          return AddTile(label: 'New Unit', onTap: _openImport);
+          return AddTile(label: tr('new_unit'), onTap: _openImport);
         }
         final col = _collections[i];
         final color = myWordsCardColors[i % myWordsCardColors.length];
@@ -203,7 +204,7 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis),
                       const SizedBox(height: 2),
-                      Text('${col.count} ${col.count == 1 ? 'item' : 'items'}',
+                      Text(tr('n_items').replaceFirst('{n}', '${col.count}'),
                         style: const TextStyle(color: Colors.white70, fontSize: 11)),
                     ],
                   ),

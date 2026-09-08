@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import 'package:lexivo/data/storage_service.dart';
 import 'package:lexivo/services/content_service.dart';
 import 'package:lexivo/screens/collections.dart';
@@ -147,7 +148,7 @@ class LeveledWordsScreen extends StatelessWidget {
             // Advanced card
             GestureDetector(
               onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Coming soon!')),
+                SnackBar(content: Text(tr('coming_soon'))),
               ),
               child: Container(
                 width: double.infinity,

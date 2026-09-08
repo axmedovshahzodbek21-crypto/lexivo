@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../app_theme.dart';
@@ -112,7 +113,7 @@ class _ImportScreenState extends State<ImportScreen> {
     final prompt = buildAiImportPrompt(wordLang: _wordLang, translationLang: _transLang, words: words, hasTranslations: hasTranslations);
     Clipboard.setData(ClipboardData(text: prompt));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Prompt copied! Paste into AI chatbot.'), duration: Duration(seconds: 2)));
+      SnackBar(content: Text(tr('prompt_copied')), duration: const Duration(seconds: 2)));
   }
 
   Future<void> _pasteFromClipboard() async {
@@ -134,7 +135,7 @@ class _ImportScreenState extends State<ImportScreen> {
       if (mounted) {
         setState(() => _adding = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to add words: $e')));
+          SnackBar(content: Text('${tr('failed_to_add_words')}: $e')));
       }
       return;
     }
@@ -155,7 +156,7 @@ class _ImportScreenState extends State<ImportScreen> {
           icon: Icon(Icons.arrow_back, color: context.primary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Import Words',
+        title: Text(tr('import_words'),
           style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
@@ -196,7 +197,7 @@ class _ImportScreenState extends State<ImportScreen> {
             _Card(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Collection name',
+                Text(tr('collection_name'),
                   style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
                     color: context.textMuted, letterSpacing: 0.8)),
                 const SizedBox(height: 8),
@@ -232,7 +233,7 @@ class _ImportScreenState extends State<ImportScreen> {
             _Card(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Word Language / Translation Language', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted)),
+                Text(tr('word_lang_tr_lang'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted)),
                 const SizedBox(height: 10),
                 Row(children: [
                   Expanded(child: _langDropdown(_wordLang, (val) {
@@ -255,7 +256,7 @@ class _ImportScreenState extends State<ImportScreen> {
             _Card(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('1. Enter words to import', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+                Text(tr('enter_words_step'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
                 const SizedBox(height: 8),
                 TextField(
                   controller: _wordsInputCtrl,
@@ -275,7 +276,7 @@ class _ImportScreenState extends State<ImportScreen> {
                   child: OutlinedButton.icon(
                     onPressed: () => _copyPrompt(hasTranslations: false),
                     icon: const Text('📋', style: TextStyle(fontSize: 14)),
-                    label: const Text('Copy Prompt — just words, AI translates', style: TextStyle(fontWeight: FontWeight.w600)),
+                    label: Text(tr('copy_prompt_just_words'), style: const TextStyle(fontWeight: FontWeight.w600)),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: context.primary,
                       side: BorderSide(color: context.primary.withValues(alpha: 0.5)),
@@ -290,7 +291,7 @@ class _ImportScreenState extends State<ImportScreen> {
                   child: OutlinedButton.icon(
                     onPressed: () => _copyPrompt(hasTranslations: true),
                     icon: const Text('📋', style: TextStyle(fontSize: 14)),
-                    label: const Text('Copy Prompt — I already have translations', style: TextStyle(fontWeight: FontWeight.w600)),
+                    label: Text(tr('copy_prompt_have_translations'), style: const TextStyle(fontWeight: FontWeight.w600)),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: context.textMuted,
                       side: BorderSide(color: context.border),
@@ -308,7 +309,7 @@ class _ImportScreenState extends State<ImportScreen> {
             _Card(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('2. Paste AI output',
+                Text(tr('paste_ai_step'),
                   style: TextStyle(fontWeight: FontWeight.w600, color: context.appText, fontSize: 14)),
                 const SizedBox(height: 10),
                 TextField(
@@ -341,7 +342,7 @@ class _ImportScreenState extends State<ImportScreen> {
                   child: OutlinedButton.icon(
                     onPressed: _pasteFromClipboard,
                     icon: const Icon(Icons.paste, size: 16),
-                    label: const Text('Paste from clipboard'),
+                    label: Text(tr('paste_from_clipboard')),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: context.primary,
                       side: BorderSide(color: context.primary),
@@ -359,11 +360,11 @@ class _ImportScreenState extends State<ImportScreen> {
               _Card(child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Preview (${_parsed.length})',
+                  Text(tr('preview_n').replaceFirst('{n}', '${_parsed.length}'),
                     style: TextStyle(fontWeight: FontWeight.w600, color: context.appText, fontSize: 14)),
                   const SizedBox(height: 10),
                   if (_parsed.isEmpty)
-                    Text('No words found — make sure the format matches the prompt',
+                    Text(tr('no_words_found_format'),
                       style: TextStyle(color: context.textMuted, fontSize: 13))
                   else
                     ..._parsed.map((w) => _WordPreviewCard(word: w)),

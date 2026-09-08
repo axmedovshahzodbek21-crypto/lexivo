@@ -96,7 +96,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to add word: $e')));
+          SnackBar(content: Text('${tr('failed_to_add_word')}: $e')));
       }
     }
   }
@@ -108,7 +108,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to remove word: $e')));
+          SnackBar(content: Text('${tr('failed_to_remove_word')}: $e')));
       }
     }
   }
@@ -124,7 +124,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to rename list: $e')));
+          SnackBar(content: Text('${tr('failed_to_rename_list')}: $e')));
       }
     }
   }
@@ -474,13 +474,13 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
           context: context,
           builder: (_) => AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Text('Remove word?'),
-            content: Text('Remove "$wordStr" from this list?'),
+            title: Text(tr('remove_word_q')),
+            content: Text(tr('remove_word_from_list').replaceFirst('{word}', wordStr)),
             actions: [
               TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr('cancel'))),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: Text('Remove', style: TextStyle(color: context.dangerColor)),
+                child: Text(tr('remove'), style: TextStyle(color: context.dangerColor)),
               ),
             ],
           ),
@@ -519,13 +519,13 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                 context: context,
                 builder: (_) => AlertDialog(
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  title: const Text('Remove word?'),
-                  content: Text('Remove "$wordStr" from this list?'),
+                  title: Text(tr('remove_word_q')),
+                  content: Text(tr('remove_word_from_list').replaceFirst('{word}', wordStr)),
                   actions: [
                     TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr('cancel'))),
                     TextButton(
                       onPressed: () => Navigator.pop(context, true),
-                      child: Text('Remove', style: TextStyle(color: context.dangerColor)),
+                      child: Text(tr('remove'), style: TextStyle(color: context.dangerColor)),
                     ),
                   ],
                 ),

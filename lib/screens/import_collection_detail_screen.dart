@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/storage_service.dart';
 import '../data/word_data.dart';
@@ -82,17 +83,17 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
       builder: (ctx) => AlertDialog(
         backgroundColor: context.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Delete ${_selected.length} words?', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
-        content: Text('This will permanently remove the selected words from this collection.',
+        title: Text(tr('delete_n_words_q').replaceFirst('{n}', '${_selected.length}'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+        content: Text(tr('delete_words_from_collection'),
           style: TextStyle(color: context.textMuted)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel', style: TextStyle(color: context.textMuted)),
+            child: Text(tr('cancel'), style: TextStyle(color: context.textMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Delete', style: TextStyle(color: context.dangerColor)),
+            child: Text(tr('delete'), style: TextStyle(color: context.dangerColor)),
           ),
         ],
       ),
@@ -165,17 +166,17 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
       builder: (ctx) => AlertDialog(
         backgroundColor: context.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Delete collection?', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
-        content: Text('This will permanently delete "${widget.collectionName}" and all its words.',
+        title: Text(tr('delete_collection_q'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+        content: Text(tr('delete_collection_confirm').replaceFirst('{name}', widget.collectionName),
           style: TextStyle(color: context.textMuted)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel', style: TextStyle(color: context.textMuted)),
+            child: Text(tr('cancel'), style: TextStyle(color: context.textMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Delete', style: TextStyle(color: context.dangerColor)),
+            child: Text(tr('delete'), style: TextStyle(color: context.dangerColor)),
           ),
         ],
       ),
@@ -192,17 +193,17 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
       builder: (ctx) => AlertDialog(
         backgroundColor: context.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Remove word?', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
-        content: Text('Remove "${word.word}" from this collection?',
+        title: Text(tr('remove_word_q'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+        content: Text(tr('remove_word_from_collection').replaceFirst('{word}', word.word),
           style: TextStyle(color: context.textMuted)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel', style: TextStyle(color: context.textMuted)),
+            child: Text(tr('cancel'), style: TextStyle(color: context.textMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Remove', style: TextStyle(color: context.dangerColor)),
+            child: Text(tr('remove'), style: TextStyle(color: context.dangerColor)),
           ),
         ],
       ),
@@ -231,7 +232,7 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
               style: TextStyle(color: context.appText, fontWeight: FontWeight.bold, fontSize: 16),
               overflow: TextOverflow.ellipsis),
             if (!_loading)
-              Text('${_words.length} ${_words.length == 1 ? 'word' : 'words'}',
+              Text(tr('n_words_plain').replaceFirst('{n}', '${_words.length}'),
                 style: TextStyle(color: context.textMuted, fontSize: 12)),
           ],
         ),
@@ -276,13 +277,13 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text('${_selected.length} selected',
+                                Text(tr('n_selected').replaceFirst('{n}', '${_selected.length}'),
                                   style: TextStyle(color: context.appText, fontWeight: FontWeight.w600, fontSize: 13)),
                                 const SizedBox(width: 12),
                                 ElevatedButton.icon(
                                   onPressed: _deleteSelected,
                                   icon: const Icon(Icons.delete_outline, size: 16, color: Colors.white),
-                                  label: const Text('Delete'),
+                                  label: Text(tr('delete')),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: context.dangerColor,
                                     foregroundColor: Colors.white,
@@ -309,10 +310,10 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
           children: [
             const Text('✍️', style: TextStyle(fontSize: 64)),
             const SizedBox(height: 16),
-            Text('No words yet',
+            Text(tr('no_words_yet'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
             const SizedBox(height: 8),
-            Text('Import words from AI to start studying.',
+            Text(tr('import_from_ai_start'),
               textAlign: TextAlign.center,
               style: TextStyle(color: context.textMuted, height: 1.5)),
             const SizedBox(height: 24),
@@ -326,7 +327,7 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: const Text('Import Words', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: Text(tr('import_words'), style: const TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -383,7 +384,7 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
           childAspectRatio: 2.2,
           children: [
             _StudyButton(
-              icon: '📖', label: 'Learn',
+              icon: '📖', label: tr('learn'),
               color: const Color(0xFF6C63FF),
               done: _progress.learnDone,
               pendingNew: _pendingByActivity['learn']!.length,
@@ -399,7 +400,7 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
               )),
             ),
             _StudyButton(
-              icon: '🃏', label: 'Flashcards',
+              icon: '🃏', label: tr('flashcards'),
               color: const Color(0xFFFF6B35),
               done: _progress.flashcardDone,
               pendingNew: _pendingByActivity['flashcard']!.length,
@@ -415,7 +416,7 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
               )),
             ),
             _StudyButton(
-              icon: '❓', label: 'Quiz',
+              icon: '❓', label: tr('quiz'),
               color: const Color(0xFFF59E0B),
               done: _progress.quizDone,
               pendingNew: _pendingByActivity['quiz']!.length,
@@ -430,7 +431,7 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
               )),
             ),
             _StudyButton(
-              icon: '🔗', label: 'Match',
+              icon: '🔗', label: tr('match_plain'),
               color: const Color(0xFF10B981),
               done: _progress.matchDone,
               pendingNew: _pendingByActivity['match']!.length,
@@ -474,7 +475,7 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
               children: [
                 Icon(Icons.add, color: context.textMuted, size: 18),
                 const SizedBox(width: 6),
-                Text('Add more words', style: TextStyle(color: context.textMuted, fontWeight: FontWeight.w500)),
+                Text(tr('add_more_words'), style: TextStyle(color: context.textMuted, fontWeight: FontWeight.w500)),
               ],
             ),
           ),
@@ -538,7 +539,7 @@ class _StudyButton extends StatelessWidget {
                     color: context.successColor,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Text('$pendingNew new',
+                  child: Text(tr('n_new_pending').replaceFirst('{n}', '$pendingNew'),
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10)),
                 ),
               ),

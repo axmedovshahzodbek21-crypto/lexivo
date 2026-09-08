@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/battle_ready_data.dart';
 
@@ -39,7 +40,7 @@ class _BattleReadyVocabLearnScreenState extends State<BattleReadyVocabLearnScree
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(icon: Icon(Icons.arrow_back, color: context.primary), onPressed: () => Navigator.pop(context)),
-        title: Text('Learn', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+        title: Text(tr('learn'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/battle_ready_data.dart';
 
@@ -33,7 +34,7 @@ class _BattleReadyVocabFlashcardsScreenState extends State<BattleReadyVocabFlash
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(icon: Icon(Icons.arrow_back, color: context.primary), onPressed: () => Navigator.pop(context)),
-        title: Text('Flashcards', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+        title: Text(tr('flashcards'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
           Padding(
@@ -62,7 +63,7 @@ class _BattleReadyVocabFlashcardsScreenState extends State<BattleReadyVocabFlash
                   child: OutlinedButton(
                     onPressed: () => _go(-1),
                     style: OutlinedButton.styleFrom(foregroundColor: context.appText, side: BorderSide(color: context.border)),
-                    child: const Text('← Prev'),
+                    child: Text(tr('br_prev')),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -70,7 +71,7 @@ class _BattleReadyVocabFlashcardsScreenState extends State<BattleReadyVocabFlash
                   child: ElevatedButton(
                     onPressed: () => setState(() => _flipped = !_flipped),
                     style: ElevatedButton.styleFrom(backgroundColor: widget.sideColor, foregroundColor: Colors.white),
-                    child: const Text('Flip'),
+                    child: Text(tr('br_flip')),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -78,7 +79,7 @@ class _BattleReadyVocabFlashcardsScreenState extends State<BattleReadyVocabFlash
                   child: OutlinedButton(
                     onPressed: () => _go(1),
                     style: OutlinedButton.styleFrom(foregroundColor: context.appText, side: BorderSide(color: context.border)),
-                    child: const Text('Next →'),
+                    child: Text(tr('br_next')),
                   ),
                 ),
               ],

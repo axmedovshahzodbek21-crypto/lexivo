@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/battle_ready_data.dart';
 
@@ -63,14 +64,14 @@ class _BattleReadyVocabMatchScreenState extends State<BattleReadyVocabMatchScree
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(icon: Icon(Icons.arrow_back, color: context.primary), onPressed: () => Navigator.pop(context)),
-        title: Text('Match', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+        title: Text(tr('match_plain'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Tap a word, then tap its matching meaning.', style: TextStyle(fontSize: 12, color: context.textMuted)),
+            Text(tr('br_tap_word_meaning'), style: TextStyle(fontSize: 12, color: context.textMuted)),
             const SizedBox(height: 12),
             Expanded(
               child: Row(
@@ -85,7 +86,7 @@ class _BattleReadyVocabMatchScreenState extends State<BattleReadyVocabMatchScree
             if (done)
               Padding(
                 padding: const EdgeInsets.only(top: 12),
-                child: Center(child: Text('All matched! 🎉', style: TextStyle(fontWeight: FontWeight.bold, color: widget.sideColor))),
+                child: Center(child: Text(tr('br_all_matched'), style: TextStyle(fontWeight: FontWeight.bold, color: widget.sideColor))),
               ),
           ],
         ),

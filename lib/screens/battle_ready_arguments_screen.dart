@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/battle_ready_data.dart';
 
@@ -22,8 +23,8 @@ class BattleReadyArgumentsScreen extends StatelessWidget {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Arguments', style: TextStyle(color: context.appText, fontSize: 16, fontWeight: FontWeight.bold)),
-            Text('${arguments.length} arguments · tap to read', style: TextStyle(color: context.textMuted, fontSize: 11)),
+            Text(tr('br_arguments'), style: TextStyle(color: context.appText, fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(tr('br_n_arguments').replaceFirst('{n}', '${arguments.length}'), style: TextStyle(color: context.textMuted, fontSize: 11)),
           ],
         ),
       ),
@@ -98,7 +99,7 @@ class BattleReadyArgumentsScreen extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () => Navigator.pop(ctx),
                     style: ElevatedButton.styleFrom(backgroundColor: sideColor, foregroundColor: Colors.white),
-                    child: const Text('Close'),
+                    child: Text(tr('close')),
                   ),
                 ),
               ],

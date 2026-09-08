@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/battle_ready_data.dart';
 
@@ -21,8 +22,8 @@ class BattleReadyIdiomsScreen extends StatelessWidget {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Idioms', style: TextStyle(color: context.appText, fontSize: 16, fontWeight: FontWeight.bold)),
-            Text('${idioms.length} natural expressions', style: TextStyle(color: context.textMuted, fontSize: 11)),
+            Text(tr('br_idioms'), style: TextStyle(color: context.appText, fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(tr('br_n_idioms').replaceFirst('{n}', '${idioms.length}'), style: TextStyle(color: context.textMuted, fontSize: 11)),
           ],
         ),
       ),

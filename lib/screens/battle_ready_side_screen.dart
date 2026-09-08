@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/battle_ready_data.dart';
 import 'battle_ready_vocabulary_hub_screen.dart';
@@ -21,29 +22,29 @@ class BattleReadySideScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final content = _content(context);
     final sideColor = side == 'for' ? context.successColor : context.dangerColor;
-    final sideLabel = side == 'for' ? 'FOR' : 'AGAINST';
+    final sideLabel = side == 'for' ? tr('br_for') : tr('br_against');
 
     final cards = [
       (
-        icon: '📖', label: 'Vocabulary', count: content.vocab.length, unit: 'words',
+        icon: '📖', label: tr('br_vocabulary'), count: content.vocab.length, unit: 'words',
         onTap: () => Navigator.push(context, MaterialPageRoute(
           builder: (_) => BattleReadyVocabularyHubScreen(topic: topic, side: side, vocab: content.vocab),
         )),
       ),
       (
-        icon: '💬', label: 'Phrases', count: content.phrases.length, unit: 'phrases',
+        icon: '💬', label: tr('br_phrases'), count: content.phrases.length, unit: 'phrases',
         onTap: () => Navigator.push(context, MaterialPageRoute(
           builder: (_) => BattleReadyPhrasesScreen(topic: topic, side: side, phrases: content.phrases),
         )),
       ),
       (
-        icon: '🎭', label: 'Idioms', count: content.idioms.length, unit: 'idioms',
+        icon: '🎭', label: tr('br_idioms'), count: content.idioms.length, unit: 'idioms',
         onTap: () => Navigator.push(context, MaterialPageRoute(
           builder: (_) => BattleReadyIdiomsScreen(topic: topic, side: side, idioms: content.idioms),
         )),
       ),
       (
-        icon: '⚔️', label: 'Arguments', count: content.arguments.length, unit: 'arguments',
+        icon: '⚔️', label: tr('br_arguments'), count: content.arguments.length, unit: 'arguments',
         onTap: () => Navigator.push(context, MaterialPageRoute(
           builder: (_) => BattleReadyArgumentsScreen(topic: topic, side: side, arguments: content.arguments),
         )),
@@ -63,7 +64,7 @@ class BattleReadySideScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(topic.title, style: TextStyle(color: context.appText, fontSize: 16, fontWeight: FontWeight.bold)),
-            Text('$sideLabel side', style: TextStyle(color: sideColor, fontSize: 11, fontWeight: FontWeight.bold)),
+            Text(tr('br_side_suffix').replaceFirst('{side}', sideLabel), style: TextStyle(color: sideColor, fontSize: 11, fontWeight: FontWeight.bold)),
           ],
         ),
       ),

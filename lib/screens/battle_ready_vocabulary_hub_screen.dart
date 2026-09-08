@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/battle_ready_data.dart';
 import 'battle_ready_vocab_learn_screen.dart';
@@ -20,10 +21,10 @@ class BattleReadyVocabularyHubScreen extends StatelessWidget {
     final sideColor = side == 'for' ? context.successColor : context.dangerColor;
 
     final modes = [
-      (icon: '📖', label: 'Learn', builder: (BuildContext c) => BattleReadyVocabLearnScreen(vocab: vocab, sideColor: sideColor)),
-      (icon: '🃏', label: 'Flashcards', builder: (BuildContext c) => BattleReadyVocabFlashcardsScreen(vocab: vocab, sideColor: sideColor)),
-      (icon: '❓', label: 'Quiz', builder: (BuildContext c) => BattleReadyVocabQuizScreen(vocab: vocab, sideColor: sideColor)),
-      (icon: '🎯', label: 'Match', builder: (BuildContext c) => BattleReadyVocabMatchScreen(vocab: vocab, sideColor: sideColor)),
+      (icon: '📖', label: tr('learn'), builder: (BuildContext c) => BattleReadyVocabLearnScreen(vocab: vocab, sideColor: sideColor)),
+      (icon: '🃏', label: tr('flashcards'), builder: (BuildContext c) => BattleReadyVocabFlashcardsScreen(vocab: vocab, sideColor: sideColor)),
+      (icon: '❓', label: tr('quiz'), builder: (BuildContext c) => BattleReadyVocabQuizScreen(vocab: vocab, sideColor: sideColor)),
+      (icon: '🎯', label: tr('match_plain'), builder: (BuildContext c) => BattleReadyVocabMatchScreen(vocab: vocab, sideColor: sideColor)),
     ];
 
     return Scaffold(
@@ -38,8 +39,8 @@ class BattleReadyVocabularyHubScreen extends StatelessWidget {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Vocabulary', style: TextStyle(color: context.appText, fontSize: 16, fontWeight: FontWeight.bold)),
-            Text('${vocab.length} words · ${topic.title}', style: TextStyle(color: context.textMuted, fontSize: 11)),
+            Text(tr('br_vocabulary'), style: TextStyle(color: context.appText, fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(tr('br_n_words_topic').replaceFirst('{n}', '${vocab.length}').replaceFirst('{topic}', topic.title), style: TextStyle(color: context.textMuted, fontSize: 11)),
           ],
         ),
       ),

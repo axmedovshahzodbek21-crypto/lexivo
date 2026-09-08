@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/battle_ready_data.dart';
 import '../data/battle_ready_progress_service.dart';
@@ -140,7 +141,7 @@ class _BattleReadyHubScreenState extends State<BattleReadyHubScreen> {
                     gradient: const LinearGradient(colors: [Color(0xFFA78BFA), Color(0xFF6C63FF), Color(0xFF4C1D95)]),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Text('🎲 Surprise Me',
+                  child: Text(tr('br_surprise_me'),
                       style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white.withValues(alpha: _surpriseShuffling ? 0.6 : 1))),
                 ),
               ),
@@ -157,7 +158,7 @@ class _BattleReadyHubScreenState extends State<BattleReadyHubScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('${_withContent.length}/${kBattleReadyTopics.length} topics ready',
+                    Text(tr('br_n_topics_ready').replaceFirst('{n}', '${_withContent.length}').replaceFirst('{total}', '${kBattleReadyTopics.length}'),
                         style: TextStyle(fontSize: 12, color: context.textMuted)),
                     const SizedBox(height: 10),
                     TextField(
@@ -187,7 +188,7 @@ class _BattleReadyHubScreenState extends State<BattleReadyHubScreen> {
               Expanded(
                 child: visible.isEmpty
                     ? Center(
-                        child: Text('No topics match your search.',
+                        child: Text(tr('br_no_topics_match'),
                             style: TextStyle(color: context.textMuted)))
                     : GridView.builder(
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -266,7 +267,7 @@ class _BattleReadyHubScreenState extends State<BattleReadyHubScreen> {
                       children: [
                         const Text('🎲', style: TextStyle(fontSize: 28)),
                         const SizedBox(height: 8),
-                        const Text('Finding a topic for you…',
+                        Text(tr('br_finding_topic'),
                             style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5)),
                         const SizedBox(height: 16),
                         Container(

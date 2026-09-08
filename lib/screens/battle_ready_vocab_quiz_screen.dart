@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/battle_ready_data.dart';
 
@@ -56,7 +57,7 @@ class _BattleReadyVocabQuizScreenState extends State<BattleReadyVocabQuizScreen>
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(icon: Icon(Icons.arrow_back, color: context.primary), onPressed: () => Navigator.pop(context)),
-        title: Text('Quiz', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+        title: Text(tr('quiz'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -72,7 +73,7 @@ class _BattleReadyVocabQuizScreenState extends State<BattleReadyVocabQuizScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('What does this mean?', style: TextStyle(fontSize: 11, color: context.textMuted)),
+                  Text(tr('br_what_does_mean'), style: TextStyle(fontSize: 11, color: context.textMuted)),
                   const SizedBox(height: 4),
                   Text(q.term, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
                 ],
@@ -90,11 +91,11 @@ class _BattleReadyVocabQuizScreenState extends State<BattleReadyVocabQuizScreen>
                 child: ElevatedButton(
                   onPressed: _next,
                   style: ElevatedButton.styleFrom(backgroundColor: widget.sideColor, foregroundColor: Colors.white),
-                  child: const Text('Next question'),
+                  child: Text(tr('br_next_question')),
                 ),
               )
             else if (_picked != null && _isLast)
-              Center(child: Text('Quiz complete.', style: TextStyle(fontWeight: FontWeight.bold, color: context.textMuted))),
+              Center(child: Text(tr('br_quiz_complete'), style: TextStyle(fontWeight: FontWeight.bold, color: context.textMuted))),
           ],
         ),
       ),

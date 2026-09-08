@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/battle_ready_data.dart';
 import '../data/battle_ready_progress_service.dart';
@@ -92,7 +93,7 @@ class _BattleReadyTopicScreenState extends State<BattleReadyTopicScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('MOTION', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5, color: context.primary)),
+                    Text(tr('br_motion'), style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5, color: context.primary)),
                     const SizedBox(height: 4),
                     Text(content!.motion!, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.primary)),
                   ],
@@ -107,7 +108,7 @@ class _BattleReadyTopicScreenState extends State<BattleReadyTopicScreen> {
                   Expanded(
                     child: _sideCard(
                       context,
-                      label: 'FOR',
+                      label: tr('br_for'),
                       icon: '👍',
                       color: context.successColor,
                       hasContent: content != null,
@@ -120,7 +121,7 @@ class _BattleReadyTopicScreenState extends State<BattleReadyTopicScreen> {
                   Expanded(
                     child: _sideCard(
                       context,
-                      label: 'AGAINST',
+                      label: tr('br_against'),
                       icon: '👎',
                       color: context.dangerColor,
                       hasContent: content != null,
@@ -167,7 +168,7 @@ class _BattleReadyTopicScreenState extends State<BattleReadyTopicScreen> {
                     color: hasContent ? Colors.white : context.textMuted)),
             if (!hasContent) ...[
               const SizedBox(height: 6),
-              Text('content coming soon',
+              Text(tr('br_content_coming_soon'),
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 10, color: context.textMuted)),
             ],

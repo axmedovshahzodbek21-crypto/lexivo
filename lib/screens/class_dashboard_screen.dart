@@ -240,7 +240,7 @@ Widget _dashHero(String classId, String className, int studentCount, {
             ),
             const SizedBox(width: 14),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Teacher Dashboard', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white.withValues(alpha: 0.5), letterSpacing: 1.5)),
+              Text(tr('teacher_dashboard'), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white.withValues(alpha: 0.5), letterSpacing: 1.5)),
               Text(className, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white, shadows: [Shadow(color: Color(0x40000000), blurRadius: 8, offset: Offset(0, 2))]), maxLines: 1, overflow: TextOverflow.ellipsis),
             ])),
             Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -387,7 +387,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     if (_verifiedTeacher) return true;
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Not verified as this class\'s teacher')),
+        SnackBar(content: Text(tr('not_verified_teacher'))),
       );
     }
     return false;
@@ -467,7 +467,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
           .eq('student_id', studentId);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to approve — try again')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr('failed_to_approve'))));
       }
       return;
     }
@@ -485,7 +485,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
           .eq('student_id', studentId);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to reject — try again')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr('failed_to_reject'))));
       }
       return;
     }
@@ -502,7 +502,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         Row(children: [
           const Text('⏳', style: TextStyle(fontSize: 16)),
           const SizedBox(width: 8),
-          Text('Pending approval (${_pendingMembers.length})', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+          Text(tr('pending_approval_n').replaceFirst('{n}', '${_pendingMembers.length}'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
         ]),
         const SizedBox(height: 10),
         ..._pendingMembers.map((m) => Padding(
@@ -511,7 +511,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             Expanded(child: Text(m['name'] as String, style: TextStyle(fontSize: 13, color: context.appText))),
             TextButton(
               onPressed: () => _rejectPending(m['student_id'] as String),
-              child: Text('Reject', style: TextStyle(color: context.dangerColor, fontSize: 12, fontWeight: FontWeight.bold)),
+              child: Text(tr('reject'), style: TextStyle(color: context.dangerColor, fontSize: 12, fontWeight: FontWeight.bold)),
             ),
             const SizedBox(width: 4),
             ElevatedButton(
@@ -521,7 +521,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              child: const Text('Approve', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+              child: Text(tr('approve'), style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
             ),
           ]),
         )),
@@ -842,11 +842,11 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Remove student?'),
-        content: Text('Remove ${s.name} from this class? They can rejoin later with the class code.'),
+        title: Text(tr('remove_student_q')),
+        content: Text(tr('remove_student_confirm').replaceFirst('{name}', s.name)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(tr('cancel'))),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text('Remove', style: TextStyle(color: context.dangerColor))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(tr('remove'), style: TextStyle(color: context.dangerColor))),
         ],
       ),
     );
@@ -865,7 +865,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     if (deleted.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to remove student')),
+          SnackBar(content: Text(tr('failed_to_remove_student'))),
         );
       }
       return;
@@ -1026,10 +1026,10 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
               child: Row(children: [
                 Text('⚠️', style: const TextStyle(fontSize: 16)),
                 const SizedBox(width: 8),
-                Expanded(child: Text('$_inactiveCount student${_inactiveCount != 1 ? 's' : ''} inactive for 3+ days', style: TextStyle(fontSize: 13, color: context.dangerColor, fontWeight: FontWeight.w500))),
+                Expanded(child: Text(tr('n_students_inactive').replaceFirst('{n}', '$_inactiveCount'), style: TextStyle(fontSize: 13, color: context.dangerColor, fontWeight: FontWeight.w500))),
                 GestureDetector(
                   onTap: () => setState(() { _filter = _filter == 'inactive' ? 'all' : 'inactive'; }),
-                  child: Text(_filter == 'inactive' ? 'Show all' : 'Show only', style: TextStyle(fontSize: 12, color: context.primary, fontWeight: FontWeight.bold)),
+                  child: Text(_filter == 'inactive' ? tr('show_all') : tr('show_only'), style: TextStyle(fontSize: 12, color: context.primary, fontWeight: FontWeight.bold)),
                 ),
               ]),
             ),
@@ -1062,11 +1062,11 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
 
   Widget _buildStudyingNow() {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('🟢 STUDYING NOW (${_activeStudents.length})',
+      Text(tr('studying_now_n').replaceFirst('{n}', '${_activeStudents.length}'),
         style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
       const SizedBox(height: 8),
       if (_activeStudents.isEmpty)
-        Text('No one studying right now', style: TextStyle(fontSize: 12, color: context.textMuted))
+        Text(tr('no_one_studying'), style: TextStyle(fontSize: 12, color: context.textMuted))
       else
         Wrap(spacing: 8, runSpacing: 8, children: _activeStudents.map((s) {
           final activity = s['activity'] as String? ?? 'learn';
@@ -1078,7 +1078,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               const _PulsingDot(),
               const SizedBox(width: 7),
-              Text(s['student_name'] as String? ?? 'Student', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: context.appText)),
+              Text(s['student_name'] as String? ?? tr('student'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: context.appText)),
               const SizedBox(width: 5),
               Text(_activityIcon[activity] ?? '📖', style: const TextStyle(fontSize: 11)),
               if (collection != null) ...[
@@ -1094,7 +1094,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   Widget _buildSpeedFlags(List<Map<String, dynamic>> speedFlagged) {
     final nameById = {for (final s in _students) s.studentId: s.name};
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('⚡ SPEED FLAGS (>10 WORDS/MIN)',
+      Text(tr('speed_flags_header'),
         style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
       const SizedBox(height: 8),
       ...speedFlagged.map((r) {
@@ -1115,7 +1115,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             if (mastery != null)
               Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                 Text('$mastery%', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: mastery < 60 ? context.dangerColor : context.successColor)),
-                Text('gate accuracy', style: TextStyle(fontSize: 8, color: context.textMuted)),
+                Text(tr('gate_accuracy'), style: TextStyle(fontSize: 8, color: context.textMuted)),
               ]),
           ]),
         );
@@ -1130,7 +1130,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     final lastDate = _progressPoints.last['study_date'] as String? ?? '';
     String shortDate(String d) => d.length >= 10 ? d.substring(5) : d;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('📈 WORDS LEARNED (LAST 30 DAYS)',
+      Text(tr('words_learned_30d'),
         style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
       const SizedBox(height: 8),
       Container(
@@ -1145,7 +1145,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
           const SizedBox(height: 6),
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             Text(shortDate(firstDate), style: TextStyle(fontSize: 9, color: context.textMuted)),
-            Text('Total: $total words', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.textMuted)),
+            Text(tr('total_n_words').replaceFirst('{n}', '$total'), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.textMuted)),
             Text(shortDate(lastDate), style: TextStyle(fontSize: 9, color: context.textMuted)),
           ]),
         ]),
@@ -1156,7 +1156,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   Widget _buildSlowestWords(List<({String word, double avg})> stats) {
     final maxAvg = stats.isEmpty ? 1.0 : stats.first.avg;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('⏱ SLOWEST WORDS (AVG SECONDS TO MARK)',
+      Text(tr('slowest_words_header'),
         style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
       const SizedBox(height: 8),
       Container(
@@ -1186,7 +1186,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   Widget _buildPerStudentOverview() {
     final nameById = {for (final s in _students) s.studentId: s.name};
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('👤 PER-STUDENT OVERVIEW',
+      Text(tr('per_student_overview'),
         style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
       const SizedBox(height: 8),
       ..._analyticsData.map((r) {
@@ -1226,11 +1226,11 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
               if (mastery != null) ...[
                 Text('$mastery%', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: masteryColor)),
-                Text('mastery', style: TextStyle(fontSize: 9, color: context.textMuted)),
+                Text(tr('mastery_lc'), style: TextStyle(fontSize: 9, color: context.textMuted)),
               ] else
-                Text('no gate data', style: TextStyle(fontSize: 10, color: context.textMuted)),
+                Text(tr('no_gate_data'), style: TextStyle(fontSize: 10, color: context.textMuted)),
               if (speedFlags > 0)
-                Text('⚡ $speedFlags flags', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.dangerColor)),
+                Text(tr('flags_n').replaceFirst('{n}', '$speedFlags'), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.dangerColor)),
             ]),
           ]),
         );
@@ -1240,7 +1240,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
 
   Widget _buildDigest() {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('🤖 AI WEEKLY DIGEST',
+      Text(tr('ai_weekly_digest'),
         style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
       const SizedBox(height: 8),
       Container(
@@ -1256,7 +1256,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),
-              child: Text(_digestLoading ? '✨ Generating…' : '✨ Generate digest', style: const TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(_digestLoading ? tr('generating_digest') : tr('generate_digest'), style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),
           if (_digestText.isNotEmpty) ...[
@@ -1274,9 +1274,9 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     child: Row(children: [
       _stat('${_students.length}', tr('students')),
       _statDiv(),
-      _stat(StorageService.displayXP(_totalXp), 'Total XP'),
+      _stat(StorageService.displayXP(_totalXp), tr('total_xp')),
       _statDiv(),
-      _stat('$_avgStreak', 'Avg Streak'),
+      _stat('$_avgStreak', tr('avg_streak')),
       _statDiv(),
       _stat('$_inactiveCount', tr('inactive')),
     ]),
@@ -1322,7 +1322,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
           if (s.isInactive) Container(
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
             decoration: BoxDecoration(color: context.dangerColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
-            child: Text('Inactive', style: TextStyle(fontSize: 10, color: context.dangerColor, fontWeight: FontWeight.bold)),
+            child: Text(tr('inactive'), style: TextStyle(fontSize: 10, color: context.dangerColor, fontWeight: FontWeight.bold)),
           ),
         ]),
         const SizedBox(height: 8),
@@ -1368,7 +1368,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             onTap: () => _removeStudent(s),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
-              child: Text('Remove', style: TextStyle(fontSize: 11, color: context.textMuted)),
+              child: Text(tr('remove'), style: TextStyle(fontSize: 11, color: context.textMuted)),
             ),
           ),
         ]),
@@ -1504,7 +1504,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             const Text('📡', style: TextStyle(fontSize: 48)),
             const SizedBox(height: 14),
-            Text('No data yet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+            Text(tr('no_data_yet'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
             const SizedBox(height: 6),
             Text(
               'Words appear here once students have studied them at least 3 times.',
@@ -1572,7 +1572,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
                   ),
                 ),
                 const SizedBox(height: 3),
-                Text('$correct/$attempts correct · $pct% accuracy', style: TextStyle(fontSize: 10, color: context.textMuted)),
+                Text(tr('n_correct_accuracy').replaceFirst('{correct}', '$correct').replaceFirst('{attempts}', '$attempts').replaceFirst('{pct}', '$pct'), style: TextStyle(fontSize: 10, color: context.textMuted)),
               ])),
             ]),
           );
@@ -1589,9 +1589,9 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             const Text('🗺', style: TextStyle(fontSize: 48)),
             const SizedBox(height: 14),
-            Text('No data yet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+            Text(tr('no_data_yet'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
             const SizedBox(height: 6),
-            Text('Add students and wait for them to study.', style: TextStyle(fontSize: 13, color: context.textMuted), textAlign: TextAlign.center),
+            Text(tr('add_students_wait'), style: TextStyle(fontSize: 13, color: context.textMuted), textAlign: TextAlign.center),
           ]),
         ),
       );
@@ -1609,7 +1609,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
       children: [
-        Text('% of class that completed each unit',
+        Text(tr('pct_class_completed_unit'),
           style: TextStyle(fontSize: 11, color: context.textMuted)),
         const SizedBox(height: 14),
         ..._collections.map((col) {
@@ -1628,7 +1628,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
               children: [
                 Row(children: [
                   Expanded(child: Text(col.label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: context.appText))),
-                  Text('$avg% avg', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: cellColor(avg))),
+                  Text(tr('avg_pct').replaceFirst('{n}', '$avg'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: cellColor(avg))),
                 ]),
                 const SizedBox(height: 10),
                 Wrap(
@@ -1637,7 +1637,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
                   children: completionPcts.asMap().entries.map((e) {
                     final c = cellColor(e.value);
                     return Tooltip(
-                      message: 'Unit ${e.key + 1}: ${e.value}% of class',
+                      message: tr('unit_n_pct_of_class').replaceFirst('{n}', '${e.key + 1}').replaceFirst('{pct}', '${e.value}'),
                       child: Container(
                         width: 36, height: 36,
                         decoration: BoxDecoration(
@@ -1730,7 +1730,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
       children: [
         // Per-student overview
-        Text('STUDENT SRS OVERVIEW', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
+        Text(tr('student_srs_overview'), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
         const SizedBox(height: 10),
         if (studentIds.isEmpty)
           Container(
@@ -1739,9 +1739,9 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             child: Column(children: [
               const Text('📚', style: TextStyle(fontSize: 40)),
               const SizedBox(height: 8),
-              Text('No SRS data yet', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+              Text(tr('no_srs_data_yet'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
               const SizedBox(height: 4),
-              Text('Students need to study class words first.', style: TextStyle(fontSize: 11, color: context.textMuted), textAlign: TextAlign.center),
+              Text(tr('no_srs_data_yet_sub'), style: TextStyle(fontSize: 11, color: context.textMuted), textAlign: TextAlign.center),
             ]),
           )
         else
@@ -1758,9 +1758,9 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
                   Expanded(child: Text(_srsNames[uid] ?? uid.substring(0, 8), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.appText))),
-                  if (dueToday > 0) Text('$dueToday due  ', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFF59E0B))),
-                  if (overdue  > 0) Text('$overdue overdue  ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.dangerColor)),
-                  Text('$total words', style: TextStyle(fontSize: 11, color: context.textMuted)),
+                  if (dueToday > 0) Text(tr('n_due_short').replaceFirst('{n}', '$dueToday'), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFF59E0B))),
+                  if (overdue  > 0) Text(tr('n_overdue_short').replaceFirst('{n}', '$overdue'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.dangerColor)),
+                  Text(tr('n_words_plain').replaceFirst('{n}', '$total'), style: TextStyle(fontSize: 11, color: context.textMuted)),
                 ]),
                 const SizedBox(height: 8),
                 ClipRRect(
@@ -1787,7 +1787,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         // Word Mastery Grid
         if (_srsWords.isNotEmpty && studentIds.isNotEmpty) ...[
           const SizedBox(height: 16),
-          Text('WORD MASTERY GRID', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
+          Text(tr('word_mastery_grid'), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
           const SizedBox(height: 10),
           Container(
             decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(14), boxShadow: context.cardShadow),
@@ -1801,7 +1801,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
                 horizontalMargin: 12,
                 headingRowColor: WidgetStateProperty.all(context.surface2),
                 columns: [
-                  DataColumn(label: Text('Word', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: context.textMuted))),
+                  DataColumn(label: Text(tr('word_col'), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: context.textMuted))),
                   ...studentIds.map((uid) => DataColumn(label: SizedBox(
                     width: 52,
                     child: Text(_srsNames[uid] ?? uid.substring(0, 6), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: context.textMuted), overflow: TextOverflow.ellipsis),
@@ -1852,7 +1852,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         // Class Hard Words
         if (hardSorted.isNotEmpty) ...[
           const SizedBox(height: 16),
-          Text('CLASS HARD WORDS', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
+          Text(tr('class_hard_words_header'), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
           const SizedBox(height: 10),
           ...hardSorted.asMap().entries.map((entry) {
             final i = entry.key;
@@ -1913,7 +1913,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             const Text('🔄', style: TextStyle(fontSize: 48)),
             const SizedBox(height: 14),
-            Text('No students yet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+            Text(tr('no_students_yet'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
           ]),
         ),
       );
@@ -1989,23 +1989,23 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(color: context.dangerColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
-                    child: Text('${r.overdue} overdue', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: context.dangerColor)),
+                    child: Text(tr('n_overdue').replaceFirst('{n}', '${r.overdue}'), style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: context.dangerColor)),
                   )
                 else if (r.due > 0)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(color: const Color(0xFFF59E0B).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
-                    child: Text('${r.due} due', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFF59E0B))),
+                    child: Text(tr('n_due').replaceFirst('{n}', '${r.due}'), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFF59E0B))),
                   ),
               ]),
               const SizedBox(height: 8),
               Text(meta.blurb, style: TextStyle(fontSize: 11, color: context.textMuted)),
               const SizedBox(height: 8),
               Wrap(spacing: 14, runSpacing: 4, children: [
-                _reviewStat('${c.daysReviewed}', '/$_reviewWindowDays days reviewed'),
-                _reviewStat('${c.streak}', ' day streak'),
-                _reviewStat('${c.longestGap}', 'd longest gap'),
-                if (c.totalReviews > 0) _reviewStat(c.avgPerActiveDay.toStringAsFixed(1), ' words/active day'),
+                _reviewStat('${c.daysReviewed}', tr('days_reviewed_suffix').replaceFirst('{n}', '$_reviewWindowDays')),
+                _reviewStat('${c.streak}', tr('day_streak_suffix')),
+                _reviewStat('${c.longestGap}', tr('longest_gap_suffix')),
+                if (c.totalReviews > 0) _reviewStat(c.avgPerActiveDay.toStringAsFixed(1), tr('words_active_day_suffix')),
               ]),
             ]),
           );
@@ -2045,7 +2045,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             'message': ctrl.text.trim(),
           });
         } catch (e) {
-          if (mounted) msg.showSnackBar(SnackBar(content: Text('Failed to send: $e')));
+          if (mounted) msg.showSnackBar(SnackBar(content: Text('${tr('failed_to_send')}: $e')));
           return;
         }
         ClassHomeScreen.invalidate(widget.classId);
@@ -2075,7 +2075,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             'message': ctrl.text.trim(),
           });
         } catch (e) {
-          if (mounted) msg.showSnackBar(SnackBar(content: Text('Failed to send: $e')));
+          if (mounted) msg.showSnackBar(SnackBar(content: Text('${tr('failed_to_send')}: $e')));
           return;
         }
         if (!mounted) return;
@@ -2161,7 +2161,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
                   try {
                     await supabase.from('class_targets').insert(data);
                   } catch (e) {
-                    if (mounted) msg.showSnackBar(SnackBar(content: Text('Failed to set target: $e')));
+                    if (mounted) msg.showSnackBar(SnackBar(content: Text('${tr('failed_to_set_target')}: $e')));
                     return;
                   }
                   ClassHomeScreen.invalidate(widget.classId);
@@ -2328,7 +2328,7 @@ class _CollectionDetailSheetState extends State<_CollectionDetailSheet> {
                   TextSpan(text: '$learnedCount', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: accent, height: 1)),
                   TextSpan(text: '/${widget.total}', style: TextStyle(fontSize: 13, color: context.textMuted)),
                 ])),
-                Text('learned', style: TextStyle(fontSize: 9, color: context.textMuted)),
+                Text(tr('learned_lc'), style: TextStyle(fontSize: 9, color: context.textMuted)),
               ]),
             ]),
             if (!_loading) ...[
@@ -2351,7 +2351,7 @@ class _CollectionDetailSheetState extends State<_CollectionDetailSheet> {
         else if (_loadError)
           Padding(
             padding: const EdgeInsets.all(40),
-            child: Center(child: Text("Couldn't load progress", style: TextStyle(color: context.textMuted))),
+            child: Center(child: Text(tr('couldnt_load_progress'), style: TextStyle(color: context.textMuted))),
           )
         else
           Flexible(
@@ -2431,7 +2431,7 @@ class _CollectionDetailSheetState extends State<_CollectionDetailSheet> {
                       child: Center(child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                         decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(20)),
-                        child: Text('LATEST', style: TextStyle(fontSize: 7, fontWeight: FontWeight.w900, color: Colors.white)),
+                        child: Text(tr('latest'), style: TextStyle(fontSize: 7, fontWeight: FontWeight.w900, color: Colors.white)),
                       )),
                     ),
                   ]);
@@ -2542,7 +2542,7 @@ void _prevMonth() => setState(() {
         Row(children: [
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(widget.student.name, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
-            Text('Study calendar', style: TextStyle(fontSize: 11, color: context.textMuted)),
+            Text(tr('study_calendar'), style: TextStyle(fontSize: 11, color: context.textMuted)),
           ])),
           Text('🔥 ${widget.student.streak}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.orange)),
         ]),
@@ -2552,7 +2552,7 @@ void _prevMonth() => setState(() {
         else if (_loadError)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 24),
-            child: Center(child: Text("Couldn't load calendar", style: TextStyle(color: context.textMuted))),
+            child: Center(child: Text(tr('couldnt_load_calendar'), style: TextStyle(color: context.textMuted))),
           )
         else
           Container(
@@ -2611,11 +2611,11 @@ void _prevMonth() => setState(() {
               Row(children: [
                 Container(width: 14, height: 14, decoration: BoxDecoration(border: Border.all(color: context.primary, width: 2), borderRadius: BorderRadius.circular(4))),
                 const SizedBox(width: 5),
-                Text('Today', style: TextStyle(fontSize: 10, color: context.textMuted)),
+                Text(tr('today'), style: TextStyle(fontSize: 10, color: context.textMuted)),
                 const SizedBox(width: 16),
                 Container(width: 14, height: 14, decoration: BoxDecoration(color: context.primary, borderRadius: BorderRadius.circular(4))),
                 const SizedBox(width: 5),
-                Text('Studied', style: TextStyle(fontSize: 10, color: context.textMuted)),
+                Text(tr('studied'), style: TextStyle(fontSize: 10, color: context.textMuted)),
               ]),
             ]),
           ),

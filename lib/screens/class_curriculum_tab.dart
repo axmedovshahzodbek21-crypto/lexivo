@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
 import '../date_utils.dart';
 import '../app_theme.dart';
+import '../l10n.dart';
 import 'class_models.dart';
 import 'teacher_library_screen.dart';
 import '../data/word_data.dart';
@@ -264,8 +265,8 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
     }).where((f) => !assignedIds.contains(f.id)).toList();
     if (!mounted) return;
     if (available.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('All your library folders are already assigned.'), duration: Duration(seconds: 2)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(tr('all_folders_assigned')), duration: const Duration(seconds: 2)));
       return;
     }
     showModalBottomSheet(
@@ -277,7 +278,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
         Container(width: 36, height: 4, margin: const EdgeInsets.symmetric(vertical: 12),
             decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(2))),
         Padding(padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-            child: Text('Assign Library Folder', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText))),
+            child: Text(tr('assign_library_folder'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText))),
         ...available.map((f) => ListTile(
           leading: const Text('📁', style: TextStyle(fontSize: 22)),
           title: Text(f.name, style: TextStyle(color: context.appText, fontWeight: FontWeight.w600)),
@@ -290,7 +291,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
             } catch (e) {
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Failed to assign: $e'), duration: const Duration(seconds: 3)));
+                  SnackBar(content: Text('${tr('failed_to_assign')}: $e'), duration: const Duration(seconds: 3)));
               }
             }
           },
@@ -300,7 +301,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
           child: OutlinedButton.icon(
             onPressed: () async { Navigator.pop(ctx); await Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherLibraryScreen())); _load(); },
             icon: const Icon(Icons.add),
-            label: const Text('Create new folder in Library'),
+            label: Text(tr('create_new_folder_in_library')),
             style: OutlinedButton.styleFrom(foregroundColor: context.primary, side: BorderSide(color: context.primary.withValues(alpha: 0.4))),
           ),
         ),
@@ -313,10 +314,10 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
     final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
       backgroundColor: context.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Text('Remove folder?', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
-      content: Text('Remove "${folder.folderName}" from this class?', style: TextStyle(color: context.textMuted)),
+      title: Text(tr('remove_folder_q'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+      content: Text(tr('remove_folder_confirm').replaceFirst('{name}', folder.folderName), style: TextStyle(color: context.textMuted)),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: context.textMuted))),
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(tr('cancel'), style: TextStyle(color: context.textMuted))),
         ElevatedButton(onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
             child: const Text('Remove')),
@@ -329,7 +330,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to remove: $e'), duration: const Duration(seconds: 3)));
+          SnackBar(content: Text('${tr('failed_to_remove')}: $e'), duration: const Duration(seconds: 3)));
       }
     }
   }
@@ -343,19 +344,19 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
     final name = await showDialog<String>(context: context, builder: (ctx) => AlertDialog(
       backgroundColor: context.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Text('New Unit', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+      title: Text(tr('new_unit'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
       content: TextField(
         controller: ctrl, autofocus: true,
         onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
-        decoration: InputDecoration(hintText: 'Unit name', hintStyle: TextStyle(color: context.textMuted),
+        decoration: InputDecoration(hintText: tr('unit_name'), hintStyle: TextStyle(color: context.textMuted),
             filled: true, fillColor: context.surface2, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
         style: TextStyle(color: context.appText),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: context.textMuted))),
+        TextButton(onPressed: () => Navigator.pop(ctx), child: Text(tr('cancel'), style: TextStyle(color: context.textMuted))),
         ElevatedButton(onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
             style: ElevatedButton.styleFrom(backgroundColor: context.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            child: const Text('Create')),
+            child: Text(tr('create'))),
       ],
     ));
     ctrl.dispose();
@@ -366,7 +367,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create unit: $e'), duration: const Duration(seconds: 3)));
+          SnackBar(content: Text('${tr('failed_to_create_unit')}: $e'), duration: const Duration(seconds: 3)));
       }
     }
   }
@@ -376,7 +377,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
     final name = await showDialog<String>(context: context, builder: (ctx) => AlertDialog(
       backgroundColor: context.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Text('Rename Unit', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+      title: Text(tr('rename_unit'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
       content: TextField(
         controller: ctrl, autofocus: true,
         onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
@@ -384,10 +385,10 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
         style: TextStyle(color: context.appText),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: context.textMuted))),
+        TextButton(onPressed: () => Navigator.pop(ctx), child: Text(tr('cancel'), style: TextStyle(color: context.textMuted))),
         ElevatedButton(onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
             style: ElevatedButton.styleFrom(backgroundColor: context.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            child: const Text('Save')),
+            child: Text(tr('save'))),
       ],
     ));
     ctrl.dispose();
@@ -398,7 +399,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to rename unit: $e'), duration: const Duration(seconds: 3)));
+          SnackBar(content: Text('${tr('failed_to_rename_unit')}: $e'), duration: const Duration(seconds: 3)));
       }
     }
   }
@@ -415,16 +416,16 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
     final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
       backgroundColor: context.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Text('Delete unit?', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+      title: Text(tr('delete_unit_q'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
       content: Text(assignedHw.isEmpty
-          ? 'Delete "${unit.name}"? Words will remain in the class but lose their unit assignment.'
-          : 'Delete "${unit.name}"? Words will remain in the class but lose their unit assignment. This unit is currently assigned as homework in ${assignedHw.length} place${assignedHw.length != 1 ? 's' : ''} — deleting it will also remove that homework and every student\'s progress on it.',
+          ? tr('delete_unit_body').replaceFirst('{name}', unit.name)
+          : tr('delete_unit_body_hw').replaceFirst('{name}', unit.name),
           style: TextStyle(color: context.textMuted)),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: context.textMuted))),
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(tr('cancel'), style: TextStyle(color: context.textMuted))),
         ElevatedButton(onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            child: const Text('Delete')),
+            child: Text(tr('delete'))),
       ],
     ));
     if (ok != true) return;
@@ -434,7 +435,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete: $e'), duration: const Duration(seconds: 3)));
+          SnackBar(content: Text('${tr('failed_to_delete')}: $e'), duration: const Duration(seconds: 3)));
       }
     }
   }
@@ -463,7 +464,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
           initialChildSize: 0.7, minChildSize: 0.4, maxChildSize: 0.92, expand: false,
           builder: (_, ctrl) => Column(children: [
             Padding(padding: const EdgeInsets.fromLTRB(20, 16, 20, 8), child: Row(children: [
-              Expanded(child: Text('Words in "${unit.name}"',
+              Expanded(child: Text(tr('words_in_unit').replaceFirst('{name}', unit.name),
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: context.appText))),
               TextButton(
                 onPressed: () async {
@@ -491,11 +492,11 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                   await Future.wait(futures);
                   _load();
                 },
-                child: Text('Save', style: TextStyle(color: context.primary, fontWeight: FontWeight.bold)),
+                child: Text(tr('save'), style: TextStyle(color: context.primary, fontWeight: FontWeight.bold)),
               ),
             ])),
             if (allWords.isEmpty)
-              Expanded(child: Center(child: Text('No words in this class yet.',
+              Expanded(child: Center(child: Text(tr('no_words_in_class'),
                   style: TextStyle(color: context.textMuted))))
             else
               Expanded(child: ListView.builder(
@@ -532,11 +533,11 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
         Container(width: 36, height: 4, margin: const EdgeInsets.symmetric(vertical: 12),
             decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(2))),
         Padding(padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-            child: Text('Pick a Collection', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText))),
+            child: Text(tr('pick_a_collection'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText))),
         Flexible(child: ListView(shrinkWrap: true, children: _kCollectionMeta.map((c) => ListTile(
           leading: Text(c.emoji, style: const TextStyle(fontSize: 24)),
           title: Text(c.name, style: TextStyle(color: context.appText, fontWeight: FontWeight.w600)),
-          subtitle: Text('${c.days} days', style: TextStyle(color: context.textMuted, fontSize: 11)),
+          subtitle: Text(tr('days_label').replaceFirst('{n}', '${c.days}'), style: TextStyle(color: context.textMuted, fontSize: 11)),
           onTap: () => Navigator.pop(ctx, c),
         )).toList())),
         const SizedBox(height: 8),
@@ -602,7 +603,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                 ),
                 title: Text(day.topic, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
                     color: alreadyAssigned ? context.textMuted : context.appText)),
-                subtitle: Text('${day.words.length} words${alreadyAssigned ? ' · Assigned ✓' : ''}',
+                subtitle: Text(tr('n_words_plain').replaceFirst('{n}', '${day.words.length}') + (alreadyAssigned ? tr('assigned_check_suffix') : ''),
                     style: TextStyle(fontSize: 11, color: context.textMuted)),
                 enabled: !alreadyAssigned,
                 onTap: alreadyAssigned ? null : () => Navigator.pop(ctx, day),
@@ -679,20 +680,20 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
           child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
             Center(child: Container(width: 36, height: 4, margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(2)))),
-            Text('Assign as Homework', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: context.appText)),
+            Text(tr('assign_as_homework'), style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: context.appText)),
             const SizedBox(height: 4),
             Text(subtitle, style: TextStyle(fontSize: 13, color: context.textMuted)),
             const SizedBox(height: 20),
             if (showModes) ...[
-              Text('Modes', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.8)),
+              Text(tr('modes'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.8)),
               const SizedBox(height: 8),
               Wrap(spacing: 8, children: ['learn', 'flashcard', 'quiz', 'match'].map((mode) {
                 final emoji = {'learn': '📖', 'flashcard': '🃏', 'quiz': '❓', 'match': '🔗'}[mode]!;
-                final label = {'learn': 'Learn', 'flashcard': 'Flashcard', 'quiz': 'Quiz', 'match': 'Match'}[mode]!;
+                final label = {'learn': tr('mode_learn'), 'flashcard': tr('mode_flashcard'), 'quiz': tr('mode_quiz'), 'match': tr('mode_match')}[mode]!;
                 final required = mode != 'match';
                 final on = selectedModes[mode]!;
                 return FilterChip(
-                  label: Text('$emoji $label${required ? '' : ' (optional)'}',
+                  label: Text('$emoji $label${required ? '' : tr('mode_optional_suffix')}',
                       style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: on ? Colors.white : context.textMuted)),
                   selected: on,
                   onSelected: required ? null : (v) => setSheet(() => selectedModes[mode] = v),
@@ -702,7 +703,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
               }).toList()),
               const SizedBox(height: 16),
             ],
-            Text('Due Date', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.8)),
+            Text(tr('due_date'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.8)),
             const SizedBox(height: 8),
             GestureDetector(
               onTap: () async {
@@ -716,7 +717,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                 decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(12)),
                 child: Row(children: [
                   const Text('📅', style: TextStyle(fontSize: 16)), const SizedBox(width: 8),
-                  Text(dueDate == null ? 'No due date (optional)' : dueDate!.toIso8601String().substring(0, 10),
+                  Text(dueDate == null ? tr('no_due_date_optional') : dueDate!.toIso8601String().substring(0, 10),
                       style: TextStyle(fontSize: 13, color: dueDate == null ? context.textMuted : context.appText, fontWeight: FontWeight.w500)),
                   if (dueDate != null) ...[
                     const Spacer(),
@@ -726,20 +727,20 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
               ),
             ),
             const SizedBox(height: 16),
-            Text('Assign to', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.8)),
+            Text(tr('assign_to'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.8)),
             const SizedBox(height: 8),
             if (preAssignedStudentIds.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
-                child: Text('Some students already have this assigned — pick who else should get it.',
+                child: Text(tr('some_already_assigned'),
                     style: TextStyle(fontSize: 11, color: context.textMuted)),
               ),
             Row(children: [
               if (preAssignedStudentIds.isEmpty) ...[
-                Expanded(child: _choiceBtn('Whole Class', assignedTo == 'class', () => setSheet(() { assignedTo = 'class'; selectedStudents.clear(); }))),
+                Expanded(child: _choiceBtn(tr('whole_class'), assignedTo == 'class', () => setSheet(() { assignedTo = 'class'; selectedStudents.clear(); }))),
                 const SizedBox(width: 8),
               ],
-              Expanded(child: _choiceBtn('Specific Students', assignedTo == 'specific', () => setSheet(() => assignedTo = 'specific'))),
+              Expanded(child: _choiceBtn(tr('specific_students'), assignedTo == 'specific', () => setSheet(() => assignedTo = 'specific'))),
             ]),
             if (assignedTo == 'specific') ...[
               const SizedBox(height: 10),
@@ -753,7 +754,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                     dense: true, value: covered ? true : on,
                     onChanged: covered ? null : (v) => setSheet(() { v == true ? selectedStudents.add(s.studentId) : selectedStudents.remove(s.studentId); }),
                     title: Text(s.name, style: TextStyle(fontSize: 13, color: covered ? context.textMuted : context.appText)),
-                    subtitle: covered ? Text('Already assigned', style: TextStyle(fontSize: 11, color: context.textMuted)) : null,
+                    subtitle: covered ? Text(tr('already_assigned'), style: TextStyle(fontSize: 11, color: context.textMuted)) : null,
                     activeColor: context.primary,
                   );
                 }).toList()),
@@ -770,7 +771,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                   if (ctx.mounted) setSheet(() => submitting = false);
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to assign: $e'), duration: const Duration(seconds: 3)));
+                      SnackBar(content: Text('${tr('failed_to_assign')}: $e'), duration: const Duration(seconds: 3)));
                   }
                   return;
                 }
@@ -783,7 +784,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                   padding: const EdgeInsets.symmetric(vertical: 14)),
               child: submitting
                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Assign Homework', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  : Text(tr('assign_homework'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
             )),
           ])),
         ),
@@ -858,7 +859,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
               Container(width: 36, height: 4, decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(2))),
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
-                child: Text('Assign a Reading Passage', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+                child: Text(tr('assign_a_reading_passage'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -867,7 +868,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                   autofocus: true,
                   onChanged: (_) => setSheet(() {}),
                   decoration: InputDecoration(
-                    hintText: 'Search by title or topic…', hintStyle: TextStyle(color: context.textMuted),
+                    hintText: tr('search_by_title_topic'), hintStyle: TextStyle(color: context.textMuted),
                     filled: true, fillColor: context.surface2,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                     prefixIcon: Icon(Icons.search, color: context.textMuted, size: 20),
@@ -888,7 +889,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                       enabled: !alreadyAssigned,
                       leading: const Text('📚', style: TextStyle(fontSize: 20)),
                       title: Text(p.title, style: TextStyle(color: context.appText, fontWeight: FontWeight.w600, fontSize: 13)),
-                      subtitle: Text(alreadyAssigned ? '${p.topic} · Assigned ✓' : p.topic,
+                      subtitle: Text(alreadyAssigned ? p.topic + tr('assigned_check_suffix') : p.topic,
                           style: TextStyle(color: context.textMuted, fontSize: 11)),
                       onTap: alreadyAssigned ? null : () { Navigator.pop(ctx); _showAssignPassageHomework(p); },
                     );
@@ -972,7 +973,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      hw.source == 'library' ? 'Library' : hw.source == 'class' ? 'Class Words' : hw.source == 'passage' ? '📚 Reading' : '📗 Collection',
+                      hw.source == 'library' ? tr('library_section').replaceFirst('📚 ', '') : hw.source == 'class' ? tr('source_class_words') : hw.source == 'passage' ? tr('source_reading') : tr('source_collection'),
                       style: TextStyle(
                         fontSize: 9, fontWeight: FontWeight.bold,
                         color: hw.source == 'library' ? context.primary : hw.source == 'class' || hw.source == 'passage' ? const Color(0xFFF59E0B) : const Color(0xFF16A34A),
@@ -981,7 +982,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                   ),
                 ]),
                 const SizedBox(height: 2),
-                Text(hw.dueDate == null ? 'No due date' : (hw.isOverdue ? '⚠️ Overdue · ${hw.dueDate}' : 'Due ${hw.dueDate}'),
+                Text(hw.dueDate == null ? tr('no_due_date') : (hw.isOverdue ? tr('overdue_on').replaceFirst('{date}', '${hw.dueDate}') : tr('due_on').replaceFirst('{date}', '${hw.dueDate}')),
                     style: TextStyle(fontSize: 12, color: hw.isOverdue ? const Color(0xFFEF4444) : context.textMuted)),
               ])),
               GestureDetector(
@@ -989,13 +990,13 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                   Navigator.pop(ctx);
                   final ok = await showDialog<bool>(context: context, builder: (d) => AlertDialog(
                     backgroundColor: context.surface, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    title: Text('Delete homework?', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
-                    content: Text('This removes the assignment for all students. Any XP students already earned from it stays on the leaderboard.', style: TextStyle(color: context.textMuted)),
+                    title: Text(tr('delete_homework_q'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+                    content: Text(tr('delete_homework_confirm'), style: TextStyle(color: context.textMuted)),
                     actions: [
-                      TextButton(onPressed: () => Navigator.pop(d, false), child: Text('Cancel', style: TextStyle(color: context.textMuted))),
+                      TextButton(onPressed: () => Navigator.pop(d, false), child: Text(tr('cancel'), style: TextStyle(color: context.textMuted))),
                       ElevatedButton(onPressed: () => Navigator.pop(d, true),
                           style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                          child: const Text('Delete')),
+                          child: Text(tr('delete'))),
                     ],
                   ));
                   if (ok == true) {
@@ -1006,7 +1007,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                     } catch (e) {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Failed to delete: $e'), duration: const Duration(seconds: 3)));
+                          SnackBar(content: Text('${tr('failed_to_delete')}: $e'), duration: const Duration(seconds: 3)));
                       }
                     }
                   }
@@ -1030,7 +1031,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
               );
             }).toList()),
             const SizedBox(height: 16),
-            Text('PER STUDENT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
+            Text(tr('per_student'), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
             const SizedBox(height: 8),
             ...progress.map((s) {
               final allDone = isHomeworkFullyDone(hw.modes, s.completedModes);
@@ -1099,7 +1100,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
 
           // ── 📚 Library section ───────────────────────────────────────────
           Row(children: [
-            Text('📚 Library', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+            Text(tr('library_section'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
             const Spacer(),
             GestureDetector(onTap: _pickAndAssignFolder,
               child: Container(
@@ -1107,7 +1108,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                 decoration: BoxDecoration(color: context.primaryBg, borderRadius: BorderRadius.circular(20)),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Icon(Icons.add, size: 14, color: context.primary), const SizedBox(width: 4),
-                  Text('Assign Folder', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.primary)),
+                  Text(tr('assign_folder'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.primary)),
                 ]),
               )),
           ]),
@@ -1119,9 +1120,9 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
               decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16)),
               child: Column(children: [
                 const Text('📁', style: TextStyle(fontSize: 36)), const SizedBox(height: 8),
-                Text('No folders assigned yet', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: context.appText)),
+                Text(tr('no_folders_assigned'), style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: context.appText)),
                 const SizedBox(height: 4),
-                Text('Assign a folder from your library to start giving homework.',
+                Text(tr('no_folders_assigned_sub'),
                     textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: context.textMuted)),
               ]),
             )
@@ -1138,7 +1139,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                       const Text('📁', style: TextStyle(fontSize: 20)), const SizedBox(width: 10),
                       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text(folder.folderName, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: context.appText)),
-                        Text('${folder.units.length} ${folder.units.length == 1 ? 'unit' : 'units'}',
+                        Text(tr('n_units_word').replaceFirst('{n}', '${folder.units.length}'),
                             style: TextStyle(fontSize: 11, color: context.textMuted)),
                       ])),
                       GestureDetector(onTap: () => _unassignFolder(folder), child: Icon(Icons.close, size: 18, color: context.textMuted)),
@@ -1156,14 +1157,14 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                           const Text('📖', style: TextStyle(fontSize: 16)), const SizedBox(width: 8),
                           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                             Text(unit.unitName, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.appText)),
-                            Text('${unit.wordCount} words', style: TextStyle(fontSize: 11, color: context.textMuted)),
+                            Text(tr('n_words_plain').replaceFirst('{n}', '${unit.wordCount}'), style: TextStyle(fontSize: 11, color: context.textMuted)),
                           ])),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: isAssigned ? const Color(0xFF10B981).withValues(alpha: 0.12) : context.primaryBg,
                               borderRadius: BorderRadius.circular(10)),
-                            child: Text(isAssigned ? '✓ Assigned' : '+ Assign',
+                            child: Text(isAssigned ? tr('assigned_check') : tr('assign_plus'),
                                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold,
                                     color: isAssigned ? const Color(0xFF10B981) : context.primary)),
                           ),
@@ -1179,7 +1180,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
 
           // ── 📝 Class Words section ────────────────────────────────────────
           Row(children: [
-            Text('📝 Class Words', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+            Text(tr('class_words_section'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
             const Spacer(),
             GestureDetector(onTap: _createClassUnit,
               child: Container(
@@ -1187,7 +1188,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                 decoration: BoxDecoration(color: const Color(0xFFF59E0B).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   const Icon(Icons.add, size: 14, color: Color(0xFFF59E0B)), const SizedBox(width: 4),
-                  const Text('New Unit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFF59E0B))),
+                  Text(tr('new_unit'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFF59E0B))),
                 ]),
               )),
           ]),
@@ -1199,9 +1200,9 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
               decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16)),
               child: Column(children: [
                 const Text('📝', style: TextStyle(fontSize: 36)), const SizedBox(height: 8),
-                Text('No units yet', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: context.appText)),
+                Text(tr('no_units_yet'), style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: context.appText)),
                 const SizedBox(height: 4),
-                Text('Create a unit to organise class words into homework groups.',
+                Text(tr('no_units_yet_sub'),
                     textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: context.textMuted)),
               ]),
             )
@@ -1220,7 +1221,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                         const Text('📝', style: TextStyle(fontSize: 20)), const SizedBox(width: 10),
                         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Text(unit.name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: context.appText)),
-                          Text('${unit.wordCount} words', style: TextStyle(fontSize: 11, color: context.textMuted)),
+                          Text(tr('n_words_plain').replaceFirst('{n}', '${unit.wordCount}'), style: TextStyle(fontSize: 11, color: context.textMuted)),
                         ]),
                       ]),
                     ),
@@ -1242,14 +1243,14 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                       Expanded(child: OutlinedButton.icon(
                         onPressed: () => _manageUnitWords(unit),
                         icon: const Icon(Icons.checklist, size: 16),
-                        label: const Text('Manage Words', style: TextStyle(fontSize: 12)),
+                        label: Text(tr('manage_words'), style: const TextStyle(fontSize: 12)),
                         style: OutlinedButton.styleFrom(foregroundColor: context.textMuted, side: BorderSide(color: context.border)),
                       )),
                       const SizedBox(width: 8),
                       Expanded(child: ElevatedButton.icon(
                         onPressed: () => _showAssignHomework((id: unit.id, name: unit.name, wordCount: unit.wordCount, isClassWords: true)),
                         icon: Icon(isAssigned ? Icons.bar_chart : Icons.assignment_outlined, size: 16),
-                        label: Text(isAssigned ? 'View Progress' : 'Assign HW', style: const TextStyle(fontSize: 12)),
+                        label: Text(isAssigned ? tr('view_progress') : tr('assign_hw'), style: const TextStyle(fontSize: 12)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: isAssigned ? const Color(0xFF10B981) : context.primary,
                           foregroundColor: Colors.white,
@@ -1266,15 +1267,15 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
 
           // ── 📗 Collections section ────────────────────────────────────────
           Row(children: [
-            Text('📗 Collections', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+            Text(tr('collections_section'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
             const Spacer(),
             GestureDetector(onTap: _pickCollectionDay,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(color: const Color(0xFF22C55E).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
-                child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.add, size: 14, color: Color(0xFF16A34A)), SizedBox(width: 4),
-                  Text('Assign Day', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF16A34A))),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.add, size: 14, color: Color(0xFF16A34A)), const SizedBox(width: 4),
+                  Text(tr('assign_day'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF16A34A))),
                 ]),
               )),
           ]),
@@ -1288,15 +1289,15 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                 child: Column(children: [
                   const Text('📗', style: TextStyle(fontSize: 30)),
                   const SizedBox(height: 8),
-                  Text('Pre-built Collection Days', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+                  Text(tr('prebuilt_collection_days'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
                   const SizedBox(height: 4),
-                  Text('Assign a day from 30 Days, A1, A2, B1 and more directly as homework.',
+                  Text(tr('prebuilt_collection_days_sub'),
                       textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: context.textMuted)),
                   const SizedBox(height: 12),
                   ElevatedButton.icon(
                     onPressed: _pickCollectionDay,
                     icon: const Icon(Icons.add, size: 16),
-                    label: const Text('Assign a Day', style: TextStyle(fontSize: 13)),
+                    label: Text(tr('assign_a_day'), style: const TextStyle(fontSize: 13)),
                     style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF22C55E), foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                   ),
@@ -1325,7 +1326,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                         const SizedBox(width: 10),
                         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Text(name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: Colors.white)),
-                          Text('${days.length} day${days.length != 1 ? 's' : ''} assigned',
+                          Text(tr('n_days_assigned').replaceFirst('{n}', '${days.length}'),
                               style: const TextStyle(fontSize: 11, color: Color(0xB3FFFFFF))),
                         ])),
                         Icon(expanded ? Icons.expand_less : Icons.expand_more, color: Colors.white70, size: 20),
@@ -1345,7 +1346,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                           decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(12)),
                           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                             Row(children: [
-                              Expanded(child: Text('Day ${hw.dayNumber}: ${hw.topic ?? hw.unitName}',
+                              Expanded(child: Text(tr('day_n_topic').replaceFirst('{n}', '${hw.dayNumber}').replaceFirst('{topic}', hw.topic ?? hw.unitName),
                                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText))),
                               Text('$avgDone/$total', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: context.appText)),
                             ]),
@@ -1386,7 +1387,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
             decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16)),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                Text('📚 Reading Passages', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+                Text(tr('reading_passages_section'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
                 const Spacer(),
                 GestureDetector(onTap: _pickAndAssignPassage,
                   child: Container(
@@ -1394,12 +1395,12 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                     decoration: BoxDecoration(color: context.primaryBg, borderRadius: BorderRadius.circular(20)),
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
                       Icon(Icons.add, size: 14, color: context.primary), const SizedBox(width: 4),
-                      Text('Assign', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.primary)),
+                      Text(tr('assign'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.primary)),
                     ]),
                   )),
               ]),
               const SizedBox(height: 6),
-              Text('Assign one of the ${readingPassages.length} curated Ideas passages as reading homework.',
+              Text(tr('reading_passages_sub').replaceFirst('{n}', '${readingPassages.length}'),
                   style: TextStyle(fontSize: 12, color: context.textMuted)),
             ]),
           ),
@@ -1407,7 +1408,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
           const SizedBox(height: 20),
 
           // ── 📋 Homework section ───────────────────────────────────────────
-          Text('📋 Homework', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+          Text(tr('homework_section'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
           const SizedBox(height: 10),
 
           if (_homework.isEmpty)
@@ -1416,9 +1417,9 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
               decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16)),
               child: Column(children: [
                 const Text('📋', style: TextStyle(fontSize: 36)), const SizedBox(height: 8),
-                Text('No homework yet', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: context.appText)),
+                Text(tr('no_homework_yet'), style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: context.appText)),
                 const SizedBox(height: 4),
-                Text('Assign a unit as homework from the sections above.',
+                Text(tr('no_homework_yet_sub'),
                     textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: context.textMuted)),
               ]),
             )
@@ -1445,23 +1446,23 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           margin: const EdgeInsets.only(right: 6),
                           decoration: BoxDecoration(color: const Color(0xFFF59E0B).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
-                          child: const Text('Class Words', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFFF59E0B))),
+                          child: Text(tr('source_class_words'), style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFFF59E0B))),
                         ),
                       if (hw.source == 'collection')
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           margin: const EdgeInsets.only(right: 6),
                           decoration: BoxDecoration(color: const Color(0xFF22C55E).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
-                          child: const Text('Collection', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF16A34A))),
+                          child: Text(tr('source_collection'), style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF16A34A))),
                         ),
                       if (hw.source == 'passage')
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           margin: const EdgeInsets.only(right: 6),
                           decoration: BoxDecoration(color: const Color(0xFFF59E0B).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
-                          child: const Text('Reading', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFFF59E0B))),
+                          child: Text(tr('source_reading'), style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFFF59E0B))),
                         ),
-                      Text(hw.dueDate == null ? '' : (hw.isOverdue ? '⚠️ Overdue' : 'Due ${hw.dueDate}'),
+                      Text(hw.dueDate == null ? '' : (hw.isOverdue ? tr('overdue_short') : tr('due_on').replaceFirst('{date}', '${hw.dueDate}')),
                           style: TextStyle(fontSize: 11, color: hw.isOverdue ? const Color(0xFFEF4444) : context.textMuted, fontWeight: FontWeight.w600)),
                     ]),
                     const SizedBox(height: 8),
@@ -1484,7 +1485,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                       );
                     }),
                     const SizedBox(height: 4),
-                    Text('Tap to see per-student progress →', style: TextStyle(fontSize: 11, color: context.textMuted)),
+                    Text(tr('tap_per_student_progress'), style: TextStyle(fontSize: 11, color: context.textMuted)),
                   ]),
                 ),
               );

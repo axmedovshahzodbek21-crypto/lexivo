@@ -347,7 +347,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to import words: $e')),
+          SnackBar(content: Text('${tr('failed_to_import_words')}: $e')),
         );
       }
     }
@@ -388,7 +388,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
         }
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to update star — try again')),
+        SnackBar(content: Text(tr('failed_to_update_star'))),
       );
     }
   }
@@ -411,7 +411,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
       // explanation why "deleting" it appeared to do nothing.
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete: $e')));
+          SnackBar(content: Text('${tr('failed_to_delete')}: $e')));
       }
       return;
     }
@@ -462,9 +462,9 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
       context: context,
       builder: (dctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('📖 Continue Learning?', textAlign: TextAlign.center),
+        title: Text(tr('continue_learning'), textAlign: TextAlign.center),
         content: Text(
-          'You left off at word ${savedIndex + 1} of ${_words.length}.\nContinue from where you stopped, or start over?',
+          tr('continue_learning_body').replaceFirst('{n}', '${savedIndex + 1}').replaceFirst('{total}', '${_words.length}'),
           textAlign: TextAlign.center,
           style: const TextStyle(fontSize: 14, color: Colors.grey),
         ),
@@ -477,7 +477,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
               deleteClassLearnBookmark(classId: widget.classId, scope: 'words');
               _openStudySheet(0);
             },
-            child: const Text('Start from Word 1', style: TextStyle(color: Colors.grey)),
+            child: Text(tr('start_from_word_1'), style: const TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -489,7 +489,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: Text('Continue from Word ${savedIndex + 1}'),
+            child: Text(tr('continue_from_word').replaceFirst('{n}', '${savedIndex + 1}')),
           ),
         ],
       ),
@@ -538,7 +538,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
   void _startQuiz() {
     if (_words.length < 4) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Need at least 4 words for a quiz'), duration: Duration(seconds: 2)));
+        SnackBar(content: Text(tr('need_4_for_quiz')), duration: const Duration(seconds: 2)));
       return;
     }
     final user = currentUser;
@@ -560,7 +560,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
   void _startMatching() {
     if (_words.length < 4) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Need at least 4 words for matching'), duration: Duration(seconds: 2)));
+        SnackBar(content: Text(tr('need_4_for_matching')), duration: const Duration(seconds: 2)));
       return;
     }
     final user = currentUser;
@@ -590,29 +590,29 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         // Practice
-        Text('── Practice', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
+        Text(tr('practice_divider'), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
         const SizedBox(height: 8),
         GridView.count(
           crossAxisCount: 2, mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: 3.2,
           shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
           children: [
-            _hubBtn('📖 Study', primary: true, onTap: _studyWords),
-            _hubBtn('🃏 Flashcards', onTap: _startFlashcards),
-            _hubBtn('❓ Quiz', onTap: _startQuiz),
-            _hubBtn('🔗 Match', onTap: _startMatching),
+            _hubBtn(tr('hub_study'), primary: true, onTap: _studyWords),
+            _hubBtn(tr('hub_flashcards'), onTap: _startFlashcards),
+            _hubBtn(tr('hub_quiz'), onTap: _startQuiz),
+            _hubBtn(tr('hub_match'), onTap: _startMatching),
           ],
         ),
         const SizedBox(height: 12),
         // Review
-        Text('── Review', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
+        Text(tr('review_divider'), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16), boxShadow: context.cardShadow),
           child: Row(children: [
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('SRS Review', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
-              Text(_dueCount > 0 ? '$_dueCount word${_dueCount == 1 ? '' : 's'} due today' : 'All caught up ✓',
+              Text(tr('srs_review'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+              Text(_dueCount > 0 ? tr('n_words_due_today').replaceFirst('{n}', '$_dueCount') : tr('all_caught_up_check'),
                   style: TextStyle(fontSize: 11, color: context.textMuted)),
             ])),
             if (_dueCount > 0)
@@ -623,7 +623,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 ),
-                child: const Text('Review →', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                child: Text(tr('review_arrow'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
               )
             else
               const Text('✅', style: TextStyle(fontSize: 22)),
@@ -632,14 +632,14 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
         // My Stats — students only
         if (!widget.isTeacher) ...[
           const SizedBox(height: 12),
-          Text('── My Stats', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
+          Text(tr('my_stats_divider'), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2)),
           const SizedBox(height: 8),
           Row(children: [
-            _statCard('$_learnedCount/${_words.length}', 'Learned', context.primary),
+            _statCard('$_learnedCount/${_words.length}', tr('learned'), context.primary),
             const SizedBox(width: 8),
-            _statCard('$_hardCount', 'Hard', const Color(0xFFEF4444)),
+            _statCard('$_hardCount', tr('hard_plain'), const Color(0xFFEF4444)),
             const SizedBox(width: 8),
-            _statCard('$_starredCount', 'Starred', const Color(0xFFF59E0B)),
+            _statCard('$_starredCount', tr('starred'), const Color(0xFFF59E0B)),
           ]),
           const SizedBox(height: 8),
           GestureDetector(
@@ -650,7 +650,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(14), boxShadow: context.cardShadow),
               child: Row(children: [
-                Text('My Progress', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+                Text(tr('my_progress'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
                 const Spacer(),
                 Text('→', style: TextStyle(color: context.textMuted)),
               ]),
@@ -696,7 +696,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
       backgroundColor: context.bg,
       body: Column(
         children: [
-          _classGradHero(widget.classId, widget.className, '📝', tr('class_words'), 'All vocabulary in this class'),
+          _classGradHero(widget.classId, widget.className, '📝', tr('class_words'), tr('all_vocab_in_class')),
           if (widget.isTeacher)
             TabBar(
               controller: _tabs,
@@ -705,8 +705,8 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
               indicatorColor: context.primary,
               tabs: [
                 Tab(text: '✍️ ${tr('manual')}'),
-                Tab(text: '🤖 AI Import'),
-                const Tab(text: '📚 Collection'),
+                Tab(text: tr('ai_import_tab')),
+                Tab(text: tr('collection_tab')),
               ],
             ),
           Expanded(
@@ -740,19 +740,19 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16), boxShadow: context.cardShadow),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Assign to', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.5)),
+        Text(tr('assign_to'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.5)),
         const SizedBox(height: 10),
         Row(children: [
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('📁 Folder (optional)', style: TextStyle(fontSize: 11, color: context.textMuted)),
+            Text(tr('folder_optional'), style: TextStyle(fontSize: 11, color: context.textMuted)),
             const SizedBox(height: 4),
-            _field(_folderCtrl, 'e.g. Unit 1, Chapter 2…'),
+            _field(_folderCtrl, tr('folder_placeholder')),
           ])),
           const SizedBox(width: 10),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('📖 Group (optional)', style: TextStyle(fontSize: 11, color: context.textMuted)),
+            Text(tr('group_optional'), style: TextStyle(fontSize: 11, color: context.textMuted)),
             const SizedBox(height: 4),
-            _field(_groupCtrl, 'e.g. Week 1, Greetings…'),
+            _field(_groupCtrl, tr('group_placeholder')),
           ])),
         ]),
         if (existingFolders.isNotEmpty) ...[
@@ -907,7 +907,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
                 final words = _wordsInputCtrl.text.trim();
                 final prompt = buildAiImportPrompt(wordLang: _wordLang, translationLang: _translationLang, words: words.isEmpty ? 'apple, book, water' : words);
                 Clipboard.setData(ClipboardData(text: prompt));
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Prompt copied! Paste into AI chatbot.'), duration: Duration(seconds: 2)));
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr('prompt_copied')), duration: const Duration(seconds: 2)));
               },
               icon: const Text('📋', style: TextStyle(fontSize: 14)),
               label: Text(tr('copy_ai_prompt'), style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -939,7 +939,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
           ),
           if (_parsed.isNotEmpty) ...[
             const SizedBox(height: 10),
-            Text('✅ ${_parsed.length} ${_parsed.length == 1 ? 'word' : 'words'} recognized', style: TextStyle(fontSize: 12, color: context.successColor, fontWeight: FontWeight.bold)),
+            Text(tr('n_words_recognized').replaceFirst('{n}', '${_parsed.length}'), style: TextStyle(fontSize: 12, color: context.successColor, fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
             ..._parsed.map((w) => Container(
               margin: const EdgeInsets.only(bottom: 4),
@@ -1011,7 +1011,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16), boxShadow: context.cardShadow),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Pick a Collection', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: context.appText)),
+          Text(tr('pick_a_collection'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: context.appText)),
           const SizedBox(height: 12),
           ...List.generate(_collectionMeta.length, (i) {
             final selected = _selectedCollectionIdx == i;
@@ -1032,7 +1032,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
                   const SizedBox(width: 10),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(name, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: selected ? context.primary : context.appText)),
-                    Text('${col.days.length} units', style: TextStyle(fontSize: 11, color: context.textMuted)),
+                    Text(tr('n_units').replaceFirst('{n}', '${col.days.length}'), style: TextStyle(fontSize: 11, color: context.textMuted)),
                   ])),
                   if (selected) Icon(Icons.check_circle, size: 18, color: context.primary),
                 ]),
@@ -1048,7 +1048,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16), boxShadow: context.cardShadow),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Pick a Unit', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: context.appText)),
+            Text(tr('pick_a_unit'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: context.appText)),
             const SizedBox(height: 8),
             SizedBox(
               height: 240,
@@ -1076,7 +1076,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
                         const SizedBox(width: 10),
                         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Text(day.topic, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: selected ? context.primary : context.appText)),
-                          Text('${day.words.length} words', style: TextStyle(fontSize: 11, color: context.textMuted)),
+                          Text(tr('n_words_plain').replaceFirst('{n}', '${day.words.length}'), style: TextStyle(fontSize: 11, color: context.textMuted)),
                         ])),
                       ]),
                     ),
@@ -1103,7 +1103,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
               ),
               child: _importingCollection
                   ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : Text('Import ${day.words.length} words to class', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  : Text(tr('import_n_words_to_class').replaceFirst('{n}', '${day.words.length}'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
             ),
           );
         }),
@@ -1167,7 +1167,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to import collection: $e')),
+          SnackBar(content: Text('${tr('failed_to_import_collection')}: $e')),
         );
       }
     }
@@ -1182,11 +1182,11 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
       return Center(child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text('⚠️ Couldn\'t load words', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+          Text('⚠️ ${tr('couldnt_load_words')}', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Text('Check your connection and try again.', textAlign: TextAlign.center, style: TextStyle(color: context.textMuted)),
+          Text(tr('check_connection'), textAlign: TextAlign.center, style: TextStyle(color: context.textMuted)),
           const SizedBox(height: 16),
-          ElevatedButton(onPressed: _loadWords, child: const Text('Retry')),
+          ElevatedButton(onPressed: _loadWords, child: Text(tr('retry'))),
         ]),
       ));
     }
@@ -1300,7 +1300,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
   void _confirmDelete(_WordEntry w) => showDialog(
     context: context, builder: (ctx) => AlertDialog(
       backgroundColor: context.surface,
-      title: Text('Delete "${w.word}"?', style: TextStyle(color: context.appText)),
+      title: Text(tr('delete_word_q').replaceFirst('{word}', w.word), style: TextStyle(color: context.appText)),
       content: Text(tr('delete_word_confirm'), style: TextStyle(color: context.textMuted)),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx), child: Text(tr('cancel'), style: TextStyle(color: context.textMuted))),

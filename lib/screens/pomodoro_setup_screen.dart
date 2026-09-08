@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import 'dart:async';
 import 'dart:math';
 import 'pomodoro_service.dart';
@@ -351,7 +352,7 @@ class _PomodoroSetupScreenState extends State<PomodoroSetupScreen> {
                     child: Column(
                       children: [
                         _SliderRow(
-                          label: 'Focus',
+                          label: tr('pomo_focus'),
                           value: _workMinutes.toDouble(),
                           min: _kMinWorkMinutes,
                           max: _kMaxWorkMinutes,
@@ -361,7 +362,7 @@ class _PomodoroSetupScreenState extends State<PomodoroSetupScreen> {
                         ),
                         const SizedBox(height: 8),
                         _SliderRow(
-                          label: 'Break',
+                          label: tr('pomo_break'),
                           value: _breakMinutes.toDouble(),
                           min: _kMinBreakMinutes,
                           max: _kMaxBreakMinutes,

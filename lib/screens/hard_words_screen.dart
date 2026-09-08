@@ -105,7 +105,7 @@ class _HardWordsScreenState extends State<HardWordsScreen> {
     await StorageService.removeMarkedHardWord(e.word.word);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('"${e.word.word}" moved to your review cycle')),
+      SnackBar(content: Text(tr('hw_moved_review').replaceFirst('{word}', e.word.word))),
     );
     await _load();
   }
@@ -189,7 +189,7 @@ class _HardWordsScreenState extends State<HardWordsScreen> {
                               child: OutlinedButton.icon(
                                 onPressed: _startLearn,
                                 icon: const Text('📖'),
-                                label: const Text('Study'),
+                                label: Text(tr('study_plain')),
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -197,7 +197,7 @@ class _HardWordsScreenState extends State<HardWordsScreen> {
                               child: OutlinedButton.icon(
                                 onPressed: _startFlashcards,
                                 icon: const Text('🃏'),
-                                label: const Text('Flashcards'),
+                                label: Text(tr('flashcards')),
                               ),
                             ),
                           ],
@@ -244,7 +244,7 @@ class _HardWordsScreenState extends State<HardWordsScreen> {
           children: [
             const Text('🎉', style: TextStyle(fontSize: 48)),
             const SizedBox(height: 16),
-            Text('No hard words',
+            Text(tr('no_hard_words'),
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
             const SizedBox(height: 8),
             Text(
@@ -346,7 +346,7 @@ class _HardWordsScreenState extends State<HardWordsScreen> {
                 foregroundColor: const Color(0xFF16A34A),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              child: const Text('✓  Mark as Learned',
+              child: Text(tr('mark_as_learned_check'),
                   style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),

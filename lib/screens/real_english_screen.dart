@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/real_english_data.dart';
 import 'real_english_detail_screen.dart';
@@ -37,7 +38,7 @@ class RealEnglishScreen extends StatelessWidget {
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 const Text('🎬', style: TextStyle(fontSize: 48)),
                 const SizedBox(height: 12),
-                Text('No sets yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
+                Text(tr('re_no_sets'), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
               ]),
             )
           : CustomScrollView(
@@ -48,11 +49,11 @@ class RealEnglishScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('REAL ENGLISH', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF5B8AF0), letterSpacing: 1.2)),
+                        Text(tr('re_caps'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF5B8AF0), letterSpacing: 1.2)),
                         const SizedBox(height: 4),
-                        Text('Learn From Videos', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: context.appText, height: 1.1)),
+                        Text(tr('re_learn_from_videos'), style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: context.appText, height: 1.1)),
                         const SizedBox(height: 4),
-                        Text('${realEnglishSets.length} video sets available', style: TextStyle(fontSize: 13, color: context.textMuted)),
+                        Text(tr('re_n_sets').replaceFirst('{n}', '${realEnglishSets.length}'), style: TextStyle(fontSize: 13, color: context.textMuted)),
                       ],
                     ),
                   ),
@@ -147,7 +148,7 @@ class _SetCard extends StatelessWidget {
                     Text(set.title, maxLines: 2, overflow: TextOverflow.ellipsis,
                       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12, height: 1.3)),
                     const SizedBox(height: 3),
-                    Text('${set.videos.length} videos',
+                    Text(tr('re_n_videos').replaceFirst('{n}', '${set.videos.length}'),
                       style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 10, fontWeight: FontWeight.w600)),
                   ],
                 ),
@@ -184,7 +185,7 @@ class _HowItWorksCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('HOW IT WORKS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: lineColor, letterSpacing: 1.0)),
+          Text(tr('how_it_works'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: lineColor, letterSpacing: 1.0)),
           const SizedBox(height: 16),
           ...List.generate(steps.length, (i) {
             final s = steps[i];

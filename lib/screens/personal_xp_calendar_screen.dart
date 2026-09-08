@@ -103,7 +103,7 @@ class _PersonalXpCalendarScreenState extends State<PersonalXpCalendarScreen> {
           icon: Icon(Icons.arrow_back_rounded, color: context.primary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('XP History',
+        title: Text(l10n.tr('xp_history'),
             style: TextStyle(
                 color: context.appText, fontWeight: FontWeight.bold)),
       ),
@@ -136,7 +136,7 @@ class _PersonalXpCalendarScreenState extends State<PersonalXpCalendarScreen> {
                             fontWeight: FontWeight.w900,
                             color: color),
                       ),
-                      Text('Total personal XP',
+                      Text(l10n.tr('total_personal_xp'),
                           style: TextStyle(
                               fontSize: 12,
                               color: context.textMuted,
@@ -293,7 +293,7 @@ class _PersonalXpCalendarScreenState extends State<PersonalXpCalendarScreen> {
                                 child: Container(
                                     width: 12, height: 12, color: color)),
                             const SizedBox(width: 6),
-                            Text('XP earned',
+                            Text(l10n.tr('xp_earned_label'),
                                 style: TextStyle(
                                     fontSize: 11, color: context.textMuted)),
                           ],

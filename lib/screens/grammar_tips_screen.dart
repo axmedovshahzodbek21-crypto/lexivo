@@ -142,7 +142,7 @@ class _GrammarTipsScreenState extends State<GrammarTipsScreen> {
                       children: [
                         const Text('🔍', style: TextStyle(fontSize: 44)),
                         const SizedBox(height: 12),
-                        Text('No tips match your search.',
+                        Text(tr('gt_no_match'),
                             style: TextStyle(color: context.textMuted)),
                       ],
                     ),

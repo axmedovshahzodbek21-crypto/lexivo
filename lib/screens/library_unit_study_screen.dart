@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import '../services/supabase_service.dart';
 import '../services/widget_service.dart';
 import '../services/class_learn_progress.dart';
@@ -50,7 +51,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
   Set<String> _completedModes = {};
 
   static const _modeIcon  = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯'};
-  static const _modeLabel = {'learn': 'Learn', 'flashcard': 'Flashcards', 'quiz': 'Quiz', 'match': 'Match'};
+  static Map<String, String> get _modeLabel => {'learn': tr('learn'), 'flashcard': tr('flashcards'), 'quiz': tr('quiz'), 'match': tr('match_plain')};
   static const _modeColor = {
     'learn':     Color(0xFF6C63FF),
     'flashcard': Color(0xFFA855F7),
@@ -192,7 +193,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not save progress: $e')),
+          SnackBar(content: Text('${tr('could_not_save_progress')}: $e')),
         );
       }
     }
@@ -212,7 +213,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not save progress: $e')),
+          SnackBar(content: Text('${tr('could_not_save_progress')}: $e')),
         );
       }
     } finally {
@@ -242,7 +243,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
             context: context,
             builder: (dctx) => AlertDialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: const Text('📖 Continue Learning?', textAlign: TextAlign.center),
+              title: Text(tr('continue_learning'), textAlign: TextAlign.center),
               content: Text(
                 'You left off at word ${savedIndex + 1} of ${wd.words.length}.\nContinue from where you stopped, or start over?',
                 textAlign: TextAlign.center,
@@ -252,7 +253,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(dctx, 'restart'),
-                  child: const Text('Start from Word 1', style: TextStyle(color: Colors.grey)),
+                  child: Text(tr('start_from_word_1'), style: TextStyle(color: Colors.grey)),
                 ),
                 ElevatedButton(
                   onPressed: () => Navigator.pop(dctx, 'resume'),
@@ -261,7 +262,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: Text('Continue from Word ${savedIndex + 1}'),
+                  child: Text(tr('continue_from_word').replaceFirst('{n}', '${savedIndex + 1}')),
                 ),
               ],
             ),
@@ -335,7 +336,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
         appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0,
           leading: IconButton(icon: Icon(Icons.arrow_back_rounded, color: context.primary),
             onPressed: () => Navigator.pop(context))),
-        body: Center(child: Text('No words in this unit yet.',
+        body: Center(child: Text(tr('no_words_in_unit_yet'),
           style: TextStyle(color: context.textMuted, fontSize: 14))),
       );
     }
@@ -396,7 +397,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
         ]),
       ),
       body: passage == null
-        ? Center(child: Text('This passage is no longer available.', style: TextStyle(color: context.textMuted)))
+        ? Center(child: Text(tr('passage_no_longer_available'), style: TextStyle(color: context.textMuted)))
         : ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
             children: [
@@ -404,7 +405,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(20)),
-                  child: const Text('📚 Reading', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.white)),
+                  child: Text(tr('reading_label'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.white)),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -415,7 +416,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(color: const Color(0xFF10B981).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
-                    child: const Text('✓ Done', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF10B981))),
+                    child: Text(tr('done_check'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF10B981))),
                   ),
               ]),
               const SizedBox(height: 16),
@@ -506,7 +507,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
-              child: const Text('Back to Homework', style: TextStyle(fontWeight: FontWeight.w700)),
+              child: Text(tr('back_to_homework'), style: TextStyle(fontWeight: FontWeight.w700)),
             ),
           ),
         ]),
@@ -581,10 +582,10 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
               Text(_modeIcon[nextMode] ?? '📖', style: const TextStyle(fontSize: 28)),
               const SizedBox(width: 16),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Do ${_modeLabel[nextMode] ?? nextMode}',
+                Text(tr('do_mode').replaceFirst('{mode}', _modeLabel[nextMode] ?? nextMode),
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: nextColor)),
                 const SizedBox(height: 2),
-                Text('Recommended next step',
+                Text(tr('recommended_next'),
                   style: TextStyle(fontSize: 12, color: context.textMuted)),
               ])),
               Icon(Icons.arrow_forward_ios_rounded, color: nextColor, size: 16),
@@ -608,10 +609,10 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
                 Text(_modeIcon[skipMode] ?? '📖', style: const TextStyle(fontSize: 24)),
                 const SizedBox(width: 14),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Skip to ${_modeLabel[skipMode] ?? skipMode}',
+                  Text(tr('skip_to_mode').replaceFirst('{mode}', _modeLabel[skipMode] ?? skipMode),
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: context.appText)),
                   const SizedBox(height: 2),
-                  Text('${_modeLabel[nextMode]} won\'t be marked until completed',
+                  Text(tr('mode_wont_mark').replaceFirst('{mode}', '${_modeLabel[nextMode]}'),
                     style: TextStyle(fontSize: 11, color: context.textMuted)),
                 ])),
                 Icon(Icons.arrow_forward_ios_rounded, color: context.textMuted, size: 14),
@@ -628,7 +629,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
         Row(children: [
           Text('📚', style: const TextStyle(fontSize: 16)),
           const SizedBox(width: 8),
-          Text('${_wordDay!.words.length} words  ·  ${_completedModes.where(widget.modes.contains).length}/${widget.modes.length} modes done',
+          Text(tr('n_words_modes_done').replaceFirst('{words}', '${_wordDay!.words.length}').replaceFirst('{done}', '${_completedModes.where(widget.modes.contains).length}').replaceFirst('{total}', '${widget.modes.length}'),
             style: TextStyle(fontSize: 13, color: context.textMuted)),
         ]),
       ],

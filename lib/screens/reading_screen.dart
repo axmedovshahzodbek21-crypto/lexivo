@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/reading_data.dart';
 import '../data/storage_service.dart';
@@ -250,9 +251,9 @@ class _ReadingScreenState extends State<ReadingScreen> {
                 children: [
                   const Text('📚', style: TextStyle(fontSize: 48)),
                   const SizedBox(height: 12),
-                  Text('No passages yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
+                  Text(tr('rd_no_passages'), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
                   const SizedBox(height: 6),
-                  Text('Passages will appear here once added.', style: TextStyle(fontSize: 13, color: context.textMuted)),
+                  Text(tr('rd_passages_appear'), style: TextStyle(fontSize: 13, color: context.textMuted)),
                 ],
               ),
             )
@@ -264,11 +265,11 @@ class _ReadingScreenState extends State<ReadingScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('IDEAS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFFEAB308), letterSpacing: 1.2)),
+                        Text(tr('rd_ideas_caps'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFFEAB308), letterSpacing: 1.2)),
                         const SizedBox(height: 4),
-                        Text('Reading Passages', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: context.appText, height: 1.1)),
+                        Text(tr('rd_reading_passages'), style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: context.appText, height: 1.1)),
                         const SizedBox(height: 4),
-                        Text('${readingPassages.length} passages to explore', style: TextStyle(fontSize: 13, color: context.textMuted)),
+                        Text(tr('rd_n_passages').replaceFirst('{n}', '${readingPassages.length}'), style: TextStyle(fontSize: 13, color: context.textMuted)),
                       ],
                     ),
                   ),

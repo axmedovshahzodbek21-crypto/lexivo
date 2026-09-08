@@ -364,7 +364,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                                   Column(mainAxisSize: MainAxisSize.min, children: [
                                     Text('${(progress * 100).round()}%',
                                       style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white)),
-                                    Text('done', style: TextStyle(fontSize: 9, color: Colors.white.withValues(alpha: 0.7))),
+                                    Text(tr('ach_done_lc'), style: TextStyle(fontSize: 9, color: Colors.white.withValues(alpha: 0.7))),
                                   ]),
                                 ]),
                               ),
@@ -380,7 +380,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                                   const SizedBox(height: 4),
                                   Text('$unlocked / $total',
                                     style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800, color: Colors.white, height: 1.0)),
-                                  Text('badges unlocked',
+                                  Text(tr('ach_badges_unlocked'),
                                     style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.65))),
                                   const SizedBox(height: 10),
                                   Container(
@@ -392,7 +392,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                                     child: Row(mainAxisSize: MainAxisSize.min, children: [
                                       const Text('✨', style: TextStyle(fontSize: 12)),
                                       const SizedBox(width: 4),
-                                      Text('$xpEarned XP earned',
+                                      Text(tr('ach_xp_earned').replaceFirst('{n}', '$xpEarned'),
                                         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
                                       Text('  / $xpTotal',
                                         style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.6))),
@@ -615,7 +615,7 @@ class _AchCard extends StatelessWidget {
                       child: const Center(child: Text('✓', style: TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold))),
                     ),
                     const SizedBox(width: 4),
-                    Text('Achieved', style: TextStyle(fontSize: 9, color: context.primary, fontWeight: FontWeight.w600)),
+                    Text(tr('ach_achieved'), style: TextStyle(fontSize: 9, color: context.primary, fontWeight: FontWeight.w600)),
                   ])
                 else if (prog != null) ...[
                   ClipRRect(
@@ -693,7 +693,7 @@ class _DetailSheet extends StatelessWidget {
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               const Text('✨', style: TextStyle(fontSize: 16)),
               const SizedBox(width: 6),
-              Text('+${def.xp} XP reward',
+              Text(tr('ach_xp_reward').replaceFirst('{n}', '${def.xp}'),
                 style: TextStyle(
                   fontSize: 14, fontWeight: FontWeight.w700,
                   color: unlocked ? context.primary : context.textMuted,
@@ -709,7 +709,7 @@ class _DetailSheet extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(children: [
-                Text('✓ Achieved', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: context.primary)),
+                Text(tr('ach_achieved_check'), style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: context.primary)),
                 if (date != null) ...[
                   const SizedBox(height: 2),
                   Text(_fmtDate(date!), style: TextStyle(fontSize: 12, color: context.textMuted)),

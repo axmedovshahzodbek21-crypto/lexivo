@@ -749,7 +749,7 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
               onPressed: _learnedThisSession.isEmpty
                   ? null
                   : _goToFlashcardWithLearned,
-              tooltip: 'Go to Flashcard',
+              tooltip: tr('go_to_flashcard'),
             ),
           ],
         ),

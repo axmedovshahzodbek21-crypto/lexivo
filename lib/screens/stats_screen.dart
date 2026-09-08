@@ -629,7 +629,7 @@ class _StatsScreenState extends State<StatsScreen> {
                     color: color,
                     fontSize: 15)),
             const Spacer(),
-            Text('$covered / $total units',
+            Text(tr('n_of_m_units').replaceFirst('{n}', '$covered').replaceFirst('{m}', '$total'),
                 style:
                     TextStyle(fontSize: 12, color: context.textMuted)),
           ],

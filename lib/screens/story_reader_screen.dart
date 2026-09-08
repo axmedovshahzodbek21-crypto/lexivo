@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import '../app_theme.dart';
 import '../services/supabase_service.dart';
 
@@ -147,13 +148,13 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   elevation: 0,
                 ),
-                child: const Text('Go back to re-learn', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                child: Text(tr('sr_go_back_relearn'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
               ),
             ),
             const SizedBox(height: 8),
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Continue reading', style: TextStyle(color: context.textMuted)),
+              child: Text(tr('sr_continue_reading'), style: TextStyle(color: context.textMuted)),
             ),
           ],
         ),
@@ -268,7 +269,7 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
                               const SizedBox(height: 16),
                               ElevatedButton(
                                 onPressed: () { setState(() => _loading = true); _fetchStory(); },
-                                child: const Text('Try again'),
+                                child: Text(tr('try_again_plain')),
                               ),
                             ],
                           ],

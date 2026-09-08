@@ -541,9 +541,9 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
           boxShadow: context.cardShadow,
         ),
         child: Row(children: [
-          Text('XP HISTORY', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.textMuted, letterSpacing: 1)),
+          Text(tr('xp_history_caps'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.textMuted, letterSpacing: 1)),
           const Spacer(),
-          Text('View Calendar →', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.primary)),
+          Text(tr('view_calendar_arrow'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.primary)),
         ]),
       ),
     );

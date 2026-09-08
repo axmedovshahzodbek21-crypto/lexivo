@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import 'package:flutter/services.dart';
 import '../app_theme.dart';
 import '../data/real_english_data.dart';
@@ -298,7 +299,7 @@ class _UnitCard extends StatelessWidget {
                         child: Text('${day.dayNumber}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)),
                       ),
                       const Spacer(),
-                      Text('${day.words.length} words', style: TextStyle(fontSize: 9, color: context.textMuted)),
+                      Text(tr('n_words_plain').replaceFirst('{n}', '${day.words.length}'), style: TextStyle(fontSize: 9, color: context.textMuted)),
                     ]),
                     const SizedBox(height: 4),
                     Text(day.topic, maxLines: 2, overflow: TextOverflow.ellipsis,
@@ -319,7 +320,7 @@ class _UnitCard extends StatelessWidget {
                         child: Column(mainAxisSize: MainAxisSize.min, children: [
                           Text(progress.learnDone ? '✅' : '📖', style: const TextStyle(fontSize: 20)),
                           const SizedBox(height: 2),
-                          Text('Learn', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold,
+                          Text(tr('learn'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold,
                             color: progress.learnDone ? Colors.green.shade600 : activeAccent)),
                         ]),
                       ),
@@ -334,11 +335,11 @@ class _UnitCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     // small icon-only lock buttons
                     Row(children: [
-                      _SmallBtn(icon: '🃏', done: progress.flashcardDone, locked: !progress.learnDone, color: const Color(0xFF9333EA), label: 'Cards', onTap: onFlashcards),
+                      _SmallBtn(icon: '🃏', done: progress.flashcardDone, locked: !progress.learnDone, color: const Color(0xFF9333EA), label: tr('cards'), onTap: onFlashcards),
                       const SizedBox(width: 6),
-                      _SmallBtn(icon: '🧠', done: progress.quizDone,      locked: !progress.learnDone, color: const Color(0xFFEA580C), label: 'Quiz',  onTap: onQuiz),
+                      _SmallBtn(icon: '🧠', done: progress.quizDone,      locked: !progress.learnDone, color: const Color(0xFFEA580C), label: tr('quiz'),  onTap: onQuiz),
                       const SizedBox(width: 6),
-                      _SmallBtn(icon: '🔀', done: false,                  locked: !progress.learnDone, color: const Color(0xFFEC4899), label: 'Match', onTap: onMatch),
+                      _SmallBtn(icon: '🔀', done: false,                  locked: !progress.learnDone, color: const Color(0xFFEC4899), label: tr('match_plain'), onTap: onMatch),
                     ]),
                   ],
                 ),
@@ -397,7 +398,7 @@ class _EmptyState extends StatelessWidget {
       Text(loadError ? 'Check your connection and try again.' : 'This video\'s words are being prepared.', style: TextStyle(fontSize: 13, color: context.textMuted)),
       if (loadError && onRetry != null) ...[
         const SizedBox(height: 16),
-        ElevatedButton(onPressed: onRetry, child: const Text('Try again')),
+        ElevatedButton(onPressed: onRetry, child: Text(tr('try_again_plain'))),
       ],
     ]));
   }

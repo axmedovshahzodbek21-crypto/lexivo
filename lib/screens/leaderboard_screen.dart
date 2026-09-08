@@ -267,7 +267,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(tr('leaderboard_title'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-                        Text('Top learners by total XP', style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 12)),
+                        Text(tr('top_learners_by_xp'), style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 12)),
                       ],
                     ),
                   ),
@@ -305,7 +305,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             const SizedBox(height: 12),
             Text(_error!, style: TextStyle(color: context.textMuted)),
             const SizedBox(height: 16),
-            ElevatedButton(onPressed: _loadAll, child: const Text('Try again')),
+            ElevatedButton(onPressed: _loadAll, child: Text(tr('try_again_plain'))),
           ],
         ),
       );
@@ -433,7 +433,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             Expanded(child: Divider(color: context.border)),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Text('Leaderboard', style: TextStyle(fontSize: 12, color: context.textMuted)),
+              child: Text(tr('leaderboard_plain'), style: TextStyle(fontSize: 12, color: context.textMuted)),
             ),
             Expanded(child: Divider(color: context.border)),
           ],
@@ -504,7 +504,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(color: context.primary, borderRadius: BorderRadius.circular(20)),
-                          child: const Text('YOU', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                          child: Text(tr('you_caps'), style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
                         ),
                       ],
                       if (studiedToday) ...[
@@ -512,7 +512,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
-                          child: const Text('TODAY', style: TextStyle(color: Colors.green, fontSize: 9, fontWeight: FontWeight.bold)),
+                          child: Text(tr('today_caps'), style: const TextStyle(color: Colors.green, fontSize: 9, fontWeight: FontWeight.bold)),
                         ),
                       ],
                     ],
@@ -642,17 +642,17 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 const SizedBox(height: 20),
                 Row(
                   children: [
-                    _StatBox(emoji: '📖', value: '${entry.totalLearned}', label: 'Words learned', color: const Color(0xFF3498DB)),
+                    _StatBox(emoji: '📖', value: '${entry.totalLearned}', label: tr('lb_words_learned'), color: const Color(0xFF3498DB)),
                     const SizedBox(width: 8),
-                    _StatBox(emoji: '🔥', value: '${entry.streak}', label: 'Day streak', color: Colors.orange),
+                    _StatBox(emoji: '🔥', value: '${entry.streak}', label: tr('lb_day_streak'), color: Colors.orange),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    _StatBox(emoji: '📊', value: history == null ? '…' : '~$avgPerDay', label: 'Words/day', color: const Color(0xFF9B59B6)),
+                    _StatBox(emoji: '📊', value: history == null ? '…' : '~$avgPerDay', label: tr('lb_words_per_day'), color: const Color(0xFF9B59B6)),
                     const SizedBox(width: 8),
-                    _StatBox(emoji: '📅', value: history == null ? '…' : '$activeDays/$daysInMonth', label: 'Days this month', color: const Color(0xFFE67E22)),
+                    _StatBox(emoji: '📅', value: history == null ? '…' : '$activeDays/$daysInMonth', label: tr('lb_days_this_month'), color: const Color(0xFFE67E22)),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -757,11 +757,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   children: [
                     Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFF4338CA), shape: BoxShape.circle)),
                     const SizedBox(width: 4),
-                    Text('Review', style: TextStyle(fontSize: 10, color: ctx.textMuted)),
+                    Text(tr('track_review'), style: TextStyle(fontSize: 10, color: ctx.textMuted)),
                     const SizedBox(width: 12),
                     Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFF059669), shape: BoxShape.circle)),
                     const SizedBox(width: 4),
-                    Text('Words', style: TextStyle(fontSize: 10, color: ctx.textMuted)),
+                    Text(tr('track_words'), style: TextStyle(fontSize: 10, color: ctx.textMuted)),
                   ],
                 ),
               ],
@@ -882,7 +882,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                 color: Colors.white.withValues(alpha: 0.25),
                                 borderRadius: BorderRadius.circular(20),
                               ),
-                              child: const Text('TIED', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.white)),
+                              child: Text(tr('tied_caps'), style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.white)),
                             ),
                           if (studiedToday)
                             Container(
@@ -892,7 +892,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                 color: Colors.white.withValues(alpha: 0.25),
                                 borderRadius: BorderRadius.circular(20),
                               ),
-                              child: const Text('TODAY', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.white)),
+                              child: Text(tr('today_caps'), style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.white)),
                             ),
                         ],
                       ),
@@ -958,7 +958,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(color: context.primary, borderRadius: BorderRadius.circular(20)),
-                          child: const Text('YOU', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                          child: Text(tr('you_caps'), style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
                         ),
                       ],
                       if (isTied) ...[
@@ -966,7 +966,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(20)),
-                          child: Text('TIED', style: TextStyle(color: context.textMuted, fontSize: 9, fontWeight: FontWeight.bold)),
+                          child: Text(tr('tied_caps'), style: TextStyle(color: context.textMuted, fontSize: 9, fontWeight: FontWeight.bold)),
                         ),
                       ],
                     ],
@@ -983,7 +983,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                 decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
-                child: const Text('TODAY', style: TextStyle(color: Colors.green, fontSize: 9, fontWeight: FontWeight.bold)),
+                child: Text(tr('today_caps'), style: const TextStyle(color: Colors.green, fontSize: 9, fontWeight: FontWeight.bold)),
               ),
           ],
         ),

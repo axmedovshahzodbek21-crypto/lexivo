@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import 'teacher_folder_screen.dart';
@@ -143,13 +144,13 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: context.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('New Folder', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+        title: Text(tr('new_folder'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
         content: TextField(
           controller: ctrl,
           autofocus: true,
           textCapitalization: TextCapitalization.words,
           decoration: InputDecoration(
-            hintText: 'Folder name',
+            hintText: tr('folder_name'),
             hintStyle: TextStyle(color: context.textMuted),
             filled: true,
             fillColor: context.surface2,
@@ -159,11 +160,11 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
           onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: context.textMuted))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(tr('cancel'), style: TextStyle(color: context.textMuted))),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
             style: ElevatedButton.styleFrom(backgroundColor: context.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            child: const Text('Create'),
+            child: Text(tr('create')),
           ),
         ],
       ),
@@ -177,7 +178,7 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create folder: $e')),
+          SnackBar(content: Text('${tr('failed_to_create_folder')}: $e')),
         );
       }
       return;
@@ -192,7 +193,7 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: context.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Rename Folder', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+        title: Text(tr('rename_folder'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
         content: TextField(
           controller: ctrl,
           autofocus: true,
@@ -206,11 +207,11 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
           onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: context.textMuted))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(tr('cancel'), style: TextStyle(color: context.textMuted))),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
             style: ElevatedButton.styleFrom(backgroundColor: context.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            child: const Text('Save'),
+            child: Text(tr('save')),
           ),
         ],
       ),
@@ -224,7 +225,7 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to rename folder: $e')),
+          SnackBar(content: Text('${tr('failed_to_rename_folder')}: $e')),
         );
       }
       return;
@@ -284,7 +285,7 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
             : 'This will delete "${folder.name}" and all its units and words permanently. It is currently ${warnings.join(', and ')}.',
             style: TextStyle(color: context.textMuted)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: context.textMuted))),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(tr('cancel'), style: TextStyle(color: context.textMuted))),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
@@ -317,12 +318,12 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
           Container(width: 36, height: 4, margin: const EdgeInsets.symmetric(vertical: 10), decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(2))),
           ListTile(
             leading: Icon(Icons.edit_outlined, color: context.primary),
-            title: Text('Rename', style: TextStyle(color: context.appText)),
+            title: Text(tr('rename'), style: TextStyle(color: context.appText)),
             onTap: () { Navigator.pop(context); _renameFolder(folder); },
           ),
           ListTile(
             leading: const Icon(Icons.delete_outline, color: Color(0xFFEF4444)),
-            title: const Text('Delete', style: TextStyle(color: Color(0xFFEF4444))),
+            title: Text(tr('delete'), style: const TextStyle(color: Color(0xFFEF4444))),
             onTap: () { Navigator.pop(context); _deleteFolder(folder); },
           ),
           const SizedBox(height: 8),
@@ -343,9 +344,9 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('My Library', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold, fontSize: 18)),
+          Text(tr('my_library'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold, fontSize: 18)),
           if (!_loading)
-            Text('${_folders.length} ${_folders.length == 1 ? 'folder' : 'folders'}',
+            Text(tr('n_folders').replaceFirst('{n}', '${_folders.length}'),
                 style: TextStyle(color: context.textMuted, fontSize: 12)),
         ]),
         actions: [
@@ -371,11 +372,11 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         const Text('⚠️', style: TextStyle(fontSize: 48)),
         const SizedBox(height: 14),
-        Text('Couldn\'t load your library', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+        Text(tr('couldnt_load_library'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
         const SizedBox(height: 6),
-        Text('Check your connection and try again.', textAlign: TextAlign.center, style: TextStyle(color: context.textMuted)),
+        Text(tr('check_connection'), textAlign: TextAlign.center, style: TextStyle(color: context.textMuted)),
         const SizedBox(height: 16),
-        ElevatedButton(onPressed: _load, child: const Text('Retry')),
+        ElevatedButton(onPressed: _load, child: Text(tr('retry'))),
       ]),
     ),
   );
@@ -386,9 +387,9 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
         const Text('📚', style: TextStyle(fontSize: 64)),
         const SizedBox(height: 16),
-        Text('No folders yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
+        Text(tr('no_folders_yet'), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
         const SizedBox(height: 8),
-        Text('Create a folder to organise your teaching units.',
+        Text(tr('create_folder_organise'),
             textAlign: TextAlign.center,
             style: TextStyle(color: context.textMuted, height: 1.5, fontSize: 14)),
         const SizedBox(height: 24),
@@ -404,7 +405,7 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
-            child: const Text('New Folder', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            child: Text(tr('new_folder'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
           ),
         ),
       ]),
@@ -416,7 +417,7 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
     child: Opacity(
       opacity: 0.7,
       child: Column(children: [
-        Text('HOW IT WORKS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.5)),
+        Text(tr('how_it_works'), style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: context.textMuted, letterSpacing: 0.5)),
         const SizedBox(height: 10),
         Wrap(
           alignment: WrapAlignment.center,
@@ -455,7 +456,7 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
     itemCount: _folders.length + 1,
     itemBuilder: (context, i) {
       if (i == _folders.length) {
-        return _AddTile(label: 'New Folder', onTap: _createFolder);
+        return _AddTile(label: tr('new_folder'), onTap: _createFolder);
       }
       final folder = _folders[i];
       final color = _cardColors[i % _cardColors.length];
@@ -586,7 +587,7 @@ class _FolderCardState extends State<_FolderCard> with SingleTickerProviderState
                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                 maxLines: 2, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 2),
-            Text('${widget.folder.unitCount} ${widget.folder.unitCount == 1 ? 'unit' : 'units'}',
+            Text(tr('n_units_word').replaceFirst('{n}', '${widget.folder.unitCount}'),
                 style: const TextStyle(color: Colors.white70, fontSize: 11)),
           ]),
         ),

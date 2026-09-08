@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import 'teacher_unit_screen.dart';
@@ -104,13 +105,13 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: context.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('New Unit', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+        title: Text(tr('new_unit'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
         content: TextField(
           controller: ctrl,
           autofocus: true,
           textCapitalization: TextCapitalization.words,
           decoration: InputDecoration(
-            hintText: 'Unit name',
+            hintText: tr('unit_name'),
             hintStyle: TextStyle(color: context.textMuted),
             filled: true,
             fillColor: context.surface2,
@@ -120,11 +121,11 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
           onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: context.textMuted))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(tr('cancel'), style: TextStyle(color: context.textMuted))),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
             style: ElevatedButton.styleFrom(backgroundColor: context.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            child: const Text('Create'),
+            child: Text(tr('create')),
           ),
         ],
       ),
@@ -147,7 +148,7 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create unit: $e')),
+          SnackBar(content: Text('${tr('failed_to_create_unit')}: $e')),
         );
       }
       return;
@@ -162,7 +163,7 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: context.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Rename Unit', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+        title: Text(tr('rename_unit'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
         content: TextField(
           controller: ctrl,
           autofocus: true,
@@ -176,11 +177,11 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
           onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: context.textMuted))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(tr('cancel'), style: TextStyle(color: context.textMuted))),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
             style: ElevatedButton.styleFrom(backgroundColor: context.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            child: const Text('Save'),
+            child: Text(tr('save')),
           ),
         ],
       ),
@@ -194,7 +195,7 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to rename unit: $e')),
+          SnackBar(content: Text('${tr('failed_to_rename_unit')}: $e')),
         );
       }
       return;
@@ -219,7 +220,7 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
       // be wiped. Bail out of the whole delete flow instead of guessing.
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not verify homework impact — try again: $e'), duration: const Duration(seconds: 3)));
+          SnackBar(content: Text('${tr('couldnt_verify_hw_impact')}: $e'), duration: const Duration(seconds: 3)));
       }
       return;
     }
@@ -229,17 +230,17 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: context.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Delete unit?', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+        title: Text(tr('delete_unit_q'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
         content: Text(assignedHw.isEmpty
-            ? 'This will delete "${unit.name}" and all its words permanently.'
-            : 'This will delete "${unit.name}" and all its words permanently. It is currently assigned as homework in ${assignedHw.length} place${assignedHw.length != 1 ? 's' : ''} — deleting it will also remove that homework and every student\'s progress on it.',
+            ? tr('delete_unit_body_perm').replaceFirst('{name}', unit.name)
+            : tr('delete_unit_body_perm_hw').replaceFirst('{name}', unit.name),
             style: TextStyle(color: context.textMuted)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: context.textMuted))),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(tr('cancel'), style: TextStyle(color: context.textMuted))),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            child: const Text('Delete'),
+            child: Text(tr('delete')),
           ),
         ],
       ),
@@ -253,7 +254,7 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete: $e'), duration: const Duration(seconds: 3)));
+          SnackBar(content: Text('${tr('failed_to_delete')}: $e'), duration: const Duration(seconds: 3)));
       }
     }
   }
@@ -269,12 +270,12 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
               decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(2))),
           ListTile(
             leading: Icon(Icons.edit_outlined, color: context.primary),
-            title: Text('Rename', style: TextStyle(color: context.appText)),
+            title: Text(tr('rename'), style: TextStyle(color: context.appText)),
             onTap: () { Navigator.pop(context); _renameUnit(unit); },
           ),
           ListTile(
             leading: const Icon(Icons.delete_outline, color: Color(0xFFEF4444)),
-            title: const Text('Delete', style: TextStyle(color: Color(0xFFEF4444))),
+            title: Text(tr('delete'), style: const TextStyle(color: Color(0xFFEF4444))),
             onTap: () { Navigator.pop(context); _deleteUnit(unit); },
           ),
           const SizedBox(height: 8),
@@ -299,7 +300,7 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
               style: TextStyle(color: context.appText, fontWeight: FontWeight.bold, fontSize: 16),
               overflow: TextOverflow.ellipsis),
           if (!_loading)
-            Text('${_units.length} ${_units.length == 1 ? 'unit' : 'units'}',
+            Text(tr('n_units_word').replaceFirst('{n}', '${_units.length}'),
                 style: TextStyle(color: context.textMuted, fontSize: 12)),
         ]),
         actions: [
@@ -325,11 +326,11 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         const Text('⚠️', style: TextStyle(fontSize: 48)),
         const SizedBox(height: 14),
-        Text('Couldn\'t load this folder', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+        Text(tr('couldnt_load_folder'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
         const SizedBox(height: 6),
-        Text('Check your connection and try again.', textAlign: TextAlign.center, style: TextStyle(color: context.textMuted)),
+        Text(tr('check_connection'), textAlign: TextAlign.center, style: TextStyle(color: context.textMuted)),
         const SizedBox(height: 16),
-        ElevatedButton(onPressed: _load, child: const Text('Retry')),
+        ElevatedButton(onPressed: _load, child: Text(tr('retry'))),
       ]),
     ),
   );
@@ -340,9 +341,9 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
         const Text('📖', style: TextStyle(fontSize: 64)),
         const SizedBox(height: 16),
-        Text('No units yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
+        Text(tr('no_units_yet'), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
         const SizedBox(height: 8),
-        Text('Add a unit to start building your vocabulary library.',
+        Text(tr('add_unit_to_build_library'),
             textAlign: TextAlign.center,
             style: TextStyle(color: context.textMuted, height: 1.5, fontSize: 14)),
         const SizedBox(height: 24),
@@ -356,7 +357,7 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
-            child: const Text('New Unit', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            child: Text(tr('new_unit'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
           ),
         ),
       ]),
@@ -371,7 +372,7 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
     itemCount: _units.length + 1,
     itemBuilder: (context, i) {
       if (i == _units.length) {
-        return _AddTile(label: 'New Unit', onTap: _createUnit);
+        return _AddTile(label: tr('new_unit'), onTap: _createUnit);
       }
       final unit = _units[i];
       final color = _cardColors[i % _cardColors.length];
@@ -506,7 +507,7 @@ class _UnitCardState extends State<_UnitCard> with SingleTickerProviderStateMixi
                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                 maxLines: 2, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 2),
-            Text('${widget.unit.wordCount} ${widget.unit.wordCount == 1 ? 'word' : 'words'}',
+            Text(tr('n_words_plain').replaceFirst('{n}', '${widget.unit.wordCount}'),
                 style: const TextStyle(color: Colors.white70, fontSize: 11)),
           ]),
         ),

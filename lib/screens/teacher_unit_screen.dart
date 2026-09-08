@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import 'package:flutter/services.dart';
 import '../services/supabase_service.dart';
 import '../app_theme.dart';
@@ -145,7 +146,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
     final prompt = buildAiImportPrompt(wordLang: _wordLang, translationLang: _translationLang, words: words, hasTranslations: hasTranslations);
     Clipboard.setData(ClipboardData(text: prompt));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Prompt copied! Paste into AI chatbot.'), duration: Duration(seconds: 2)));
+      SnackBar(content: Text(tr('prompt_copied')), duration: const Duration(seconds: 2)));
   }
 
   Future<void> _load() async {
@@ -210,13 +211,13 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
       await _load();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${rows.length} words added!'), duration: const Duration(seconds: 2)));
+          SnackBar(content: Text(tr('n_words_added').replaceFirst('{n}', '${rows.length}')), duration: const Duration(seconds: 2)));
         _tabs.animateTo(0);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to add words: $e'), duration: const Duration(seconds: 3)));
+          SnackBar(content: Text('${tr('failed_to_add_words')}: $e'), duration: const Duration(seconds: 3)));
       }
     }
     if (mounted) setState(() => _importing = false);
@@ -230,7 +231,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete word: $e')));
+          SnackBar(content: Text('${tr('failed_to_delete_word')}: $e')));
       }
       return;
     }
@@ -265,17 +266,17 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
       builder: (ctx) => AlertDialog(
         backgroundColor: context.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Delete ${_selected.length} words?', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
-        content: Text('This will permanently remove the selected words from this unit.',
+        title: Text(tr('delete_n_words_q').replaceFirst('{n}', '${_selected.length}'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+        content: Text(tr('delete_n_words_perm'),
           style: TextStyle(color: context.textMuted)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel', style: TextStyle(color: context.textMuted)),
+            child: Text(tr('cancel'), style: TextStyle(color: context.textMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete', style: TextStyle(color: Color(0xFFEF4444))),
+            child: Text(tr('delete'), style: const TextStyle(color: Color(0xFFEF4444))),
           ),
         ],
       ),
@@ -288,7 +289,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to delete words: $e')));
+            SnackBar(content: Text('${tr('failed_to_delete_words')}: $e')));
         }
         return;
       }
@@ -329,7 +330,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
             ],
             if (word.examples.isNotEmpty) ...[
               const SizedBox(height: 16),
-              Text('Examples', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.0)),
+              Text(tr('examples'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.0)),
               const SizedBox(height: 8),
               ...word.examples.asMap().entries.map((e) => Container(
                 margin: const EdgeInsets.only(bottom: 8),
@@ -362,11 +363,11 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
               decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(2))),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-            child: Text('Delete "${word.word}"?', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: context.appText)),
+            child: Text(tr('delete_word_q').replaceFirst('{word}', word.word), style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: context.appText)),
           ),
           ListTile(
             leading: const Icon(Icons.delete_outline, color: Color(0xFFEF4444)),
-            title: const Text('Delete word', style: TextStyle(color: Color(0xFFEF4444))),
+            title: Text(tr('delete_word_action'), style: const TextStyle(color: Color(0xFFEF4444))),
             onTap: () { Navigator.pop(context); _deleteWord(word.id); },
           ),
           const SizedBox(height: 8),
@@ -432,13 +433,13 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('${_selected.length} selected',
+                            Text(tr('n_selected').replaceFirst('{n}', '${_selected.length}'),
                               style: TextStyle(color: context.appText, fontWeight: FontWeight.w600, fontSize: 13)),
                             const SizedBox(width: 12),
                             ElevatedButton.icon(
                               onPressed: _deleteSelected,
                               icon: const Icon(Icons.delete_outline, size: 16, color: Colors.white),
-                              label: const Text('Delete'),
+                              label: Text(tr('delete')),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFFEF4444),
                                 foregroundColor: Colors.white,
@@ -466,11 +467,11 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             const Text('⚠️', style: TextStyle(fontSize: 48)),
             const SizedBox(height: 14),
-            Text('Couldn\'t load this unit\'s words', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+            Text(tr('couldnt_load_unit_words'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
             const SizedBox(height: 6),
-            Text('Check your connection and try again.', textAlign: TextAlign.center, style: TextStyle(color: context.textMuted)),
+            Text(tr('check_connection'), textAlign: TextAlign.center, style: TextStyle(color: context.textMuted)),
             const SizedBox(height: 16),
-            ElevatedButton(onPressed: _load, child: const Text('Retry')),
+            ElevatedButton(onPressed: _load, child: Text(tr('retry'))),
           ]),
         ),
       );
@@ -482,9 +483,9 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
             const Text('📝', style: TextStyle(fontSize: 56)),
             const SizedBox(height: 16),
-            Text('No words yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
+            Text(tr('no_words_yet'), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
             const SizedBox(height: 8),
-            Text('Go to the Add Words tab to import words with AI.',
+            Text(tr('go_to_add_words_tab'),
                 textAlign: TextAlign.center,
                 style: TextStyle(color: context.textMuted, height: 1.5, fontSize: 14)),
             const SizedBox(height: 24),
@@ -495,7 +496,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
               ),
-              child: const Text('Add Words', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(tr('add_words'), style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
           ]),
         ),
@@ -510,7 +511,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Row(children: [
-              Text('${_words.length} words', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.textMuted)),
+              Text(tr('n_words_plain').replaceFirst('{n}', '${_words.length}'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.textMuted)),
               const Spacer(),
               if (!_selectMode)
               GestureDetector(
@@ -521,7 +522,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
                     Icon(Icons.add, size: 14, color: context.primary),
                     const SizedBox(width: 4),
-                    Text('Add more', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.primary)),
+                    Text(tr('add_more'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.primary)),
                   ]),
                 ),
               ),
@@ -587,7 +588,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16), boxShadow: context.cardShadow),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Word Language / Translation Language', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted)),
+          Text(tr('word_lang_tr_lang'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted)),
           const SizedBox(height: 10),
           Row(children: [
             Expanded(child: _langDropdown(_wordLang, (v) => setState(() => _wordLang = v!))),
@@ -603,7 +604,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16), boxShadow: context.cardShadow),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('1. Enter words to import', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+          Text(tr('enter_words_step'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
           const SizedBox(height: 8),
           TextField(
             controller: _wordsInputCtrl,
@@ -623,7 +624,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
             child: OutlinedButton.icon(
               onPressed: () => _copyPrompt(context, hasTranslations: false),
               icon: const Text('📋', style: TextStyle(fontSize: 14)),
-              label: const Text('Copy Prompt — just words, AI translates', style: TextStyle(fontWeight: FontWeight.w600)),
+              label: Text(tr('copy_prompt_just_words'), style: const TextStyle(fontWeight: FontWeight.w600)),
               style: OutlinedButton.styleFrom(
                 foregroundColor: context.primary,
                 side: BorderSide(color: context.primary.withValues(alpha: 0.5)),
@@ -638,7 +639,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
             child: OutlinedButton.icon(
               onPressed: () => _copyPrompt(context, hasTranslations: true),
               icon: const Text('📋', style: TextStyle(fontSize: 14)),
-              label: const Text('Copy Prompt — I already have translations', style: TextStyle(fontWeight: FontWeight.w600)),
+              label: Text(tr('copy_prompt_have_translations'), style: const TextStyle(fontWeight: FontWeight.w600)),
               style: OutlinedButton.styleFrom(
                 foregroundColor: context.textMuted,
                 side: BorderSide(color: context.border),
@@ -656,14 +657,14 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16), boxShadow: context.cardShadow),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('2. Paste AI output', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+          Text(tr('paste_ai_step'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
           const SizedBox(height: 8),
           TextField(
             controller: _pasteCtrl,
             maxLines: 6,
             style: TextStyle(color: context.appText, fontSize: 12, fontFamily: 'monospace'),
             decoration: InputDecoration(
-              hintText: 'Paste the AI response here...',
+              hintText: tr('paste_ai_response_hint'),
               hintStyle: TextStyle(color: context.textMuted, fontSize: 12),
               filled: true, fillColor: context.surface2,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
@@ -672,7 +673,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
           ),
           if (_parsed.isNotEmpty) ...[
             const SizedBox(height: 10),
-            Text('✅ ${_parsed.length} ${_parsed.length == 1 ? 'word' : 'words'} recognized',
+            Text(tr('n_words_recognized').replaceFirst('{n}', '${_parsed.length}'),
                 style: TextStyle(fontSize: 12, color: const Color(0xFF10B981), fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
             ..._parsed.map((w) => Container(
@@ -706,7 +707,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
             ),
             child: _importing
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : Text('Import All (${_parsed.length} words)', style: const TextStyle(fontWeight: FontWeight.bold)),
+                : Text(tr('import_all_n').replaceFirst('{n}', '${_parsed.length}'), style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
         ),
       ],

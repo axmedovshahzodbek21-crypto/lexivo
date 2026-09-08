@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/structures_data.dart';
 import '../data/structures_storage_service.dart';
@@ -85,15 +86,15 @@ class _StructuresReviewScreenState extends State<StructuresReviewScreen> {
                 children: [
                   const Text('✅', style: TextStyle(fontSize: 56)),
                   const SizedBox(height: 8),
-                  Text('All caught up', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: context.appText)),
-                  Text('No structures due for review right now.', style: TextStyle(color: context.textMuted)),
+                  Text(tr('st_all_caught_up'), style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: context.appText)),
+                  Text(tr('st_no_due_now'), style: TextStyle(color: context.textMuted)),
                   const SizedBox(height: 20),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () => Navigator.pop(context),
                       style: ElevatedButton.styleFrom(backgroundColor: context.primary, foregroundColor: Colors.white),
-                      child: const Text('Back'),
+                      child: Text(tr('back')),
                     ),
                   ),
                 ],
@@ -117,15 +118,15 @@ class _StructuresReviewScreenState extends State<StructuresReviewScreen> {
               children: [
                 Text(score >= 80 ? '🧠' : '💪', style: const TextStyle(fontSize: 56)),
                 const SizedBox(height: 8),
-                Text('Review complete', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: context.appText)),
-                Text('$_knew/$total knew · +$_sessionXP XP', style: TextStyle(color: context.textMuted)),
+                Text(tr('st_review_complete'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: context.appText)),
+                Text(tr('st_knew_total_xp').replaceFirst('{knew}', '$_knew').replaceFirst('{total}', '$total').replaceFirst('{xp}', '$_sessionXP'), style: TextStyle(color: context.textMuted)),
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () => Navigator.pop(context),
                     style: ElevatedButton.styleFrom(backgroundColor: context.primary, foregroundColor: Colors.white),
-                    child: const Text('Back'),
+                    child: Text(tr('back')),
                   ),
                 ),
               ],
@@ -155,7 +156,7 @@ class _StructuresReviewScreenState extends State<StructuresReviewScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(color: context.primaryBg, borderRadius: BorderRadius.circular(12)),
-                child: Text('Every ${srs.interval}d so far', style: TextStyle(fontSize: 11, color: context.primary)),
+                child: Text(tr('st_every_nd').replaceFirst('{n}', '${srs.interval}'), style: TextStyle(fontSize: 11, color: context.primary)),
               ),
             ),
             const SizedBox(height: 12),
@@ -209,7 +210,7 @@ class _StructuresReviewScreenState extends State<StructuresReviewScreen> {
                           child: ElevatedButton(
                             onPressed: () => setState(() => _revealed = true),
                             style: ElevatedButton.styleFrom(backgroundColor: context.primary, foregroundColor: Colors.white, padding: const EdgeInsets.all(14)),
-                            child: const Text('Reveal'),
+                            child: Text(tr('structures_reveal')),
                           ),
                         ),
                     ],
@@ -225,7 +226,7 @@ class _StructuresReviewScreenState extends State<StructuresReviewScreen> {
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(foregroundColor: context.dangerColor, side: BorderSide(color: context.dangerColor), padding: const EdgeInsets.all(16)),
                       onPressed: () => _grade(false),
-                      child: const Text('✗ Not Yet'),
+                      child: Text(tr('st_not_yet')),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -233,7 +234,7 @@ class _StructuresReviewScreenState extends State<StructuresReviewScreen> {
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(foregroundColor: context.successColor, side: BorderSide(color: context.successColor), padding: const EdgeInsets.all(16)),
                       onPressed: () => _grade(true),
-                      child: const Text('✓ Knew It'),
+                      child: Text(tr('st_knew_it')),
                     ),
                   ),
                 ],

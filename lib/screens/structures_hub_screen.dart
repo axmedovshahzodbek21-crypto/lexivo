@@ -98,7 +98,7 @@ class _StructuresHubScreenState extends State<StructuresHubScreen> {
             style: TextStyle(fontSize: 12, color: context.textMuted),
           ),
           const SizedBox(height: 12),
-          Text('Learn by unit',
+          Text(tr('st_learn_by_unit'),
               style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
@@ -129,7 +129,7 @@ class _StructuresHubScreenState extends State<StructuresHubScreen> {
             }).toList(),
           ),
           const SizedBox(height: 16),
-          Text('Practice everything',
+          Text(tr('st_practice_everything'),
               style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
@@ -228,7 +228,7 @@ class _StructuresHubScreenState extends State<StructuresHubScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 32),
               child: Center(
-                child: Text('No structures match your search.',
+                child: Text(tr('st_no_match_search'),
                     style: TextStyle(color: context.textMuted)),
               ),
             )

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/structures_data.dart';
 import '../data/structures_storage_service.dart';
@@ -54,7 +55,7 @@ class _StructuresDayPickerScreenState extends State<StructuresDayPickerScreen> {
           icon: Icon(Icons.arrow_back, color: context.primary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('🔎 Pick a day',
+        title: Text(tr('st_pick_a_day'),
             style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
       ),
       body: Padding(
@@ -94,7 +95,7 @@ class _StructuresDayPickerScreenState extends State<StructuresDayPickerScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('DAY $day',
+                        Text(tr('st_day_n').replaceFirst('{n}', '$day'),
                             style: const TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
@@ -107,7 +108,7 @@ class _StructuresDayPickerScreenState extends State<StructuresDayPickerScreen> {
                             color: Colors.black.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: Text('${structures.length} structures',
+                          child: Text(tr('st_n_structures').replaceFirst('{n}', '${structures.length}'),
                               style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
                         ),
                       ],

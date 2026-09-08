@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/structures_data.dart';
 import '../data/structures_storage_service.dart';
@@ -103,9 +104,9 @@ class _StructuresDetectiveScreenState extends State<StructuresDetectiveScreen> {
               children: [
                 const Text('📭', style: TextStyle(fontSize: 48)),
                 const SizedBox(height: 12),
-                Text('No structures in your deck yet', style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
+                Text(tr('st_none_in_deck'), style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
                 const SizedBox(height: 6),
-                Text('Learn some structures first, then come back to test yourself.', textAlign: TextAlign.center, style: TextStyle(color: context.textMuted)),
+                Text(tr('st_learn_first_test'), textAlign: TextAlign.center, style: TextStyle(color: context.textMuted)),
               ],
             ),
           ),
@@ -125,11 +126,11 @@ class _StructuresDetectiveScreenState extends State<StructuresDetectiveScreen> {
               children: [
                 Text(score >= 80 ? '🕵️‍♂️' : score >= 50 ? '🔍' : '💪', style: const TextStyle(fontSize: 56)),
                 const SizedBox(height: 8),
-                Text('Case closed', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: context.appText)),
-                Text('$_correctCount/${_deck.length} correct · $score%', style: TextStyle(color: context.textMuted)),
+                Text(tr('st_case_closed'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: context.appText)),
+                Text(tr('st_n_correct_pct').replaceFirst('{n}', '$_correctCount').replaceFirst('{total}', '${_deck.length}').replaceFirst('{pct}', '$score'), style: TextStyle(color: context.textMuted)),
                 if (_sessionXP > 0) ...[
                   const SizedBox(height: 12),
-                  Text('⚡ +$_sessionXP XP', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+                  Text(tr('st_xp_earned').replaceFirst('{n}', '$_sessionXP'), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
                 ],
                 const SizedBox(height: 20),
                 SizedBox(
@@ -137,7 +138,7 @@ class _StructuresDetectiveScreenState extends State<StructuresDetectiveScreen> {
                   child: ElevatedButton(
                     onPressed: () => Navigator.pop(context),
                     style: ElevatedButton.styleFrom(backgroundColor: context.primary, foregroundColor: Colors.white),
-                    child: const Text('Back'),
+                    child: Text(tr('back')),
                   ),
                 ),
               ],
@@ -174,11 +175,11 @@ class _StructuresDetectiveScreenState extends State<StructuresDetectiveScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('THE SITUATION', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1, color: context.textMuted)),
+                  Text(tr('st_the_situation'), style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1, color: context.textMuted)),
                   const SizedBox(height: 6),
                   Text('💭 ${current.scenario}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
                   const SizedBox(height: 4),
-                  Text('Which structure fits best?', style: TextStyle(fontSize: 12, color: context.textMuted)),
+                  Text(tr('st_which_fits'), style: TextStyle(fontSize: 12, color: context.textMuted)),
                 ],
               ),
             ),

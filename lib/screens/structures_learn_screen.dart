@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/storage_service.dart';
 import '../data/structures_data.dart';
@@ -85,7 +86,7 @@ class _StructuresLearnScreenState extends State<StructuresLearnScreen> {
       return Scaffold(
         backgroundColor: context.bg,
         body: Center(
-          child: Text('No structures in this day.', style: TextStyle(color: context.textMuted)),
+          child: Text(tr('st_none_in_day'), style: TextStyle(color: context.textMuted)),
         ),
       );
     }
@@ -107,7 +108,7 @@ class _StructuresLearnScreenState extends State<StructuresLearnScreen> {
         ),
         title: Column(
           children: [
-            Text('${widget.unit} · Day ${widget.day}',
+            Text(tr('st_unit_day').replaceFirst('{unit}', widget.unit).replaceFirst('{day}', '${widget.day}'),
                 style: TextStyle(fontSize: 12, color: context.textMuted)),
             Text('${_index + 1} / ${_structures.length}',
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.primary)),
@@ -184,13 +185,13 @@ class _StructuresLearnScreenState extends State<StructuresLearnScreen> {
                               const SizedBox(height: 20),
                               const Text('🤔', style: TextStyle(fontSize: 44)),
                               const SizedBox(height: 8),
-                              Text('Do you know this structure?',
+                              Text(tr('st_do_you_know'),
                                   style: TextStyle(fontSize: 13, color: context.textMuted)),
                               const SizedBox(height: 10),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
                                 decoration: BoxDecoration(color: context.primaryBg, borderRadius: BorderRadius.circular(20)),
-                                child: Text('Tap to reveal', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.primary)),
+                                child: Text(tr('tap_to_reveal_short'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.primary)),
                               ),
                             ],
                           ),
@@ -231,7 +232,7 @@ class _StructuresLearnScreenState extends State<StructuresLearnScreen> {
                                   ] else
                                     Padding(
                                       padding: const EdgeInsets.only(top: 4),
-                                      child: Text('Tap to see translation',
+                                      child: Text(tr('st_tap_see_translation'),
                                           style: TextStyle(fontSize: 11, color: context.textMuted)),
                                     ),
                                 ],
@@ -264,7 +265,7 @@ class _StructuresLearnScreenState extends State<StructuresLearnScreen> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text('Extra ${i - 2}', style: TextStyle(fontSize: 10, color: context.textMuted)),
+                                      Text(tr('st_extra_n').replaceFirst('{n}', '${i - 2}'), style: TextStyle(fontSize: 10, color: context.textMuted)),
                                       const SizedBox(height: 2),
                                       Text('"${current.examples[i]}"',
                                           style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: context.appText)),
@@ -275,7 +276,7 @@ class _StructuresLearnScreenState extends State<StructuresLearnScreen> {
                                       ] else
                                         Padding(
                                           padding: const EdgeInsets.only(top: 4),
-                                          child: Text('Tap to see translation',
+                                          child: Text(tr('st_tap_see_translation'),
                                               style: TextStyle(fontSize: 11, color: context.textMuted)),
                                         ),
                                     ],
@@ -292,7 +293,7 @@ class _StructuresLearnScreenState extends State<StructuresLearnScreen> {
                         else
                           TextButton(
                             onPressed: () => setState(() => _showUz = true),
-                            child: const Text('🇺🇿 Show Uzbek explanation'),
+                            child: Text(tr('st_show_uz_explanation')),
                           ),
                       ],
                     ],
@@ -307,7 +308,7 @@ class _StructuresLearnScreenState extends State<StructuresLearnScreen> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => _advance(_Mark.skipped),
-                      child: const Text('Skip'),
+                      child: Text(tr('skip')),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -316,7 +317,7 @@ class _StructuresLearnScreenState extends State<StructuresLearnScreen> {
                     child: ElevatedButton(
                       onPressed: _capReached ? null : _markLearned,
                       style: ElevatedButton.styleFrom(backgroundColor: context.primary, foregroundColor: Colors.white),
-                      child: const Text('✓ Learned'),
+                      child: Text(tr('structures_learned_btn')),
                     ),
                   ),
                 ],
@@ -358,8 +359,8 @@ class _StructuresLearnScreenState extends State<StructuresLearnScreen> {
             children: [
               const Text('🎉', style: TextStyle(fontSize: 56)),
               const SizedBox(height: 8),
-              Text('Day complete!', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: context.appText)),
-              Text('${widget.unit} · Day ${widget.day}', style: TextStyle(fontSize: 13, color: context.textMuted)),
+              Text(tr('st_day_complete'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: context.appText)),
+              Text(tr('st_unit_day').replaceFirst('{unit}', widget.unit).replaceFirst('{day}', '${widget.day}'), style: TextStyle(fontSize: 13, color: context.textMuted)),
               const SizedBox(height: 20),
               Row(
                 children: [
@@ -378,7 +379,7 @@ class _StructuresLearnScreenState extends State<StructuresLearnScreen> {
                   onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(
                     builder: (_) => StructuresFlashcardsScreen(unit: widget.unit),
                   )),
-                  child: const Text('Practice Flashcards →'),
+                  child: Text(tr('st_practice_flashcards_arrow')),
                 ),
               ),
               const SizedBox(height: 12),
@@ -386,7 +387,7 @@ class _StructuresLearnScreenState extends State<StructuresLearnScreen> {
                 width: double.infinity,
                 child: OutlinedButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Back to days'),
+                  child: Text(tr('st_back_to_days')),
                 ),
               ),
             ],

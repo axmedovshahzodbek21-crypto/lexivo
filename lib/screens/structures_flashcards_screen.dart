@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/structures_data.dart';
 import '../data/structures_storage_service.dart';
@@ -91,10 +92,10 @@ class _StructuresFlashcardsScreenState extends State<StructuresFlashcardsScreen>
               children: [
                 const Text('📭', style: TextStyle(fontSize: 48)),
                 const SizedBox(height: 12),
-                Text('No structures in your deck yet',
+                Text(tr('st_none_in_deck'),
                     style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
                 const SizedBox(height: 6),
-                Text('Learn some structures first, then come back to practice.',
+                Text(tr('st_learn_first_practice'),
                     textAlign: TextAlign.center, style: TextStyle(color: context.textMuted)),
               ],
             ),
@@ -115,11 +116,11 @@ class _StructuresFlashcardsScreenState extends State<StructuresFlashcardsScreen>
               children: [
                 Text(score >= 80 ? '🎉' : score >= 50 ? '👍' : '💪', style: const TextStyle(fontSize: 56)),
                 const SizedBox(height: 8),
-                Text('Deck complete', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: context.appText)),
-                Text('$_known known · $_unknown to review · $score%', style: TextStyle(color: context.textMuted)),
+                Text(tr('st_deck_complete'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: context.appText)),
+                Text(tr('st_known_review_pct').replaceFirst('{known}', '$_known').replaceFirst('{unknown}', '$_unknown').replaceFirst('{pct}', '$score'), style: TextStyle(color: context.textMuted)),
                 if (_sessionXP > 0) ...[
                   const SizedBox(height: 12),
-                  Text('⚡ +$_sessionXP XP', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+                  Text(tr('st_xp_earned').replaceFirst('{n}', '$_sessionXP'), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
                 ],
                 const SizedBox(height: 20),
                 SizedBox(
@@ -127,7 +128,7 @@ class _StructuresFlashcardsScreenState extends State<StructuresFlashcardsScreen>
                   child: ElevatedButton(
                     onPressed: () => Navigator.pop(context),
                     style: ElevatedButton.styleFrom(backgroundColor: context.primary, foregroundColor: Colors.white),
-                    child: const Text('Back'),
+                    child: Text(tr('back')),
                   ),
                 ),
               ],
@@ -174,7 +175,7 @@ class _StructuresFlashcardsScreenState extends State<StructuresFlashcardsScreen>
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(foregroundColor: context.dangerColor, side: BorderSide(color: context.dangerColor)),
                       onPressed: () => _advance(false),
-                      child: const Text('Again'),
+                      child: Text(tr('st_again')),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -182,13 +183,13 @@ class _StructuresFlashcardsScreenState extends State<StructuresFlashcardsScreen>
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(foregroundColor: context.successColor, side: BorderSide(color: context.successColor)),
                       onPressed: () => _advance(true),
-                      child: const Text('Know It'),
+                      child: Text(tr('st_know_it')),
                     ),
                   ),
                 ],
               )
             else
-              Text('Tap to reveal', style: TextStyle(color: context.textMuted)),
+              Text(tr('tap_to_reveal_short'), style: TextStyle(color: context.textMuted)),
           ],
         ),
       ),

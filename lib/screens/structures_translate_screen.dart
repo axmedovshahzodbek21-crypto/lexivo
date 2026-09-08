@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/structures_data.dart';
 import '../data/structures_sentences_data.dart';
@@ -69,9 +70,9 @@ class _StructuresTranslateScreenState extends State<StructuresTranslateScreen> {
               children: [
                 const Text('📭', style: TextStyle(fontSize: 48)),
                 const SizedBox(height: 12),
-                Text('Learn a few ${widget.unit} structures first', style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
+                Text(tr('st_learn_unit_first').replaceFirst('{unit}', widget.unit), style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
                 const SizedBox(height: 6),
-                Text('Translation practice draws on structures you\'ve already learned in this unit.',
+                Text(tr('st_translate_intro'),
                     textAlign: TextAlign.center, style: TextStyle(color: context.textMuted)),
               ],
             ),
@@ -107,7 +108,7 @@ class _StructuresTranslateScreenState extends State<StructuresTranslateScreen> {
                   child: ElevatedButton(
                     onPressed: () => Navigator.pop(context),
                     style: ElevatedButton.styleFrom(backgroundColor: context.primary, foregroundColor: Colors.white),
-                    child: Text('Back to ${widget.unit}'),
+                    child: Text(tr('st_back_to_unit').replaceFirst('{unit}', widget.unit)),
                   ),
                 ),
               ],
@@ -127,8 +128,8 @@ class _StructuresTranslateScreenState extends State<StructuresTranslateScreen> {
         leading: IconButton(icon: Icon(Icons.arrow_back, color: context.primary), onPressed: () => Navigator.pop(context)),
         title: Column(
           children: [
-            Text('Translate · ${widget.unit}', style: TextStyle(fontSize: 12, color: context.textMuted)),
-            Text('$_progress/$_total done', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.primary)),
+            Text(tr('st_translate_unit').replaceFirst('{unit}', widget.unit), style: TextStyle(fontSize: 12, color: context.textMuted)),
+            Text(tr('st_n_done').replaceFirst('{n}', '$_progress').replaceFirst('{total}', '$_total'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.primary)),
           ],
         ),
         centerTitle: true,
@@ -178,7 +179,7 @@ class _StructuresTranslateScreenState extends State<StructuresTranslateScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('SENTENCE ${i + 1} OF ${_batch.length}', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5, color: context.textMuted)),
+          Text(tr('st_sentence_n_of').replaceFirst('{n}', '${i + 1}').replaceFirst('{total}', '${_batch.length}'), style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5, color: context.textMuted)),
           const SizedBox(height: 6),
           Text(sentence.uz, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
           const SizedBox(height: 10),
@@ -203,12 +204,12 @@ class _StructuresTranslateScreenState extends State<StructuresTranslateScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Model answer — compare it with your own:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.primary)),
+                  Text(tr('st_model_answer_compare'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.primary)),
                   const SizedBox(height: 2),
                   Text(sentence.en, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: context.primary)),
                   if (structure != null) ...[
                     const SizedBox(height: 4),
-                    Text('uses: ${structure.pattern}', style: TextStyle(fontSize: 11, color: context.textMuted)),
+                    Text(tr('st_uses_pattern').replaceFirst('{pattern}', structure.pattern), style: TextStyle(fontSize: 11, color: context.textMuted)),
                   ],
                 ],
               ),
@@ -218,7 +219,7 @@ class _StructuresTranslateScreenState extends State<StructuresTranslateScreen> {
               width: double.infinity,
               child: OutlinedButton(
                 onPressed: () => setState(() => _revealed[i] = true),
-                child: const Text('Show model answer'),
+                child: Text(tr('structures_show_model_answer')),
               ),
             ),
         ],

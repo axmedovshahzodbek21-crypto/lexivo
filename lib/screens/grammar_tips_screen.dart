@@ -73,7 +73,7 @@ class _GrammarTipsScreenState extends State<GrammarTipsScreen> {
                   controller: _searchCtrl,
                   onChanged: (v) => setState(() => _search = v),
                   decoration: InputDecoration(
-                    hintText: 'Search tips...',
+                    hintText: tr('search_tips_hint'),
                     hintStyle: TextStyle(color: context.textMuted),
                     prefixIcon: Icon(Icons.search, color: context.textMuted, size: 20),
                     suffixIcon: _search.isNotEmpty

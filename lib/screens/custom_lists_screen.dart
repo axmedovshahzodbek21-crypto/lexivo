@@ -167,7 +167,7 @@ class _CustomListsScreenState extends State<CustomListsScreen> {
             autofocus: true,
             style: TextStyle(color: context.appText),
             decoration: InputDecoration(
-              hintText: 'e.g. IELTS Vocab, Hard Words…',
+              hintText: tr('list_name_placeholder'),
               hintStyle: TextStyle(color: context.textMuted),
               filled: true,
               fillColor: context.surface2,

@@ -139,7 +139,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   autofocus: true,
                   style: TextStyle(color: context.appText),
                   decoration: InputDecoration(
-                    hintText: 'you@example.com',
+                    hintText: tr('email_placeholder'),
                     hintStyle: TextStyle(color: context.textMuted),
                     filled: true,
                     fillColor: context.surface,

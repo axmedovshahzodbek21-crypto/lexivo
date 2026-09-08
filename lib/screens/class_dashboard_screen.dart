@@ -245,7 +245,7 @@ Widget _dashHero(String classId, String className, int studentCount, {
             ])),
             Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
               Text('$studentCount', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white)),
-              Text('students', style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.6))),
+              Text(tr('students'), style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.6))),
             ]),
           ]),
           const SizedBox(height: 12),

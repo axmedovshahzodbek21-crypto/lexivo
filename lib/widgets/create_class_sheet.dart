@@ -25,7 +25,7 @@ void showCreateClassSheet(BuildContext context, void Function(String name) onCre
             controller: ctrl, autofocus: true,
             style: TextStyle(color: context.appText),
             decoration: InputDecoration(
-              hintText: 'e.g. English B1 — Group A',
+              hintText: tr('class_name_placeholder'),
               hintStyle: TextStyle(color: context.textMuted),
               filled: true, fillColor: context.surface2,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),

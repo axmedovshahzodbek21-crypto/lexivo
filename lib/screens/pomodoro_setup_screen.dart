@@ -235,9 +235,9 @@ class _PomodoroSetupScreenState extends State<PomodoroSetupScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _LegendDot(color: primary, label: 'Focus'),
+              _LegendDot(color: primary, label: tr('pomo_focus')),
               const SizedBox(width: 20),
-              _LegendDot(color: _kBreakColor, label: 'Break'),
+              _LegendDot(color: _kBreakColor, label: tr('pomo_break')),
             ],
           ),
           const SizedBox(height: 18),

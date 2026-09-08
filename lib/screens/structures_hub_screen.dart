@@ -177,7 +177,7 @@ class _StructuresHubScreenState extends State<StructuresHubScreen> {
             controller: _searchCtrl,
             onChanged: (v) => setState(() => _search = v),
             decoration: InputDecoration(
-              hintText: 'Search structures…',
+              hintText: tr('search_structures_hint'),
               hintStyle: TextStyle(color: context.textMuted),
               prefixIcon: Icon(Icons.search, color: context.textMuted, size: 20),
               isDense: true,

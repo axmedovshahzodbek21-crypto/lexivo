@@ -186,7 +186,7 @@ class _StructuresTranslateScreenState extends State<StructuresTranslateScreen> {
           TextField(
             maxLines: 3,
             decoration: InputDecoration(
-              hintText: 'Write your English translation here…',
+              hintText: tr('write_translation_here'),
               hintStyle: TextStyle(color: context.textMuted, fontSize: 13),
               filled: true,
               fillColor: context.surface2,

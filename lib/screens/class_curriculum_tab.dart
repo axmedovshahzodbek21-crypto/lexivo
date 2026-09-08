@@ -320,7 +320,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
         TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(tr('cancel'), style: TextStyle(color: context.textMuted))),
         ElevatedButton(onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            child: const Text('Remove')),
+            child: Text(tr('remove'))),
       ],
     ));
     if (ok != true) return;

@@ -279,17 +279,17 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: context.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Delete folder?', style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+        title: Text(tr('delete_folder_q'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
         content: Text(warnings.isEmpty
-            ? 'This will delete "${folder.name}" and all its units and words permanently.'
-            : 'This will delete "${folder.name}" and all its units and words permanently. It is currently ${warnings.join(', and ')}.',
+            ? tr('delete_folder_body_perm').replaceFirst('{name}', folder.name)
+            : tr('delete_folder_body_perm_warn').replaceFirst('{name}', folder.name).replaceFirst('{warn}', warnings.join(', and ')),
             style: TextStyle(color: context.textMuted)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(tr('cancel'), style: TextStyle(color: context.textMuted))),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            child: const Text('Delete'),
+            child: Text(tr('delete')),
           ),
         ],
       ),

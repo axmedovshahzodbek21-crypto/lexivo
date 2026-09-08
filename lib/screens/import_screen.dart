@@ -205,7 +205,7 @@ class _ImportScreenState extends State<ImportScreen> {
                   controller: _collectionCtrl,
                   style: TextStyle(color: context.appText, fontSize: 14),
                   decoration: InputDecoration(
-                    hintText: 'e.g. Russian B1, Korean Verbs…',
+                    hintText: tr('collection_name_placeholder'),
                     hintStyle: TextStyle(color: context.textMuted, fontSize: 14),
                     filled: true,
                     fillColor: context.surface2,
@@ -317,7 +317,7 @@ class _ImportScreenState extends State<ImportScreen> {
                   maxLines: 8,
                   style: TextStyle(color: context.appText, fontSize: 13, fontFamily: 'monospace'),
                   decoration: InputDecoration(
-                    hintText: 'Paste the AI response here...',
+                    hintText: tr('paste_ai_response_hint'),
                     hintStyle: TextStyle(color: context.textMuted, fontSize: 13),
                     filled: true,
                     fillColor: context.surface2,

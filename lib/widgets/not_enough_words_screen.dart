@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import '../app_theme.dart';
 
 // Shared empty/undersized-word-list guard for the four study modes (Learn,
@@ -33,7 +34,7 @@ class NotEnoughWordsScreen extends StatelessWidget {
             children: [
               const Text('📭', style: TextStyle(fontSize: 56)),
               const SizedBox(height: 16),
-              Text('Not enough words',
+              Text(tr('not_enough_words'),
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: context.appText)),
               const SizedBox(height: 8),
               Text(

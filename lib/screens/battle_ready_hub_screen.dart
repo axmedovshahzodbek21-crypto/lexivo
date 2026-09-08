@@ -165,7 +165,7 @@ class _BattleReadyHubScreenState extends State<BattleReadyHubScreen> {
                       controller: _searchCtrl,
                       onChanged: (v) => setState(() => _search = v),
                       decoration: InputDecoration(
-                        hintText: 'Search topics...',
+                        hintText: tr('search_topics_hint'),
                         hintStyle: TextStyle(color: context.textMuted),
                         prefixIcon: Icon(Icons.search, color: context.textMuted, size: 20),
                         isDense: true,

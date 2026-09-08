@@ -73,7 +73,7 @@ class _ClassesScreenState extends State<ClassesScreen> with NavigateOnceMixin {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to create class')),
+          SnackBar(content: Text(tr('failed_to_create_class'))),
         );
       }
       return;
@@ -91,14 +91,14 @@ class _ClassesScreenState extends State<ClassesScreen> with NavigateOnceMixin {
     if (mounted) setState(() { _joinError = ''; _joining = true; });
     try {
       final cls = await supabase.from('classes').select('id, teacher_id').eq('join_code', code).maybeSingle();
-      if (cls == null) { if (mounted) setState(() => _joinError = 'Class not found'); return; }
+      if (cls == null) { if (mounted) setState(() => _joinError = tr('class_not_found')); return; }
       final m = Map<String, dynamic>.from(cls as Map);
-      if (m['teacher_id'] == user.id) { if (mounted) setState(() => _joinError = "Can't join your own class"); return; }
+      if (m['teacher_id'] == user.id) { if (mounted) setState(() => _joinError = tr('cant_join_own_class')); return; }
       await supabase.from('class_members').insert({'class_id': m['id'], 'student_id': user.id, 'status': 'pending'});
       if (!mounted) return;
       _joinCtrl.clear();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Request sent — waiting for your teacher to approve you')),
+        SnackBar(content: Text(tr('request_sent_waiting'))),
       );
       Navigator.push(context, MaterialPageRoute(builder: (_) => const JoinedClassesScreen()))
           .then((_) => _loadCounts());
@@ -168,7 +168,7 @@ class _ClassesScreenState extends State<ClassesScreen> with NavigateOnceMixin {
                     ]),
                   ]),
                   const SizedBox(height: 8),
-                  Text('Create or join a class with your teacher or students.', style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.65))),
+                  Text(tr('create_or_join_class'), style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.65))),
                 ]),
               ),
             ]),
@@ -280,7 +280,7 @@ class _ClassesScreenState extends State<ClassesScreen> with NavigateOnceMixin {
                 textCapitalization: TextCapitalization.characters,
                 style: TextStyle(color: context.appText, fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 14),
                 decoration: InputDecoration(
-                  hintText: 'e.g. LEXI-8X2K',
+                  hintText: tr('class_code_example'),
                   hintStyle: TextStyle(color: context.textMuted, fontFamily: 'monospace', fontWeight: FontWeight.normal, fontSize: 14),
                   filled: true, fillColor: context.surface2,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),

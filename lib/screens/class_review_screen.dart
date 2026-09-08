@@ -5,6 +5,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import '../services/supabase_service.dart';
 import '../services/class_srs_service.dart';
 import '../app_theme.dart';
+import '../l10n.dart';
 
 // Kahoot-style answer tiles for SRS review — ported from the web review page
 // (app/classes/[id]/review/page.tsx). Keep the palette in sync.
@@ -394,9 +395,9 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             const Text('⚠️', style: TextStyle(fontSize: 48)),
             const SizedBox(height: 12),
-            Text("Couldn't load review words", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+            Text(tr('couldnt_load_review_words'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
             const SizedBox(height: 16),
-            ElevatedButton(onPressed: _load, child: const Text('Try again')),
+            ElevatedButton(onPressed: _load, child: Text(tr('try_again_plain'))),
           ]),
         ));
     }
@@ -407,9 +408,9 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             const Text('🎉', style: TextStyle(fontSize: 56)),
             const SizedBox(height: 16),
-            Text('All caught up!', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: context.appText)),
+            Text(tr('srs_empty'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: context.appText)),
             const SizedBox(height: 8),
-            Text('No words due for review right now.', style: TextStyle(fontSize: 14, color: context.textMuted), textAlign: TextAlign.center),
+            Text(tr('no_words_due_now'), style: TextStyle(fontSize: 14, color: context.textMuted), textAlign: TextAlign.center),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: _dismiss,
@@ -418,7 +419,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
               ),
-              child: Text(widget.embedded ? 'Refresh' : 'Back', style: const TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(widget.embedded ? tr('refresh') : tr('back'), style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
           ]),
         ));
@@ -432,14 +433,14 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Text(pct >= 80 ? '🏆' : pct >= 50 ? '⭐' : '💪', style: const TextStyle(fontSize: 56)),
             const SizedBox(height: 16),
-            Text('Session complete!', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: context.appText)),
+            Text(tr('session_complete_excl'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: context.appText)),
             const SizedBox(height: 20),
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              _scoreBox('$_knew', 'Knew it', const Color(0xFF10B981)),
+              _scoreBox('$_knew', tr('structures_knew_it'), const Color(0xFF10B981)),
               const SizedBox(width: 12),
-              _scoreBox('$_didntKnow', "Didn't know", const Color(0xFFEF4444)),
+              _scoreBox('$_didntKnow', tr('didnt_know_short'), const Color(0xFFEF4444)),
               const SizedBox(width: 12),
-              _scoreBox('$pct%', 'Score', context.primary),
+              _scoreBox('$pct%', tr('score'), context.primary),
             ]),
             const SizedBox(height: 28),
             SizedBox(width: double.infinity, child: ElevatedButton(
@@ -449,7 +450,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 padding: const EdgeInsets.symmetric(vertical: 15),
               ),
-              child: const Text('Finish', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              child: Text(tr('finish'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             )),
           ]),
         ));
@@ -485,7 +486,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
                 color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(999),
               ),
-              child: const Text('Keeps tripping you up',
+              child: Text(tr('keeps_tripping_you_up'),
                   style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFFF59E0B))),
             ),
             const SizedBox(height: 12),
@@ -520,7 +521,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
             )),
             const SizedBox(height: 20),
             if (!_flipped)
-              Text('Tap the card to reveal', style: TextStyle(fontSize: 13, color: context.textMuted))
+              Text(tr('tap_card_to_reveal'), style: TextStyle(fontSize: 13, color: context.textMuted))
             else
               SizedBox(width: double.infinity, child: ElevatedButton(
                 onPressed: () => _answer(true),
@@ -530,7 +531,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 child: Text(
-                  _index + 1 < _cards.length ? 'Next  →' : 'Finish  ✓',
+                  _index + 1 < _cards.length ? tr('next_arrow') : tr('finish_check'),
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
               )),
           ],
@@ -559,7 +560,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Text('Class word',
+                Text(tr('class_word_label'),
                     style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: context.textMuted)),
                 GestureDetector(
                   onTap: () => _speak(card.word),
@@ -578,7 +579,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
                 Row(children: [
                   Icon(Icons.touch_app_outlined, size: 15, color: context.textMuted),
                   const SizedBox(width: 6),
-                  Text('Tap to see options',
+                  Text(tr('tap_to_see_options'),
                       style: TextStyle(fontSize: 12, color: context.textMuted)),
                 ]),
               ] else if (_answerShown && choices == null) ...[
@@ -595,7 +596,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
                 const SizedBox(height: 14),
                 SizedBox(width: double.infinity, child: OutlinedButton(
                   onPressed: _cardLocked ? null : _revealAnswer,
-                  child: const Text('Reveal'),
+                  child: Text(tr('reveal')),
                 )),
               ],
             ]),
@@ -738,7 +739,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
           style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: context.appText),
           textAlign: TextAlign.center),
       const SizedBox(height: 10),
-      Text('Tap to reveal', style: TextStyle(fontSize: 12, color: context.textMuted)),
+      Text(tr('tap_to_reveal_short'), style: TextStyle(fontSize: 12, color: context.textMuted)),
     ]),
   );
 

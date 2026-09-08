@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
+import '../l10n.dart';
 import '../services/supabase_service.dart';
 import '../services/class_srs_service.dart';
 import 'class_home_screen.dart';
@@ -148,8 +149,8 @@ class _ClassShellState extends State<ClassShell> {
   }
 
   List<BottomNavigationBarItem> get _navItems => [
-    const BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
-    const BottomNavigationBarItem(icon: Icon(Icons.auto_stories_rounded), label: 'Words'),
+    BottomNavigationBarItem(icon: const Icon(Icons.home_rounded), label: tr('nav_home')),
+    BottomNavigationBarItem(icon: const Icon(Icons.auto_stories_rounded), label: tr('words_nav')),
     if (!_isTeacher)
       BottomNavigationBarItem(
         icon: Badge(
@@ -158,17 +159,17 @@ class _ClassShellState extends State<ClassShell> {
           backgroundColor: Colors.red,
           child: const Icon(Icons.refresh_rounded),
         ),
-        label: 'Review',
+        label: tr('nav_review'),
       ),
-    const BottomNavigationBarItem(icon: Icon(Icons.emoji_events_rounded), label: 'Ranks'),
+    BottomNavigationBarItem(icon: const Icon(Icons.emoji_events_rounded), label: tr('ranks_nav')),
     BottomNavigationBarItem(
       icon: Icon(_isTeacher ? Icons.menu_book_rounded : Icons.assignment_rounded),
-      label: _isTeacher ? 'Curriculum' : 'Homework',
+      label: _isTeacher ? tr('curriculum') : tr('homework'),
     ),
     if (_isTeacher)
-      const BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: 'Dashboard')
+      BottomNavigationBarItem(icon: const Icon(Icons.dashboard_rounded), label: tr('dashboard'))
     else
-      const BottomNavigationBarItem(icon: Icon(Icons.bar_chart_rounded), label: 'Progress'),
+      BottomNavigationBarItem(icon: const Icon(Icons.bar_chart_rounded), label: tr('nav_progress')),
   ];
 
   Future<void> _confirmExit() async {
@@ -180,17 +181,17 @@ class _ClassShellState extends State<ClassShell> {
         title: Row(children: [
           const Text('📦', style: TextStyle(fontSize: 22)),
           const SizedBox(width: 8),
-          Text('Exit this class?',
+          Text(tr('exit_this_class_q'),
             style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: context.appText)),
         ]),
         content: Text(
-          "You'll return to your classes list — you'll stay enrolled in this class.",
+          tr('exit_class_body'),
           style: TextStyle(fontSize: 13, color: context.textMuted),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel', style: TextStyle(color: context.textMuted)),
+            child: Text(tr('cancel'), style: TextStyle(color: context.textMuted)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -198,7 +199,7 @@ class _ClassShellState extends State<ClassShell> {
               backgroundColor: context.primary,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('Exit', style: TextStyle(color: Colors.white)),
+            child: Text(tr('exit'), style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -263,7 +264,7 @@ class _ClassShellState extends State<ClassShell> {
                     backgroundColor: context.primary,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text('Try again', style: TextStyle(color: Colors.white)),
+                  child: Text(tr('try_again_plain'), style: const TextStyle(color: Colors.white)),
                 ),
               ],
             ]),

@@ -3,6 +3,7 @@ import '../services/supabase_service.dart';
 import '../services/class_srs_service.dart';
 import '../app_theme.dart';
 import '../date_utils.dart';
+import '../l10n.dart';
 
 List<Color> _pgGradColors(String id) {
   const grads = <List<Color>>[
@@ -49,11 +50,11 @@ Widget _pgHero(String classId, String className) {
             const SizedBox(width: 14),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(className, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white.withValues(alpha: 0.5), letterSpacing: 1.5), maxLines: 1, overflow: TextOverflow.ellipsis),
-              const Text('My Progress', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, shadows: [Shadow(color: Color(0x40000000), blurRadius: 8, offset: Offset(0, 2))])),
+              Text(tr('my_progress'), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, shadows: [Shadow(color: Color(0x40000000), blurRadius: 8, offset: Offset(0, 2))])),
             ])),
           ]),
           const SizedBox(height: 6),
-          Text('Your personal study stats', style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.65))),
+          Text(tr('your_personal_study_stats'), style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.65))),
         ]),
       ),
     ]),
@@ -94,7 +95,7 @@ class _ClassProgressScreenState extends State<ClassProgressScreen> {
     Color(0xFF9CA3AF), Color(0xFFF59E0B), Color(0xFF3B82F6),
     Color(0xFF8B5CF6), Color(0xFFEC4899), Color(0xFF10B981),
   ];
-  static const _stageLabels = ['New', '+1 day', '+3 days', '+7 days', '+14 days', 'Graduated'];
+  static List<String> get _stageLabels => [tr('srs_stage_new'), tr('srs_stage_1d'), tr('srs_stage_3d'), tr('srs_stage_7d'), tr('srs_stage_14d'), tr('srs_stage_graduated')];
 
   @override
   void initState() {
@@ -196,11 +197,11 @@ class _ClassProgressScreenState extends State<ClassProgressScreen> {
           const SizedBox(height: 16),
 
           // SRS stage breakdown
-          _sectionCard('SRS Stages', [
+          _sectionCard(tr('srs_stages'), [
             if (learnedCount == 0)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text('Start studying to see your SRS progress.', style: TextStyle(fontSize: 12, color: context.textMuted), textAlign: TextAlign.center),
+                child: Text(tr('start_studying_srs'), style: TextStyle(fontSize: 12, color: context.textMuted), textAlign: TextAlign.center),
               )
             else
               ...List.generate(6, (s) {
@@ -213,7 +214,7 @@ class _ClassProgressScreenState extends State<ClassProgressScreen> {
                       Container(width: 8, height: 8, decoration: BoxDecoration(color: _stageColors[s], shape: BoxShape.circle)),
                       const SizedBox(width: 6),
                       Expanded(child: Text(_stageLabels[s], style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.appText))),
-                      Text('$count word${count == 1 ? '' : 's'}', style: TextStyle(fontSize: 12, color: context.textMuted)),
+                      Text(tr('n_words_plain').replaceFirst('{n}', '$count'), style: TextStyle(fontSize: 12, color: context.textMuted)),
                     ]),
                     const SizedBox(height: 4),
                     ClipRRect(
@@ -238,8 +239,8 @@ class _ClassProgressScreenState extends State<ClassProgressScreen> {
               decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16), boxShadow: context.cardShadow),
               child: Row(children: [
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Hard words', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
-                  Text('Words you got wrong in quizzes', style: TextStyle(fontSize: 11, color: context.textMuted)),
+                  Text(tr('hard_words'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+                  Text(tr('hard_words_sub'), style: TextStyle(fontSize: 11, color: context.textMuted)),
                 ])),
                 Text('$_hardCount', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: context.dangerColor)),
               ]),
@@ -248,7 +249,7 @@ class _ClassProgressScreenState extends State<ClassProgressScreen> {
           ],
 
           // 30-day calendar
-          _sectionCard('Study Calendar · Last 30 days', [
+          _sectionCard(tr('study_calendar_30d'), [
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -273,11 +274,11 @@ class _ClassProgressScreenState extends State<ClassProgressScreen> {
             Row(mainAxisAlignment: MainAxisAlignment.end, children: [
               Container(width: 12, height: 12, decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(3))),
               const SizedBox(width: 4),
-              Text('No study', style: TextStyle(fontSize: 10, color: context.textMuted)),
+              Text(tr('no_study'), style: TextStyle(fontSize: 10, color: context.textMuted)),
               const SizedBox(width: 10),
               Container(width: 12, height: 12, decoration: BoxDecoration(color: context.primary, borderRadius: BorderRadius.circular(3))),
               const SizedBox(width: 4),
-              Text('Studied', style: TextStyle(fontSize: 10, color: context.textMuted)),
+              Text(tr('studied'), style: TextStyle(fontSize: 10, color: context.textMuted)),
             ]),
           ]),
 
@@ -293,7 +294,7 @@ class _ClassProgressScreenState extends State<ClassProgressScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: Text('Review $dueCount due word${dueCount == 1 ? '' : 's'} →', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                child: Text(tr('review_n_due_arrow').replaceFirst('{n}', '$dueCount'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
               ),
             ),
           ],

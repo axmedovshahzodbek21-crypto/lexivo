@@ -165,7 +165,7 @@ class _ClassStreakScreenState extends State<ClassStreakScreen> {
           icon: Icon(Icons.arrow_back, color: context.primary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('${widget.className} Streak',
+        title: Text(l10n.tr('class_streak_title').replaceFirst('{name}', widget.className),
             style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
       ),
       body: SingleChildScrollView(
@@ -175,11 +175,11 @@ class _ClassStreakScreenState extends State<ClassStreakScreen> {
           children: [
             // ── Stat tiles ────────────────────────────────────────
             Row(children: [
-              _StatTile(emoji: '🔥', value: '$_currentStreak', label: 'Current streak', color: color),
+              _StatTile(emoji: '🔥', value: '$_currentStreak', label: l10n.tr('current_streak_label'), color: color),
               const SizedBox(width: 10),
-              _StatTile(emoji: '⚡', value: '$_longestStreak', label: 'Longest streak', color: const Color(0xFF0369A1)),
+              _StatTile(emoji: '⚡', value: '$_longestStreak', label: l10n.tr('longest_streak_label'), color: const Color(0xFF0369A1)),
               const SizedBox(width: 10),
-              _StatTile(emoji: '🏆', value: '$_totalDays', label: 'Total days', color: const Color(0xFFB45309)),
+              _StatTile(emoji: '🏆', value: '$_totalDays', label: l10n.tr('total_days_label'), color: const Color(0xFFB45309)),
             ]),
             const SizedBox(height: 20),
 
@@ -302,7 +302,7 @@ class _ClassStreakScreenState extends State<ClassStreakScreen> {
                     ClipOval(
                         child: Container(width: 12, height: 12, color: color)),
                     const SizedBox(width: 6),
-                    Text('Studied in class',
+                    Text(l10n.tr('studied_in_class'),
                         style: TextStyle(fontSize: 11, color: context.textMuted)),
                   ]),
                 ),
@@ -330,7 +330,7 @@ class _ClassStreakScreenState extends State<ClassStreakScreen> {
         const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Today',
+            Text(l10n.tr('today'),
                 style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,

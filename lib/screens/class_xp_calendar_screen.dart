@@ -268,12 +268,12 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
                         Row(mainAxisSize: MainAxisSize.min, children: [
                           ClipOval(child: Container(width: 12, height: 12, color: color)),
                           const SizedBox(width: 6),
-                          Text('XP earned', style: TextStyle(fontSize: 11, color: context.textMuted)),
+                          Text(l10n.tr('xp_earned_label'), style: TextStyle(fontSize: 11, color: context.textMuted)),
                         ]),
                         Row(mainAxisSize: MainAxisSize.min, children: [
                           const Text('🔄', style: TextStyle(fontSize: 12)),
                           const SizedBox(width: 6),
-                          Text('Did Review', style: TextStyle(fontSize: 11, color: context.textMuted)),
+                          Text(l10n.tr('did_review'), style: TextStyle(fontSize: 11, color: context.textMuted)),
                         ]),
                       ]),
                     ),

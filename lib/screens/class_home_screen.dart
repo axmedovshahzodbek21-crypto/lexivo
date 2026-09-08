@@ -512,9 +512,9 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
             const Text('⚠️', style: TextStyle(fontSize: 48)),
             const SizedBox(height: 12),
-            Text("Couldn't load this class", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+            Text(tr('couldnt_load_class'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
             const SizedBox(height: 16),
-            ElevatedButton(onPressed: _load, child: const Text('Try again')),
+            ElevatedButton(onPressed: _load, child: Text(tr('try_again_plain'))),
           ]),
         ),
       );
@@ -568,7 +568,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
                   widget.isTeacher
                     ? GestureDetector(
                         onTap: _showStudentsSheet,
-                        child: Text('$_memberCount students',
+                        child: Text(tr('n_students').replaceFirst('{n}', '$_memberCount'),
                           style: const TextStyle(color: Colors.white70, fontSize: 13,
                             decoration: TextDecoration.underline, decorationColor: Colors.white54)),
                       )
@@ -635,11 +635,11 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
                   const SizedBox(width: 12),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(
-                      _pendingHwCount == 1 ? 'You have new homework!' : 'You have $_pendingHwCount homework assignments',
+                      _pendingHwCount == 1 ? tr('you_have_new_homework') : tr('you_have_n_homework').replaceFirst('{n}', '$_pendingHwCount'),
                       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14),
                     ),
-                    const Text('Tap to view and complete →',
-                      style: TextStyle(color: Colors.white70, fontSize: 11)),
+                    Text(tr('tap_to_view_complete'),
+                      style: const TextStyle(color: Colors.white70, fontSize: 11)),
                   ])),
                   const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
                 ]),
@@ -712,7 +712,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
               decoration: BoxDecoration(color: context.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
-              child: Text('Teacher', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.primary)),
+              child: Text(tr('teacher'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.primary)),
             ),
             const SizedBox(height: 16),
             Container(
@@ -720,7 +720,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(12)),
               child: Text(
-                _teacherBio.isEmpty ? 'No bio yet' : _teacherBio,
+                _teacherBio.isEmpty ? tr('no_bio_yet') : _teacherBio,
                 style: TextStyle(fontSize: 13, color: _teacherBio.isEmpty ? context.textMuted : context.appText,
                     fontStyle: _teacherBio.isEmpty ? FontStyle.italic : FontStyle.normal),
                 textAlign: TextAlign.center,
@@ -733,7 +733,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
                 onPressed: () => Navigator.pop(context),
                 style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                child: const Text('Close'),
+                child: Text(tr('close')),
               ),
             ),
           ],
@@ -773,10 +773,10 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         Text(
-          isAllActive ? '🔥 Everyone\'s active today!' : '🔥 Class Activity',
+          isAllActive ? tr('everyone_active_today') : tr('class_activity'),
           style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
         ),
-        Text('$_activeToday of $_memberCount',
+        Text(tr('n_of_m_active').replaceFirst('{n}', '$_activeToday').replaceFirst('{m}', '$_memberCount'),
           style: const TextStyle(color: Colors.white70, fontSize: 11)),
       ]),
       const SizedBox(height: 6),
@@ -879,14 +879,14 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
             decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(6)),
-            child: Text('${_readCounts[a.id] ?? 0}/$_memberCount read',
+            child: Text(tr('n_read').replaceFirst('{n}', '${_readCounts[a.id] ?? 0}').replaceFirst('{m}', '$_memberCount'),
               style: TextStyle(fontSize: 9, color: context.textMuted, fontWeight: FontWeight.w700)),
           )
         else if (isNew)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(color: context.primary, borderRadius: BorderRadius.circular(4)),
-            child: const Text('NEW', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800)),
+            child: Text(tr('new_label'), style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800)),
           ),
       ]),
     );
@@ -954,7 +954,7 @@ class _StudentsSheetState extends State<_StudentsSheet> {
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
           child: Row(children: [
-            Text('👥 Students', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+            Text(tr('students_header'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
             const Spacer(),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
@@ -970,7 +970,7 @@ class _StudentsSheetState extends State<_StudentsSheet> {
             : _error != null
               ? Center(child: Text(_error!, style: TextStyle(color: context.textMuted, fontSize: 12)))
               : _students.isEmpty
-                ? Center(child: Text('No students yet', style: TextStyle(color: context.textMuted)))
+                ? Center(child: Text(tr('no_students_yet'), style: TextStyle(color: context.textMuted)))
                 : ListView.separated(
                     controller: scrollCtrl,
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
@@ -1013,12 +1013,12 @@ class _StudentsSheetState extends State<_StudentsSheet> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                                   decoration: BoxDecoration(color: const Color(0xFF10B981).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4)),
-                                  child: const Text('TODAY', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: Color(0xFF10B981))),
+                                  child: Text(tr('today_caps'), style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: Color(0xFF10B981))),
                                 ),
                               ],
                             ]),
                             if (streak > 0)
-                              Text('🔥 $streak day streak', style: TextStyle(fontSize: 11, color: ctx.textMuted)),
+                              Text(tr('n_day_streak').replaceFirst('{n}', '$streak'), style: TextStyle(fontSize: 11, color: ctx.textMuted)),
                           ])),
                           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                             Text('${xpDisplay(xp)} XP',

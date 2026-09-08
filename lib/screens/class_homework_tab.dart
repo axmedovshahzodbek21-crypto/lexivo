@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/supabase_service.dart';
 import '../date_utils.dart';
 import '../app_theme.dart';
+import '../l10n.dart';
 import 'class_models.dart';
 import 'library_unit_study_screen.dart';
 import '../data/word_data.dart';
@@ -54,11 +55,11 @@ Widget _hwHero(String classId, String className) {
             const SizedBox(width: 14),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(className, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white.withValues(alpha: 0.5), letterSpacing: 1.5), maxLines: 1, overflow: TextOverflow.ellipsis),
-              const Text('Homework', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, shadows: [Shadow(color: Color(0x40000000), blurRadius: 8, offset: Offset(0, 2))])),
+              Text(tr('homework'), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, shadows: [Shadow(color: Color(0x40000000), blurRadius: 8, offset: Offset(0, 2))])),
             ])),
           ]),
           const SizedBox(height: 6),
-          Text('Assigned folders to review', style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.65))),
+          Text(tr('assigned_folders_to_review'), style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.65))),
         ]),
       ),
     ]),
@@ -524,9 +525,9 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
             const Text('⚠️', style: TextStyle(fontSize: 48)),
             const SizedBox(height: 12),
-            Text("Couldn't load homework", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+            Text(tr('couldnt_load_homework'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
             const SizedBox(height: 16),
-            ElevatedButton(onPressed: () => _load(), child: const Text('Try again')),
+            ElevatedButton(onPressed: () => _load(), child: Text(tr('try_again_plain'))),
           ]),
         ),
       );
@@ -539,10 +540,10 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
             const Text('📋', style: TextStyle(fontSize: 52)),
             const SizedBox(height: 16),
-            Text('Manage Homework from the Dashboard',
+            Text(tr('manage_hw_from_dashboard'),
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText), textAlign: TextAlign.center),
             const SizedBox(height: 8),
-            Text('Go to Dashboard → Curriculum tab to assign units as homework.',
+            Text(tr('manage_hw_from_dashboard_sub'),
               style: TextStyle(color: context.textMuted, fontSize: 13), textAlign: TextAlign.center),
           ]),
         ),
@@ -570,8 +571,8 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
               ),
               child: Column(children: [
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Text('My Progress', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: context.appText)),
-                  Text('$_totalDone / $_totalAssigned done',
+                  Text(tr('my_progress'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: context.appText)),
+                  Text(tr('n_of_m_done').replaceFirst('{n}', '$_totalDone').replaceFirst('{m}', '$_totalAssigned'),
                     style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.primary)),
                 ]),
                 const SizedBox(height: 8),
@@ -586,7 +587,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
                 ),
                 if (_totalDone == _totalAssigned && _totalAssigned > 0) ...[
                   const SizedBox(height: 8),
-                  Text('🎉 All done! Great work!',
+                  Text(tr('all_done_great'),
                     style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.primary)),
                 ],
               ]),
@@ -597,7 +598,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
               const SizedBox(height: 60),
               const Text('📚', style: TextStyle(fontSize: 48)),
               const SizedBox(height: 12),
-              Text('No homework yet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+              Text(tr('no_homework_yet'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
               const SizedBox(height: 6),
               Text("Your teacher hasn't assigned any units yet",
                 style: TextStyle(color: context.textMuted, fontSize: 13)),
@@ -694,7 +695,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
       if (visible.isEmpty)
         Padding(
           padding: const EdgeInsets.only(bottom: 8),
-          child: Text('No units assigned yet', style: TextStyle(fontSize: 12, color: context.textMuted)))
+          child: Text(tr('no_units_assigned_yet'), style: TextStyle(fontSize: 12, color: context.textMuted)))
       else
         GridView.count(
           crossAxisCount: 3,
@@ -917,7 +918,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
         ]),
         const SizedBox(height: 5),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Day ${h.dayNumber}',
+          Text(tr('day_label').replaceFirst('{n}', '${h.dayNumber}'),
             style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700,
               color: allDone ? Colors.green : collColor)),
           const SizedBox(height: 2),

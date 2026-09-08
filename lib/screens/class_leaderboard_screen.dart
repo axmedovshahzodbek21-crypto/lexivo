@@ -51,11 +51,11 @@ Widget _lbHero(String classId, String className) {
             const SizedBox(width: 14),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(className, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white.withValues(alpha: 0.5), letterSpacing: 1.5), maxLines: 1, overflow: TextOverflow.ellipsis),
-              const Text('Leaderboard', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, shadows: [Shadow(color: Color(0x40000000), blurRadius: 8, offset: Offset(0, 2))])),
+              Text(tr('leaderboard_plain'), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, shadows: [Shadow(color: Color(0x40000000), blurRadius: 8, offset: Offset(0, 2))])),
             ])),
           ]),
           const SizedBox(height: 6),
-          Text('Ranked by XP earned in class', style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.65))),
+          Text(tr('ranked_by_xp_in_class'), style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.65))),
         ]),
       ),
     ]),
@@ -148,9 +148,9 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
         Expanded(child: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
           const Text('🏆', style: TextStyle(fontSize: 56)),
           const SizedBox(height: 12),
-          Text('No rankings yet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+          Text(tr('no_rankings_yet'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
           const SizedBox(height: 6),
-          Text('Students need to earn XP first', style: TextStyle(color: context.textMuted, fontSize: 13)),
+          Text(tr('no_rankings_yet_sub'), style: TextStyle(color: context.textMuted, fontSize: 13)),
         ]))),
       ]);
     }
@@ -177,7 +177,7 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
           ],
 
           // Full list
-          Text('All Rankings',
+          Text(tr('all_rankings'),
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: context.appText)),
           const SizedBox(height: 8),
           ..._rows.asMap().entries.map((e) => _buildRow(context, e.key + 1, e.value)),
@@ -275,8 +275,8 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
       Text('🎓', style: const TextStyle(fontSize: 22)),
       const SizedBox(width: 10),
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Your position', style: TextStyle(fontSize: 11, color: context.textMuted)),
-        Text('#$rank in class', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: context.primary)),
+        Text(tr('your_position'), style: TextStyle(fontSize: 11, color: context.textMuted)),
+        Text(tr('rank_in_class').replaceFirst('{n}', '$rank'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: context.primary)),
       ])),
       if (_rows.isNotEmpty && rank <= _rows.length)
         Text('${xpDisplay(_rows[rank - 1].xp)} XP',
@@ -325,7 +325,7 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
                 viewUserName: row.name,
               ),
             )),
-            child: Text('🔥 ${row.streak} day streak',
+            child: Text(tr('n_day_streak').replaceFirst('{n}', '${row.streak}'),
               style: TextStyle(fontSize: 11, color: context.textMuted,
                 decoration: TextDecoration.underline, decorationColor: context.textMuted)),
           ),

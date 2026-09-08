@@ -109,7 +109,7 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> with Naviga
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to create class')),
+          SnackBar(content: Text(tr('failed_to_create_class'))),
         );
       }
       return;
@@ -132,7 +132,7 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> with Naviga
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to rename class')),
+          SnackBar(content: Text(tr('failed_to_rename_class'))),
         );
       }
       return;
@@ -150,7 +150,7 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> with Naviga
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to delete class')),
+          SnackBar(content: Text(tr('failed_to_delete_class'))),
         );
       }
       return;
@@ -165,7 +165,7 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> with Naviga
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) setState(() { if (_copiedId == id) _copiedId = null; });
     });
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied!'), duration: Duration(seconds: 1)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr('copied')), duration: const Duration(seconds: 1)));
   }
 
   @override
@@ -277,15 +277,15 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> with Naviga
               ),
               const SizedBox(width: 14),
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('MY CLASSES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white.withValues(alpha: 0.5), letterSpacing: 1.5)),
+                Text(tr('my_classes_caps'), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white.withValues(alpha: 0.5), letterSpacing: 1.5)),
                 Text(
-                  _myClasses.isEmpty ? tr('my_classes') : '${_myClasses.length} Class${_myClasses.length != 1 ? 'es' : ''}',
+                  _myClasses.isEmpty ? tr('my_classes') : tr('n_classes').replaceFirst('{n}', '${_myClasses.length}'),
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, shadows: [Shadow(color: Color(0x40000000), blurRadius: 8, offset: Offset(0, 2))]),
                 ),
               ]),
             ]),
             const SizedBox(height: 8),
-            Text('Classes you created as a teacher.', style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.65))),
+            Text(tr('classes_you_created'), style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.65))),
           ]),
         ),
       ]),
@@ -308,9 +308,9 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> with Naviga
         const Text('📚', style: TextStyle(fontSize: 32)),
         const SizedBox(width: 14),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('My Library', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white)),
+          Text(tr('my_library'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white)),
           const SizedBox(height: 2),
-          Text('Folders · Units · Words', style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.8))),
+          Text(tr('folders_units_words'), style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.8))),
         ])),
         Icon(Icons.arrow_forward_ios, color: Colors.white.withValues(alpha: 0.7), size: 16),
       ]),
@@ -392,7 +392,7 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> with Naviga
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
                 ),
-                child: const Text('Enter →', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white)),
+                child: Text(tr('enter_arrow'), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white)),
               ),
             ]),
           ),
@@ -435,7 +435,7 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> with Naviga
   void _confirmDeleteClass(ClassRow cls) => showDialog(
     context: context, builder: (ctx) => AlertDialog(
       backgroundColor: context.surface,
-      title: Text('Delete "${cls.name}"?', style: TextStyle(color: context.appText)),
+      title: Text(tr('delete_named_q').replaceFirst('{name}', cls.name), style: TextStyle(color: context.appText)),
       content: Text(tr('delete_class_confirm'), style: TextStyle(color: context.textMuted)),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx), child: Text(tr('cancel'), style: TextStyle(color: context.textMuted))),

@@ -181,11 +181,11 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
     if (user == null) return;
     final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
       backgroundColor: context.surface,
-      title: Text('Leave class?', style: TextStyle(color: context.appText)),
-      content: Text('You will need the class code to rejoin.', style: TextStyle(color: context.textMuted)),
+      title: Text(tr('leave_class_q'), style: TextStyle(color: context.appText)),
+      content: Text(tr('leave_class_confirm'), style: TextStyle(color: context.textMuted)),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(tr('cancel'), style: TextStyle(color: context.textMuted))),
-        TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text('Leave', style: TextStyle(color: context.dangerColor))),
+        TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(tr('leave'), style: TextStyle(color: context.dangerColor))),
       ],
     ));
     if (ok != true) return;
@@ -234,7 +234,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to update target — try again')),
+        SnackBar(content: Text(tr('failed_to_update_target'))),
       );
       return;
     }
@@ -342,15 +342,15 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
               ),
               const SizedBox(width: 14),
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('JOINED CLASSES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white.withValues(alpha: 0.5), letterSpacing: 1.5)),
+                Text(tr('joined_classes_caps'), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white.withValues(alpha: 0.5), letterSpacing: 1.5)),
                 Text(
-                  _joinedClasses.isEmpty ? tr('joined_classes') : '${_joinedClasses.length} Class${_joinedClasses.length != 1 ? 'es' : ''}',
+                  _joinedClasses.isEmpty ? tr('joined_classes') : tr('n_classes').replaceFirst('{n}', '${_joinedClasses.length}'),
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, shadows: [Shadow(color: Color(0x40000000), blurRadius: 8, offset: Offset(0, 2))]),
                 ),
               ]),
             ]),
             const SizedBox(height: 8),
-            Text('Classes you are enrolled in as a student.', style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.65))),
+            Text(tr('classes_you_enrolled'), style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.65))),
           ]),
         ),
       ]),
@@ -424,9 +424,9 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Wrap(spacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
                     Text(cls.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
-                    if (pending) Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(8)), child: const Text('⏳ Pending approval', style: TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold))),
-                    if (unread > 0) Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(8)), child: Text('$unread new', style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold))),
-                    if (active.isNotEmpty) Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)), child: Text('${active.length} target${active.length != 1 ? 's' : ''}', style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold))),
+                    if (pending) Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(8)), child: Text(tr('pending_approval'), style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold))),
+                    if (unread > 0) Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(8)), child: Text(tr('n_new').replaceFirst('{n}', '$unread'), style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold))),
+                    if (active.isNotEmpty) Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)), child: Text(tr('n_targets').replaceFirst('{n}', '${active.length}'), style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold))),
                   ]),
                   const SizedBox(height: 2),
                   Text('👩‍🏫 $teacherName · ${cls.joinCode}', style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.7))),
@@ -472,7 +472,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
                 ],
               ),
               alignment: Alignment.center,
-              child: const Text('Enter Class →', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: Colors.white)),
+              child: Text(tr('enter_class_arrow'), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: Colors.white)),
             ),
           ),
         ),
@@ -493,7 +493,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
                 const SizedBox(height: 2),
                 Text(_timeAgo(a.createdAt), style: TextStyle(fontSize: 10, color: context.textMuted)),
               ])),
-              if (isNew) Text('NEW', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: context.primary)),
+              if (isNew) Text(tr('new_label'), style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: context.primary)),
             ]),
           );
         }).toList())),
@@ -516,7 +516,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
                     ),
                     child: Row(children: [
                       SizedBox(width: 28, child: Text(medal ?? '${e.key + 1}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isMe ? context.primary : context.textMuted))),
-                      Expanded(child: Text('${e.value.name}${isMe ? ' (you)' : ''}', style: TextStyle(fontSize: 13, fontWeight: isMe ? FontWeight.bold : FontWeight.normal, color: isMe ? context.primary : context.appText))),
+                      Expanded(child: Text('${e.value.name}${isMe ? tr('you_suffix') : ''}', style: TextStyle(fontSize: 13, fontWeight: isMe ? FontWeight.bold : FontWeight.normal, color: isMe ? context.primary : context.appText))),
                       Text('${e.value.xp} XP', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.primary)),
                       const SizedBox(width: 8),
                       Text('🔥 ${e.value.streak}', style: TextStyle(fontSize: 11, color: context.textMuted)),
@@ -540,7 +540,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(t.title, style: TextStyle(fontSize: 13, color: t.completedAt != null ? context.textMuted : context.appText, decoration: t.completedAt != null ? TextDecoration.lineThrough : null, fontWeight: t.completedAt != null ? FontWeight.normal : FontWeight.w500)),
                   if (due != null && t.completedAt == null) Text(due, style: TextStyle(fontSize: 10, color: overdue ? context.dangerColor : context.textMuted, fontWeight: FontWeight.w500)),
-                  if (t.completedAt != null) Text('Done ${_timeAgo(t.completedAt!)}', style: TextStyle(fontSize: 10, color: context.textMuted)),
+                  if (t.completedAt != null) Text(tr('done_time_ago').replaceFirst('{t}', _timeAgo(t.completedAt!)), style: TextStyle(fontSize: 10, color: context.textMuted)),
                 ])),
               ]),
             ),
@@ -561,7 +561,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
               const SizedBox(height: 2),
               Text(_timeAgo(n.createdAt), style: TextStyle(fontSize: 10, color: context.textMuted)),
             ])),
-            if (n.readAt == null) Text('NEW', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: context.primary)),
+            if (n.readAt == null) Text(tr('new_label'), style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: context.primary)),
           ]),
         )).toList())),
 

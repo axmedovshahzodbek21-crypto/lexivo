@@ -99,6 +99,12 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
   int _classStreak = 0;
   bool _loadError = false;
 
+  // Pending join requests (teacher only) — kept separate from the cached
+  // _load() above since it's teacher-only, changes independently of the
+  // rest of this screen's data, and needs to stay fresh rather than served
+  // from the persisted cache.
+  List<Map<String, dynamic>> _pendingMembers = [];
+
   static const _prefsPrefix = 'class_home_v1_';
 
   void _applyCache(_ClassHomeCache c) {
@@ -131,6 +137,97 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
     } else {
       _initWithPersistedCache();
     }
+    if (widget.isTeacher) _loadPendingMembers();
+  }
+
+  Future<void> _loadPendingMembers() async {
+    try {
+      // get_class_pending_members is a SECURITY DEFINER RPC (not a direct
+      // class_members + profiles query) because profiles RLS only lets a
+      // user read their own row — a teacher querying profiles for their
+      // students directly would get zero rows back silently.
+      final rows = await supabase.rpc('get_class_pending_members', params: {'p_class_id': widget.classId});
+      final members = (rows as List).map((r) {
+        final m = Map<String, dynamic>.from(r as Map);
+        return {
+          'student_id': m['student_id'] as String,
+          'name': m['name'] as String? ?? 'Student',
+          'avatar_url': m['avatar_url'] as String?,
+        };
+      }).toList();
+      if (mounted) setState(() => _pendingMembers = members);
+    } catch (_) {}
+  }
+
+  Future<void> _approvePending(String studentId) async {
+    try {
+      await supabase.from('class_members')
+          .update({'status': 'approved'})
+          .eq('class_id', widget.classId)
+          .eq('student_id', studentId);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr('failed_to_approve'))));
+      }
+      return;
+    }
+    if (mounted) setState(() => _pendingMembers.removeWhere((m) => m['student_id'] == studentId));
+    ClassHomeScreen.invalidate(widget.classId);
+    _load(background: true);
+  }
+
+  Future<void> _rejectPending(String studentId) async {
+    try {
+      await supabase.from('class_members')
+          .delete()
+          .eq('class_id', widget.classId)
+          .eq('student_id', studentId);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr('failed_to_reject'))));
+      }
+      return;
+    }
+    if (mounted) setState(() => _pendingMembers.removeWhere((m) => m['student_id'] == studentId));
+  }
+
+  Widget _buildPendingSection() {
+    if (_pendingMembers.isEmpty) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: context.primaryBg, borderRadius: BorderRadius.circular(14), border: Border.all(color: context.primary.withValues(alpha: 0.3))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Text('⏳', style: TextStyle(fontSize: 16)),
+          const SizedBox(width: 8),
+          Text(tr('pending_approval_n').replaceFirst('{n}', '${_pendingMembers.length}'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+        ]),
+        const SizedBox(height: 10),
+        ..._pendingMembers.map((m) => Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(children: [
+            MemberAvatar(name: m['name'] as String, avatarUrl: m['avatar_url'] as String?, color: colorForId(m['student_id'] as String), size: 28),
+            const SizedBox(width: 8),
+            Expanded(child: Text(m['name'] as String, style: TextStyle(fontSize: 13, color: context.appText))),
+            TextButton(
+              onPressed: () => _rejectPending(m['student_id'] as String),
+              child: Text(tr('reject'), style: TextStyle(color: context.dangerColor, fontSize: 12, fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(width: 4),
+            ElevatedButton(
+              onPressed: () => _approvePending(m['student_id'] as String),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: context.primary,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: Text(tr('approve'), style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+            ),
+          ]),
+        )),
+      ]),
+    );
   }
 
   Future<void> _initWithPersistedCache() async {
@@ -524,7 +621,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
     final pending = _targets.where((t) => t.completedAt == null).toList();
 
     return RefreshIndicator(
-      onRefresh: _load,
+      onRefresh: () => Future.wait([_load(), if (widget.isTeacher) _loadPendingMembers()]),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
         children: [
@@ -608,6 +705,9 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
           ),
 
           const SizedBox(height: 20),
+
+          // ── Pending join requests (teacher only) ───────────────────────────
+          if (widget.isTeacher) _buildPendingSection(),
 
           // ── Spotlight (teacher only) ───────────────────────────────────────
           if (widget.isTeacher && _needsAttentionCount > 0) ...[

@@ -433,26 +433,21 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   Future<void> _loadPendingMembers() async {
     if (mounted) setState(() => _pendingLoading = true);
     try {
-      final rows = await supabase
-          .from('class_members')
-          .select('student_id')
-          .eq('class_id', widget.classId)
-          .eq('status', 'pending');
-      final ids = (rows as List).map((r) => (r as Map)['student_id'] as String).toList();
-      var names = <String, String>{};
-      if (ids.isNotEmpty) {
-        final profiles = await supabase.from('profiles').select('id, name').inFilter('id', ids);
-        for (final p in profiles as List) {
-          final pm = Map<String, dynamic>.from(p as Map);
-          names[pm['id'] as String] = pm['name'] as String? ?? 'Student';
-        }
-      }
-      if (mounted) {
-        setState(() {
-          _pendingMembers = ids.map((id) => {'student_id': id, 'name': names[id] ?? 'Student'}).toList();
-          _pendingLoading = false;
-        });
-      }
+      // get_class_pending_members is a SECURITY DEFINER RPC (not a direct
+      // class_members + profiles query) because profiles RLS only lets a
+      // user read their own row — a teacher querying profiles for their
+      // students directly gets zero rows back silently, same failure shape
+      // the class_members read itself had before it got its own policy.
+      final rows = await supabase.rpc('get_class_pending_members', params: {'p_class_id': widget.classId});
+      final members = (rows as List).map((r) {
+        final m = Map<String, dynamic>.from(r as Map);
+        return {
+          'student_id': m['student_id'] as String,
+          'name': m['name'] as String? ?? 'Student',
+          'avatar_url': m['avatar_url'] as String?,
+        };
+      }).toList();
+      if (mounted) setState(() { _pendingMembers = members; _pendingLoading = false; });
     } catch (_) {
       if (mounted) setState(() => _pendingLoading = false);
     }
@@ -508,6 +503,8 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         ..._pendingMembers.map((m) => Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: Row(children: [
+            MemberAvatar(name: m['name'] as String, avatarUrl: m['avatar_url'] as String?, color: context.primary, size: 28),
+            const SizedBox(width: 8),
             Expanded(child: Text(m['name'] as String, style: TextStyle(fontSize: 13, color: context.appText))),
             TextButton(
               onPressed: () => _rejectPending(m['student_id'] as String),

@@ -604,10 +604,15 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
 
   Future<int> _saveProgress() async {
     int xpEarned = 0;
-    if (_easyWords.isNotEmpty) {
+    // noXP is true only for class-homework sessions (see
+    // library_unit_study_screen.dart) — personal SRS/hard-words storage must
+    // stay untouched then, same as the XP/session-count calls below already
+    // do, or a class word marked "Too Hard" leaks into the personal Review
+    // queue (getDueWords reads this same _srsKey store).
+    if (!widget.noXP && _easyWords.isNotEmpty) {
       await StorageService.removeHardWords(_easyWords, widget.collectionName);
     }
-    if (_hardWords.isNotEmpty) {
+    if (!widget.noXP && _hardWords.isNotEmpty) {
       await StorageService.saveHardWords(
         _hardWords,
         widget.collectionName,
@@ -660,10 +665,10 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
   }
 
   Future<void> _saveExitProgress() async {
-    if (_easyWords.isNotEmpty) {
+    if (!widget.noXP && _easyWords.isNotEmpty) {
       await StorageService.removeHardWords(_easyWords, widget.collectionName);
     }
-    if (_hardWords.isNotEmpty) {
+    if (!widget.noXP && _hardWords.isNotEmpty) {
       await StorageService.saveHardWords(
         _hardWords,
         widget.collectionName,
@@ -671,7 +676,7 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
         widget.wordDay.dayNumber,
       );
     }
-    await StorageService.recordStudySession();
+    if (!widget.noXP) await StorageService.recordStudySession();
   }
 
 

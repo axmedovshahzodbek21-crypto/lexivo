@@ -36,7 +36,6 @@ class _ReadingScreenState extends State<ReadingScreen> {
   int? _lastSurprisePassageId;
   bool _shuffling = false;
   ReadingPassage? _shown;
-  List<String> _classIds = [];
 
   @override
   void initState() {
@@ -44,30 +43,50 @@ class _ReadingScreenState extends State<ReadingScreen> {
     StorageService.getVisitedPassageIds().then((ids) {
       if (mounted) setState(() => _visited = ids);
     });
-    final user = currentUser;
-    if (user != null) {
-      supabase.from('class_members').select('class_id').eq('student_id', user.id).then((rows) {
-        if (mounted) setState(() => _classIds = rows.map((r) => r['class_id'] as String).toList());
-      }).catchError((e) {
-        // Previously swallowed with zero trace — a failure here silently
-        // means every subsequent reading session's class XP/activity credit
-        // (_recordClassReadActivity, gated on _classIds being non-empty)
-        // never fires, with nothing indicating why.
-        debugPrint('[ReadingScreen] class membership fetch failed: $e');
-      });
-    }
   }
 
-  // Free-browse reads aren't tied to a specific homework assignment, so they
-  // can't show up in the teacher's per-passage checklist — that requires a
-  // real class_homework row. This just credits the student's classes with
-  // activity/XP so they don't look inactive, same as Learn/SRS Review.
-  void _recordClassReadActivity(ReadingPassage passage) {
+  // Free-browse reads used to blanket-credit XP/streak to every class the
+  // student belongs to, "so they don't look inactive" — but that meant
+  // reading something wholly unrelated to a class made the student look
+  // engaged with classes they never touched that day. Now only credits a
+  // class when this exact passage is that class's actual, still-outstanding
+  // reading homework (a real class_homework row targeting this student,
+  // with no 'read' completion yet) — same passage_id/student_ids/mode
+  // shape class_homework_tab.dart already uses to compute "applicable,
+  // incomplete" homework for a student. This still doesn't mark the
+  // homework's 'read' mode complete — that stays the assigned-homework
+  // flow's job (library_unit_study_screen.dart's _markPassageRead) — it
+  // only credits the class-side XP/streak nudge for real, active homework.
+  Future<void> _recordClassReadActivity(ReadingPassage passage) async {
     final user = currentUser;
-    if (user == null || _classIds.isEmpty) return;
+    if (user == null) return;
     const xp = 3;
-    for (final classId in _classIds) {
-      recordClassActivity(user.id, classId, xp: xp, reason: 'Reading: ${passage.title}');
+    try {
+      final hwRows = List<Map<String, dynamic>>.from(
+        await supabase.from('class_homework')
+            .select('id, class_id, student_ids')
+            .eq('passage_id', passage.id));
+      final applicable = hwRows.where((h) {
+        final sids = h['student_ids'] as List?;
+        return sids == null || sids.contains(user.id);
+      }).toList();
+      if (applicable.isNotEmpty) {
+        final hwIds = applicable.map((h) => h['id'] as String).toList();
+        final prog = await supabase.from('class_homework_progress')
+            .select('homework_id')
+            .eq('student_id', user.id).eq('mode', 'read')
+            .inFilter('homework_id', hwIds);
+        final completedHwIds = (prog as List).map((p) => (p as Map)['homework_id'] as String).toSet();
+        final activeClassIds = applicable
+            .where((h) => !completedHwIds.contains(h['id']))
+            .map((h) => h['class_id'] as String)
+            .toSet();
+        for (final classId in activeClassIds) {
+          recordClassActivity(user.id, classId, xp: xp, reason: 'Reading: ${passage.title}');
+        }
+      }
+    } catch (e) {
+      debugPrint('[ReadingScreen] class reading-assignment check failed: $e');
     }
     StorageService.addXP(xp, reason: 'Reading', source: passage.title);
   }

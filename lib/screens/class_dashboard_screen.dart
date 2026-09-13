@@ -1608,6 +1608,9 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       children: [
         Text(tr('pct_class_completed_unit'),
           style: TextStyle(fontSize: 11, color: context.textMuted)),
+        const SizedBox(height: 2),
+        Text(tr('pct_class_completed_unit_note'),
+          style: TextStyle(fontSize: 10, color: context.textMuted.withOpacity(0.7))),
         const SizedBox(height: 14),
         ..._collections.map((col) {
           final completionPcts = List.generate(col.totalUnits, (i) {

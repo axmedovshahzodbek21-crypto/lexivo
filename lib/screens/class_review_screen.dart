@@ -39,6 +39,11 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
   bool _loading = true;
   bool _loadError = false;
   List<_ReviewCard> _cards = [];
+  // True count of everything due right now (dueOnly mode only) — always
+  // >= _cards.length, since getClassDueWords caps never-reviewed words per
+  // session. Lets the UI tell the student more is waiting instead of the
+  // session's own size quietly looking like the whole picture.
+  int _totalDue = 0;
   int _index = 0;
   bool _flipped = false; // !dueOnly flip-card only
   int _knew = 0;
@@ -164,6 +169,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
             _cards = due.map((e) => _ReviewCard(
                   word: e.word, translation: e.translation, isSRS: true, failStreak: e.failStreak,
                 )).toList();
+            _totalDue = countDueClassWords(all);
             _distractorPool = all
                 .map((e) => e.translation)
                 .where((t) => t.isNotEmpty)
@@ -352,6 +358,15 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
       Navigator.pop(context);
       return;
     }
+    _resetAndReload();
+  }
+
+  // Resets session state and re-fetches due words in place — always (not
+  // just embedded), for the "more words waiting" continue action on the
+  // finish screen. getClassDueWords caps never-reviewed words per session,
+  // so this is how a student gets to the next batch the same day instead of
+  // waiting for a future day's session, without leaving the screen.
+  void _resetAndReload() {
     _beatTimer?.cancel();
     _lockTimer?.cancel();
     _revealedAt = null;
@@ -428,12 +443,21 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
     if (_done) {
       final total = _knew + _didntKnow;
       final pct = total == 0 ? 0 : (_knew / total * 100).round();
+      // Remaining is an estimate off the pre-session snapshot, not a
+      // re-fetch — good enough to tell the student more is waiting without
+      // an extra round-trip; _resetAndReload() below gets the real number.
+      final remaining = widget.dueOnly ? (_totalDue - _cards.length).clamp(0, 1 << 30) : 0;
       return Center(child: Padding(
           padding: const EdgeInsets.all(32),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Text(pct >= 80 ? '🏆' : pct >= 50 ? '⭐' : '💪', style: const TextStyle(fontSize: 56)),
             const SizedBox(height: 16),
             Text(tr('session_complete_excl'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: context.appText)),
+            if (remaining > 0) ...[
+              const SizedBox(height: 6),
+              Text(tr('n_more_due').replaceFirst('{n}', '$remaining'),
+                  style: TextStyle(fontSize: 13, color: context.textMuted)),
+            ],
             const SizedBox(height: 20),
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               _scoreBox('$_knew', tr('structures_knew_it'), const Color(0xFF10B981)),
@@ -443,15 +467,35 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
               _scoreBox('$pct%', tr('score'), context.primary),
             ]),
             const SizedBox(height: 28),
-            SizedBox(width: double.infinity, child: ElevatedButton(
-              onPressed: _dismiss,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: context.primary, foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                padding: const EdgeInsets.symmetric(vertical: 15),
-              ),
-              child: Text(tr('finish'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            )),
+            if (remaining > 0)
+              SizedBox(width: double.infinity, child: ElevatedButton(
+                onPressed: _resetAndReload,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: context.primary, foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                ),
+                child: Text(tr('continue_reviewing'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              )),
+            if (remaining > 0) const SizedBox(height: 10),
+            SizedBox(width: double.infinity, child: remaining > 0
+              ? OutlinedButton(
+                  onPressed: _dismiss,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: Text(tr('finish'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                )
+              : ElevatedButton(
+                  onPressed: _dismiss,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: context.primary, foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                  ),
+                  child: Text(tr('finish'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                )),
           ]),
         ));
     }
@@ -472,8 +516,12 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
               ),
             )),
             const SizedBox(width: 10),
-            Text('${_index + 1}/${_cards.length}',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.textMuted)),
+            Text(
+              widget.dueOnly && _totalDue > _cards.length
+                  ? '${_index + 1}/${_cards.length} (${tr('n_more_due').replaceFirst('{n}', '${_totalDue - _cards.length}')})'
+                  : '${_index + 1}/${_cards.length}',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.textMuted),
+            ),
           ]),
           const SizedBox(height: 20),
 

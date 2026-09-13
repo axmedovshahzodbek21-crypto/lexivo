@@ -74,6 +74,17 @@ int _daysBetween(String fromDateStr, String toDateStr) {
   return b.difference(a).inDays;
 }
 
+// True count of words due right now, ignoring getClassDueWords' per-session
+// cap on never-reviewed words. That cap paces one review session so a big
+// learn-day doesn't dump as one wall — it's not meant to hide from the
+// student (or a due-count badge) how many words are actually waiting, or a
+// 31-word learning day looks like it silently lost 21 words instead of
+// spreading them over a few more rounds.
+int countDueClassWords(List<ClassSRSEntry> all) {
+  final today = _todayStr();
+  return all.where((e) => e.stage < 5 && e.nextDue.compareTo(today) <= 0).length;
+}
+
 // Called when a student marks a class word as learned. Inserts the SRS row
 // and awards XP atomically server-side (record_class_word_learned) so a
 // modified client can't split "was this new" from "award XP" into two

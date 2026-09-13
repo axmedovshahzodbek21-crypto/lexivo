@@ -377,15 +377,22 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
             // no second (e.g. 7-day) "inactive" definition exists here.
             final today = DateTime.now().toIso8601String().substring(0, 10);
             final threeDaysAgo = DateTime.now().subtract(const Duration(days: 3)).toIso8601String().substring(0, 10);
-            final profilesRaw = await supabase
-                .from('user_data')
-                .select('id, last_study_date')
-                .inFilter('id', memberIds);
-            activeToday = (profilesRaw as List)
-                .where((p) => (p as Map)['last_study_date'] == today)
-                .length;
-            needsAttentionCount = (profilesRaw as List).where((p) {
-              final date = (p as Map)['last_study_date'] as String?;
+            final studyDaysRaw = await supabase
+                .from('class_study_days')
+                .select('student_id, study_date')
+                .eq('class_id', widget.classId)
+                .inFilter('student_id', memberIds);
+            final lastStudyByStudent = <String, String>{};
+            for (final row in studyDaysRaw as List) {
+              final m = row as Map;
+              final sid = m['student_id'] as String;
+              final date = m['study_date'] as String;
+              final current = lastStudyByStudent[sid];
+              if (current == null || date.compareTo(current) > 0) lastStudyByStudent[sid] = date;
+            }
+            activeToday = memberIds.where((id) => lastStudyByStudent[id] == today).length;
+            needsAttentionCount = memberIds.where((id) {
+              final date = lastStudyByStudent[id];
               return date == null || date.compareTo(threeDaysAgo) < 0;
             }).length;
           } catch (_) {}

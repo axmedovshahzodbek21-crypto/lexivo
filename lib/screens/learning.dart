@@ -758,6 +758,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
       final gateCorrectFirst = _perWordData.where((w) => w['outcome'] == 'learned' && w['gate_correct_first'] == true).length;
       await supabase.from('learn_session_analytics').insert({
         'student_id': user.id,
+        'class_id': widget.classId,
         'collection_name': widget.collectionName,
         'day_number': widget.wordDay.dayNumber,
         'started_at': _sessionStart.toIso8601String(),

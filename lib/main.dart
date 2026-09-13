@@ -250,6 +250,10 @@ class _SplashRouterState extends State<SplashRouter> {
       // datasets instead of racing.
       await WidgetService.refreshFromSupabase();
       await WidgetService.pushStats();
+      // One-time cleanup, fire-and-forget: see purgeLeakedClassHomeworkSRSWords
+      // doc comment. Runs after pullAll() so it operates on the fully-merged
+      // local SRS list, not a stale pre-pull one.
+      StorageService.purgeLeakedClassHomeworkSRSWords();
       if (!mounted) return;
       Navigator.pushReplacement(
         context,

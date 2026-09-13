@@ -824,6 +824,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
   static const _hasPerfectQuizKey = 'has_perfect_quiz';
   static const _hasCompletedFlashcardKey = 'has_completed_flashcard';
   static const _hasCompletedSRSKey = 'has_completed_srs';
+  static const _hasPurgedClassLeakSRSKey = 'has_purged_class_leak_srs_v1';
   static const _unitDoneDaysKey  = 'unit_done_days';
   static const _reviewDaysKey    = 'review_days';
   static const _wordGoalDaysKey  = 'word_goal_days';
@@ -1452,6 +1453,42 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
       words: updatedSRS.where((w) => w.deletedAt == null).toList(),
       log: updatedLog,
     );
+  }
+
+  // One-time cleanup for a fixed bug: flashcard.dart's _saveProgress/
+  // _saveExitProgress used to call saveHardWords (which writes into this
+  // same _srsKey store) even during a class-homework flashcard session,
+  // leaking class words into the personal Review queue. Class-homework
+  // collectionName values always take the form "{collection} · Day {n}"
+  // (see library_unit_study_screen.dart's collection-based homework path)
+  // or an arbitrary teacher-authored unit name (its teacher_units-based
+  // path) — neither of which any genuine personal collection or My Words
+  // list is ever named. Only the " · Day " form is structurally safe to
+  // detect without a network round-trip, so this catches that case; a
+  // leaked teacher-custom-unit name has no local signature to key off and
+  // is left alone. Runs once (gated on _hasPurgedClassLeakSRSKey) and
+  // tombstones rather than removes, so the cleanup itself propagates to
+  // other devices the same way an unlearn does.
+  static Future<void> purgeLeakedClassHomeworkSRSWords() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_hasPurgedClassLeakSRSKey) ?? false) return;
+    await _srsMutex.run(() async {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final rawSRS = await _getSRSWordsRaw();
+      var changed = false;
+      final updatedSRS = rawSRS.map((w) {
+        if (w.deletedAt == null && w.collectionName.contains(' · Day ')) {
+          changed = true;
+          return w.copyWith(deletedAt: now);
+        }
+        return w;
+      }).toList();
+      if (changed) {
+        await prefs.setString(_srsKey, jsonEncode(updatedSRS.map((w) => w.toJson()).toList()));
+        SyncService.pushLists();
+      }
+    });
+    await prefs.setBool(_hasPurgedClassLeakSRSKey, true);
   }
 
   static Future<List<DueSRSWord>> getDueWords() async {

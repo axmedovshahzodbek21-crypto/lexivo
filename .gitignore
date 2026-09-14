@@ -50,3 +50,8 @@ app.*.map.json
 
 # git filter-branch scratch dir — never belongs in the repo
 .git-rewrite/
+
+# release signing secrets — never commit these
+/android/key.properties
+*.jks
+*.keystore

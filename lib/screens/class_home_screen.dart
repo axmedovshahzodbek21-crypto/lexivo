@@ -191,42 +191,70 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
     if (mounted) setState(() => _pendingMembers.removeWhere((m) => m['student_id'] == studentId));
   }
 
-  Widget _buildPendingSection() {
-    if (_pendingMembers.isEmpty) return const SizedBox.shrink();
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: context.primaryBg, borderRadius: BorderRadius.circular(14), border: Border.all(color: context.primary.withValues(alpha: 0.3))),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          const Text('⏳', style: TextStyle(fontSize: 16)),
-          const SizedBox(width: 8),
-          Text(tr('pending_approval_n').replaceFirst('{n}', '${_pendingMembers.length}'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
-        ]),
-        const SizedBox(height: 10),
-        ..._pendingMembers.map((m) => Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Row(children: [
-            MemberAvatar(name: m['name'] as String, avatarUrl: m['avatar_url'] as String?, color: colorForId(m['student_id'] as String), size: 28),
-            const SizedBox(width: 8),
-            Expanded(child: Text(m['name'] as String, style: TextStyle(fontSize: 13, color: context.appText))),
-            TextButton(
-              onPressed: () => _rejectPending(m['student_id'] as String),
-              child: Text(tr('reject'), style: TextStyle(color: context.dangerColor, fontSize: 12, fontWeight: FontWeight.bold)),
-            ),
-            const SizedBox(width: 4),
-            ElevatedButton(
-              onPressed: () => _approvePending(m['student_id'] as String),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: context.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+  // Tapping the "⏳ N pending" chip opens this instead of an always-visible
+  // inline card — a teacher with several pending requests shouldn't have to
+  // scroll past a growing list every time they open Home.
+  Future<void> _showPendingSheet() async {
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: context.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) => Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(sheetContext).size.height * 0.7),
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: context.border, borderRadius: BorderRadius.circular(2)))),
+              const SizedBox(height: 16),
+              Text(tr('pending_approval_n').replaceFirst('{n}', '${_pendingMembers.length}'),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+              const SizedBox(height: 12),
+              Flexible(
+                child: _pendingMembers.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Text(tr('no_pending_requests'), style: TextStyle(color: context.textMuted)),
+                    )
+                  : ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: _pendingMembers.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
+                      itemBuilder: (_, i) {
+                        final m = _pendingMembers[i];
+                        return Row(children: [
+                          MemberAvatar(name: m['name'] as String, avatarUrl: m['avatar_url'] as String?, color: colorForId(m['student_id'] as String), size: 32),
+                          const SizedBox(width: 10),
+                          Expanded(child: Text(m['name'] as String, style: TextStyle(fontSize: 14, color: context.appText))),
+                          TextButton(
+                            onPressed: () async {
+                              await _rejectPending(m['student_id'] as String);
+                              setSheetState(() {});
+                            },
+                            child: Text(tr('reject'), style: TextStyle(color: context.dangerColor, fontSize: 12, fontWeight: FontWeight.bold)),
+                          ),
+                          const SizedBox(width: 4),
+                          ElevatedButton(
+                            onPressed: () async {
+                              await _approvePending(m['student_id'] as String);
+                              setSheetState(() {});
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: context.primary,
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            child: Text(tr('approve'), style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                          ),
+                        ]);
+                      },
+                    ),
               ),
-              child: Text(tr('approve'), style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-            ),
-          ]),
-        )),
-      ]),
+            ]),
+          ),
+        ),
+      ),
     );
   }
 
@@ -682,6 +710,11 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
               const SizedBox(height: 16),
               Wrap(spacing: 8, runSpacing: 6, children: [
                 _chip('✅ $_activeToday/$_memberCount active'),
+                if (widget.isTeacher && _pendingMembers.isNotEmpty)
+                  GestureDetector(
+                    onTap: _showPendingSheet,
+                    child: _chip('⏳ ${_pendingMembers.length} pending'),
+                  ),
                 if (!widget.isTeacher) _chip('📋 ${pending.length} pending'),
                 if (!widget.isTeacher) GestureDetector(
                   onTap: () => Navigator.push(context, MaterialPageRoute(
@@ -712,9 +745,6 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
           ),
 
           const SizedBox(height: 20),
-
-          // ── Pending join requests (teacher only) ───────────────────────────
-          if (widget.isTeacher) _buildPendingSection(),
 
           // ── Spotlight (teacher only) ───────────────────────────────────────
           if (widget.isTeacher && _needsAttentionCount > 0) ...[

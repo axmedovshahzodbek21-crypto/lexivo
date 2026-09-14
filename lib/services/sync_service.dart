@@ -110,6 +110,16 @@ class SyncService {
       final xp = max(prefs.getInt('total_xp') ?? 0, ((cloudRow?['total_xp'] as num?) ?? 0).toInt());
       final streak = max(prefs.getInt('streak') ?? 0, ((cloudRow?['streak'] as num?) ?? 0).toInt());
       final freezes = prefs.getInt('streak_freezes') ?? 0;
+      // Server-side source of truth for the scheduled "due reviews" push
+      // reminder — personal SRS due-state otherwise lives only on-device.
+      // Always a fresh snapshot (not gated to today like daily_words_learned),
+      // so it's fine to just overwrite on every push.
+      int dueWordsCount = 0;
+      try {
+        dueWordsCount = await StorageService.getDueCount();
+      } catch (e) {
+        debugPrint('[SyncService.pushStats] getDueCount failed: $e');
+      }
 
       // user_stats (the leaderboard's read source) is no longer written
       // directly — a trigger on user_data derives it in the same transaction,
@@ -127,6 +137,7 @@ class SyncService {
         'streak_bonus_date':   prefs.getString('streak_bonus_date'),
         'last_freeze_week':    prefs.getString('last_freeze_week'),
         'study_days':          studyDays,
+        'due_words_count':     dueWordsCount,
         if (prefs.getString('last_xp_date') == todayStr) ...{
           'today_xp':      prefs.getInt('today_xp') ?? 0,
           'today_xp_date': prefs.getString('last_xp_date'),

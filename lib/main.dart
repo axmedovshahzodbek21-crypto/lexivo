@@ -212,10 +212,11 @@ class _SplashRouterState extends State<SplashRouter> {
     try {
       final res = await supabase
           .from('profiles')
-          .select('push_enabled')
+          .select('push_prefs')
           .eq('id', userId)
           .maybeSingle();
-      if (res?['push_enabled'] == true) {
+      final prefs = res?['push_prefs'];
+      if (prefs is Map && prefs.values.any((v) => v == true)) {
         OneSignalService.linkUser(userId);
       }
     } catch (_) {}

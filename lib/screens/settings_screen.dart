@@ -50,7 +50,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _showBattleReady = false;
   bool _autoPlayOnReveal = true;
   bool _loading = true;
-  bool _pushEnabled = false;
+  Map<String, bool> _pushPrefs = {
+    'class_activity': true,
+    'due_reviews': true,
+    'streak_risk': true,
+    'homework_reminders': true,
+    'class_idle': true,
+  };
+  bool _isTeacher = false;
 
   final _nameController = TextEditingController();
   final _bioController = TextEditingController();
@@ -117,19 +124,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final user = currentUser;
     if (user == null) return;
     try {
-      final res = await supabase.from('profiles').select('bio, push_enabled').eq('id', user.id).maybeSingle();
+      final res = await supabase.from('profiles').select('bio, push_prefs').eq('id', user.id).maybeSingle();
       if (res != null && mounted) {
         final fetched = (res['bio'] as String?) ?? '';
         _bioController.text = fetched;
-        setState(() => _pushEnabled = res['push_enabled'] == true);
+        final rawPrefs = res['push_prefs'];
+        if (rawPrefs is Map) {
+          setState(() {
+            _pushPrefs = {
+              for (final key in _pushPrefs.keys)
+                key: rawPrefs[key] == true,
+            };
+          });
+        }
       }
+    } catch (_) {}
+    // Teacher-only "idle class" reminder is shown only to accounts that own
+    // at least one class — same existence-check pattern as classes_screen.dart.
+    try {
+      final owned = await supabase.from('classes').select('id').eq('teacher_id', user.id).limit(1);
+      if (mounted) setState(() => _isTeacher = (owned as List).isNotEmpty);
     } catch (_) {}
   }
 
-  Future<void> _togglePush(bool value) async {
+  Future<void> _togglePushPref(String key, bool value) async {
     final user = currentUser;
     if (user == null) return;
-    if (value) {
+    final updated = {..._pushPrefs, key: value};
+    final anyEnabled = updated.values.any((v) => v);
+    if (anyEnabled) {
       final granted = await OneSignalService.requestPermission();
       if (!granted) return;
       await OneSignalService.linkUser(user.id);
@@ -137,9 +160,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await OneSignalService.unlinkUser();
     }
     try {
-      await supabase.from('profiles').update({'push_enabled': value}).eq('id', user.id);
+      await supabase.from('profiles').update({'push_prefs': updated}).eq('id', user.id);
     } catch (_) {}
-    if (mounted) setState(() => _pushEnabled = value);
+    if (mounted) setState(() => _pushPrefs = updated);
   }
 
   Future<void> _saveBio() async {
@@ -919,22 +942,56 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 8),
                 _buildCard(
                   context,
-                  child: SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(
-                      tr('class_notifications'),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: context.appText,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(tr('class_notifications'), style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
+                        subtitle: Text(tr('class_notifications_sub'), style: const TextStyle(fontSize: 12)),
+                        value: _pushPrefs['class_activity'] ?? true,
+                        activeThumbColor: context.primary,
+                        onChanged: (v) => _togglePushPref('class_activity', v),
                       ),
-                    ),
-                    subtitle: Text(
-                      tr('class_notifications_sub'),
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                    value: _pushEnabled,
-                    activeThumbColor: context.primary,
-                    onChanged: _togglePush,
+                      const Divider(height: 8),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(tr('push_due_reviews_title'), style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
+                        subtitle: Text(tr('push_due_reviews_sub'), style: const TextStyle(fontSize: 12)),
+                        value: _pushPrefs['due_reviews'] ?? true,
+                        activeThumbColor: context.primary,
+                        onChanged: (v) => _togglePushPref('due_reviews', v),
+                      ),
+                      const Divider(height: 8),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(tr('push_streak_risk_title'), style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
+                        subtitle: Text(tr('push_streak_risk_sub'), style: const TextStyle(fontSize: 12)),
+                        value: _pushPrefs['streak_risk'] ?? true,
+                        activeThumbColor: context.primary,
+                        onChanged: (v) => _togglePushPref('streak_risk', v),
+                      ),
+                      const Divider(height: 8),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(tr('push_homework_title'), style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
+                        subtitle: Text(tr('push_homework_sub'), style: const TextStyle(fontSize: 12)),
+                        value: _pushPrefs['homework_reminders'] ?? true,
+                        activeThumbColor: context.primary,
+                        onChanged: (v) => _togglePushPref('homework_reminders', v),
+                      ),
+                      if (_isTeacher) ...[
+                        const Divider(height: 8),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(tr('push_class_idle_title'), style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
+                          subtitle: Text(tr('push_class_idle_sub'), style: const TextStyle(fontSize: 12)),
+                          value: _pushPrefs['class_idle'] ?? true,
+                          activeThumbColor: context.primary,
+                          onChanged: (v) => _togglePushPref('class_idle', v),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
 

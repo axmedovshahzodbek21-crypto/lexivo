@@ -1510,7 +1510,7 @@ class FlashcardFinishScreen extends StatelessWidget {
       ),
       body: SafeArea(
         top: false,
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(28),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,

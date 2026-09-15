@@ -800,7 +800,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
             Row(children: [
               _statCard(context, '👥', '$_memberCount', 'Students', onTap: _showStudentsSheet),
               const SizedBox(width: 10),
-              _statCard(context, '✅', '$_activeToday', 'Active today'),
+              _statCard(context, '✅', '$_activeToday', 'Active today', onTap: _showStudentsSheet),
             ]),
             const SizedBox(height: 20),
           ],
@@ -1108,19 +1108,15 @@ class _StudentsSheetState extends State<_StudentsSheet> {
               ? Center(child: Text(_error!, style: TextStyle(color: context.textMuted, fontSize: 12)))
               : _students.isEmpty
                 ? Center(child: Text(tr('no_students_yet'), style: TextStyle(color: context.textMuted)))
-                : ListView.separated(
-                    controller: scrollCtrl,
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-                    itemCount: _students.length,
-                    separatorBuilder: (ctx2, i2) => const SizedBox(height: 8),
-                    itemBuilder: (ctx, i) {
-                      final s = _students[i];
+                : Builder(builder: (ctx) {
+                    Widget buildRow(Map<String, dynamic> s) {
                       final sid = s['student_id'] as String;
                       final name = s['name'] as String? ?? '?';
                       final xp = (s['xp'] as num?)?.toInt() ?? 0;
                       final streak = (s['streak'] as num?)?.toInt() ?? 0;
                       final lastStudy = s['last_study_date'] as String?;
                       final isActive = lastStudy == today;
+                      final rank = _students.indexOf(s) + 1;
                       final row = Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                         decoration: BoxDecoration(
@@ -1132,7 +1128,7 @@ class _StudentsSheetState extends State<_StudentsSheet> {
                           Container(
                             width: 28, height: 28,
                             decoration: BoxDecoration(color: ctx.surface, borderRadius: BorderRadius.circular(8)),
-                            child: Center(child: Text('${i + 1}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: ctx.textMuted))),
+                            child: Center(child: Text('$rank', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: ctx.textMuted))),
                           ),
                           const SizedBox(width: 10),
                           MemberAvatar(
@@ -1173,8 +1169,34 @@ class _StudentsSheetState extends State<_StudentsSheet> {
                         )),
                         child: row,
                       );
-                    },
-                  ),
+                    }
+
+                    Widget sectionHeader(String label) => Padding(
+                      padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
+                      child: Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: ctx.textMuted, letterSpacing: 0.5)),
+                    );
+
+                    final active = _students.where((s) => (s as Map<String, dynamic>)['last_study_date'] == today).toList();
+                    final inactive = _students.where((s) => (s as Map<String, dynamic>)['last_study_date'] != today).toList();
+
+                    return ListView(
+                      controller: scrollCtrl,
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                      children: [
+                        sectionHeader(tr('active_today_n').replaceFirst('{n}', '${active.length}')),
+                        if (active.isEmpty)
+                          Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(tr('no_one_yet'), style: TextStyle(fontSize: 12, color: ctx.textMuted)))
+                        else
+                          ...active.map((s) => Padding(padding: const EdgeInsets.only(bottom: 8), child: buildRow(s as Map<String, dynamic>))),
+                        const SizedBox(height: 8),
+                        sectionHeader(tr('not_active_today_n').replaceFirst('{n}', '${inactive.length}')),
+                        if (inactive.isEmpty)
+                          Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(tr('everyone_active_exclaim'), style: TextStyle(fontSize: 12, color: ctx.textMuted)))
+                        else
+                          ...inactive.map((s) => Padding(padding: const EdgeInsets.only(bottom: 8), child: buildRow(s as Map<String, dynamic>))),
+                      ],
+                    );
+                  }),
         ),
       ]),
     );

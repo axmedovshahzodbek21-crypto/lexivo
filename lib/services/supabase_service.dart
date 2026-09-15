@@ -159,7 +159,7 @@ Future<List<HomeClassCard>> getHomeClassCards(String userId) async {
       final taughtList = taughtIds.toList();
       final today = todayForStreaks();
       final batch = await Future.wait([
-        supabase.from('class_members').select('class_id').inFilter('class_id', taughtList),
+        supabase.from('class_members').select('class_id').inFilter('class_id', taughtList).eq('status', 'approved'),
         supabase.from('class_study_days').select('class_id').inFilter('class_id', taughtList).eq('study_date', today),
       ]);
       final memberCount = <String, int>{};

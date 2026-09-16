@@ -836,6 +836,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           _langOption(context, tr('lang_en'), 'en'),
                           const SizedBox(width: 8),
                           _langOption(context, tr('lang_uz'), 'uz'),
+                          const SizedBox(width: 8),
+                          _langOption(context, tr('lang_ru'), 'ru'),
                         ],
                       ),
                     ],

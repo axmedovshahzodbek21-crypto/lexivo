@@ -56,6 +56,14 @@ before and after, in plain text, before you write any code.
 <!-- Add to this section every time something breaks. Fastest way: start a message in
      Claude Code with # and the line gets saved here automatically. -->
 
+- A lingering Gradle daemon can silently serve a stale compiled `libapp.so` inside a
+  freshly-timestamped, freshly-signed `.apk`/`.aab` — every outer signal (file mtime,
+  checksum of the artifact, installed versionCode, install timestamp, even the running
+  process's PID) can say "fresh" while the actual compiled Dart code inside is old.
+  `flutter clean` does NOT fix this — it only wipes `.dart_tool/`/`build/`, not the
+  daemon's in-memory state. If a build seems to ignore a source change despite a clean
+  rebuild, run `cd android && gradlew --stop` before rebuilding again.
+
 - (empty — fill as you hit them)
 
 ## TODO: fill these in yourself

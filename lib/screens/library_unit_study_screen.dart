@@ -245,7 +245,9 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               title: Text(tr('continue_learning'), textAlign: TextAlign.center),
               content: Text(
-                'You left off at word ${savedIndex + 1} of ${wd.words.length}.\nContinue from where you stopped, or start over?',
+                tr('left_off_at_word')
+                    .replaceFirst('{n}', '${savedIndex + 1}')
+                    .replaceFirst('{total}', '${wd.words.length}'),
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 14, color: Colors.grey),
               ),
@@ -444,7 +446,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                   child: Text(
-                    done ? '✓ Marked as read' : (_markingRead ? 'Saving…' : 'Mark as Read ✓'),
+                    done ? tr('marked_as_read') : (_markingRead ? tr('saving_ellipsis') : tr('mark_as_read')),
                     style: const TextStyle(fontWeight: FontWeight.w800),
                   ),
                 ),
@@ -463,13 +465,13 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Text(widget.modes.isEmpty ? '📭' : '🎉', style: const TextStyle(fontSize: 64)),
           const SizedBox(height: 16),
-          Text(widget.modes.isEmpty ? 'No study modes assigned' : 'Unit Complete!',
+          Text(widget.modes.isEmpty ? tr('no_study_modes_assigned') : tr('unit_complete_title'),
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: context.appText)),
           const SizedBox(height: 8),
           Text(
             widget.modes.isEmpty
-                ? 'This unit has no study modes to complete yet.'
-                : 'You finished all ${widget.modes.length} modes for this unit.',
+                ? tr('unit_no_modes_yet')
+                : tr('unit_finished_all_modes').replaceFirst('{n}', '${widget.modes.length}'),
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, color: context.textMuted)),
           const SizedBox(height: 32),

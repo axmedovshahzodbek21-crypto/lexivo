@@ -1108,7 +1108,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                                 if (_currentWord.language != null && !_currentWord.language!.startsWith('en'))
                                   Row(
                                     children: [
-                                      _buildPronounceButton('Listen', () => _speakInLanguage(_currentWord.word, _currentWord.language!)),
+                                      _buildPronounceButton(tr('listen'), () => _speakInLanguage(_currentWord.word, _currentWord.language!)),
                                     ],
                                   )
                                 else
@@ -1374,7 +1374,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isSpot ? '🔍  Spot Check' : '🎯  Quick Check',
+                  isSpot ? tr('spot_check_title') : tr('quick_check_title'),
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: context.primary, letterSpacing: 0.5),
                 ),
                 const SizedBox(height: 28),
@@ -1475,7 +1475,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              'Example $label • Medium',
+              '${tr('example_word')} $label • ${tr('medium')}',
               style: TextStyle(color: context.primary, fontWeight: FontWeight.bold, fontSize: 12),
             ),
           ),

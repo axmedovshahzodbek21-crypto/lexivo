@@ -776,7 +776,7 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
         : (widget.correctCount / widget.totalCount * 100).round();
 
     String emoji = '😊';
-    String message = 'Good job!';
+    String message = tr('quiz_good');
 
     if (percent == 100) {
       emoji = '🎉🏆✨';
@@ -856,7 +856,7 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
                     ),
                     _buildStat(
                       '$percent%',
-                      '🎯 Score',
+                      '🎯 ${tr('score')}',
                       context.primary,
                     ),
                   ],
@@ -910,9 +910,9 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  child: const Text(
-                    '🔗 Play Match',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  child: Text(
+                    '🔗 ${tr('play_match_btn')}',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ),
               ),
@@ -931,7 +931,9 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'You missed ${widget.wrongWords.length} word${widget.wrongWords.length > 1 ? 's' : ''}. Retry them?',
+                          tr('quiz_retry_prompt')
+                              .replaceFirst('{n}', '${widget.wrongWords.length}')
+                              .replaceFirst('{s}', widget.wrongWords.length > 1 ? 's' : ''),
                           style: const TextStyle(
                             color: Color(0xFFE53935),
                             fontWeight: FontWeight.w600,
@@ -948,7 +950,7 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
                     onPressed: () {
                       final retryDay = WordDay(
                         dayNumber: widget.wordDay.dayNumber,
-                        topic: '${widget.wordDay.topic} — Retry',
+                        topic: '${widget.wordDay.topic} — ${tr('retry')}',
                         words: widget.wrongWords,
                       );
                       Navigator.pushReplacement(

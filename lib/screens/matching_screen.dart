@@ -310,7 +310,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      _statBox(context, '${_words.length}', 'Pairs', context.primaryBg, context.primary),
+                      _statBox(context, '${_words.length}', tr('match_pairs'), context.primaryBg, context.primary),
                       const SizedBox(width: 10),
                       _statBox(context, '$_totalMistakes', tr('match_mistakes'), context.dangerBg, context.dangerColor),
                       const SizedBox(width: 10),

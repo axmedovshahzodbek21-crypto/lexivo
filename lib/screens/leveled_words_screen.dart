@@ -24,7 +24,7 @@ class LeveledWordsScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Leveled Words',
+          tr('leveled_words_title'),
           style: TextStyle(
             color: context.appText,
             fontWeight: FontWeight.bold,
@@ -51,7 +51,7 @@ class LeveledWordsScreen extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Learn vocabulary sorted by CEFR level — from beginner to mastery.',
+                      tr('leveled_words_subtitle'),
                       style: TextStyle(
                         fontSize: 13,
                         color: context.appText,
@@ -108,9 +108,9 @@ class LeveledWordsScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Foundation',
-                            style: TextStyle(
+                          Text(
+                            tr('foundation_title'),
+                            style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF2ECC71),
@@ -118,7 +118,7 @@ class LeveledWordsScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'A1 · A2 · B1',
+                            tr('foundation_levels_range'),
                             style: TextStyle(
                               fontSize: 13,
                               color: context.appText,
@@ -127,7 +127,7 @@ class LeveledWordsScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Beginner to Intermediate vocabulary',
+                            tr('foundation_description'),
                             style: TextStyle(fontSize: 12, color: context.textMuted),
                           ),
                         ],
@@ -186,9 +186,9 @@ class LeveledWordsScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Advanced',
-                            style: TextStyle(
+                          Text(
+                            tr('advanced_title'),
+                            style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF9B59B6),
@@ -196,7 +196,7 @@ class LeveledWordsScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'B2 · C1 · C2',
+                            tr('advanced_levels_range'),
                             style: TextStyle(
                               fontSize: 13,
                               color: context.appText,
@@ -205,7 +205,7 @@ class LeveledWordsScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Upper-Intermediate to Mastery vocabulary',
+                            tr('advanced_description'),
                             style: TextStyle(fontSize: 12, color: context.textMuted),
                           ),
                         ],
@@ -285,10 +285,10 @@ class _FoundationScreenState extends State<FoundationScreen> {
     final levels = [
       {
         'label': 'A1',
-        'name': 'Beginner',
+        'name': tr('level_a1_name'),
         'emoji': '🌱',
         'color': const Color(0xFF2ECC71),
-        'description': 'Basic everyday words and phrases',
+        'description': tr('level_a1_description'),
         'collection': ContentService.a1,
         // Excludes placeholder days with no words yet, matching
         // CollectionsScreen's own unit picker (nonEmptyDays) which already
@@ -300,19 +300,19 @@ class _FoundationScreenState extends State<FoundationScreen> {
       },
       {
         'label': 'A2',
-        'name': 'Elementary',
+        'name': tr('level_a2_name'),
         'emoji': '📗',
         'color': const Color(0xFF27AE60),
-        'description': 'Common vocabulary for simple situations',
+        'description': tr('level_a2_description'),
         'collection': ContentService.a2,
         'total': ContentService.a2.days.where((d) => d.words.isNotEmpty).length,
       },
       {
         'label': 'B1',
-        'name': 'Intermediate',
+        'name': tr('level_b1_name'),
         'emoji': '📘',
         'color': const Color(0xFF3498DB),
-        'description': 'Everyday topics and familiar situations',
+        'description': tr('level_b1_description'),
         'collection': ContentService.b1,
         'total': ContentService.b1.days.where((d) => d.words.isNotEmpty).length,
       },
@@ -328,7 +328,7 @@ class _FoundationScreenState extends State<FoundationScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Foundation',
+          tr('foundation_title'),
           style: TextStyle(
             color: context.appText,
             fontWeight: FontWeight.bold,
@@ -441,7 +441,7 @@ class _FoundationScreenState extends State<FoundationScreen> {
                                           ),
                                         ),
                                         child: Text(
-                                          '✓ Done',
+                                          tr('level_done_badge'),
                                           style: TextStyle(
                                             fontSize: 10,
                                             fontWeight: FontWeight.bold,
@@ -462,7 +462,9 @@ class _FoundationScreenState extends State<FoundationScreen> {
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  '$completed / $total units complete',
+                                  tr('units_complete_count')
+                                      .replaceFirst('{completed}', '$completed')
+                                      .replaceFirst('{total}', '$total'),
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
@@ -550,7 +552,7 @@ class _WordsLibraryScreenState extends State<WordsLibraryScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Word Library (${_learnedWords.length})',
+          tr('word_library_title').replaceFirst('{count}', '${_learnedWords.length}'),
           style: TextStyle(
             color: context.appText,
             fontWeight: FontWeight.bold,
@@ -562,7 +564,7 @@ class _WordsLibraryScreenState extends State<WordsLibraryScreen> {
           : _learnedWords.isEmpty
           ? Center(
               child: Text(
-                'No words learned yet',
+                tr('no_words_learned_yet'),
                 style: TextStyle(color: context.textMuted, fontSize: 16),
               ),
             )

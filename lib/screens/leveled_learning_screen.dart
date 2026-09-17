@@ -225,13 +225,13 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Leave session?',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          tr('leveled_leave_session_title'),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        content: const Text(
-          'What would you like to do with your progress?',
-          style: TextStyle(color: Colors.grey),
+        content: Text(
+          tr('leveled_leave_session_body'),
+          style: const TextStyle(color: Colors.grey),
         ),
         actions: [
           TextButton(
@@ -241,7 +241,7 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context, 'discard'),
             child: Text(
-              'Discard',
+              tr('discard_label'),
               style: TextStyle(color: Colors.red.shade400),
             ),
           ),
@@ -308,9 +308,9 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
         children: [
           const Text('⚠️', style: TextStyle(fontSize: 48)),
           const SizedBox(height: 16),
-          const Text(
-            'Why 40 words per day?',
-            style: TextStyle(
+          Text(
+            tr('leveled_limit_why_title'),
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Colors.white,
@@ -318,15 +318,15 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 12),
-          const Text(
-            'Learning feels easy — but real work comes after.\n\nBy Day 15, your daily workload:\n• 40 new words to learn\n• 40 words for Flashcard + Quiz\n• ~160 words due for SRS review\n\nThat\'s 240 words in one day.\n\nLearning more now makes tomorrow much harder.',
-            style: TextStyle(color: Colors.white70, height: 1.6),
+          Text(
+            tr('leveled_limit_why_body'),
+            style: const TextStyle(color: Colors.white70, height: 1.6),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Tap to see in Uzbek',
-            style: TextStyle(color: Colors.white38, fontSize: 12),
+          Text(
+            tr('leveled_limit_tap_uzbek'),
+            style: const TextStyle(color: Colors.white38, fontSize: 12),
           ),
           const SizedBox(height: 16),
           Row(
@@ -337,9 +337,9 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
                     Navigator.of(context, rootNavigator: true).pop();
                     _goToFlashcardWithLearned();
                   },
-                  child: const Text(
-                    'Go to Flashcard',
-                    style: TextStyle(color: Color(0xFF6C63FF)),
+                  child: Text(
+                    tr('go_to_flashcard'),
+                    style: const TextStyle(color: Color(0xFF6C63FF)),
                   ),
                 ),
               ),
@@ -379,9 +379,9 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
         children: [
           const Text('⚠️', style: TextStyle(fontSize: 48)),
           const SizedBox(height: 16),
-          const Text(
-            'Nima uchun kuniga 40 so\'z?',
-            style: TextStyle(
+          Text(
+            tr('leveled_limit_why_title_uz'),
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Colors.white,
@@ -389,15 +389,15 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 12),
-          const Text(
-            'O\'rganish oson tuyuladi — lekin asosiy ish keyinroq boshlanadi.\n\n15-kunga kelib kunlik yukingiz:\n• 40 ta yangi so\'z o\'rganish\n• 40 ta so\'z uchun Flashcard + Quiz\n• ~160 ta so\'zni takrorlash (SRS)\n\nBu 240 ta so\'z bitta kunda.\n\nBugun ko\'proq o\'rganish — ertaga ishni qiyinlashtiradi.',
-            style: TextStyle(color: Colors.white, height: 1.6),
+          Text(
+            tr('leveled_limit_why_body_uz'),
+            style: const TextStyle(color: Colors.white, height: 1.6),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Tap to see in English',
-            style: TextStyle(color: Colors.white70, fontSize: 12),
+          Text(
+            tr('leveled_limit_tap_english'),
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
           const SizedBox(height: 16),
           Row(
@@ -408,9 +408,9 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
                     Navigator.of(context, rootNavigator: true).pop();
                     _goToFlashcardWithLearned();
                   },
-                  child: const Text(
-                    'Flashcardga o\'tish',
-                    style: TextStyle(color: Colors.white),
+                  child: Text(
+                    tr('leveled_go_to_flashcard_uz'),
+                    style: const TextStyle(color: Colors.white),
                   ),
                 ),
               ),
@@ -442,20 +442,22 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          '🧠 Time for Flashcard!',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          tr('leveled_flashcard_time_title'),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         content: Text(
-          'You\'ve learned $_learnedToday words today — that\'s ${_learnedToday - _dailyLimit} more than the recommended limit.\n\nYour brain retains words better when you practice them now.',
+          tr('leveled_flashcard_time_body')
+              .replaceFirst('{n}', '$_learnedToday')
+              .replaceFirst('{over}', '${_learnedToday - _dailyLimit}'),
           style: const TextStyle(color: Colors.grey, height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Keep learning',
-              style: TextStyle(color: Colors.grey),
+            child: Text(
+              tr('leveled_keep_learning'),
+              style: const TextStyle(color: Colors.grey),
             ),
           ),
           ElevatedButton(
@@ -767,7 +769,7 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
                       onPressed: _skipWordPermanently,
                       icon: const Text('↓', style: TextStyle(fontSize: 16)),
                       label: Text(
-                        'Skip  $_skippedToday',
+                        tr('leveled_skip_count').replaceFirst('{n}', '$_skippedToday'),
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       style: OutlinedButton.styleFrom(
@@ -786,7 +788,7 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
                       onPressed: _onWordLearned,
                       icon: const Text('✓', style: TextStyle(fontSize: 16)),
                       label: Text(
-                        'Learned  $_learnedToday',
+                        tr('leveled_learned_count').replaceFirst('{n}', '$_learnedToday'),
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       style: ElevatedButton.styleFrom(
@@ -819,9 +821,9 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                        child: const Text(
-                          'Previous',
-                          style: TextStyle(
+                        child: Text(
+                          tr('leveled_previous'),
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
@@ -842,8 +844,8 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
                       ),
                       child: Text(
                         _currentIndex + 1 >= _todayWords.length
-                            ? 'Finish Session'
-                            : 'Next Word',
+                            ? tr('leveled_finish_session')
+                            : tr('leveled_next_word'),
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -893,7 +895,7 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
                         duration: const Duration(milliseconds: 100),
                         child: Center(
                           child: Text(
-                            '↑ ✓ Learned',
+                            tr('leveled_swipe_up_learned'),
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
@@ -1074,7 +1076,7 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
                         duration: const Duration(milliseconds: 100),
                         child: Center(
                           child: Text(
-                            '↓ Skip',
+                            tr('leveled_swipe_down_skip'),
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
@@ -1148,7 +1150,7 @@ class LevelCompleteScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                '$levelName Complete!',
+                tr('leveled_level_complete').replaceFirst('{name}', levelName),
                 style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
@@ -1159,8 +1161,8 @@ class LevelCompleteScreen extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 hasNextLevel
-                    ? '$_nextLevelId is now unlocked! 🚀'
-                    : 'You\'ve mastered all Foundation levels!',
+                    ? tr('leveled_next_level_unlocked').replaceFirst('{name}', _nextLevelId)
+                    : tr('leveled_all_foundation_mastered'),
                 style: const TextStyle(
                   color: Color(0xFF6C63FF),
                   fontSize: 16,
@@ -1185,19 +1187,19 @@ class LevelCompleteScreen extends StatelessWidget {
                     _buildStat(
                       context,
                       '$learnedCount',
-                      '✓ Learned',
+                      tr('leveled_stat_learned'),
                       const Color(0xFF2ECC71),
                     ),
                     _buildStat(
                       context,
                       '$skippedCount',
-                      '↓ Skipped',
+                      tr('leveled_stat_skipped'),
                       const Color(0xFFFF8C42),
                     ),
                     _buildStat(
                       context,
                       '$percent%',
-                      '🎯 Score',
+                      tr('leveled_stat_score'),
                       const Color(0xFF6C63FF),
                     ),
                   ],
@@ -1225,9 +1227,9 @@ class LevelCompleteScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: const Text(
-                    'Back to Foundation 🌱',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  child: Text(
+                    tr('leveled_back_to_foundation'),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ),
               ),

@@ -325,10 +325,10 @@ class _HomeScreenState extends State<HomeScreen>
     const sectionIcons = {
       'goal': '🎯', 'wod': '✨', 'session': '▶️', 'stats': '📊', 'xp_history': '📅', 'battle_ready': '🛡️',
     };
-    const sectionLabels = {
-      'goal': 'Daily Goal & Level', 'wod': 'Word of the Day',
-      'session': 'Start Learning', 'stats': 'Stats Row', 'xp_history': 'XP History',
-      'battle_ready': 'Battle-Ready',
+    final sectionLabels = {
+      'goal': tr('home_section_goal'), 'wod': tr('word_of_day'),
+      'session': tr('start_learning'), 'stats': tr('home_section_stats'), 'xp_history': tr('xp_history'),
+      'battle_ready': tr('more_battle_ready'),
     };
 
     // Only the 4 known toggleable sections — exclude 'classes' and any unknown IDs
@@ -392,11 +392,11 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Customize Home',
+                  tr('home_customize_title'),
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText),
                 ),
                 Text(
-                  'Drag ≡ to reorder · toggle to show/hide',
+                  tr('home_customize_hint'),
                   style: TextStyle(fontSize: 13, color: context.textMuted),
                 ),
                 const SizedBox(height: 8),
@@ -467,7 +467,7 @@ class _HomeScreenState extends State<HomeScreen>
                         _saveBattleReadyVisible(false);
                       },
                       child: Text(
-                        'Reset to default',
+                        tr('home_reset_default'),
                         style: TextStyle(color: context.textMuted, fontSize: 13),
                       ),
                     ),
@@ -525,7 +525,7 @@ class _HomeScreenState extends State<HomeScreen>
                   children: [
                     Expanded(
                       child: Text(
-                        'Words Learned Today',
+                        tr('home_words_learned_today_title'),
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText),
                       ),
                     ),
@@ -536,7 +536,7 @@ class _HomeScreenState extends State<HomeScreen>
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        '${words.length} words',
+                        tr('words_count').replaceFirst('{n}', '${words.length}'),
                         style: const TextStyle(fontSize: 12, color: Color(0xFF5B21B6), fontWeight: FontWeight.w600),
                       ),
                     ),
@@ -842,7 +842,7 @@ class _HomeScreenState extends State<HomeScreen>
                                       ? _userName
                                       : widget.userProfile.isNotEmpty
                                       ? widget.userProfile
-                                      : 'Learner',
+                                      : tr('learner'),
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
@@ -1175,7 +1175,7 @@ class _HomeScreenState extends State<HomeScreen>
                                       _buildStatCard(
                                         context,
                                         '$_wordsLearned',
-                                        'Words\nLearned',
+                                        tr('home_stat_words_learned'),
                                         () => Navigator.push(
                                           context,
                                           MaterialPageRoute(
@@ -1191,7 +1191,7 @@ class _HomeScreenState extends State<HomeScreen>
                                       _buildStatCard(
                                         context,
                                         '$_streak',
-                                        'Day\nStreak',
+                                        tr('home_stat_day_streak'),
                                         () => Navigator.push(
                                           context,
                                           MaterialPageRoute(
@@ -1207,7 +1207,7 @@ class _HomeScreenState extends State<HomeScreen>
                                       _buildStatCard(
                                         context,
                                         '$_reviewsDue',
-                                        'Reviews\nDue',
+                                        tr('home_stat_reviews_due'),
                                         () => Navigator.push(
                                           context,
                                           MaterialPageRoute(
@@ -1227,7 +1227,7 @@ class _HomeScreenState extends State<HomeScreen>
                                       _buildStatCard(
                                         context,
                                         StorageService.displayXP(_xp),
-                                        'Total\nXP',
+                                        tr('home_stat_total_xp'),
                                         () => showXpLevelSheet(context, _xp),
                                         gradient: [const Color(0xFFD97706), const Color(0xFFFBBF24)],
                                         edge: const Color(0xFF92400E),
@@ -1457,15 +1457,15 @@ class _HomeScreenState extends State<HomeScreen>
                           children: [
                             Row(
                               children: [
-                                const Text(
-                                  'REVIEW DUE',
-                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1.2),
+                                Text(
+                                  tr('home_review_due_badge'),
+                                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1.2),
                                 ),
                                 const Spacer(),
                                 GestureDetector(
                                   onTap: () => setState(() => _bannerDismissed = true),
                                   child: Text(
-                                    'Skip →',
+                                    tr('home_skip_arrow'),
                                     style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.7), fontWeight: FontWeight.w600),
                                   ),
                                 ),
@@ -1473,12 +1473,12 @@ class _HomeScreenState extends State<HomeScreen>
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              '$_reviewsDue ${_reviewsDue == 1 ? 'word' : 'words'} due for review!',
+                              '$_reviewsDue ${_reviewsDue == 1 ? tr('word') : tr('words')} ${tr('home_due_for_review')}',
                               style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Colors.white),
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Complete your reviews before learning new words for best results.',
+                              tr('home_review_banner_sub_mobile'),
                               style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.85), height: 1.4),
                             ),
                             const SizedBox(height: 14),
@@ -1499,9 +1499,9 @@ class _HomeScreenState extends State<HomeScreen>
                                   border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
                                 ),
                                 alignment: Alignment.center,
-                                child: const Text(
-                                  'Start Reviews 🧠',
-                                  style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 15),
+                                child: Text(
+                                  tr('start_reviews'),
+                                  style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 15),
                                 ),
                               ),
                             ),
@@ -1530,8 +1530,8 @@ class _HomeScreenState extends State<HomeScreen>
                         const SizedBox(height: 4),
                         Text(
                           _limitReached
-                              ? 'Daily goal complete! $_todayLearned / $_dailyGoal words ✓'
-                              : '$_todayLearned / $_dailyGoal words learned today',
+                              ? '${tr('daily_goal_done')} $_todayLearned / $_dailyGoal ${tr('words')} ✓'
+                              : '$_todayLearned / $_dailyGoal ${tr('today_learned')}',
                           style: TextStyle(
                             fontSize: 14,
                             color: _limitReached ? Colors.green : context.textMuted,
@@ -1606,9 +1606,9 @@ class _HomeScreenState extends State<HomeScreen>
                                 ),
                               ),
                               const SizedBox(height: 6),
-                              const Text(
-                                'Total XP',
-                                style: TextStyle(fontSize: 13, color: Colors.white70, fontWeight: FontWeight.w600),
+                              Text(
+                                tr('total_xp'),
+                                style: const TextStyle(fontSize: 13, color: Colors.white70, fontWeight: FontWeight.w600),
                               ),
                             ],
                           ),
@@ -1667,9 +1667,9 @@ class _HomeScreenState extends State<HomeScreen>
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              const Text(
-                                'Day Streak',
-                                style: TextStyle(fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w600),
+                              Text(
+                                tr('day_streak'),
+                                style: const TextStyle(fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w600),
                               ),
                             ],
                           ),
@@ -1782,7 +1782,7 @@ class _HomeScreenState extends State<HomeScreen>
               if (sid == 'stats' && !_hideStats) ...[
                 const SizedBox(height: 8),
                 Text(
-                  'Your Progress',
+                  tr('home_your_progress'),
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -1796,7 +1796,7 @@ class _HomeScreenState extends State<HomeScreen>
                   _buildStatCard(
                     context,
                     '$_wordsLearned',
-                    'Words\nLearned',
+                    tr('home_stat_words_learned'),
                     () => Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -1811,7 +1811,7 @@ class _HomeScreenState extends State<HomeScreen>
                   _buildStatCard(
                     context,
                     '$_reviewsDue',
-                    'Reviews\nDue',
+                    tr('home_stat_reviews_due'),
                     () => Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -1878,14 +1878,18 @@ class _HomeScreenState extends State<HomeScreen>
                             style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w700),
                           ),
                           Text(
-                            _todayLearned >= _dailyGoal ? 'Done! 🎉' : '${_dailyGoal - _todayLearned} to go',
+                            _todayLearned >= _dailyGoal
+                                ? tr('home_goal_done_emoji')
+                                : tr('home_n_to_go').replaceFirst('{n}', '${_dailyGoal - _todayLearned}'),
                             textAlign: TextAlign.center,
                             style: const TextStyle(fontSize: 9, color: Colors.white70),
                           ),
                           if (_freezes > 0) ...[
                             const SizedBox(height: 4),
                             Text(
-                              '🧊 $_freezes freeze${_freezes == 1 ? '' : 's'}',
+                              tr('home_freezes_label')
+                                  .replaceFirst('{n}', '$_freezes')
+                                  .replaceFirst('{s}', _freezes == 1 ? '' : 's'),
                               style: const TextStyle(fontSize: 9, color: Colors.white70),
                             ),
                           ],
@@ -1959,7 +1963,7 @@ class _HomeScreenState extends State<HomeScreen>
               if (sid == 'classes' && _homeClasses.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
-                  'My Classes',
+                  tr('my_classes'),
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -2053,7 +2057,7 @@ class _HomeScreenState extends State<HomeScreen>
                       runSpacing: 5,
                       children: [
                         _classChip('⚡ ${xpDisplay(card.classXP)} XP'),
-                        _classChip('🔥 ${card.classStreak} day streak'),
+                        _classChip('🔥 ${card.classStreak}${tr('day_streak_suffix')}'),
                         if (card.pendingHomework > 0)
                           _classChipWarning('📚 ${card.pendingHomework} pending'),
                       ],
@@ -2184,7 +2188,7 @@ class _HomeScreenState extends State<HomeScreen>
                                 ? _userName
                                 : widget.userProfile.isNotEmpty
                                 ? widget.userProfile
-                                : 'Learner',
+                                : tr('learner'),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 20,
@@ -2237,7 +2241,7 @@ class _HomeScreenState extends State<HomeScreen>
                           const SizedBox(height: 4),
                           Text(
                             isMax
-                                ? 'Max level reached 🏆'
+                                ? tr('home_max_level_reached')
                                 : '${StorageService.displayXP(nextMin - _xp)} XP to $nextLevelName',
                             style: const TextStyle(color: Colors.white60, fontSize: 10),
                           ),
@@ -2251,11 +2255,11 @@ class _HomeScreenState extends State<HomeScreen>
                             ),
                             child: Row(
                               children: [
-                                _drawerStat('🔥', '$_streak', 'Streak'),
+                                _drawerStat('🔥', '$_streak', tr('streak')),
                                 Container(width: 1, height: 32, color: Colors.white.withValues(alpha: 0.25)),
-                                _drawerStat('📚', '$_wordsLearned', 'Words'),
+                                _drawerStat('📚', '$_wordsLearned', tr('track_words')),
                                 Container(width: 1, height: 32, color: Colors.white.withValues(alpha: 0.25)),
-                                _drawerStat('🔄', '$_reviewsDue', 'Due'),
+                                _drawerStat('🔄', '$_reviewsDue', tr('home_stat_due')),
                               ],
                             ),
                           ),
@@ -2296,7 +2300,7 @@ class _HomeScreenState extends State<HomeScreen>
                               children: [
                                 const Text('🎯', style: TextStyle(fontSize: 14)),
                                 const SizedBox(width: 6),
-                                Text("Today's Goal",
+                                Text(tr('home_todays_goal_title'),
                                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: context.appText)),
                                 const Spacer(),
                                 Text('$_todayLearned / $_dailyGoal',
@@ -2330,8 +2334,8 @@ class _HomeScreenState extends State<HomeScreen>
                             const SizedBox(height: 4),
                             Text(
                               _todayLearned >= _dailyGoal
-                                  ? 'Goal reached! 🎉'
-                                  : '${_dailyGoal - _todayLearned} more to go',
+                                  ? tr('home_goal_reached')
+                                  : tr('home_n_more_to_go').replaceFirst('{n}', '${_dailyGoal - _todayLearned}'),
                               style: TextStyle(
                                 fontSize: 10,
                                 color: _todayLearned >= _dailyGoal ? const Color(0xFF6C63FF) : context.textMuted,
@@ -2488,13 +2492,13 @@ class _HomeScreenState extends State<HomeScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        "TODAY'S SESSION",
-                        style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.8),
+                      Text(
+                        tr('home_todays_session_badge'),
+                        style: const TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.8),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${_dailyGoal - _todayLearned} Words Left',
+                        tr('home_words_left').replaceFirst('{n}', '${_dailyGoal - _todayLearned}'),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 20,
@@ -2554,18 +2558,18 @@ class _HomeScreenState extends State<HomeScreen>
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "TODAY'S SESSION",
-                  style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.8),
+                Text(
+                  tr('home_todays_session_badge'),
+                  style: const TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.8),
                 ),
                 const SizedBox(height: 6),
-                const Text(
-                  'Daily Limit Reached 🎯',
-                  style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                Text(
+                  tr('home_daily_limit_reached_title'),
+                  style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'You\'ve learned $_todayLearned words today. Come back tomorrow!',
+                  tr('home_daily_limit_reached_sub').replaceFirst('{n}', '$_todayLearned'),
                   style: const TextStyle(color: Colors.white70, fontSize: 13),
                 ),
                 const SizedBox(height: 14),
@@ -2617,19 +2621,19 @@ class _HomeScreenState extends State<HomeScreen>
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'ALL CAUGHT UP',
-                style: TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.8),
+              Text(
+                tr('home_all_caught_up_badge'),
+                style: const TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.8),
               ),
               const SizedBox(height: 6),
-              const Text(
-                '🎉 Nothing due today!',
-                style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+              Text(
+                tr('home_nothing_due_title'),
+                style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 4),
-              const Text(
-                "You've done everything for today. Explore free time!",
-                style: TextStyle(color: Colors.white60, fontSize: 13),
+              Text(
+                tr('home_nothing_due_sub'),
+                style: const TextStyle(color: Colors.white60, fontSize: 13),
               ),
               const SizedBox(height: 14),
               ElevatedButton(
@@ -2652,9 +2656,9 @@ class _HomeScreenState extends State<HomeScreen>
               const SizedBox(height: 8),
               TextButton(
                 onPressed: _showLimitReachedDialog,
-                child: const Text(
-                  'Learn anyway',
-                  style: TextStyle(color: Colors.white54, fontSize: 12),
+                child: Text(
+                  tr('learn_anyway'),
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
                 ),
               ),
             ],
@@ -2844,7 +2848,7 @@ class _StarredWordsScreenState extends State<StarredWordsScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Starred Words',
+          tr('starred_words'),
           style: TextStyle(color: context.appText, fontWeight: FontWeight.bold),
         ),
         actions: [
@@ -2853,7 +2857,7 @@ class _StarredWordsScreenState extends State<StarredWordsScreen> {
               padding: const EdgeInsets.only(right: 16),
               child: Center(
                 child: Text(
-                  '${_starredWords.length} words',
+                  tr('words_count').replaceFirst('{n}', '${_starredWords.length}'),
                   style: TextStyle(fontSize: 13, color: context.textMuted),
                 ),
               ),
@@ -2870,12 +2874,12 @@ class _StarredWordsScreenState extends State<StarredWordsScreen> {
                   const Text('⭐', style: TextStyle(fontSize: 48)),
                   const SizedBox(height: 16),
                   Text(
-                    'No starred words yet',
+                    tr('home_no_starred_title'),
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Star words during learning sessions\nto save them here.',
+                    tr('home_no_starred_sub'),
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 14, color: context.textMuted, height: 1.5),
                   ),
@@ -2928,7 +2932,7 @@ class _StarredWordsScreenState extends State<StarredWordsScreen> {
                       ? filtered.isEmpty
                           ? Center(
                               child: Text(
-                                'No results for "$_search"',
+                                tr('home_no_search_results').replaceFirst('{q}', _search),
                                 style: TextStyle(color: context.textMuted),
                               ),
                             )
@@ -2972,7 +2976,7 @@ class _StarredWordsScreenState extends State<StarredWordsScreen> {
                                       const Text('⭐', style: TextStyle(fontSize: 20)),
                                       const SizedBox(width: 8),
                                       Text(
-                                        'Unit ${unitIndex + 1}',
+                                        tr('home_unit_label').replaceFirst('{n}', '${unitIndex + 1}'),
                                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText),
                                       ),
                                       const Spacer(),
@@ -2992,7 +2996,7 @@ class _StarredWordsScreenState extends State<StarredWordsScreen> {
                                   if (isLast && !isFull) ...[
                                     const SizedBox(height: 4),
                                     Text(
-                                      '${30 - unit.length} more to complete this unit',
+                                      tr('home_unit_more_to_complete').replaceFirst('{n}', '${30 - unit.length}'),
                                       style: TextStyle(fontSize: 11, color: context.textMuted),
                                     ),
                                   ],
@@ -3117,7 +3121,7 @@ class _WordCard extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
               child: Text(
-                isExpanded ? 'Show less ▲' : 'Show more ▼',
+                isExpanded ? tr('home_show_less') : tr('home_show_more'),
                 style: TextStyle(fontSize: 12, color: context.primary, fontWeight: FontWeight.w500),
               ),
             ),
@@ -3180,22 +3184,22 @@ class _CollectionPickerOverlayState extends State<_CollectionPickerOverlay>
   final List<Map<String, dynamic>> _collections = [
     {
       'icon': '🏆',
-      'name': '30 Days of Powerful Words',
-      'description': 'Essential IELTS vocabulary by topic',
+      'name': tr('home_collection_30days_name'),
+      'description': tr('home_collection_30days_desc'),
       'color': const Color(0xFF6C63FF),
       'collection': thirtyDaysCollection,
     },
     {
       'icon': '💡',
-      'name': '24 Vocabulary Challenge',
-      'description': 'Idioms and phrases for fluent speakers',
+      'name': tr('home_collection_challenge_name'),
+      'description': tr('home_collection_challenge_desc'),
       'color': const Color(0xFFFF6584),
       'collection': vocabularyChallengeCollection,
     },
     {
       'icon': '🎯',
-      'name': 'Word Mastery',
-      'description': 'High-level C1 & B2 collocations',
+      'name': tr('home_collection_mastery_name'),
+      'description': tr('home_collection_mastery_desc'),
       'color': const Color(0xFF2ECC71),
       'collection': wordMasteryCollection,
     },
@@ -3309,7 +3313,7 @@ class _CollectionPickerOverlayState extends State<_CollectionPickerOverlay>
                               ),
                             ),
                             Text(
-                              'Choose a Collection',
+                              tr('choose_collection'),
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -3394,13 +3398,13 @@ class _CollectionPickerOverlayState extends State<_CollectionPickerOverlay>
               ),
             ),
             const SizedBox(width: 16),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Leveled Words',
-                    style: TextStyle(
+                    tr('more_leveled_words'),
+                    style: const TextStyle(
                       fontWeight: FontWeight.w900,
                       fontSize: 15,
                       color: Colors.white,
@@ -3408,8 +3412,8 @@ class _CollectionPickerOverlayState extends State<_CollectionPickerOverlay>
                     ),
                   ),
                   Text(
-                    'A1 → C2 vocabulary by CEFR level',
-                    style: TextStyle(fontSize: 12, color: Colors.white70),
+                    tr('home_leveled_words_desc'),
+                    style: const TextStyle(fontSize: 12, color: Colors.white70),
                   ),
                 ],
               ),

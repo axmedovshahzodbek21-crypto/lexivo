@@ -291,14 +291,16 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
   }
 
   String _stageProgress(SRSWord word) {
-    if (word is DueSRSWord) return 'Review · Day ${word.dueInterval}';
+    if (word is DueSRSWord) {
+      return '${tr('nav_review')} · ${tr('day_label').replaceFirst('{n}', '${word.dueInterval}')}';
+    }
     // getDueWords() never returns a mastered word (it only yields
     // DueSRSWord, handled above), but a plain SRSWord reaching this screen
     // through some other path (e.g. Manage Deck) can still be mastered —
     // reviewStage is frozen at 5 for those, and "Stage ${5 + 1} of 5" read
     // as "Stage 6 of 5".
-    if (word.isMastered) return 'Mastered';
-    return 'Stage ${word.reviewStage + 1} of 5';
+    if (word.isMastered) return tr('mastery_mastered');
+    return tr('srs_stage_of_5').replaceFirst('{n}', '${word.reviewStage + 1}');
   }
 
   WordCollection? _collectionFor(SRSWord word) {
@@ -896,7 +898,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
               color: _autoPlay ? context.primary : context.textMuted,
               size: 20,
             ),
-            tooltip: _autoPlay ? 'Auto-play on' : 'Auto-play off',
+            tooltip: _autoPlay ? tr('autoplay_on_tooltip') : tr('autoplay_off_tooltip'),
             onPressed: () => setState(() => _autoPlay = !_autoPlay),
           ),
           Padding(

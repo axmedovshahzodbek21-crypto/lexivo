@@ -151,7 +151,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
         final m = Map<String, dynamic>.from(r as Map);
         return {
           'student_id': m['student_id'] as String,
-          'name': m['name'] as String? ?? 'Student',
+          'name': m['name'] as String? ?? tr('student_role'),
           'avatar_url': m['avatar_url'] as String?,
         };
       }).toList();
@@ -470,7 +470,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
                   .eq('id', fetchedTeacherId)
                   .maybeSingle();
               if (profileRaw != null) {
-                teacherName = (profileRaw as Map)['name'] as String? ?? 'Teacher';
+                teacherName = (profileRaw as Map)['name'] as String? ?? tr('teacher');
                 teacherBio = (profileRaw as Map)['bio'] as String? ?? '';
               }
             }
@@ -709,13 +709,13 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
               ]),
               const SizedBox(height: 16),
               Wrap(spacing: 8, runSpacing: 6, children: [
-                _chip('✅ $_activeToday/$_memberCount active'),
+                _chip('✅ ${tr('n_slash_m_active').replaceFirst('{n}', '$_activeToday').replaceFirst('{m}', '$_memberCount')}'),
                 if (widget.isTeacher && _pendingMembers.isNotEmpty)
                   GestureDetector(
                     onTap: _showPendingSheet,
-                    child: _chip('⏳ ${_pendingMembers.length} pending'),
+                    child: _chip('⏳ ${tr('n_pending').replaceFirst('{n}', '${_pendingMembers.length}')}'),
                   ),
-                if (!widget.isTeacher) _chip('📋 ${pending.length} pending'),
+                if (!widget.isTeacher) _chip('📋 ${tr('n_pending').replaceFirst('{n}', '${pending.length}')}'),
                 if (!widget.isTeacher) GestureDetector(
                   onTap: () => Navigator.push(context, MaterialPageRoute(
                     builder: (_) => ClassXpCalendarScreen(
@@ -724,7 +724,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
                       totalXpRaw: _myClassXp,
                     ),
                   )),
-                  child: _chip('⚡ ${xpDisplay(_myClassXp)} XP'),
+                  child: _chip('⚡ ${xpDisplay(_myClassXp)} ${tr('xp')}'),
                 ),
                 if (!widget.isTeacher) GestureDetector(
                   onTap: () => Navigator.push(context, MaterialPageRoute(
@@ -734,7 +734,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
                       classColor: color,
                     ),
                   )),
-                  child: _chip('🔥 $_classStreak day streak'),
+                  child: _chip(tr('n_day_streak').replaceFirst('{n}', '$_classStreak')),
                 ),
               ]),
               if (_memberCount > 0) ...[
@@ -795,12 +795,12 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
 
           // ── Quick stats (teacher only) ─────────────────────────────────────
           if (widget.isTeacher) ...[
-            _sectionLabel('📊 Quick Stats'),
+            _sectionLabel('📊 ${tr('quick_stats')}'),
             const SizedBox(height: 8),
             Row(children: [
-              _statCard(context, '👥', '$_memberCount', 'Students', onTap: _showStudentsSheet),
+              _statCard(context, '👥', '$_memberCount', tr('students_stat_label'), onTap: _showStudentsSheet),
               const SizedBox(width: 10),
-              _statCard(context, '✅', '$_activeToday', 'Active today', onTap: _showStudentsSheet),
+              _statCard(context, '✅', '$_activeToday', tr('active_today_stat_label'), onTap: _showStudentsSheet),
             ]),
             const SizedBox(height: 20),
           ],
@@ -809,7 +809,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
           _sectionLabel('📢 ${tr('announcements')}'),
           const SizedBox(height: 8),
           if (_announcements.isEmpty)
-            _emptyHint('No announcements yet')
+            _emptyHint(tr('no_announcements_yet'))
           else
             ..._announcements.map(_buildAnnouncementRow),
         ],
@@ -893,10 +893,10 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
         const SizedBox(width: 10),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(
-            '$_needsAttentionCount student${_needsAttentionCount > 1 ? 's' : ''} need attention',
+            tr('n_students_need_attention').replaceFirst('{n}', '$_needsAttentionCount'),
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: context.dangerColor),
           ),
-          Text("Haven't studied in 3+ days · Check Dashboard",
+          Text(tr('havent_studied_3days_check_dashboard'),
             style: TextStyle(fontSize: 11, color: context.textMuted)),
         ])),
         Icon(Icons.arrow_forward_ios, size: 14, color: context.dangerColor),

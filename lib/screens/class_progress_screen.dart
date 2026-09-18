@@ -188,11 +188,11 @@ class _ClassProgressScreenState extends State<ClassProgressScreen> {
           const SizedBox(height: 12),
           // Summary stats
           Row(children: [
-            _statCard('$learnedCount/$_totalWords', 'Learned', context.primary),
+            _statCard('$learnedCount/$_totalWords', tr('learned'), context.primary),
             const SizedBox(width: 8),
-            _statCard('$dueCount', 'Due today', dueCount > 0 ? const Color(0xFFF59E0B) : const Color(0xFF10B981)),
+            _statCard('$dueCount', tr('due_today'), dueCount > 0 ? const Color(0xFFF59E0B) : const Color(0xFF10B981)),
             const SizedBox(width: 8),
-            _statCard('$_starredCount', 'Starred', const Color(0xFFF59E0B)),
+            _statCard('$_starredCount', tr('starred'), const Color(0xFFF59E0B)),
           ]),
           const SizedBox(height: 16),
 

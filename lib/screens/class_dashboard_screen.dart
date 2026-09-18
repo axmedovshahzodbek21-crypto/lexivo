@@ -50,7 +50,7 @@ class StudentRow {
   const StudentRow({required this.studentId, required this.name, this.avatarUrl, required this.xp, required this.streak, required this.totalWords, required this.collectionProgress, this.lastStudyDate});
   factory StudentRow.fromMap(Map<String, dynamic> m) => StudentRow(
     studentId: m['student_id'] as String? ?? m['id'] as String? ?? '',
-    name: m['name'] as String? ?? 'Student',
+    name: m['name'] as String? ?? tr('student'),
     avatarUrl: m['avatar_url'] as String?,
     xp: (m['xp'] as num?)?.toInt() ?? 0,
     streak: (m['streak'] as num?)?.toInt() ?? 0,
@@ -74,7 +74,7 @@ class ActivityRow {
   final int? dayNumber;
   const ActivityRow({required this.studentName, required this.completionType, required this.completedAt, this.collectionName, this.dayNumber});
   factory ActivityRow.fromMap(Map<String, dynamic> m) => ActivityRow(
-    studentName: m['student_name'] as String? ?? 'Student',
+    studentName: m['student_name'] as String? ?? tr('student'),
     completionType: m['completion_type'] as String? ?? '',
     completedAt: m['completed_at'] as String? ?? '',
     collectionName: m['collection_name'] as String?,
@@ -96,12 +96,12 @@ class ReviewLabelMeta {
   const ReviewLabelMeta(this.emoji, this.text, this.color, this.blurb);
 }
 
-const _reviewLabelMeta = <ReviewLabel, ReviewLabelMeta>{
-  ReviewLabel.daily:    ReviewLabelMeta('🟢', 'Daily',           Color(0xFF22C55E), 'Reviews on nearly every day — small, steady sessions.'),
-  ReviewLabel.mostly:   ReviewLabelMeta('🟡', 'Mostly daily',    Color(0xFFEAB308), 'Reviews most days, with the occasional gap.'),
-  ReviewLabel.bursty:   ReviewLabelMeta('🟠', 'Bursty catch-up', Color(0xFFF97316), 'Reviews rarely, but does a lot at once when they do.'),
-  ReviewLabel.inactive: ReviewLabelMeta('🔴', 'Inactive',        Color(0xFFEF4444), 'Little to no review activity, and words are piling up.'),
-  ReviewLabel.never:    ReviewLabelMeta('⚪', 'Never reviewed',  Color(0xFF94A3B8), "Hasn't done a single SRS review yet."),
+Map<ReviewLabel, ReviewLabelMeta> get _reviewLabelMeta => <ReviewLabel, ReviewLabelMeta>{
+  ReviewLabel.daily:    ReviewLabelMeta('🟢', tr('review_label_daily'),  Color(0xFF22C55E), tr('review_blurb_daily')),
+  ReviewLabel.mostly:   ReviewLabelMeta('🟡', tr('review_label_mostly'), Color(0xFFEAB308), tr('review_blurb_mostly')),
+  ReviewLabel.bursty:   ReviewLabelMeta('🟠', tr('review_label_bursty'), Color(0xFFF97316), tr('review_blurb_bursty')),
+  ReviewLabel.inactive: ReviewLabelMeta('🔴', tr('inactive'),            Color(0xFFEF4444), tr('review_blurb_inactive')),
+  ReviewLabel.never:    ReviewLabelMeta('⚪', tr('review_label_never'),  Color(0xFF94A3B8), tr('review_blurb_never')),
 };
 
 const _reviewWindowDays = 30;
@@ -252,14 +252,14 @@ Widget _dashHero(String classId, String className, int studentCount, {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(children: [
-              _heroBtn('📝 Words', onWords),
+              _heroBtn('📝 ${tr('hero_words')}', onWords),
               const SizedBox(width: 8),
-              _heroBtn('📢 Announce', onAnnounce),
+              _heroBtn('📢 ${tr('hero_announce')}', onAnnounce),
               const SizedBox(width: 8),
-              _heroBtn('🔄 Refresh', onRefresh),
+              _heroBtn('🔄 ${tr('refresh')}', onRefresh),
               if (onExport != null) ...[
                 const SizedBox(width: 8),
-                _heroBtn('📥 CSV', onExport),
+                _heroBtn('📥 ${tr('hero_csv')}', onExport),
               ],
             ]),
           ),
@@ -443,7 +443,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         final m = Map<String, dynamic>.from(r as Map);
         return {
           'student_id': m['student_id'] as String,
-          'name': m['name'] as String? ?? 'Student',
+          'name': m['name'] as String? ?? tr('student'),
           'avatar_url': m['avatar_url'] as String?,
         };
       }).toList();
@@ -644,9 +644,9 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         body: jsonEncode({'classId': widget.classId, 'analytics': payload}),
       );
       final json = jsonDecode(res.body) as Map<String, dynamic>;
-      if (mounted) setState(() => _digestText = (json['digest'] as String?) ?? (json['error'] as String?) ?? 'Error generating digest');
+      if (mounted) setState(() => _digestText = (json['digest'] as String?) ?? (json['error'] as String?) ?? tr('error_generating_digest'));
     } catch (_) {
-      if (mounted) setState(() => _digestText = 'Error connecting to AI service');
+      if (mounted) setState(() => _digestText = tr('error_connecting_ai'));
     }
     if (mounted) setState(() => _digestLoading = false);
   }
@@ -729,7 +729,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       if (mounted) {
         setState(() {
           _loading = false;
-          if (!hasCached) _error = 'Could not load class data';
+          if (!hasCached) _error = tr('error_could_not_load_class_data');
         });
       }
     }
@@ -753,7 +753,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         final profiles = await supabase.from('profiles').select('id, name').inFilter('id', uids);
         for (final p in (profiles as List)) {
           final m = Map<String, dynamic>.from(p as Map);
-          names[m['id'] as String] = m['name'] as String? ?? 'Student';
+          names[m['id'] as String] = m['name'] as String? ?? tr('student');
         }
       }
       if (mounted) {
@@ -767,7 +767,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         });
       }
     } catch (_) {
-      if (mounted) setState(() { _srsLoading = false; _srsError = 'Could not load SRS data'; });
+      if (mounted) setState(() { _srsLoading = false; _srsError = tr('error_could_not_load_srs_data'); });
     }
   }
 
@@ -790,7 +790,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         });
       }
     } catch (_) {
-      if (mounted) setState(() { _reviewLoading = false; _reviewError = 'Could not load review pattern data'; });
+      if (mounted) setState(() { _reviewLoading = false; _reviewError = tr('error_could_not_load_review_pattern_data'); });
     }
   }
 
@@ -814,10 +814,10 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   int get _avgStreak => _students.isEmpty ? 0 : (_students.fold(0, (s, e) => s + e.streak) / _students.length).round();
 
   Future<void> _exportCSV() async {
-    final headers = ['Name', 'Last Active', 'XP', 'Streak', 'Words Learned',
+    final headers = [tr('name'), tr('csv_last_active'), tr('xp'), tr('streak'), tr('words_learned'),
       ..._collections.map((c) => '${c.label} (/${c.totalUnits})')];
     final rows = _students.map((s) => [
-      s.name, s.lastStudyDate ?? 'Never', s.xp, s.streak, s.totalWords,
+      s.name, s.lastStudyDate ?? tr('csv_never'), s.xp, s.streak, s.totalWords,
       ..._collections.map((c) => s.progressFor(c.collectionName)),
     ]);
     String esc(Object? v) => '"${v.toString().replaceAll('"', '""')}"';
@@ -904,11 +904,11 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
           tabs: [
             Tab(text: '👥 ${tr('students')}'),
             Tab(text: '📊 ${tr('activity')}'),
-            const Tab(text: '📡 Radar'),
-            const Tab(text: '🗺 Heatmap'),
-            const Tab(text: '📚 SRS'),
-            const Tab(text: '🔄 Review Pattern'),
-            const Tab(text: '📋 Curriculum'),
+            Tab(text: '📡 ${tr('tab_radar')}'),
+            Tab(text: '🗺 ${tr('tab_heatmap')}'),
+            Tab(text: '📚 ${tr('track_srs')}'),
+            Tab(text: '🔄 ${tr('tab_review_pattern')}'),
+            Tab(text: '📋 ${tr('curriculum')}'),
           ],
         ),
         Expanded(
@@ -1035,7 +1035,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(children: [
-              _sortChip('xp', 'XP'),
+              _sortChip('xp', tr('xp')),
               const SizedBox(width: 6),
               _sortChip('streak', '🔥 ${tr('streak')}'),
               const SizedBox(width: 6),
@@ -1106,8 +1106,8 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             const Text('⚠️', style: TextStyle(fontSize: 18)),
             const SizedBox(width: 10),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(nameById[uid] ?? 'Student', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: context.appText)),
-              Text('$count flagged session${count > 1 ? 's' : ''} · possible rushing', style: TextStyle(fontSize: 10, color: context.textMuted)),
+              Text(nameById[uid] ?? tr('student'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: context.appText)),
+              Text(tr('n_flagged_sessions').replaceFirst('{n}', '$count'), style: TextStyle(fontSize: 10, color: context.textMuted)),
             ])),
             if (mastery != null)
               Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -1209,7 +1209,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             _MiniPie(learned: learned, skipped: skipped, hard: hard, size: 44),
             const SizedBox(width: 12),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(nameById[uid] ?? 'Student', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: context.appText), overflow: TextOverflow.ellipsis),
+              Text(nameById[uid] ?? tr('student'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: context.appText), overflow: TextOverflow.ellipsis),
               const SizedBox(height: 3),
               Wrap(spacing: 4, children: [
                 Text('$learned✓', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF22C55E))),
@@ -1217,7 +1217,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
                 Text('$skipped⏭', style: const TextStyle(fontSize: 10, color: Color(0xFFF97316))),
                 Text('·', style: TextStyle(fontSize: 10, color: context.textMuted)),
                 Text('$hard😤', style: const TextStyle(fontSize: 10, color: Color(0xFFEF4444))),
-                Text('· $totalSessions session${totalSessions != 1 ? 's' : ''}', style: TextStyle(fontSize: 10, color: context.textMuted)),
+                Text('· ${tr('n_sessions').replaceFirst('{n}', '$totalSessions')}', style: TextStyle(fontSize: 10, color: context.textMuted)),
               ]),
             ])),
             Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -1451,9 +1451,8 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
 
   String _lastSeen(String iso) {
     final diff = DateTime.now().difference(DateTime.parse(iso)).inDays;
-    if (diff == 0) return 'today';
-    if (diff == 1) return '1d ago';
-    return '${diff}d ago';
+    if (diff == 0) return tr('today');
+    return tr('n_days_ago_short').replaceFirst('{n}', '$diff');
   }
 
   // ── Activity tab ───────────────────────────────────────────────────────────
@@ -1468,7 +1467,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         final icon = a.completionType == 'daily' ? '📅' : a.completionType == 'collection' ? '📚' : '✅';
         final detail = a.collectionName != null
           ? a.collectionName!
-          : a.dayNumber != null ? 'Day ${a.dayNumber}' : a.completionType;
+          : a.dayNumber != null ? tr('day_label').replaceFirst('{n}', '${a.dayNumber}') : a.completionType;
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -1479,7 +1478,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               RichText(text: TextSpan(children: [
                 TextSpan(text: a.studentName, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
-                TextSpan(text: ' completed ', style: TextStyle(fontSize: 13, color: context.textMuted)),
+                TextSpan(text: ' ${tr('completed_lc')} ', style: TextStyle(fontSize: 13, color: context.textMuted)),
                 TextSpan(text: detail, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: context.primary)),
               ])),
               const SizedBox(height: 2),
@@ -1504,7 +1503,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             Text(tr('no_data_yet'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
             const SizedBox(height: 6),
             Text(
-              'Words appear here once students have studied them at least 3 times.',
+              tr('radar_empty_sub'),
               style: TextStyle(fontSize: 13, color: context.textMuted),
               textAlign: TextAlign.center,
             ),
@@ -1523,7 +1522,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             const Text('📡', style: TextStyle(fontSize: 20)),
             const SizedBox(width: 10),
             Expanded(child: Text(
-              'Words ranked by how often students struggle — lowest accuracy first.',
+              tr('radar_info_banner'),
               style: TextStyle(fontSize: 12, color: context.appText),
             )),
           ]),
@@ -1688,7 +1687,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     Color(0xFF9CA3AF), Color(0xFFF59E0B), Color(0xFF3B82F6),
     Color(0xFF8B5CF6), Color(0xFFEC4899), Color(0xFF10B981),
   ];
-  static const _srsLabels = ['New', '+1d', '+3d', '+7d', '+14d', '✓'];
+  static List<String> get _srsLabels => [tr('srs_stage_new'), '+1d', '+3d', '+7d', '+14d', '✓'];
 
   // SRS stage values come straight from the DB (class_srs_states.stage) and
   // are only guaranteed to be 0-5 by application logic, not a DB constraint
@@ -1890,7 +1889,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text('$count student${count != 1 ? 's' : ''} got this wrong', style: TextStyle(fontSize: 9, color: context.textMuted)),
+                  Text(tr('n_students_wrong').replaceFirst('{n}', '$count'), style: TextStyle(fontSize: 9, color: context.textMuted)),
                 ])),
               ]),
             );
@@ -1962,7 +1961,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
       children: [
         Text(
-          'Classified from each student\'s SRS Review activity over the last $_reviewWindowDays days. Sorted with students needing attention first.',
+          tr('review_pattern_info_banner').replaceFirst('{n}', '$_reviewWindowDays'),
           style: TextStyle(fontSize: 12, color: context.textMuted),
         ),
         const SizedBox(height: 14),
@@ -2361,8 +2360,7 @@ class _CollectionDetailSheetState extends State<_CollectionDetailSheet> {
               final latestDay = doneDates.isNotEmpty ? doneDates.first['day_number'] as int : -1;
               String fmtDate(String iso) {
                 final d = DateTime.parse(iso).toLocal();
-                const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-                return '${months[d.month - 1]} ${d.day}';
+                return '${tr('month_short_${d.month}')} ${d.day}';
               }
               return GridView.builder(
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 28),

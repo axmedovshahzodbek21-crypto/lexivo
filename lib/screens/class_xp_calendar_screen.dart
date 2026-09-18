@@ -12,6 +12,40 @@ const _reasonIcons = <String, String>{
   'SRS Review': '🔄', 'Homework': '📋',
 };
 
+// class_xp_history.reason is a raw English constant stored in the DB (can't
+// rewrite what's stored) — map it to a translated label for display, falling
+// back to the raw string for any value not in this list so nothing crashes.
+String _reasonLabel(String reason) {
+  switch (reason) {
+    case 'Learn': return l10n.tr('learn');
+    case 'Cards': return l10n.tr('cards');
+    case 'Quiz': return l10n.tr('quiz');
+    case 'Match': return l10n.tr('match_plain');
+    case 'SRS Review': return l10n.tr('srs_review');
+    case 'Homework': return l10n.tr('homework');
+    default: return reason;
+  }
+}
+
+// A handful of strings this screen needs that aren't in the shared
+// l10n.dart map — kept as a small local table instead of adding to that
+// file, mirroring its {placeholder} style and en/uz/ru shape.
+const _localStrings = <String, Map<String, String>>{
+  'total_class_xp': {'en': 'Total class XP', 'uz': 'Jami sinf XP-si', 'ru': 'Всего XP класса'},
+  'student_class_xp': {'en': "{name}'s class XP", 'uz': '{name} sinfdagi XP-si', 'ru': 'XP класса {name}'},
+  'just_now': {'en': 'just now', 'uz': 'hozirgina', 'ru': 'только что'},
+  'min_ago': {'en': '{n}m ago', 'uz': '{n} daq. oldin', 'ru': '{n} мин назад'},
+  'hours_ago': {'en': '{n}h ago', 'uz': '{n} soat oldin', 'ru': '{n} ч назад'},
+  'days_ago': {'en': '{n}d ago', 'uz': '{n} kun oldin', 'ru': '{n} дн назад'},
+  'am_short': {'en': 'AM', 'uz': 'AM', 'ru': 'AM'},
+  'pm_short': {'en': 'PM', 'uz': 'PM', 'ru': 'PM'},
+};
+
+String _ltr(String key) {
+  final lang = l10n.appLangNotifier.value;
+  return _localStrings[key]?[lang] ?? _localStrings[key]!['en']!;
+}
+
 class ClassXpCalendarScreen extends StatefulWidget {
   final String classId;
   final String className;
@@ -147,7 +181,7 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
                       '${xpDisplay(widget.totalXpRaw)} XP',
                       style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: color),
                     ),
-                    Text(widget.studentName != null ? '${widget.studentName}\'s class XP' : 'Total class XP',
+                    Text(widget.studentName != null ? _ltr('student_class_xp').replaceFirst('{name}', widget.studentName!) : _ltr('total_class_xp'),
                         style: TextStyle(fontSize: 12, color: context.textMuted, fontWeight: FontWeight.w600)),
                   ]),
                 ),
@@ -328,12 +362,12 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
                 final icon = _reasonIcons[reason] ?? '⚡';
                 final createdAt = DateTime.parse(e['created_at'] as String).toLocal();
                 final diff = DateTime.now().difference(createdAt);
-                final ago = diff.inMinutes < 1 ? 'just now'
-                    : diff.inMinutes < 60 ? '${diff.inMinutes}m ago'
-                    : diff.inHours < 24 ? '${diff.inHours}h ago'
-                    : '${diff.inDays}d ago';
+                final ago = diff.inMinutes < 1 ? _ltr('just_now')
+                    : diff.inMinutes < 60 ? _ltr('min_ago').replaceFirst('{n}', '${diff.inMinutes}')
+                    : diff.inHours < 24 ? _ltr('hours_ago').replaceFirst('{n}', '${diff.inHours}')
+                    : _ltr('days_ago').replaceFirst('{n}', '${diff.inDays}');
                 final hour12 = createdAt.hour % 12 == 0 ? 12 : createdAt.hour % 12;
-                final exactTime = '$hour12:${createdAt.minute.toString().padLeft(2, '0')} ${createdAt.hour < 12 ? 'AM' : 'PM'}';
+                final exactTime = '$hour12:${createdAt.minute.toString().padLeft(2, '0')} ${createdAt.hour < 12 ? _ltr('am_short') : _ltr('pm_short')}';
                 return Container(
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -345,7 +379,7 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
                     Text(icon, style: const TextStyle(fontSize: 20)),
                     const SizedBox(width: 12),
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(reason, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
+                      Text(_reasonLabel(reason), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
                           color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87)),
                       Text('$exactTime · $ago', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
                     ])),

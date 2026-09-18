@@ -429,7 +429,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
           passageItems.add(_PassageHW(
             homeworkId: h['id'] as String,
             passageId: passageId,
-            title: found?.title ?? 'Reading Passage',
+            title: found?.title ?? tr('reading_passage_fallback'),
             topic: found?.topic ?? '',
             hwModes: List<String>.from(h['modes'] as List? ?? ['read']),
             hwDue: h['due_date'] as String?,
@@ -600,20 +600,20 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
               const SizedBox(height: 12),
               Text(tr('no_homework_yet'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
               const SizedBox(height: 6),
-              Text("Your teacher hasn't assigned any units yet",
+              Text(tr('teacher_no_units_assigned'),
                 style: TextStyle(color: context.textMuted, fontSize: 13)),
             ])
           else ...[
             // ── Library section ─────────────────────────────────────────
             if (_folders.isNotEmpty) ...[
-              _sectionHeader('📚 Library'),
+              _sectionHeader(tr('library_section')),
               ..._folders.expand((f) => _buildFolderSection(f, isClassWords: false)),
               const SizedBox(height: 8),
             ],
 
             // ── Class Words section ─────────────────────────────────────
             if (_cwUnits.any((u) => u.hasHomework)) ...[
-              _sectionHeader('📝 Class Words'),
+              _sectionHeader(tr('class_words_section')),
               GridView.count(
                 crossAxisCount: 3,
                 crossAxisSpacing: 10,
@@ -632,7 +632,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
 
             // ── Collections section ─────────────────────────────────────
             if (_collHwItems.isNotEmpty) ...[
-              _sectionHeader('📗 Collections'),
+              _sectionHeader(tr('collections_section')),
               GridView.count(
                 crossAxisCount: 3,
                 crossAxisSpacing: 10,
@@ -647,7 +647,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
 
             // ── Reading section ──────────────────────────────────────────
             if (_passageItems.isNotEmpty) ...[
-              _sectionHeader('📚 Reading'),
+              _sectionHeader(tr('reading_label')),
               GridView.count(
                 crossAxisCount: 3,
                 crossAxisSpacing: 10,
@@ -687,7 +687,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
           if (hiddenCount > 0)
             GestureDetector(
               onTap: () => setState(() => folder.showAll = !folder.showAll),
-              child: Text(folder.showAll ? 'Show less' : '$hiddenCount hidden — Show all',
+              child: Text(folder.showAll ? tr('show_less') : tr('n_hidden_show_all').replaceFirst('{n}', '$hiddenCount'),
                 style: TextStyle(fontSize: 11, color: context.primary, fontWeight: FontWeight.w600)),
             ),
         ]),
@@ -985,7 +985,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
         const SizedBox(height: 4),
         Text(h.topic, style: TextStyle(fontSize: 9, color: context.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
         const SizedBox(height: 5),
-        Text(allDone ? '✓ Read' : 'Tap to read',
+        Text(allDone ? tr('read_done_check') : tr('tap_to_read'),
           style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700,
             color: allDone ? Colors.green : passageColor)),
       ]),

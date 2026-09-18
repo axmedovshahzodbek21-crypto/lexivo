@@ -269,11 +269,11 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
     final word = _wordCtrl.text.trim();
     final translation = _translationCtrl.text.trim();
     if (word.isEmpty || translation.isEmpty) {
-      setState(() => _manualError = 'Word and translation are required');
+      setState(() => _manualError = tr('word_translation_required'));
       return;
     }
     if (_existingWordKeys.contains(word.toLowerCase())) {
-      setState(() => _manualError = 'This word already exists in the class');
+      setState(() => _manualError = tr('word_already_in_class'));
       return;
     }
     setState(() { _saving = true; _manualError = ''; });
@@ -297,7 +297,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
       _example1Ctrl.clear(); _example1TrCtrl.clear(); _example2Ctrl.clear(); _example2TrCtrl.clear();
       await _loadWords();
     } catch (e) {
-      if (mounted) setState(() => _manualError = 'Failed to add word: $e');
+      if (mounted) setState(() => _manualError = '${tr('failed_to_add_word')}: $e');
     }
     if (mounted) setState(() => _saving = false);
   }
@@ -341,7 +341,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
       await _loadWords();
       if (mounted) {
         final message = rows.isEmpty
-            ? 'All words already exist in the class'
+            ? tr('all_words_already_in_class')
             : '${rows.length} word${rows.length == 1 ? '' : 's'} added!';
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), duration: const Duration(seconds: 2)));
       }
@@ -978,6 +978,16 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
     ],
   );
 
+  // _langs values stay English identifiers (they're fed to buildAiImportPrompt,
+  // which expects plain English language names for the AI prompt) — only the
+  // on-screen label is localized, and only for the 3 languages l10n.dart
+  // already has lang_* keys for; the rest fall back to their English name.
+  static const _langKeys = {'English': 'lang_en', 'Uzbek': 'lang_uz', 'Russian': 'lang_ru'};
+  String _langLabel(String lang) {
+    final key = _langKeys[lang];
+    return key == null ? lang : tr(key);
+  }
+
   Widget _langDropdown(String value, void Function(String?) onChanged) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
     decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(10)),
@@ -988,7 +998,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
         dropdownColor: context.surface,
         style: TextStyle(color: context.appText, fontSize: 13),
         icon: Icon(Icons.keyboard_arrow_down, color: context.textMuted, size: 18),
-        items: _langs.map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
+        items: _langs.map((l) => DropdownMenuItem(value: l, child: Text(_langLabel(l)))).toList(),
         onChanged: onChanged,
       ),
     ),
@@ -996,10 +1006,10 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
 
   // ── Collection Import tab ─────────────────────────────────────────────────
 
-  static const _collectionMeta = [
-    ('📅', '30 Days of English'),
-    ('🎯', 'Vocabulary Challenge'),
-    ('🎓', 'Word Mastery'),
+  static List<(String, String)> get _collectionMeta => [
+    ('📅', tr('collection_30days_of_english')),
+    ('🎯', tr('collection_vocabulary_challenge')),
+    ('🎓', tr('home_collection_mastery_name')),
   ];
 
   List<WordCollection> get _collections =>
@@ -1156,7 +1166,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
       if (rows.isNotEmpty) await supabase.from('class_words').insert(rows);
       if (mounted) {
         final message = rows.isEmpty
-            ? 'All words already exist in the class'
+            ? tr('all_words_already_in_class')
             : '${rows.length} word${rows.length == 1 ? '' : 's'} imported!';
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(message),

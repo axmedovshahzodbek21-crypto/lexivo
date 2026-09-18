@@ -10,21 +10,21 @@ import '../widgets/navigate_once.dart';
 
 String _timeAgo(String iso) {
   final diff = DateTime.now().difference(DateTime.parse(iso));
-  if (diff.inMinutes < 1) return 'just now';
-  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-  if (diff.inHours < 24) return '${diff.inHours}h ago';
-  if (diff.inDays < 7) return '${diff.inDays}d ago';
-  return '${(diff.inDays / 7).floor()}w ago';
+  if (diff.inMinutes < 1) return tr('time_just_now');
+  if (diff.inMinutes < 60) return tr('time_minutes_ago').replaceFirst('{n}', '${diff.inMinutes}');
+  if (diff.inHours < 24) return tr('time_hours_ago').replaceFirst('{n}', '${diff.inHours}');
+  if (diff.inDays < 7) return tr('time_days_ago').replaceFirst('{n}', '${diff.inDays}');
+  return tr('time_weeks_ago').replaceFirst('{n}', '${(diff.inDays / 7).floor()}');
 }
 
 String? _dueText(String? due) {
   if (due == null) return null;
   final today = DateTime.now().toIso8601String().substring(0, 10);
   final tomorrow = DateTime.now().add(const Duration(days: 1)).toIso8601String().substring(0, 10);
-  if (due.compareTo(today) < 0) return 'Overdue · $due';
-  if (due == today) return 'Due today';
-  if (due == tomorrow) return 'Due tomorrow';
-  return 'Due $due';
+  if (due.compareTo(today) < 0) return tr('overdue_on').replaceFirst('{date}', due);
+  if (due == today) return tr('due_today');
+  if (due == tomorrow) return tr('due_tomorrow');
+  return tr('due_on').replaceFirst('{date}', due);
 }
 
 bool _isDueOverdue(String? due) {
@@ -131,7 +131,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
 
           for (final p in parallel[0] as List) {
             final pm = Map<String, dynamic>.from(p as Map);
-            teacherNames[pm['id'] as String] = pm['name'] as String? ?? 'Teacher';
+            teacherNames[pm['id'] as String] = pm['name'] as String? ?? tr('teacher');
           }
 
           final unreadIds = <String>[];
@@ -363,9 +363,9 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
         Text(_loadError ? '⚠️' : '🎓', style: const TextStyle(fontSize: 56)),
         const SizedBox(height: 16),
-        Text(_loadError ? "Couldn't load your classes" : 'Not enrolled yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
+        Text(_loadError ? tr('couldnt_load_your_classes') : tr('not_enrolled_yet'), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
         const SizedBox(height: 8),
-        Text(_loadError ? 'Pull down to retry' : 'Go back and use "Join a Class" to enroll', textAlign: TextAlign.center, style: TextStyle(color: context.textMuted, fontSize: 14)),
+        Text(_loadError ? tr('pull_down_to_retry') : tr('go_back_join_class_hint'), textAlign: TextAlign.center, style: TextStyle(color: context.textMuted, fontSize: 14)),
       ]),
     ),
   );
@@ -391,7 +391,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
     final active = targets.where((t) => t.completedAt == null).toList();
     final done = targets.where((t) => t.completedAt != null).toList();
     final announcements = _classAnnouncements[cls.id] ?? [];
-    final teacherName = _teacherNames[cls.teacherId] ?? 'Teacher';
+    final teacherName = _teacherNames[cls.teacherId] ?? tr('teacher');
     final isLbExpanded = _expandedLeaderboard == cls.id;
     final leaderboard = _classLeaderboards[cls.id] ?? [];
     final colors = _joinedCardColors(cls.id);

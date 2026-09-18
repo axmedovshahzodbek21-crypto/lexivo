@@ -103,7 +103,7 @@ class _ClassesScreenState extends State<ClassesScreen> with NavigateOnceMixin {
       Navigator.push(context, MaterialPageRoute(builder: (_) => const JoinedClassesScreen()))
           .then((_) => _loadCounts());
     } catch (e) {
-      if (mounted) setState(() => _joinError = e.toString().contains('23505') ? 'Already in this class' : 'Failed to join');
+      if (mounted) setState(() => _joinError = e.toString().contains('23505') ? tr('already_in_class') : tr('failed_to_join'));
     } finally {
       if (mounted) setState(() => _joining = false);
     }
@@ -184,7 +184,7 @@ class _ClassesScreenState extends State<ClassesScreen> with NavigateOnceMixin {
                       children: [
                         _buildHubCard(
                           title: tr('my_classes'),
-                          subtitle: _loadError ? "Couldn't load — pull to retry" : (_createdCount == 0 ? 'No classes yet' : '$_createdCount class${_createdCount != 1 ? 'es' : ''} created'),
+                          subtitle: _loadError ? tr('couldnt_load_pull_retry') : (_createdCount == 0 ? tr('no_classes_created_yet') : tr('n_classes_created').replaceFirst('{n}', '$_createdCount').replaceFirst('{s}', _createdCount != 1 ? 'es' : '')),
                           emoji: '🏫',
                           colors: [const Color(0xFF6366F1), const Color(0xFF8B5CF6)],
                           onTap: () => pushOnce(MaterialPageRoute(builder: (_) => const CreatedClassesScreen())).then((_) => _loadCounts()),
@@ -192,7 +192,7 @@ class _ClassesScreenState extends State<ClassesScreen> with NavigateOnceMixin {
                         const SizedBox(height: 16),
                         _buildHubCard(
                           title: tr('joined_classes'),
-                          subtitle: _loadError ? "Couldn't load — pull to retry" : (_joinedCount == 0 ? 'Not enrolled yet' : '$_joinedCount class${_joinedCount != 1 ? 'es' : ''} joined'),
+                          subtitle: _loadError ? tr('couldnt_load_pull_retry') : (_joinedCount == 0 ? tr('not_enrolled_yet') : tr('n_classes_joined').replaceFirst('{n}', '$_joinedCount').replaceFirst('{s}', _joinedCount != 1 ? 'es' : '')),
                           emoji: '🎓',
                           colors: [const Color(0xFF10B981), const Color(0xFF06B6D4)],
                           onTap: () => pushOnce(MaterialPageRoute(builder: (_) => const JoinedClassesScreen())).then((_) => _loadCounts()),

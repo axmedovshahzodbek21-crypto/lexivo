@@ -16,6 +16,17 @@ const _tilePalette = <(Color, Color, String)>[
   (Color(0xFF26890C), Color(0xFF1C6409), '■'),
 ];
 
+// "Answer: {word}" isn't in the shared l10n.dart map and this file is not
+// allowed to add to it — kept as a small local lookup instead, mirroring
+// l10n.dart's own {placeholder} style.
+String _answerColon(String word) {
+  switch (appLangNotifier.value) {
+    case 'uz': return 'Javob: $word';
+    case 'ru': return 'Ответ: $word';
+    default: return 'Answer: $word';
+  }
+}
+
 class ClassReviewScreen extends StatefulWidget {
   final String classId;
   final String className;
@@ -656,7 +667,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
           if (_tappedChoice != null) ...[
             const SizedBox(height: 12),
             Text(
-              _tappedChoice == card.translation ? 'Correct — nice' : 'Answer: ${card.translation}',
+              _tappedChoice == card.translation ? tr('correct') : _answerColon(card.translation),
               style: TextStyle(fontSize: 12, color: context.textMuted),
               textAlign: TextAlign.center,
             ),
@@ -755,9 +766,9 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
     // Visible but disabled until the reveal beat elapses, so the card can't be
     // graded before the answer has actually been seen.
     return Row(children: [
-      btn(false, const Color(0xFFEF4444), 'Not yet  ✗'),
+      btn(false, const Color(0xFFEF4444), '${tr('not_yet')}  ✗'),
       const SizedBox(width: 12),
-      btn(true, const Color(0xFF10B981), 'Knew it  ✓'),
+      btn(true, const Color(0xFF10B981), '${tr('structures_knew_it')}  ✓'),
     ]);
   }
 
@@ -769,7 +780,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
       onPressed: () => Navigator.pop(context),
     ),
     title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(widget.dueOnly ? 'SRS Review' : 'Flashcards',
+      Text(widget.dueOnly ? tr('srs_review') : tr('flashcards'),
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
       Text(widget.className, style: TextStyle(fontSize: 11, color: context.textMuted)),
     ]),

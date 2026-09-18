@@ -237,19 +237,19 @@ class _ClassShellState extends State<ClassShell> {
               const SizedBox(height: 16),
               Text(
                 offline
-                    ? "Couldn't check your access"
+                    ? tr('couldnt_check_access')
                     : pending
-                        ? 'Waiting for approval'
-                        : "You don't have access to this class",
+                        ? tr('waiting_for_approval')
+                        : tr('no_access_to_class'),
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText),
               ),
               const SizedBox(height: 8),
               Text(
                 offline
-                    ? 'Check your connection and try again.'
+                    ? tr('check_connection')
                     : pending
-                        ? "Your teacher hasn't approved your join request yet. Check back soon."
-                        : 'Ask the teacher for the join code, or check that you joined the right class.',
+                        ? tr('join_request_not_approved_yet')
+                        : tr('ask_teacher_for_join_code'),
                 textAlign: TextAlign.center,
                 style: TextStyle(color: context.textMuted),
               ),
@@ -291,7 +291,7 @@ class _ClassShellState extends State<ClassShell> {
               overflow: TextOverflow.ellipsis,
             ),
             Text(
-              _isTeacher ? '👩‍🏫 My Class' : '🎓 Classroom',
+              _isTeacher ? '👩‍🏫 ${tr('my_class_label')}' : '🎓 ${tr('classroom_label')}',
               style: TextStyle(color: context.textMuted, fontSize: 11),
             ),
           ],
@@ -302,7 +302,7 @@ class _ClassShellState extends State<ClassShell> {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(color: context.primaryBg, borderRadius: BorderRadius.circular(20)),
             child: Text(
-              _isTeacher ? 'Teacher' : 'Student',
+              _isTeacher ? tr('teacher') : tr('student_role'),
               style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: context.primary),
             ),
           ),

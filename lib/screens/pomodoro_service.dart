@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../l10n.dart';
 
 enum PomodoroState { idle, working, onBreak }
 
@@ -134,13 +135,13 @@ class PomodoroService extends ChangeNotifier with WidgetsBindingObserver {
         _oneMinuteWarningSent = true;
         if (_state == PomodoroState.working) {
           _sendNotification(
-            '🍅 Almost done!',
-            '1 minute left in your focus session. Get ready for a break!',
+            tr('pomo_notif_almost_done_title'),
+            tr('pomo_notif_almost_done_body'),
           );
         } else if (_state == PomodoroState.onBreak) {
           _sendNotification(
-            '✅ Break ending!',
-            'Break ends in 1 minute. Get ready to focus!',
+            tr('pomo_notif_break_ending_title'),
+            tr('pomo_notif_break_ending_body'),
           );
         }
       }
@@ -156,15 +157,15 @@ class PomodoroService extends ChangeNotifier with WidgetsBindingObserver {
       _pomodorosCompleted++;
       _beginPhase(PomodoroState.onBreak, _breakMinutes * 60);
       _sendNotification(
-        '🍅 Focus session complete!',
-        'Time for a $_breakMinutes-minute break. You earned it!',
+        tr('pomo_notif_focus_complete_title'),
+        tr('pomo_notif_focus_complete_body').replaceFirst('{n}', '$_breakMinutes'),
       );
       _startTimer();
     } else if (_state == PomodoroState.onBreak) {
       _beginPhase(PomodoroState.working, _workMinutes * 60);
       _sendNotification(
-        '✅ Break over!',
-        "Ready to get back to learning? Let's go!",
+        tr('pomo_notif_break_over_title'),
+        tr('pomo_notif_break_over_body'),
       );
       _startTimer();
     }

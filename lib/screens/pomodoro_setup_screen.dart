@@ -40,9 +40,9 @@ class _PomodoroSetupScreenState extends State<PomodoroSetupScreen> {
   int? _selectedPreset = 0;
 
   static const _presets = [
-    {'label': 'Classic',   'emoji': '🍅', 'work': 25, 'break': 5},
-    {'label': 'Deep Work', 'emoji': '🧠', 'work': 50, 'break': 10},
-    {'label': 'Quick',     'emoji': '⚡', 'work': 15, 'break': 3},
+    {'label': 'pomo_preset_classic',   'emoji': '🍅', 'work': 25, 'break': 5},
+    {'label': 'pomo_preset_deep_work', 'emoji': '🧠', 'work': 50, 'break': 10},
+    {'label': 'pomo_preset_quick',     'emoji': '⚡', 'work': 15, 'break': 3},
   ];
 
   @override
@@ -135,7 +135,7 @@ class _PomodoroSetupScreenState extends State<PomodoroSetupScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Focus Mode',
+                      tr('pomo_setup_header'),
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -144,7 +144,7 @@ class _PomodoroSetupScreenState extends State<PomodoroSetupScreen> {
                       ),
                     ),
                     Text(
-                      'Timed sessions with breaks',
+                      tr('pomo_setup_subtitle'),
                       style: TextStyle(fontSize: 13, color: context.textMuted),
                     ),
                   ],
@@ -160,7 +160,7 @@ class _PomodoroSetupScreenState extends State<PomodoroSetupScreen> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      'Skip in ${_autoSkipSeconds}s',
+                      tr('pomo_skip_in_seconds').replaceFirst('{n}', '$_autoSkipSeconds'),
                       style: TextStyle(fontSize: 12, color: context.textMuted),
                     ),
                   ),
@@ -219,7 +219,7 @@ class _PomodoroSetupScreenState extends State<PomodoroSetupScreen> {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          'min cycle',
+                          tr('pomo_min_cycle'),
                           style: TextStyle(fontSize: 11, color: context.textMuted),
                         ),
                       ],
@@ -277,7 +277,7 @@ class _PomodoroSetupScreenState extends State<PomodoroSetupScreen> {
                               ),
                               const SizedBox(height: 5),
                               Text(
-                                p['label'] as String,
+                                tr(p['label'] as String),
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
@@ -326,7 +326,7 @@ class _PomodoroSetupScreenState extends State<PomodoroSetupScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Custom',
+                            tr('pomo_custom'),
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
@@ -392,9 +392,9 @@ class _PomodoroSetupScreenState extends State<PomodoroSetupScreen> {
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
-              child: const Text(
-                'Start Focusing',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              child: Text(
+                tr('pomo_start_focusing'),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
             ),
           ),
@@ -402,7 +402,7 @@ class _PomodoroSetupScreenState extends State<PomodoroSetupScreen> {
           TextButton(
             onPressed: widget.onSkip,
             child: Text(
-              'Skip, just learn',
+              tr('pomo_skip_just_learn'),
               style: TextStyle(color: context.textMuted, fontSize: 14),
             ),
           ),

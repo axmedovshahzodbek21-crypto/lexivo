@@ -1,8 +1,42 @@
 import 'package:flutter/material.dart';
 import '../data/storage_service.dart';
 import '../app_theme.dart';
+import '../l10n.dart' as l10n;
 
 String _displayXP(int raw) => (raw / 10).toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '');
+
+// A handful of strings this screen needs that aren't in the shared l10n.dart
+// map — kept as a small local table instead of adding to that file,
+// mirroring class_xp_calendar_screen.dart's _localStrings pattern.
+const _localStrings = <String, Map<String, String>>{
+  'xp_reason_level_complete': {'en': 'Level Complete', 'uz': 'Daraja tugallandi', 'ru': 'Уровень завершён'},
+  'no_xp_earned_yet': {'en': 'No XP earned yet', 'uz': 'Hali XP olinmagan', 'ru': 'XP ещё не заработан'},
+  'complete_learning_sessions_xp': {
+    'en': 'Complete learning sessions to earn XP',
+    'uz': 'XP olish uchun o\'quv sessiyalarini tugating',
+    'ru': 'Завершайте учебные сессии, чтобы заработать XP',
+  },
+};
+
+String _ltr(String key) {
+  final lang = l10n.appLangNotifier.value;
+  return _localStrings[key]?[lang] ?? _localStrings[key]!['en']!;
+}
+
+// xp_history.reason is a raw English constant stored in the DB at
+// award-time (can't rewrite what's already stored) — map it to a translated
+// label for display, falling back to the raw string for any value not in
+// this list so nothing crashes or shows blank on an unexpected/future value.
+String _reasonLabel(String reason) {
+  switch (reason) {
+    case 'Learn': return l10n.tr('learn');
+    case 'Quiz': return l10n.tr('quiz');
+    case 'Flashcard': return l10n.tr('mode_flashcard');
+    case 'SRS Review': return l10n.tr('srs_review');
+    case 'Level Complete': return _ltr('xp_reason_level_complete');
+    default: return reason;
+  }
+}
 
 class XpHistoryScreen extends StatefulWidget {
   const XpHistoryScreen({super.key});
@@ -106,7 +140,7 @@ class _XpHistoryScreenState extends State<XpHistoryScreen> {
           onPressed: () => Navigator.maybePop(context),
         ),
         title: Text(
-          'XP History',
+          l10n.tr('xp_history'),
           style: TextStyle(
             color: context.appText,
             fontWeight: FontWeight.bold,
@@ -123,7 +157,7 @@ class _XpHistoryScreenState extends State<XpHistoryScreen> {
                       const Text('⭐', style: TextStyle(fontSize: 48)),
                       const SizedBox(height: 12),
                       Text(
-                        'No XP earned yet',
+                        _ltr('no_xp_earned_yet'),
                         style: TextStyle(
                           color: context.appText,
                           fontSize: 16,
@@ -132,7 +166,7 @@ class _XpHistoryScreenState extends State<XpHistoryScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Complete learning sessions to earn XP',
+                        _ltr('complete_learning_sessions_xp'),
                         style: TextStyle(
                           color: context.appText.withValues(alpha: 0.6),
                           fontSize: 13,
@@ -209,7 +243,7 @@ class _XpHistoryScreenState extends State<XpHistoryScreen> {
                                                 CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                entry['reason'] as String,
+                                                _reasonLabel(entry['reason'] as String),
                                                 style: TextStyle(
                                                   color: context.appText,
                                                   fontWeight: FontWeight.w600,

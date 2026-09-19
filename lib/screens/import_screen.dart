@@ -8,6 +8,11 @@ import '../ai_import_samples.dart';
 import '../services/ai_import.dart';
 import 'import_collection_detail_screen.dart';
 
+// Labels for 'en'/'ru'/'uz' are resolved via tr('lang_en'/'lang_ru'/'lang_uz')
+// at use sites since these are option labels for the word-language picker
+// (not the app's UI language), not literal display strings here. The rest
+// stay as literal proper nouns — no existing l10n keys for them, and they
+// name languages being imported, not the app chrome.
 const _languages = [
   {'label': 'English',  'code': 'en-US'},
   {'label': 'Russian',  'code': 'ru-RU'},
@@ -21,6 +26,18 @@ const _languages = [
   {'label': 'Chinese',  'code': 'zh-CN'},
   {'label': 'Uzbek',    'code': 'uz-UZ'},
 ];
+
+/// Display label for a language-picker option: English/Russian/Uzbek route
+/// through the real translation system since they already have keys there;
+/// the rest are literal proper nouns with no existing keys.
+String _langLabel(String label) {
+  switch (label) {
+    case 'English': return tr('lang_en');
+    case 'Russian': return tr('lang_ru');
+    case 'Uzbek': return tr('lang_uz');
+    default: return label;
+  }
+}
 
 // Prompt-building and response-parsing now live in
 // lib/services/ai_import.dart, shared with class_words_screen.dart and
@@ -181,8 +198,10 @@ class _ImportScreenState extends State<ImportScreen> {
             ? const SizedBox(width: 20, height: 20,
                 child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
             : Text(
-                'Add ${_parsed.length} ${_parsed.length == 1 ? 'word' : 'words'} to '
-                '"${_collectionCtrl.text.trim().isEmpty ? 'My Words' : _collectionCtrl.text.trim()}"',
+                tr('add_words_to_collection_format')
+                  .replaceFirst('{n}', '${_parsed.length}')
+                  .replaceFirst('{word}', tr(_parsed.length == 1 ? 'word' : 'words'))
+                  .replaceFirst('{collection}', _collectionCtrl.text.trim().isEmpty ? 'My Words' : _collectionCtrl.text.trim()),
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               ),
         ),
@@ -389,7 +408,7 @@ class _ImportScreenState extends State<ImportScreen> {
         dropdownColor: context.surface,
         style: TextStyle(color: context.appText, fontSize: 13),
         icon: Icon(Icons.keyboard_arrow_down, color: context.textMuted, size: 18),
-        items: _languages.map((l) => DropdownMenuItem(value: l['label'], child: Text(l['label']!))).toList(),
+        items: _languages.map((l) => DropdownMenuItem(value: l['label'], child: Text(_langLabel(l['label']!)))).toList(),
         onChanged: onChanged,
       ),
     ),
@@ -460,50 +479,17 @@ class _WordPreviewCard extends StatelessWidget {
   }
 }
 
-class _TutorialSheet extends StatefulWidget {
-  @override
-  State<_TutorialSheet> createState() => _TutorialSheetState();
-}
-
-class _TutorialSheetState extends State<_TutorialSheet> {
-  String _lang = 'en';
-
-  static const _content = {
-    'en': {
-      'title': 'How to Import Words',
-      's1t': '1. Choose languages',
-      's1d': 'Select the language of your words and the language you want translations in.',
-      's2t': '2. Copy a prompt',
-      's2d': 'Expand a prompt below, copy it, open Claude or ChatGPT, paste it with your words and send.',
-      's3t': '3. Paste the response',
-      's3d': "Copy the AI's reply and paste it into the box below. Your words will appear instantly.",
-      'btn': 'Got it!',
-    },
-    'uz': {
-      'title': "So'zlarni qanday import qilish",
-      's1t': '1. Tilni tanlang',
-      's1d': "So'zlaringiz tilini va tarjima qilishni istagan tilni tanlang.",
-      's2t': '2. So\'rovni nusxalang',
-      's2d': "Quyidagi so'rovni nusxalab, Claude yoki ChatGPT ga joylashtiring va so'zlaringizni yuboring.",
-      's3t': '3. Javobni joylashtiring',
-      's3d': "Sun'iy intellekt javobini nusxalab, quyidagi maydonga joylashtiring. So'zlar darhol ko'rinadi.",
-      'btn': 'Tushunarli!',
-    },
-    'ru': {
-      'title': 'Как импортировать слова',
-      's1t': '1. Выберите языки',
-      's1d': 'Выберите язык слов и язык, на который нужен перевод.',
-      's2t': '2. Скопируйте запрос',
-      's2d': 'Разверните запрос ниже, скопируйте его, откройте Claude или ChatGPT, вставьте слова и отправьте.',
-      's3t': '3. Вставьте ответ',
-      's3d': 'Скопируйте ответ ИИ и вставьте в поле ниже. Слова появятся мгновенно.',
-      'btn': 'Понятно!',
-    },
-  };
-
+// The tutorial used to keep its own private EN/UZ/RU dictionary and a
+// `tutorialLang` state var hardcoded to 'en', so a first-time Uzbek/Russian
+// user saw an English tutorial by default and had to tap a toggle to fix it
+// themselves, even though the rest of the app already knew their language.
+// This now routes through the real tr() system, which reads
+// appLangNotifier.value — so it automatically matches the app's actual UI
+// language with no separate state, and the redundant in-sheet toggle is
+// gone.
+class _TutorialSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final c = _content[_lang]!;
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(24),
@@ -514,26 +500,14 @@ class _TutorialSheetState extends State<_TutorialSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(c['title']!,
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: context.appText)),
-              ),
-              const SizedBox(width: 8),
-              _LangBtn(label: 'EN', selected: _lang == 'en', onTap: () => setState(() => _lang = 'en')),
-              const SizedBox(width: 6),
-              _LangBtn(label: 'UZ', selected: _lang == 'uz', onTap: () => setState(() => _lang = 'uz')),
-              const SizedBox(width: 6),
-              _LangBtn(label: 'RU', selected: _lang == 'ru', onTap: () => setState(() => _lang = 'ru')),
-            ],
-          ),
+          Text(tr('import_tutorial_title'),
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: context.appText)),
           const SizedBox(height: 20),
-          _TutorialStep(icon: '🌐', title: c['s1t']!, desc: c['s1d']!),
+          _TutorialStep(icon: '🌐', title: tr('import_tutorial_step1_title'), desc: tr('import_tutorial_step1_desc')),
           const SizedBox(height: 16),
-          _TutorialStep(icon: '🤖', title: c['s2t']!, desc: c['s2d']!),
+          _TutorialStep(icon: '🤖', title: tr('import_tutorial_step2_title'), desc: tr('import_tutorial_step2_desc')),
           const SizedBox(height: 16),
-          _TutorialStep(icon: '📋', title: c['s3t']!, desc: c['s3d']!),
+          _TutorialStep(icon: '📋', title: tr('import_tutorial_step3_title'), desc: tr('import_tutorial_step3_desc')),
           const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,
@@ -545,40 +519,10 @@ class _TutorialSheetState extends State<_TutorialSheet> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
-              child: Text(c['btn']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              child: Text(tr('import_tutorial_got_it'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _LangBtn extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _LangBtn({required this.label, required this.selected, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: selected ? context.primary : context.primaryBg,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: selected ? Colors.white : context.primary,
-          ),
-        ),
       ),
     );
   }

@@ -147,7 +147,8 @@ class _StructuresLearnScreenState extends State<StructuresLearnScreen> {
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(color: context.primaryBg, borderRadius: BorderRadius.circular(12)),
                 child: Text(
-                  '🌙 You\'ve added ${StructuresStorageService.dailyNewCap} new structures today — come back tomorrow to mark more as Learned.',
+                  tr('st_cap_reached_banner')
+                      .replaceFirst('{cap}', '${StructuresStorageService.dailyNewCap}'),
                   style: TextStyle(fontSize: 12, color: context.primary),
                 ),
               ),
@@ -244,8 +245,9 @@ class _StructuresLearnScreenState extends State<StructuresLearnScreen> {
                           TextButton(
                             onPressed: () => setState(() => _showMoreExamples = !_showMoreExamples),
                             child: Text(_showMoreExamples
-                                ? '− Hide examples'
-                                : '+ More examples (${current.examples.length - 3})'),
+                                ? tr('st_hide_examples')
+                                : tr('st_more_examples_n')
+                                    .replaceFirst('{n}', '${current.examples.length - 3}')),
                           ),
                           if (_showMoreExamples)
                             for (var i = 3; i < current.examples.length; i++)
@@ -364,11 +366,11 @@ class _StructuresLearnScreenState extends State<StructuresLearnScreen> {
               const SizedBox(height: 20),
               Row(
                 children: [
-                  Expanded(child: _statTile('🧩', '$_sessionCount', 'Learned')),
+                  Expanded(child: _statTile('🧩', '$_sessionCount', tr('learned'))),
                   const SizedBox(width: 8),
-                  Expanded(child: _statTile('⚡', '+$_sessionXP', 'XP')),
+                  Expanded(child: _statTile('⚡', '+$_sessionXP', tr('xp'))),
                   const SizedBox(width: 8),
-                  Expanded(child: _statTile('⏭️', '$skipped', 'Skipped')),
+                  Expanded(child: _statTile('⏭️', '$skipped', tr('st_skipped_stat'))),
                 ],
               ),
               const SizedBox(height: 24),

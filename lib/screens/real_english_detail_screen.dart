@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/real_english_data.dart';
 import 'real_english_video_screen.dart';
@@ -202,7 +203,7 @@ class _VideoCard extends StatelessWidget {
                       Row(
                         children: [
                           Text(
-                            failed ? "Couldn't load" : (wordCount > 0 ? '$wordCount words' : 'No words yet'),
+                            failed ? tr('couldnt_load') : (wordCount > 0 ? tr('n_words_plain').replaceFirst('{n}', '$wordCount') : tr('no_words_yet')),
                             style: TextStyle(
                               fontSize: 10,
                               color: context.textMuted,

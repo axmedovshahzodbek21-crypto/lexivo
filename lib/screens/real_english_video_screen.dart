@@ -222,9 +222,9 @@ class _HeroBanner extends StatelessWidget {
             spacing: 8,
             runSpacing: 6,
             children: [
-              if (totalWords > 0) _Pill('$totalWords words'),
+              if (totalWords > 0) _Pill(tr('n_words_plain').replaceFirst('{n}', '$totalWords')),
               if (video.duration.isNotEmpty) _Pill('⏱ ${video.duration}'),
-              if (unitCount > 0) _Pill('$unitCount units'),
+              if (unitCount > 0) _Pill(tr('re_n_units_plain').replaceFirst('{n}', '$unitCount')),
             ],
           ),
         ],
@@ -393,9 +393,9 @@ class _EmptyState extends StatelessWidget {
       const SizedBox(height: 40),
       Text(loadError ? '⚠️' : '📭', style: const TextStyle(fontSize: 48)),
       const SizedBox(height: 12),
-      Text(loadError ? "Couldn't load this video's words" : 'Words coming soon', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+      Text(loadError ? tr('couldnt_load_video_words') : tr('re_words_coming_soon'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
       const SizedBox(height: 6),
-      Text(loadError ? 'Check your connection and try again.' : 'This video\'s words are being prepared.', style: TextStyle(fontSize: 13, color: context.textMuted)),
+      Text(loadError ? tr('check_connection') : tr('re_words_being_prepared'), style: TextStyle(fontSize: 13, color: context.textMuted)),
       if (loadError && onRetry != null) ...[
         const SizedBox(height: 16),
         ElevatedButton(onPressed: onRetry, child: Text(tr('try_again_plain'))),

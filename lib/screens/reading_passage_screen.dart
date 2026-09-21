@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/reading_data.dart';
 
@@ -83,7 +84,7 @@ class _ReadingPassageScreenState extends State<ReadingPassageScreen> {
               const SizedBox(height: 20),
 
               Text(
-                'Comprehension Questions',
+                tr('rd_comprehension_questions'),
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w900,
@@ -92,7 +93,7 @@ class _ReadingPassageScreenState extends State<ReadingPassageScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Read each question, think about your answer, then reveal.',
+                tr('rd_comprehension_instructions'),
                 style: TextStyle(fontSize: 13, color: context.textMuted),
               ),
               const SizedBox(height: 20),
@@ -194,7 +195,7 @@ class _ReadingPassageScreenState extends State<ReadingPassageScreen> {
                           ),
                           alignment: Alignment.center,
                           child: Text(
-                            revealed ? 'Hide explanation' : 'Show explanation',
+                            revealed ? tr('rd_hide_explanation') : tr('rd_show_explanation'),
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,

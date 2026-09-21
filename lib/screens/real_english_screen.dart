@@ -29,7 +29,7 @@ class RealEnglishScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          '🗣️ Real English',
+          '🗣️ ${tr('more_real_english')}',
           style: TextStyle(color: context.appText, fontWeight: FontWeight.bold, fontSize: 20),
         ),
       ),
@@ -169,10 +169,10 @@ class _HowItWorksCard extends StatelessWidget {
     // RealEnglishVideo model only carries a title and duration) — the copy
     // was describing a step that was never built. Left to 3 steps that
     // match what actually happens today.
-    const steps = [
-      ('📖', 'Learn the words from a real video'),
-      ('🔄', 'Review them with SRS over ~11 days'),
-      ('🧠', 'Understand every word next time you watch'),
+    final steps = [
+      ('📖', tr('re_step_learn')),
+      ('🔄', tr('re_step_review')),
+      ('🧠', tr('re_step_understand')),
     ];
     const lineColor = Color(0xFF5B8AF0);
     return Container(

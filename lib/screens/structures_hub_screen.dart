@@ -94,7 +94,9 @@ class _StructuresHubScreenState extends State<StructuresHubScreen> {
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
         children: [
           Text(
-            '${_learnedIds.length} / ${kStructures.length} learned',
+            tr('st_x_of_y_learned')
+                .replaceFirst('{n}', '${_learnedIds.length}')
+                .replaceFirst('{total}', '${kStructures.length}'),
             style: TextStyle(fontSize: 12, color: context.textMuted),
           ),
           const SizedBox(height: 12),
@@ -118,7 +120,9 @@ class _StructuresHubScreenState extends State<StructuresHubScreen> {
               return _tile(
                 icon: _kUnitIcons[unit] ?? '🧩',
                 label: unit,
-                sub: '$learned/${inUnit.length} learned',
+                sub: tr('st_x_of_y_learned')
+                    .replaceFirst('{n}', '$learned')
+                    .replaceFirst('{total}', '${inUnit.length}'),
                 onTap: () async {
                   await Navigator.push(context, MaterialPageRoute(
                     builder: (_) => StructuresDayPickerScreen(unit: unit),
@@ -164,7 +168,7 @@ class _StructuresHubScreenState extends State<StructuresHubScreen> {
                 child: _tile(
                   icon: '🔄',
                   label: tr('structures_review'),
-                  sub: _dueCount > 0 ? '$_dueCount due' : null,
+                  sub: _dueCount > 0 ? tr('n_due').replaceFirst('{n}', '$_dueCount') : null,
                   onTap: () => Navigator.push(context, MaterialPageRoute(
                     builder: (_) => const StructuresReviewScreen(),
                   )).then((_) => _load()),

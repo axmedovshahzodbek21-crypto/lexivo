@@ -93,12 +93,15 @@ class _StructuresTranslateScreenState extends State<StructuresTranslateScreen> {
               children: [
                 Text(done ? '🏆' : '✅', style: const TextStyle(fontSize: 56)),
                 const SizedBox(height: 8),
-                Text(done ? 'That\'s every sentence!' : 'Batch complete',
+                Text(done ? tr('st_every_sentence_done') : tr('st_batch_complete_title'),
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: context.appText)),
                 const SizedBox(height: 6),
                 Text(
-                  '${_progress.clamp(0, _total)}/$_total sentences translated in ${widget.unit}'
-                  '${done ? '' : ' — come back next time for the next batch.'}',
+                  tr('st_sentences_translated_in')
+                          .replaceFirst('{n}', '${_progress.clamp(0, _total)}')
+                          .replaceFirst('{total}', '$_total')
+                          .replaceFirst('{unit}', widget.unit) +
+                      (done ? '' : tr('st_come_back_next_batch')),
                   textAlign: TextAlign.center,
                   style: TextStyle(color: context.textMuted),
                 ),
@@ -147,7 +150,7 @@ class _StructuresTranslateScreenState extends State<StructuresTranslateScreen> {
               child: ElevatedButton(
                 onPressed: allRevealed ? _finishBatch : null,
                 style: ElevatedButton.styleFrom(backgroundColor: context.primary, foregroundColor: Colors.white, padding: const EdgeInsets.all(14)),
-                child: Text(allRevealed ? 'Done with this batch' : 'Check all sentences to continue'),
+                child: Text(allRevealed ? tr('structures_done_batch') : tr('st_check_all_continue')),
               ),
             ),
           ],

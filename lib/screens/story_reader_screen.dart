@@ -129,7 +129,9 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
             ),
             const SizedBox(height: 6),
             Text(
-              'Unit ${widget.unitNumber} · ${widget.collectionName}',
+              tr('heatmap_unit_topic')
+                  .replaceFirst('{n}', '${widget.unitNumber}')
+                  .replaceFirst('{topic}', widget.collectionName),
               style: TextStyle(fontSize: 13, color: context.textMuted),
               textAlign: TextAlign.center,
             ),
@@ -164,10 +166,10 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
 
   String get _storyLabel {
     switch (widget.storyNumber) {
-      case 1: return 'Story 1 · Stage 4';
-      case 2: return 'Story 2 · Mastered';
-      case 3: return 'Story 3 · 30 Days Later';
-      default: return 'Story ${widget.storyNumber}';
+      case 1: return tr('sr_story_1_label');
+      case 2: return tr('sr_story_2_label');
+      case 3: return tr('sr_story_3_label');
+      default: return tr('sr_story_n_label').replaceFirst('{n}', '${widget.storyNumber}');
     }
   }
 
@@ -234,7 +236,9 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      '${widget.collectionName} · Unit ${widget.unitNumber}',
+                      tr('sr_collection_unit_label')
+                          .replaceFirst('{name}', widget.collectionName)
+                          .replaceFirst('{n}', '${widget.unitNumber}'),
                       style: TextStyle(fontSize: 12, color: widget.color, fontWeight: FontWeight.w600),
                     ),
                   ),
@@ -256,12 +260,12 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
                           children: [
                             Text(_loadError ? '⚠️' : _storyEmoji, style: const TextStyle(fontSize: 52)),
                             const SizedBox(height: 16),
-                            Text(_loadError ? "Couldn't load this story" : 'Story coming soon', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
+                            Text(_loadError ? tr('sr_story_load_failed') : tr('sr_story_coming_soon'), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
                             const SizedBox(height: 8),
                             Text(
                               _loadError
-                                  ? 'Check your connection and try again.'
-                                  : "You've unlocked this story, but it hasn't\nbeen written yet. Check back soon!",
+                                  ? tr('check_connection')
+                                  : tr('sr_story_unlocked_not_written'),
                               textAlign: TextAlign.center,
                               style: TextStyle(fontSize: 14, color: context.textMuted, height: 1.55),
                             ),

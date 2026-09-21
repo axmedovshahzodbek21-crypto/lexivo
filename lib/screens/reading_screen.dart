@@ -169,7 +169,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          '💡 Ideas',
+          tr('rd_ideas_title'),
           style: TextStyle(
             color: context.appText,
             fontWeight: FontWeight.bold,
@@ -197,9 +197,9 @@ class _ReadingScreenState extends State<ReadingScreen> {
                       BoxShadow(color: Color(0x596C63FF), offset: Offset(0, 6), blurRadius: 14),
                     ],
                   ),
-                  child: const Text(
-                    '🎲 Surprise Me',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+                  child: Text(
+                    tr('br_surprise_me'),
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
                   ),
                 ),
               ),
@@ -350,7 +350,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
                                           borderRadius: BorderRadius.circular(20),
                                         ),
                                         child: Text(
-                                          'PASS $numStr',
+                                          tr('rd_pass_badge').replaceFirst('{n}', numStr),
                                           style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 0.5),
                                         ),
                                       ),
@@ -378,7 +378,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
                                               borderRadius: BorderRadius.circular(8),
                                             ),
                                             child: Text(
-                                              '${passage.questions.length} Q',
+                                              tr('rd_q_count').replaceFirst('{n}', '${passage.questions.length}'),
                                               style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white),
                                             ),
                                           ),

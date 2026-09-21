@@ -100,8 +100,8 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
             if (!_loading)
               Text(
                 _collections.isEmpty
-                    ? '0 units'
-                    : '${_collections.length} ${_collections.length == 1 ? 'unit' : 'units'} · ✅ ${_completedUnits.length}/${_collections.length} done',
+                    ? tr('n_units').replaceFirst('{n}', '0')
+                    : '${tr('n_units').replaceFirst('{n}', '${_collections.length}')} · ✅ ${tr('n_of_m_done').replaceFirst('{n}', '${_completedUnits.length}').replaceFirst('{m}', '${_collections.length}')}',
                 style: TextStyle(color: context.textMuted, fontSize: 12)),
           ],
         ),

@@ -214,9 +214,9 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
                           spacing: 6,
                           runSpacing: 6,
                           children: [
-                            _statPill('${nonEmptyDays.length} units'),
-                            _statPill('$totalWords words'),
-                            _statPill('$completedUnits done'),
+                            _statPill(tr('units_count').replaceFirst('{n}', '${nonEmptyDays.length}')),
+                            _statPill(tr('words_count').replaceFirst('{n}', '$totalWords')),
+                            _statPill(tr('done_count').replaceFirst('{n}', '$completedUnits')),
                           ],
                         ),
                         const SizedBox(height: 14),
@@ -231,7 +231,7 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
                         ),
                         if (progressPct > 0) ...[
                           const SizedBox(height: 4),
-                          Text('${(progressPct * 100).round()}% complete',
+                          Text(tr('percent_complete').replaceFirst('{n}', '${(progressPct * 100).round()}'),
                             style: const TextStyle(color: Colors.white70, fontSize: 11)),
                         ],
                       ],
@@ -347,7 +347,7 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        'UNIT $numStr',
+                        tr('unit_badge_label').replaceFirst('{n}', numStr),
                         style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 0.5),
                       ),
                     ),
@@ -556,11 +556,11 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _progressChip(sheetContext, '📖 Learn', progress.learnDone),
+                _progressChip(sheetContext, '📖 ${tr('learn')}', progress.learnDone),
                 const SizedBox(width: 8),
-                _progressChip(sheetContext, '🃏 Flashcards', progress.flashcardDone),
+                _progressChip(sheetContext, '🃏 ${tr('flashcards')}', progress.flashcardDone),
                 const SizedBox(width: 8),
-                _progressChip(sheetContext, '🧠 Quiz', progress.quizDone),
+                _progressChip(sheetContext, '🧠 ${tr('quiz')}', progress.quizDone),
               ],
             ),
             const SizedBox(height: 20),
@@ -569,7 +569,9 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
               _actionTile(
                 sheetContext,
                 hardCount > 0
-                    ? '🃏 Flashcards ($hardCount hard word${hardCount == 1 ? '' : 's'} left)'
+                    ? tr('flashcards_hard_words_left')
+                        .replaceFirst('{n}', '$hardCount')
+                        .replaceFirst('{s}', hardCount == 1 ? '' : 's')
                     : tr('do_flashcards'),
                 hardCount > 0
                     ? tr('clear_hard_words')
@@ -622,7 +624,7 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
                               ),
                             ),
                             Text(
-                              'Flashcards won\'t be marked until all hard words are cleared',
+                              tr('flashcards_no_mark'),
                               style: TextStyle(
                                 fontSize: 11,
                                 color: sheetContext.textMuted,
@@ -650,7 +652,7 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '📚 Stories',
+                      tr('stories_label'),
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
@@ -674,21 +676,21 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
             Row(
               children: [
                 Expanded(
-                  child: _smallActionBtn(sheetContext, '📖 Learn', _color, () {
+                  child: _smallActionBtn(sheetContext, '📖 ${tr('learn')}', _color, () {
                     Navigator.pop(sheetContext);
                     _startLearning(context, day, index);
                   }),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: _smallActionBtn(sheetContext, '🃏 Cards', Colors.purple, () {
+                  child: _smallActionBtn(sheetContext, '🃏 ${tr('cards')}', Colors.purple, () {
                     Navigator.pop(sheetContext);
                     _startFlashcards(context, day);
                   }, locked: !progress.learnDone),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: _smallActionBtn(sheetContext, '🧠 Quiz', Colors.orange, () {
+                  child: _smallActionBtn(sheetContext, '🧠 ${tr('quiz')}', Colors.orange, () {
                     Navigator.pop(sheetContext);
                     _startQuiz(context, day);
                   }, locked: !progress.learnDone),

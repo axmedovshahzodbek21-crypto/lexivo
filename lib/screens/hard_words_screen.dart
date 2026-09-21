@@ -212,7 +212,7 @@ class _HardWordsScreenState extends State<HardWordsScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          '💡 Words you marked Too Hard while learning. Drill them here, then "Mark as Learned" to add them to your review cycle.',
+                          tr('hard_words_intro'),
                           style: TextStyle(fontSize: 12, color: context.appText, height: 1.4),
                         ),
                       ),
@@ -229,7 +229,7 @@ class _HardWordsScreenState extends State<HardWordsScreen> {
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                         child: Text(
-                          '$_unresolved more not shown (not in a built-in collection)',
+                          tr('hard_words_unresolved_hint').replaceFirst('{n}', '$_unresolved'),
                           style: TextStyle(fontSize: 11, color: context.textMuted),
                         ),
                       ),
@@ -248,7 +248,7 @@ class _HardWordsScreenState extends State<HardWordsScreen> {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
             const SizedBox(height: 8),
             Text(
-              'Words you tap Too Hard while learning\nshow up here for focused practice.',
+              tr('hard_words_empty_sub'),
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 14, color: context.textMuted, height: 1.5),
             ),

@@ -312,7 +312,9 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '$count ${count == 1 ? 'word' : 'words'} in this list',
+            tr('list_word_count')
+                .replaceFirst('{n}', '$count')
+                .replaceFirst('{s}', count != 1 ? 's' : ''),
             style: TextStyle(fontSize: 12, color: context.textMuted),
           ),
           const SizedBox(height: 10),

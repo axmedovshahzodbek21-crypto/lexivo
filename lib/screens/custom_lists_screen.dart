@@ -240,7 +240,7 @@ class _CustomListsScreenState extends State<CustomListsScreen> {
         ),
         title: Text(list.name, style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
         subtitle: Text(
-          '$studyableCount ${studyableCount == 1 ? 'word' : 'words'} · $created',
+          '$studyableCount ${studyableCount == 1 ? tr('word') : tr('words')} · $created',
           style: TextStyle(fontSize: 12, color: context.textMuted),
         ),
         trailing: Row(
@@ -258,6 +258,13 @@ class _CustomListsScreenState extends State<CustomListsScreen> {
   }
 
   Widget _buildDeleteConfirm(CustomList list) {
+    // Split the localized "Delete "{name}"?" template around the {name}
+    // placeholder so the list name can keep its own (danger-colored) TextSpan
+    // — languages differ in where {name} falls (e.g. Uzbek puts it first),
+    // so the prefix/suffix split has to happen at runtime, not be assumed.
+    final deleteTemplateParts = tr('delete_named_q').split('{name}');
+    final deleteTitlePrefix = deleteTemplateParts.isNotEmpty ? deleteTemplateParts[0] : '';
+    final deleteTitleSuffix = deleteTemplateParts.length > 1 ? deleteTemplateParts[1] : '';
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(16),
@@ -271,13 +278,15 @@ class _CustomListsScreenState extends State<CustomListsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text.rich(TextSpan(children: [
-            TextSpan(text: 'Delete "', style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
+            TextSpan(text: deleteTitlePrefix, style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
             TextSpan(text: list.name, style: TextStyle(color: context.dangerColor, fontWeight: FontWeight.bold)),
-            TextSpan(text: '"?', style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
+            TextSpan(text: deleteTitleSuffix, style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
           ])),
           const SizedBox(height: 4),
           Text(
-            'Removes the list and its ${list.words.length} word${list.words.length != 1 ? 's' : ''}. Words themselves are not affected.',
+            tr('delete_list_body')
+                .replaceFirst('{n}', '${list.words.length}')
+                .replaceFirst('{s}', list.words.length != 1 ? 's' : ''),
             style: TextStyle(fontSize: 12, color: context.textMuted),
           ),
           const SizedBox(height: 10),
@@ -308,8 +317,7 @@ class _CustomListsScreenState extends State<CustomListsScreen> {
   String _formatDate(String iso) {
     try {
       final d = DateTime.parse(iso);
-      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      return '${months[d.month - 1]} ${d.day}, ${d.year}';
+      return '${monthName(d.month)} ${d.day}, ${d.year}';
     } catch (_) {
       return '';
     }

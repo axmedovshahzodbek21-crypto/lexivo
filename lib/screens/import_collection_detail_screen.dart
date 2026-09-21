@@ -240,7 +240,7 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
           if (!_loading && _words.isNotEmpty)
             TextButton(
               onPressed: _toggleSelectMode,
-              child: Text(_selectMode ? 'Cancel' : 'Select',
+              child: Text(_selectMode ? tr('cancel') : tr('select_action'),
                 style: TextStyle(color: context.primary, fontWeight: FontWeight.w600)),
             ),
           if (!_selectMode) ...[
@@ -359,8 +359,10 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
                 Flexible(
                   child: Text(
                     _pendingNewWords.isEmpty
-                        ? 'Completed'
-                        : 'Completed · ${_pendingNewWords.length} new word${_pendingNewWords.length == 1 ? '' : 's'} to learn',
+                        ? tr('completed')
+                        : tr('completed_new_words_to_learn')
+                            .replaceFirst('{n}', '${_pendingNewWords.length}')
+                            .replaceFirst('{s}', _pendingNewWords.length == 1 ? '' : 's'),
                     textAlign: TextAlign.center,
                     style: TextStyle(fontWeight: FontWeight.bold, color: context.successColor),
                   ),

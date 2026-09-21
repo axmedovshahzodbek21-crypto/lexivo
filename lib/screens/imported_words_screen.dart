@@ -311,11 +311,11 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
           crossAxisAlignment: WrapCrossAlignment.center,
           spacing: 8, runSpacing: 8,
           children: [
-            _exampleChip('FOLDER', '📁 Vocabulary 101', myWordsCardColors[0]),
+            _exampleChip(tr('folder_label').toUpperCase(), '📁 Vocabulary 101', myWordsCardColors[0]),
             Icon(Icons.arrow_forward, size: 14, color: context.textMuted),
-            _exampleChip('UNIT', '📖 Unit 1', myWordsCardColors[1]),
+            _exampleChip(tr('unit').toUpperCase(), '📖 Unit 1', myWordsCardColors[1]),
             Icon(Icons.arrow_forward, size: 14, color: context.textMuted),
-            _exampleChip('WORDS', 'apple · book · water', null),
+            _exampleChip(tr('words_nav').toUpperCase(), 'apple · book · water', null),
           ],
         ),
       ]),
@@ -382,8 +382,11 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
                   const SizedBox(height: 2),
                   Text(
                     (_completedCounts[folder.name] ?? 0) > 0
-                        ? '${folder.wordCount} words · ✅ ${_completedCounts[folder.name]}/${folder.collectionCount}'
-                        : '${folder.wordCount} words',
+                        ? tr('folder_words_completed')
+                            .replaceFirst('{n}', '${folder.wordCount}')
+                            .replaceFirst('{done}', '${_completedCounts[folder.name]}')
+                            .replaceFirst('{total}', '${folder.collectionCount}')
+                        : tr('n_words_plain').replaceFirst('{n}', '${folder.wordCount}'),
                     style: const TextStyle(color: Colors.white70, fontSize: 11)),
                 ],
               ),

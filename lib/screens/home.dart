@@ -851,7 +851,7 @@ class _HomeScreenState extends State<HomeScreen>
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 Text(
-                                  '$levelName · ${StorageService.displayXP(_xp)} XP',
+                                  '${levelDisplayName(levelName)} · ${StorageService.displayXP(_xp)} XP',
                                   style: const TextStyle(
                                     color: Colors.white60,
                                     fontSize: 11,
@@ -1061,7 +1061,7 @@ class _HomeScreenState extends State<HomeScreen>
                                           children: [
                                             Flexible(
                                               child: Text(
-                                                levelName,
+                                                levelDisplayName(levelName),
                                                 style: TextStyle(
                                                   fontWeight: FontWeight.bold,
                                                   fontSize: 16,
@@ -2205,7 +2205,7 @@ class _HomeScreenState extends State<HomeScreen>
                                   color: Colors.white.withValues(alpha: 0.22),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
-                                child: Text(levelName,
+                                child: Text(levelDisplayName(levelName),
                                     style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
                               ),
                               const SizedBox(width: 8),
@@ -2242,7 +2242,7 @@ class _HomeScreenState extends State<HomeScreen>
                           Text(
                             isMax
                                 ? tr('home_max_level_reached')
-                                : '${StorageService.displayXP(nextMin - _xp)} XP to $nextLevelName',
+                                : '${StorageService.displayXP(nextMin - _xp)} XP to ${levelDisplayName(nextLevelName)}',
                             style: const TextStyle(color: Colors.white60, fontSize: 10),
                           ),
                           const SizedBox(height: 14),

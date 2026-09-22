@@ -222,7 +222,7 @@ class _StatsScreenState extends State<StatsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              levelName,
+                              levelDisplayName(levelName),
                               style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,

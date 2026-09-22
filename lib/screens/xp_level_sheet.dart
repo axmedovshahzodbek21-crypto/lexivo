@@ -106,12 +106,11 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
     if (mounted) setState(() => _reachedDates = out);
   }
 
-  static const _mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   String _fmtReached(String iso) {
     final parts = iso.split('T').first.split('-');
     if (parts.length != 3) return iso;
     final m = int.tryParse(parts[1]) ?? 1;
-    return '${_mon[(m - 1).clamp(0, 11)]} ${int.tryParse(parts[2]) ?? ''}, ${parts[0]}';
+    return '${monthShortName(m.clamp(1, 12))} ${int.tryParse(parts[2]) ?? ''}, ${parts[0]}';
   }
 
   @override
@@ -202,7 +201,7 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
               ),
               const SizedBox(height: 4),
               Text(
-                _levelName,
+                levelDisplayName(_levelName),
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: context.appText),
               ),
             ],
@@ -306,7 +305,7 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
             style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: context.primary),
           ),
           Text(
-            tr('to_reach_level').replaceAll('{name}', nextName),
+            tr('to_reach_level').replaceAll('{name}', levelDisplayName(nextName)),
             style: TextStyle(fontSize: 13, color: context.textMuted),
           ),
           const SizedBox(height: 12),
@@ -394,7 +393,7 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                name,
+                                levelDisplayName(name),
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,

@@ -25,6 +25,31 @@ String weekdayAbbr(int dartWeekday) {
   return tr(keys[(dartWeekday - 1) % 7]);
 }
 
+// StorageService.levels' name field (e.g. "Pre-Intermediate") is an English
+// identifier used for level-up comparisons and lookups — it must never
+// change. This maps that identifier to a translated display string via
+// level_* keys below, falling back to the English identifier itself for any
+// name not in this table.
+const _levelNameKeys = {
+  'Starter': 'xplevel_starter',
+  'Beginner': 'xplevel_beginner',
+  'Elementary': 'xplevel_elementary',
+  'Pre-Intermediate': 'xplevel_pre_intermediate',
+  'Intermediate': 'xplevel_intermediate',
+  'Upper-Intermediate': 'xplevel_upper_intermediate',
+  'Advanced': 'xplevel_advanced',
+  'Expert': 'xplevel_expert',
+  'Master': 'xplevel_master',
+  'Legend': 'xplevel_legend',
+};
+
+String levelDisplayName(String englishName) {
+  final key = _levelNameKeys[englishName];
+  if (key == null) return englishName;
+  final t = tr(key);
+  return t == key ? englishName : t;
+}
+
 const Map<String, Map<String, String>> _t = {
   'en': {
     // ── Navigation ──────────────────────────────────────────────────────────────
@@ -622,6 +647,16 @@ const Map<String, Map<String, String>> _t = {
     // ── Stats ───────────────────────────────────────────────────────────────────
     'stats_title': 'Statistics',
     'total_xp': 'Total XP',
+    'xplevel_starter': 'Starter',
+    'xplevel_beginner': 'Beginner',
+    'xplevel_elementary': 'Elementary',
+    'xplevel_pre_intermediate': 'Pre-Intermediate',
+    'xplevel_intermediate': 'Intermediate',
+    'xplevel_upper_intermediate': 'Upper-Intermediate',
+    'xplevel_advanced': 'Advanced',
+    'xplevel_expert': 'Expert',
+    'xplevel_master': 'Master',
+    'xplevel_legend': 'Legend',
     'current_streak': 'Current Streak',
     'best_streak': 'Best Streak',
     'total_study_days': 'Total Study Days',
@@ -2274,6 +2309,16 @@ const Map<String, Map<String, String>> _t = {
     // ── Stats ───────────────────────────────────────────────────────────────────
     'stats_title': 'Statistika',
     'total_xp': 'Jami XP',
+    'xplevel_starter': "Boshlang'ich",
+    'xplevel_beginner': 'Yangi boshlovchi',
+    'xplevel_elementary': 'Elementar',
+    'xplevel_pre_intermediate': "O'rta darajagacha",
+    'xplevel_intermediate': "O'rta daraja",
+    'xplevel_upper_intermediate': "Yuqori o'rta daraja",
+    'xplevel_advanced': 'Yuqori daraja',
+    'xplevel_expert': 'Ekspert',
+    'xplevel_master': 'Usta',
+    'xplevel_legend': 'Afsona',
     'current_streak': 'Joriy seriya',
     'best_streak': 'Eng yaxshi seriya',
     'total_study_days': 'Jami o\'qish kunlari',
@@ -3934,6 +3979,16 @@ const Map<String, Map<String, String>> _t = {
     // ── Статистика ───────────────────────────────────────────────────────────────
     'stats_title': 'Статистика',
     'total_xp': 'Всего XP',
+    'xplevel_starter': 'Начинающий',
+    'xplevel_beginner': 'Новичок',
+    'xplevel_elementary': 'Элементарный',
+    'xplevel_pre_intermediate': 'Предсредний',
+    'xplevel_intermediate': 'Средний',
+    'xplevel_upper_intermediate': 'Выше среднего',
+    'xplevel_advanced': 'Продвинутый',
+    'xplevel_expert': 'Эксперт',
+    'xplevel_master': 'Мастер',
+    'xplevel_legend': 'Легенда',
     'current_streak': 'Текущая серия',
     'best_streak': 'Лучшая серия',
     'total_study_days': 'Всего дней занятий',

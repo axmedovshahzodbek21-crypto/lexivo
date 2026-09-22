@@ -241,7 +241,7 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
           children: [
             Text('${StorageService.displayXP(_curMinXP)} XP', style: TextStyle(fontSize: 11, color: context.textMuted)),
             Text(
-              '${(_progress * 100).round()}% there',
+              tr('percent_there').replaceFirst('{n}', '${(_progress * 100).round()}'),
               style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.primary),
             ),
             Text('${StorageService.displayXP(_nextXP)} XP', style: TextStyle(fontSize: 11, color: context.textMuted)),

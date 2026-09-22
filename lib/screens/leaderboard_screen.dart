@@ -634,7 +634,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   child: fetchedBio == null
                       ? Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: context.primary)))
                       : Text(
-                          fetchedBio!.isEmpty ? 'No bio yet' : fetchedBio!,
+                          fetchedBio!.isEmpty ? tr('no_bio_yet') : fetchedBio!,
                           style: TextStyle(fontSize: 13, color: fetchedBio!.isEmpty ? context.textMuted : context.appText, fontStyle: fetchedBio!.isEmpty ? FontStyle.italic : FontStyle.normal),
                           textAlign: TextAlign.center,
                         ),
@@ -686,7 +686,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 ),
                 // Weekday headers
                 Row(
-                  children: ['Su','Mo','Tu','We','Th','Fr','Sa'].map((d) => Expanded(
+                  children: List.generate(7, (i) => weekdayAbbr(i == 0 ? 7 : i)).map((d) => Expanded(
                     child: Text(d, textAlign: TextAlign.center,
                         style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: context.textMuted)),
                   )).toList(),

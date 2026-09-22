@@ -5,8 +5,6 @@ import '../l10n.dart' as l10n;
 import '../services/supabase_service.dart';
 import 'class_models.dart';
 
-const _dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-
 const _reasonIcons = <String, String>{
   'Learn': '📖', 'Cards': '🃏', 'Quiz': '🧠', 'Match': '🎯',
   'SRS Review': '🔄', 'Homework': '📋',
@@ -211,7 +209,7 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
 
                     // Day-of-week headers
                     Row(mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: _dayLabels.map((d) => SizedBox(
+                      children: List.generate(7, (i) => l10n.weekdayAbbr(i + 1)).map((d) => SizedBox(
                         width: 40,
                         child: Text(d,
                           textAlign: TextAlign.center,

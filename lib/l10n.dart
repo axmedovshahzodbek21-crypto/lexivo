@@ -12,6 +12,10 @@ String tr(String key) {
 /// array independently in 6 different screens.
 String monthName(int month) => tr('month_$month');
 
+/// Localized 3-letter month abbreviation for [month] (1-12), via the
+/// month_short_1..month_short_12 keys below.
+String monthShortName(int month) => tr('month_short_$month');
+
 /// Localized 3-letter weekday abbreviation for [dartWeekday] — a
 /// DateTime.weekday value (1=Monday..7=Sunday, Dart's own convention), via
 /// the wd_mon..wd_sun keys below. Previously reimplemented as hardcoded
@@ -1235,9 +1239,14 @@ const Map<String, Map<String, String>> _t = {
     'ach_xp_earned': '{n} XP earned',
     'ach_xp_reward': '+{n} XP reward',
     'ach_achieved': 'Achieved',
+    'ach_progress_words': 'words',
+    'ach_progress_xp': 'XP',
+    'ach_progress_days': 'days',
+    'ach_progress_mastered': 'mastered',
     'ach_achieved_check': '✓ Achieved',
     'n_of_m_units': '{n} / {m} units',
     'total_personal_xp': 'Total personal XP',
+    'percent_there': '{n}% there',
     'xp_history_caps': 'XP HISTORY',
     'view_calendar_arrow': 'View Calendar →',
     'top_learners_by_xp': 'Top learners by total XP',
@@ -2867,9 +2876,14 @@ const Map<String, Map<String, String>> _t = {
     'ach_xp_earned': '{n} XP to\'plandi',
     'ach_xp_reward': '+{n} XP mukofot',
     'ach_achieved': 'Erishildi',
+    'ach_progress_words': "so'z",
+    'ach_progress_xp': 'XP',
+    'ach_progress_days': 'kun',
+    'ach_progress_mastered': "o'zlashtirilgan",
     'ach_achieved_check': '✓ Erishildi',
     'n_of_m_units': '{m} dan {n} bo\'lim',
     'total_personal_xp': 'Jami shaxsiy XP',
+    'percent_there': '{n}% bajarildi',
     'xp_history_caps': 'XP TARIXI',
     'view_calendar_arrow': 'Taqvimni ko\'rish →',
     'top_learners_by_xp': 'Umumiy XP bo\'yicha eng yaxshi o\'quvchilar',
@@ -4507,9 +4521,14 @@ const Map<String, Map<String, String>> _t = {
     'ach_xp_earned': 'заработано {n} XP',
     'ach_xp_reward': '+{n} XP награда',
     'ach_achieved': 'Получено',
+    'ach_progress_words': 'слов',
+    'ach_progress_xp': 'XP',
+    'ach_progress_days': 'дней',
+    'ach_progress_mastered': 'изучено',
     'ach_achieved_check': '✓ Получено',
     'n_of_m_units': '{n} / {m} юнитов',
     'total_personal_xp': 'Всего личного XP',
+    'percent_there': '{n}% пройдено',
     'xp_history_caps': 'ИСТОРИЯ XP',
     'view_calendar_arrow': 'Открыть календарь →',
     'top_learners_by_xp': 'Лучшие ученики по общему XP',

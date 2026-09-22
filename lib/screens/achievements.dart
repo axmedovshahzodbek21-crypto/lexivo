@@ -181,19 +181,23 @@ bool _isUnlocked(_AchDef d, _Stats s) {
 }
 
 (int current, int target, String label)? _progress(_AchDef d, _Stats s) {
+  final words = tr('ach_progress_words');
+  final xp = tr('ach_progress_xp');
+  final days = tr('ach_progress_days');
+  final mastered = tr('ach_progress_mastered');
   switch (d.id) {
-    case 'first_word':      return (s.words.clamp(0,1), 1, 'words');
-    case 'words_10':        return (s.words.clamp(0,10), 10, 'words');
-    case 'words_50':        return (s.words.clamp(0,50), 50, 'words');
-    case 'words_100':       return (s.words.clamp(0,100), 100, 'words');
-    case 'words_250':       return (s.words.clamp(0,250), 250, 'words');
-    case 'words_500':       return (s.words.clamp(0,500), 500, 'words');
-    case 'words_1000':      return (s.words.clamp(0,1000), 1000, 'words');
-    case 'xp_100':          return ((s.xp~/10).clamp(0,100), 100, 'XP');
-    case 'xp_500':          return ((s.xp~/10).clamp(0,500), 500, 'XP');
-    case 'xp_1000':         return ((s.xp~/10).clamp(0,1000), 1000, 'XP');
-    case 'xp_2000':         return ((s.xp~/10).clamp(0,2000), 2000, 'XP');
-    case 'srs_mastered_10': return (s.mastered.clamp(0,10), 10, 'mastered');
+    case 'first_word':      return (s.words.clamp(0,1), 1, words);
+    case 'words_10':        return (s.words.clamp(0,10), 10, words);
+    case 'words_50':        return (s.words.clamp(0,50), 50, words);
+    case 'words_100':       return (s.words.clamp(0,100), 100, words);
+    case 'words_250':       return (s.words.clamp(0,250), 250, words);
+    case 'words_500':       return (s.words.clamp(0,500), 500, words);
+    case 'words_1000':      return (s.words.clamp(0,1000), 1000, words);
+    case 'xp_100':          return ((s.xp~/10).clamp(0,100), 100, xp);
+    case 'xp_500':          return ((s.xp~/10).clamp(0,500), 500, xp);
+    case 'xp_1000':         return ((s.xp~/10).clamp(0,1000), 1000, xp);
+    case 'xp_2000':         return ((s.xp~/10).clamp(0,2000), 2000, xp);
+    case 'srs_mastered_10': return (s.mastered.clamp(0,10), 10, mastered);
     default:
       final parts = d.id.split('_');
       if (parts.length < 2) return null;
@@ -201,12 +205,12 @@ bool _isUnlocked(_AchDef d, _Stats s) {
       if (n == 0) return null;
       final prefix = parts.sublist(0, parts.length - 1).join('_');
       switch (prefix) {
-        case 'sd': return (s.totalDays.clamp(0,n), n, 'days');
-        case 'ss': return (s.streak.clamp(0,n), n, 'days');
-        case 'fd': return (s.flashDays.clamp(0,n), n, 'days');
-        case 'fs': return (s.flashStreak.clamp(0,n), n, 'days');
-        case 'qd': return (s.quizDays.clamp(0,n), n, 'days');
-        case 'qs': return (s.quizStreak.clamp(0,n), n, 'days');
+        case 'sd': return (s.totalDays.clamp(0,n), n, days);
+        case 'ss': return (s.streak.clamp(0,n), n, days);
+        case 'fd': return (s.flashDays.clamp(0,n), n, days);
+        case 'fs': return (s.flashStreak.clamp(0,n), n, days);
+        case 'qd': return (s.quizDays.clamp(0,n), n, days);
+        case 'qs': return (s.quizStreak.clamp(0,n), n, days);
       }
       return null;
   }
@@ -650,8 +654,7 @@ class _DetailSheet extends StatelessWidget {
   String _fmtDate(String iso) {
     final d = DateTime.tryParse(iso);
     if (d == null) return '';
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return '${months[d.month-1]} ${d.day}, ${d.year}';
+    return '${monthShortName(d.month)} ${d.day}, ${d.year}';
   }
 
   @override

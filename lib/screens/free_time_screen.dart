@@ -4,6 +4,7 @@ import '../data/word_data.dart';
 import '../data/storage_service.dart';
 import 'collections.dart';
 import '../app_theme.dart';
+import '../l10n.dart';
 
 class FreeTimeScreen extends StatefulWidget {
   final WordItem? wordOfDay;
@@ -62,7 +63,7 @@ class _FreeTimeScreenState extends State<FreeTimeScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Free Time',
+          tr('more_free_time'),
           style: TextStyle(
             color: context.appText,
             fontWeight: FontWeight.bold,
@@ -88,21 +89,21 @@ class _FreeTimeScreenState extends State<FreeTimeScreen> {
                       ),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Column(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '🎉 You\'re all caught up!',
-                          style: TextStyle(
+                          '🎉 ${tr('ft_caught_up_title')}',
+                          style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
                         ),
-                        SizedBox(height: 4),
+                        const SizedBox(height: 4),
                         Text(
-                          'No reviews due. Explore something fun while you wait.',
-                          style: TextStyle(fontSize: 13, color: Colors.white60),
+                          tr('ft_caught_up_subtitle'),
+                          style: const TextStyle(fontSize: 13, color: Colors.white60),
                         ),
                       ],
                     ),
@@ -112,7 +113,7 @@ class _FreeTimeScreenState extends State<FreeTimeScreen> {
                   // Word of the Day — expanded
                   if (widget.wordOfDay != null) ...[
                     Text(
-                      '✨ Word of the Day',
+                      '✨ ${tr('word_of_day')}',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -201,9 +202,9 @@ class _FreeTimeScreenState extends State<FreeTimeScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  '💬 Example',
-                                  style: TextStyle(
+                                Text(
+                                  '💬 ${tr('example_word')}',
+                                  style: const TextStyle(
                                     fontSize: 11,
                                     color: Colors.white54,
                                     fontWeight: FontWeight.w600,
@@ -232,9 +233,9 @@ class _FreeTimeScreenState extends State<FreeTimeScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    '💬 Example 2',
-                                    style: TextStyle(
+                                  Text(
+                                    '💬 ${tr('example_2')}',
+                                    style: const TextStyle(
                                       fontSize: 11,
                                       color: Colors.white54,
                                       fontWeight: FontWeight.w600,
@@ -261,7 +262,7 @@ class _FreeTimeScreenState extends State<FreeTimeScreen> {
 
                   // Browse Collections
                   Text(
-                    '🗂 Browse Collections',
+                    '🗂 ${tr('ft_browse_collections')}',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -270,15 +271,15 @@ class _FreeTimeScreenState extends State<FreeTimeScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Explore words freely — no limits, no pressure.',
+                    tr('ft_browse_collections_subtitle'),
                     style: TextStyle(fontSize: 13, color: context.textMuted),
                   ),
                   const SizedBox(height: 12),
                   _buildBrowseCard(
                     context,
                     '🏆',
-                    '30 Days of Powerful Words',
-                    'IELTS vocabulary',
+                    tr('home_collection_30days_name'),
+                    tr('ft_30days_desc'),
                     const Color(0xFF6C63FF),
                     thirtyDaysCollection,
                   ),
@@ -286,8 +287,8 @@ class _FreeTimeScreenState extends State<FreeTimeScreen> {
                   _buildBrowseCard(
                     context,
                     '💡',
-                    '24 Vocabulary Challenge',
-                    'Idioms & phrases',
+                    tr('home_collection_challenge_name'),
+                    tr('ft_challenge_desc'),
                     const Color(0xFFFF6584),
                     vocabularyChallengeCollection,
                   ),
@@ -295,8 +296,8 @@ class _FreeTimeScreenState extends State<FreeTimeScreen> {
                   _buildBrowseCard(
                     context,
                     '🎯',
-                    'Word Mastery',
-                    'C1 & B2 collocations',
+                    tr('home_collection_mastery_name'),
+                    tr('ft_mastery_desc'),
                     const Color(0xFF2ECC71),
                     wordMasteryCollection,
                   ),
@@ -308,7 +309,7 @@ class _FreeTimeScreenState extends State<FreeTimeScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '⭐ Mastered Words',
+                          '⭐ ${tr('ft_mastered_words')}',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -316,7 +317,7 @@ class _FreeTimeScreenState extends State<FreeTimeScreen> {
                           ),
                         ),
                         Text(
-                          '${_masteredWords.length} words',
+                          tr('words_count').replaceAll('{n}', '${_masteredWords.length}'),
                           style: TextStyle(
                             fontSize: 13,
                             color: context.textMuted,
@@ -326,7 +327,7 @@ class _FreeTimeScreenState extends State<FreeTimeScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Light refresh — browse words you\'ve already mastered.',
+                      tr('ft_mastered_words_subtitle'),
                       style: TextStyle(fontSize: 13, color: context.textMuted),
                     ),
                     const SizedBox(height: 12),
@@ -395,7 +396,7 @@ class _FreeTimeScreenState extends State<FreeTimeScreen> {
                     if (_masteredWords.length > 10)
                       Center(
                         child: Text(
-                          '+ ${_masteredWords.length - 10} more mastered words',
+                          tr('ft_more_mastered_words').replaceAll('{n}', '${_masteredWords.length - 10}'),
                           style: TextStyle(
                             fontSize: 13,
                             color: context.textMuted,
@@ -415,7 +416,7 @@ class _FreeTimeScreenState extends State<FreeTimeScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              'No mastered words yet. Complete 4 review stages to master a word!',
+                              tr('ft_no_mastered_words'),
                               style: TextStyle(
                                 fontSize: 13,
                                 color: context.textMuted,

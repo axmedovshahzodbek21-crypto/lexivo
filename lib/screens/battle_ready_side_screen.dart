@@ -26,25 +26,25 @@ class BattleReadySideScreen extends StatelessWidget {
 
     final cards = [
       (
-        icon: '📖', label: tr('br_vocabulary'), count: content.vocab.length, unit: 'words',
+        icon: '📖', label: tr('br_vocabulary'), count: content.vocab.length, unitKey: 'words',
         onTap: () => Navigator.push(context, MaterialPageRoute(
           builder: (_) => BattleReadyVocabularyHubScreen(topic: topic, side: side, vocab: content.vocab),
         )),
       ),
       (
-        icon: '💬', label: tr('br_phrases'), count: content.phrases.length, unit: 'phrases',
+        icon: '💬', label: tr('br_phrases'), count: content.phrases.length, unitKey: 'br_unit_phrases',
         onTap: () => Navigator.push(context, MaterialPageRoute(
           builder: (_) => BattleReadyPhrasesScreen(topic: topic, side: side, phrases: content.phrases),
         )),
       ),
       (
-        icon: '🎭', label: tr('br_idioms'), count: content.idioms.length, unit: 'idioms',
+        icon: '🎭', label: tr('br_idioms'), count: content.idioms.length, unitKey: 'br_unit_idioms',
         onTap: () => Navigator.push(context, MaterialPageRoute(
           builder: (_) => BattleReadyIdiomsScreen(topic: topic, side: side, idioms: content.idioms),
         )),
       ),
       (
-        icon: '⚔️', label: tr('br_arguments'), count: content.arguments.length, unit: 'arguments',
+        icon: '⚔️', label: tr('br_arguments'), count: content.arguments.length, unitKey: 'br_unit_arguments',
         onTap: () => Navigator.push(context, MaterialPageRoute(
           builder: (_) => BattleReadyArgumentsScreen(topic: topic, side: side, arguments: content.arguments),
         )),
@@ -90,7 +90,7 @@ class BattleReadySideScreen extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(c.label, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: context.appText)),
                 const SizedBox(height: 2),
-                Text('${c.count} ${c.unit}', style: TextStyle(fontSize: 11, color: context.textMuted)),
+                Text('${c.count} ${tr(c.unitKey)}', style: TextStyle(fontSize: 11, color: context.textMuted)),
                 const SizedBox(height: 8),
                 Container(height: 3, width: 36, decoration: BoxDecoration(color: sideColor.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(2))),
               ],

@@ -86,7 +86,7 @@ class _BattleReadyVocabLearnScreenState extends State<BattleReadyVocabLearnScree
               child: ElevatedButton(
                 onPressed: (_revealed && _isLast) ? null : _next,
                 style: ElevatedButton.styleFrom(backgroundColor: widget.sideColor, foregroundColor: Colors.white),
-                child: Text(!_revealed ? 'Reveal meaning' : _isLast ? 'All words learned' : 'Next word'),
+                child: Text(!_revealed ? tr('br_reveal_meaning') : _isLast ? tr('br_all_words_learned') : tr('br_next_word')),
               ),
             ),
           ],

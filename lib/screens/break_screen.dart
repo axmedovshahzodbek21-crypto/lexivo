@@ -24,20 +24,21 @@ class _BreakOverlayState extends State<BreakOverlay>
   // notifyListeners() calls.
   bool _running = false;
 
-  final List<String> _tips = [
-    '👁 Look 20 feet away for 20 seconds.\nYour eyes need rest too.',
-    '🧘 Take 3 slow deep breaths.\nIn through nose, out through mouth.',
-    '💧 Drink some water.\nHydration boosts memory.',
-    '🙆 Stand up and stretch your neck.\nRoll shoulders back twice.',
-    '😊 You\'re doing great!\nConsistent study beats marathon sessions.',
-    '🧠 Your brain is consolidating\nwhat you just learned right now.',
-    '🌿 Look at something green or far away.\nReduces eye strain.',
-    '👐 Shake out your hands.\nRelease tension from typing.',
-  ];
+  late final List<String> _tips;
 
   @override
   void initState() {
     super.initState();
+    _tips = [
+      tr('break_tip_1'),
+      tr('break_tip_2'),
+      tr('break_tip_3'),
+      tr('break_tip_4'),
+      tr('break_tip_5'),
+      tr('break_tip_6'),
+      tr('break_tip_7'),
+      tr('break_tip_8'),
+    ];
     _breatheController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 4),
@@ -142,9 +143,9 @@ class _BreakContent extends StatelessWidget {
               ),
               const SizedBox(height: 32),
 
-              const Text(
-                'Break Time',
-                style: TextStyle(
+              Text(
+                tr('break_time_title'),
+                style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
@@ -168,7 +169,9 @@ class _BreakContent extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '🍅 ${service.pomodorosCompleted} Pomodoro${service.pomodorosCompleted != 1 ? 's' : ''} completed',
+                      tr('break_pomo_completed')
+                          .replaceAll('{n}', '${service.pomodorosCompleted}')
+                          .replaceAll('{s}', service.pomodorosCompleted != 1 ? 's' : ''),
                       style: const TextStyle(fontSize: 14, color: Colors.white60),
                     ),
                   ]);
@@ -217,9 +220,9 @@ class _BreakContent extends StatelessWidget {
                     ),
                     borderRadius: BorderRadius.circular(24),
                   ),
-                  child: const Text(
-                    'Skip Break →',
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                  child: Text(
+                    tr('break_skip_btn'),
+                    style: const TextStyle(color: Colors.white70, fontSize: 14),
                   ),
                 ),
               ),
@@ -289,7 +292,7 @@ class PomodoroTimerPill extends StatelessWidget {
           children: [
             const Text('🍅 ', style: TextStyle(fontSize: 24)),
             Text(
-              service.isWorking ? 'Focus Session' : 'Break Time',
+              service.isWorking ? tr('break_focus_session_title') : tr('break_time_title'),
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ],
@@ -307,7 +310,7 @@ class PomodoroTimerPill extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '${service.pomodorosCompleted} Pomodoros completed today',
+              tr('break_pomo_completed_today').replaceAll('{n}', '${service.pomodorosCompleted}'),
               style: TextStyle(color: context.textMuted),
             ),
           ],
@@ -318,9 +321,9 @@ class PomodoroTimerPill extends StatelessWidget {
               Navigator.pop(context);
               service.stop();
             },
-            child: const Text(
-              'Stop Session',
-              style: TextStyle(color: Colors.red),
+            child: Text(
+              tr('break_stop_session'),
+              style: const TextStyle(color: Colors.red),
             ),
           ),
           ElevatedButton(

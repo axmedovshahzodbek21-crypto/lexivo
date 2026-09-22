@@ -72,7 +72,7 @@ class _BattleReadyTopicScreenState extends State<BattleReadyTopicScreen> {
                     border: Border.all(color: _done ? context.successColor : context.border),
                   ),
                   child: Text(
-                    _done ? '✓ Done' : 'Mark as Done',
+                    _done ? tr('done_check') : tr('br_mark_as_done'),
                     style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _done ? Colors.white : context.textMuted),
                   ),
                 ),

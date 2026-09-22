@@ -24,7 +24,7 @@ Widget _xpHistoryChip(BuildContext context, int xp) {
             const Text('📅', style: TextStyle(fontSize: 11)),
             const SizedBox(width: 4),
             Text(
-              'XP history',
+              tr('xp_history_chip'),
               style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: context.primary),
             ),
           ],
@@ -197,7 +197,7 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'YOUR LEVEL',
+                tr('your_level_caps'),
                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.textMuted, letterSpacing: 1),
               ),
               const SizedBox(height: 4),
@@ -274,7 +274,7 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
                     children: [
                       Text(tr('master_level_reached'), style: TextStyle(fontWeight: FontWeight.bold, color: context.primary)),
                       const SizedBox(height: 2),
-                      Text("You've conquered all levels.", style: TextStyle(fontSize: 12, color: context.textMuted)),
+                      Text(tr('conquered_all_levels'), style: TextStyle(fontSize: 12, color: context.textMuted)),
                     ],
                   ),
                 ),
@@ -306,7 +306,7 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
             style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: context.primary),
           ),
           Text(
-            'to reach $nextName',
+            tr('to_reach_level').replaceAll('{name}', nextName),
             style: TextStyle(fontSize: 13, color: context.textMuted),
           ),
           const SizedBox(height: 12),
@@ -314,9 +314,9 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
           const SizedBox(height: 8),
           Row(
             children: [
-              Expanded(child: _miniStat(context, '${(_xpToNext / 10).ceil()}', 'words to learn')),
+              Expanded(child: _miniStat(context, '${(_xpToNext / 10).ceil()}', tr('words_to_learn_stat'))),
               Container(width: 1, height: 36, color: context.border),
-              Expanded(child: _miniStat(context, '${(_xpToNext / 7).ceil()}', 'Day 7 reviews')),
+              Expanded(child: _miniStat(context, '${(_xpToNext / 7).ceil()}', tr('day7_reviews_stat'))),
             ],
           ),
         ],
@@ -339,7 +339,7 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'XP TO REACH EACH LEVEL',
+          tr('xp_ladder_caps'),
           style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.textMuted, letterSpacing: 1),
         ),
         const SizedBox(height: 10),
@@ -410,13 +410,13 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
-                                    'You',
+                                    tr('you_badge'),
                                     style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: context.primary),
                                   ),
                                 ),
                               if (isFuture)
                                 Text(
-                                  isPeeked ? 'tap to close' : 'tap to preview',
+                                  isPeeked ? tr('tap_to_close') : tr('tap_to_preview'),
                                   style: TextStyle(fontSize: 10, color: context.textMuted),
                                 ),
                               if (isPast && _reachedDates[name] != null)
@@ -471,12 +471,12 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'To reach $name',
+                        tr('to_reach_level_title').replaceAll('{name}', name),
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.appText),
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        '${StorageService.displayXP(xpNeeded)} more XP',
+                        tr('more_xp_placeholder').replaceAll('{n}', StorageService.displayXP(xpNeeded)),
                         style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: context.primary),
                       ),
                       const SizedBox(height: 10),
@@ -486,7 +486,7 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
                             child: _peekStat(
                               context,
                               '${(xpNeeded / 20).ceil()}',
-                              'learn sessions',
+                              tr('learn_sessions_stat'),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -494,7 +494,7 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
                             child: _peekStat(
                               context,
                               '${(xpNeeded / 30).ceil()}',
-                              'quiz sessions',
+                              tr('quiz_sessions_stat'),
                             ),
                           ),
                         ],

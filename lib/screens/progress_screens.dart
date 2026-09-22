@@ -119,7 +119,7 @@ class _WordsLearnedScreenState extends State<WordsLearnedScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          '${_words.length} Words Learned',
+          tr('words_learned_header').replaceAll('{n}', '${_words.length}'),
           style: TextStyle(
             color: context.appText,
             fontWeight: FontWeight.bold,
@@ -151,7 +151,7 @@ class _WordsLearnedScreenState extends State<WordsLearnedScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Complete a flashcard session to\nstart tracking your progress.',
+                    tr('no_words_learned_sub'),
                     textAlign: TextAlign.center,
                     style: TextStyle(color: context.textMuted),
                   ),
@@ -268,7 +268,9 @@ class _CollectionTileState extends State<_CollectionTile>
                         ),
                       ),
                       Text(
-                        '${widget.totalWords} words • ${widget.units.length} units',
+                        tr('words_in_collection')
+                            .replaceAll('{n}', '${widget.totalWords}')
+                            .replaceAll('{units}', '${widget.units.length}'),
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.white70,
@@ -392,7 +394,7 @@ class _UnitTileState extends State<_UnitTile>
                           ),
                         ),
                         Text(
-                          '${widget.words.length} words learned',
+                          tr('words_learned_count').replaceAll('{n}', '${widget.words.length}'),
                           style: TextStyle(
                             fontSize: 12,
                             color: context.textMuted,
@@ -791,7 +793,7 @@ class _StreakCalendarScreenState extends State<StreakCalendarScreen> {
                   // Day-of-week headers
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: ['M','T','W','T','F','S','S'].map((d) =>
+                    children: List.generate(7, (i) => weekdayAbbr(i + 1)[0]).map((d) =>
                       SizedBox(width: 40, child: Text(d,
                           textAlign: TextAlign.center,
                           style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted)))
@@ -1076,7 +1078,7 @@ class _TaskCard extends StatelessWidget {
                 if (infoTitle != null) ...[
                   const SizedBox(width: 4),
                   GestureDetector(
-                    onTap: () => _showInfoDialog(context, emoji: label == 'Review' ? '🔁' : '✏️', title: infoTitle!, body: infoBody!, color: color),
+                    onTap: () => _showInfoDialog(context, emoji: color == _kSrsColor ? '🔁' : '✏️', title: infoTitle!, body: infoBody!, color: color),
                     child: Container(
                       width: 13, height: 13,
                       decoration: BoxDecoration(
@@ -1146,7 +1148,7 @@ class _MiniCalendar extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(10)),
                 child: Text(
-                  '$monthCount ${monthCount == 1 ? 'day' : 'days'}',
+                  '$monthCount ${monthCount == 1 ? tr('day') : tr('days')}',
                   style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
               ),
@@ -1155,7 +1157,7 @@ class _MiniCalendar extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: ['M','T','W','T','F','S','S'].map((d) =>
+            children: List.generate(7, (i) => weekdayAbbr(i + 1)[0]).map((d) =>
               SizedBox(width: 36, child: Text(d,
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 11, color: context.textMuted, fontWeight: FontWeight.bold)))
@@ -1382,9 +1384,9 @@ class _ReviewsDueScreenState extends State<ReviewsDueScreen> {
 
   String _timeEstimate(int wordCount) {
     final minutes = (wordCount * 20 / 60).ceil();
-    if (minutes <= 4) return 'Quick session ⚡ About $minutes min';
-    if (minutes <= 15) return 'Solid session 💪 About $minutes min';
-    if (minutes <= 30) return 'Deep session 🧠 About $minutes min';
+    if (minutes <= 4) return tr('quick_session').replaceAll('{n}', '$minutes');
+    if (minutes <= 15) return tr('solid_session').replaceAll('{n}', '$minutes');
+    if (minutes <= 30) return tr('deep_session').replaceAll('{n}', '$minutes');
     return '';
   }
 
@@ -1403,7 +1405,7 @@ class _ReviewsDueScreenState extends State<ReviewsDueScreen> {
           onPressed: () => Navigator.maybePop(context),
         ),
         title: Text(
-          '${_dueWords.length} Reviews Due',
+          tr('reviews_due_header').replaceAll('{n}', '${_dueWords.length}'),
           style: TextStyle(
             color: context.appText,
             fontWeight: FontWeight.bold,
@@ -1441,8 +1443,8 @@ class _ReviewsDueScreenState extends State<ReviewsDueScreen> {
                             ),
                             child: Text(
                               _dueWords.length > 50
-                                  ? 'Start Review (50 of ${_dueWords.length}) 🧠'
-                                  : 'Start Review (${_dueWords.length} words) 🧠',
+                                  ? tr('start_review_50').replaceAll('{n}', '${_dueWords.length}')
+                                  : tr('start_review_all').replaceAll('{n}', '${_dueWords.length}'),
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,

@@ -117,7 +117,7 @@ class _SignupScreenState extends State<SignupScreen> {
       // AuthException, so it fell through uncaught before this — the finally
       // block still stopped the spinner, but with no error message shown,
       // the button looked like it had silently done nothing.
-      if (mounted) setState(() => _error = 'Network error: $e');
+      if (mounted) setState(() => _error = tr('network_error').replaceAll('{error}', '$e'));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -170,7 +170,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 Text(tr('free_forever'), style: TextStyle(fontSize: 13, color: context.textMuted)),
                 const SizedBox(height: 32),
 
-                _AuthField(controller: _emailCtrl, label: tr('email'), hint: 'you@example.com', keyboardType: TextInputType.emailAddress),
+                _AuthField(controller: _emailCtrl, label: tr('email'), hint: tr('email_placeholder'), keyboardType: TextInputType.emailAddress),
                 const SizedBox(height: 12),
                 _AuthField(controller: _passwordCtrl, label: tr('password'), hint: tr('password_hint'), obscure: true),
                 if (_passwordCtrl.text.isNotEmpty) ...[

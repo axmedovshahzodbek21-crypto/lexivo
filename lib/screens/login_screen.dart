@@ -73,7 +73,7 @@ class _LoginScreenState extends State<LoginScreen> {
       // AuthException, so it fell through uncaught before this — the finally
       // block still stopped the spinner, but with no error message shown,
       // the button looked like it had silently done nothing.
-      if (mounted) setState(() => _error = 'Network error: $e');
+      if (mounted) setState(() => _error = tr('network_error').replaceAll('{error}', '$e'));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -105,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } on AuthException catch (e) {
       setState(() => _error = e.message);
     } catch (e) {
-      setState(() => _error = 'Google error: $e');
+      setState(() => _error = tr('google_error').replaceAll('{error}', '$e'));
     } finally {
       if (mounted) setState(() => _googleLoading = false);
     }
@@ -275,7 +275,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ]),
                 const SizedBox(height: 20),
 
-                _AuthField(controller: _emailCtrl, label: tr('email'), hint: 'you@example.com', keyboardType: TextInputType.emailAddress),
+                _AuthField(controller: _emailCtrl, label: tr('email'), hint: tr('email_placeholder'), keyboardType: TextInputType.emailAddress),
                 const SizedBox(height: 12),
                 _AuthField(controller: _passwordCtrl, label: tr('password'), hint: '••••••••', obscure: true, onSubmit: _signIn),
                 Align(

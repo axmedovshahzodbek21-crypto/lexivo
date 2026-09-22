@@ -153,18 +153,18 @@ class _SearchScreenState extends State<SearchScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'DISCOVER',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF8B5CF6), letterSpacing: 1.2),
+                  Text(
+                    tr('search_discover_label'),
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF8B5CF6), letterSpacing: 1.2),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Search your words',
+                    tr('search_words_title'),
                     style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: context.appText, height: 1.1),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Type a word, translation, or definition',
+                    tr('search_words_subtitle'),
                     style: TextStyle(fontSize: 14, color: context.textMuted),
                   ),
                   const SizedBox(height: 48),
@@ -420,7 +420,7 @@ class WordDetailScreen extends StatelessWidget {
             // Examples
             _buildExampleCard(
               context,
-              '1 • Medium',
+              tr('word_example_n_medium').replaceAll('{n}', '1'),
               word.example1,
               word.example1Translation,
               color,
@@ -428,7 +428,7 @@ class WordDetailScreen extends StatelessWidget {
             const SizedBox(height: 12),
             _buildExampleCard(
               context,
-              '2 • Medium',
+              tr('word_example_n_medium').replaceAll('{n}', '2'),
               word.example2,
               word.example2Translation,
               color,
@@ -436,7 +436,7 @@ class WordDetailScreen extends StatelessWidget {
             const SizedBox(height: 12),
             _buildExampleCard(
               context,
-              '3 • Medium',
+              tr('word_example_n_medium').replaceAll('{n}', '3'),
               word.example3,
               word.example3Translation,
               color,
@@ -494,7 +494,7 @@ class WordDetailScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              'Example $label',
+              tr('word_example_label').replaceAll('{label}', label),
               style: TextStyle(
                 color: color,
                 fontWeight: FontWeight.bold,

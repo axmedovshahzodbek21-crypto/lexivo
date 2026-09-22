@@ -13,6 +13,24 @@ import 'story_reader_screen.dart';
 import 'matching_screen.dart';
 import '../services/supabase_service.dart';
 
+// The *_collection.dart / word_data.dart files ship only an English
+// description — this overrides it per UI language for the known curated
+// collections, falling back to the raw data description (via the null
+// return) for anything else (custom/imported collections have no
+// translated copy to fall back to).
+String? _cefrDescription(String collectionName) {
+  switch (collectionName) {
+    case 'A1': return '${tr('level_a1_name')} — ${tr('level_a1_description')}';
+    case 'A2': return '${tr('level_a2_name')} — ${tr('level_a2_description')}';
+    case 'B1': return '${tr('level_b1_name')} — ${tr('level_b1_description')}';
+    case 'Advanced': return '${tr('advanced_levels_range')} — ${tr('advanced_description')}';
+    case '30 Days of Powerful Words': return tr('home_collection_30days_desc');
+    case '24 Vocabulary Challenge': return tr('home_collection_challenge_desc');
+    case 'Word Mastery': return tr('home_collection_mastery_desc');
+    default: return null;
+  }
+}
+
 class CollectionsScreen extends StatefulWidget {
   final String userProfile;
   final WordCollection collection;
@@ -202,7 +220,7 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
                                       shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 4)]),
                                   ),
                                   const SizedBox(height: 2),
-                                  Text(widget.collection.description,
+                                  Text(_cefrDescription(widget.collection.name) ?? widget.collection.description,
                                     style: const TextStyle(fontSize: 12, color: Colors.white70)),
                                 ],
                               ),
@@ -359,14 +377,22 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
                   ],
                 ),
                 const SizedBox(height: 5),
-                Expanded(
-                  child: Text(
-                    day.topic,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white, height: 1.3),
-                  ),
-                ),
+                // Some collections (word_data.dart) give units real topics
+                // like "Ageing Population" — genuine content, shown as-is.
+                // Others (a1/a2/b1/advanced_collection.dart) just set topic
+                // to the literal string "Unit N", which would duplicate the
+                // badge above now that it's localized, so it's skipped here.
+                if (!RegExp(r'^Unit \d+$').hasMatch(day.topic))
+                  Expanded(
+                    child: Text(
+                      day.topic,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white, height: 1.3),
+                    ),
+                  )
+                else
+                  const Spacer(),
                 const SizedBox(height: 4),
                 Row(
                   children: [
@@ -378,7 +404,7 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          '$wordCount w',
+                          '$wordCount ${tr('word_count_abbr')}',
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700),
                         ),
@@ -1249,9 +1275,11 @@ class _MasteryHeatmapSectionState extends State<_MasteryHeatmapSection> {
 
           if (drillDay != null) ...[
             // ── Per-word drill-down ──
-            Text(tr('heatmap_unit_topic')
-                .replaceFirst('{n}', '${drillDay.dayNumber}')
-                .replaceFirst('{topic}', drillDay.topic),
+            Text(RegExp(r'^Unit \d+$').hasMatch(drillDay.topic)
+                ? tr('unit_badge_label').replaceFirst('{n}', '${drillDay.dayNumber}')
+                : tr('heatmap_unit_topic')
+                    .replaceFirst('{n}', '${drillDay.dayNumber}')
+                    .replaceFirst('{topic}', drillDay.topic),
               style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: context.textMuted)),
             const SizedBox(height: 10),
             ...drillDay.words.map((w) {

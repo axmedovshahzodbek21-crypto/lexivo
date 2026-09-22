@@ -10,6 +10,17 @@ import '../widgets/not_enough_words_screen.dart';
 
 const _batchSize = 6;
 
+const _localStrings = <String, Map<String, String>>{
+  'mistake_word': {'en': 'mistake', 'uz': 'xato', 'ru': 'ошибка'},
+  'mistakes_word': {'en': 'mistakes', 'uz': 'xato', 'ru': 'ошибок'},
+  'matched_word': {'en': 'matched', 'uz': 'moslashtirildi', 'ru': 'совпало'},
+};
+
+String _ltr(String key) {
+  final lang = appLangNotifier.value;
+  return _localStrings[key]?[lang] ?? _localStrings[key]!['en']!;
+}
+
 List<WordItem> _shuffle(List<WordItem> list) {
   final a = [...list];
   final rng = Random();
@@ -404,7 +415,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                '${_fmt(_elapsed.value)} · $_mistakes ${_mistakes == 1 ? 'mistake' : 'mistakes'}',
+                '${_fmt(_elapsed.value)} · $_mistakes ${_mistakes == 1 ? _ltr('mistake_word') : _ltr('mistakes_word')}',
                 style: TextStyle(color: context.textMuted),
               ),
               const SizedBox(height: 32),
@@ -484,7 +495,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
                   Text('✗ $_mistakes',
                       style: TextStyle(fontSize: 13, color: context.dangerColor, fontWeight: FontWeight.bold)),
                 const Spacer(),
-                Text('${_matched.length}/${_roundWords.length} matched',
+                Text('${_matched.length}/${_roundWords.length} ${_ltr('matched_word')}',
                     style: TextStyle(fontSize: 12, color: context.textMuted)),
               ],
             ),

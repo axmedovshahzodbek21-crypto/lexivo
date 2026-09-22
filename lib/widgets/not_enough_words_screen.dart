@@ -2,6 +2,25 @@ import 'package:flutter/material.dart';
 import '../l10n.dart';
 import '../app_theme.dart';
 
+const _localStrings = <String, Map<String, String>>{
+  'no_words_available': {
+    'en': 'No words available to study.',
+    'uz': 'O\'rganish uchun so\'z yo\'q.',
+    'ru': 'Нет слов для изучения.',
+  },
+  'need_at_least': {'en': 'Need at least', 'uz': 'Kamida', 'ru': 'Нужно минимум'},
+  'words_to_play_suffix': {
+    'en': 'words to play.',
+    'uz': 'so\'z kerak.',
+    'ru': 'слов для игры.',
+  },
+};
+
+String _ltr(String key) {
+  final lang = appLangNotifier.value;
+  return _localStrings[key]?[lang] ?? _localStrings[key]!['en']!;
+}
+
 // Shared empty/undersized-word-list guard for the four study modes (Learn,
 // Flashcards, Quiz, Matching). Previously each handled this differently:
 // Quiz crashed outright (late fields left uninitialized, then indexed into
@@ -39,8 +58,8 @@ class NotEnoughWordsScreen extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 minWords <= 1
-                    ? 'No words available to study.'
-                    : 'Need at least $minWords words to play.',
+                    ? _ltr('no_words_available')
+                    : '${_ltr('need_at_least')} $minWords ${_ltr('words_to_play_suffix')}',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: context.textMuted),
               ),

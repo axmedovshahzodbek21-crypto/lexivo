@@ -3,6 +3,17 @@ import '../app_theme.dart';
 import '../data/grammar_tips_data.dart';
 import '../l10n.dart';
 
+const _localStrings = <String, Map<String, String>>{
+  'all': {'en': 'All', 'uz': 'Barchasi', 'ru': 'Все'},
+  'tips_word': {'en': 'tips', 'uz': 'maslahat', 'ru': 'советов'},
+  'categories_word': {'en': 'categories', 'uz': 'toifa', 'ru': 'категорий'},
+};
+
+String _ltr(String key) {
+  final lang = appLangNotifier.value;
+  return _localStrings[key]?[lang] ?? _localStrings[key]!['en']!;
+}
+
 /// Port of lexivo-web's /grammar-tips page: a searchable, category-filtered
 /// list of expandable grammar/vocabulary/writing tips. Reached from the home
 /// drawer.
@@ -65,7 +76,7 @@ class _GrammarTipsScreenState extends State<GrammarTipsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${grammarTips.length} tips · ${grammarTipCategories.length} categories',
+                  '${grammarTips.length} ${_ltr('tips_word')} · ${grammarTipCategories.length} ${_ltr('categories_word')}',
                   style: TextStyle(fontSize: 12, color: context.textMuted),
                 ),
                 const SizedBox(height: 10),
@@ -119,7 +130,7 @@ class _GrammarTipsScreenState extends State<GrammarTipsScreen> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Text(
-                            cat,
+                            cat == _all ? _ltr('all') : cat,
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,

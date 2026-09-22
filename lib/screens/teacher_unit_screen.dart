@@ -7,6 +7,16 @@ import '../app_theme.dart';
 import '../ai_import_samples.dart';
 import '../services/ai_import.dart';
 
+const _localStrings = <String, Map<String, String>>{
+  'select': {'en': 'Select', 'uz': 'Tanlash', 'ru': 'Выбрать'},
+  'words_cap': {'en': 'Words', 'uz': 'So\'zlar', 'ru': 'Слова'},
+};
+
+String _ltr(String key) {
+  final lang = appLangNotifier.value;
+  return _localStrings[key]?[lang] ?? _localStrings[key]!['en']!;
+}
+
 class _Word {
   final String id, word, translation;
   final String? definition, partOfSpeech, pronunciation, definitionUz;
@@ -392,7 +402,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
           if (!_loading && _words.isNotEmpty && _tabs.index == 0)
             TextButton(
               onPressed: _toggleSelectMode,
-              child: Text(_selectMode ? 'Cancel' : 'Select',
+              child: Text(_selectMode ? tr('cancel') : _ltr('select'),
                 style: TextStyle(color: context.primary, fontWeight: FontWeight.w600)),
             ),
         ],
@@ -401,9 +411,9 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
           labelColor: context.primary,
           unselectedLabelColor: context.textMuted,
           indicatorColor: context.primary,
-          tabs: const [
-            Tab(text: '📖 Words'),
-            Tab(text: '🤖 Add Words'),
+          tabs: [
+            Tab(text: '📖 ${_ltr('words_cap')}'),
+            Tab(text: '🤖 ${tr('add_words')}'),
           ],
         ),
       ),

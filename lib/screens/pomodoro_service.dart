@@ -189,10 +189,14 @@ class PomodoroService extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> _sendNotification(String title, String body) async {
+    // Android caches a notification channel's name/description after its
+    // first creation on a device, so these can't meaningfully follow the
+    // in-app language toggle later — set once in Uzbek since that's the
+    // app's interface language.
     const androidDetails = AndroidNotificationDetails(
       'pomodoro_channel',
-      'Pomodoro Timer',
-      channelDescription: 'Pomodoro timer notifications',
+      'Pomodoro taymeri',
+      channelDescription: 'Pomodoro taymeri bildirishnomalari',
       importance: Importance.high,
       priority: Priority.high,
     );

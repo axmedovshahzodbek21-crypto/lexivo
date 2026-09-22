@@ -7,6 +7,15 @@ import '../app_theme.dart';
 
 const _kBreakColor = Color(0xFF10B981);
 
+const _localStrings = <String, Map<String, String>>{
+  'min_unit': {'en': 'min', 'uz': 'daq', 'ru': 'мин'},
+};
+
+String _ltr(String key) {
+  final lang = appLangNotifier.value;
+  return _localStrings[key]?[lang] ?? _localStrings[key]!['en']!;
+}
+
 // Pomodoro session length bounds/defaults for this setup screen, named so
 // they aren't scattered as bare numeric literals across initial state and
 // the custom-duration sliders below.
@@ -564,7 +573,7 @@ class _SliderRow extends StatelessWidget {
         SizedBox(
           width: 48,
           child: Text(
-            '${value.round()} min',
+            '${value.round()} ${_ltr('min_unit')}',
             textAlign: TextAlign.right,
             style: TextStyle(
               fontSize: 12,

@@ -10,6 +10,15 @@ import 'library_unit_study_screen.dart';
 import '../data/word_data.dart';
 import '../data/reading_data.dart';
 
+const _localStrings = <String, Map<String, String>>{
+  'day_cap': {'en': 'Day', 'uz': 'Kun', 'ru': 'День'},
+};
+
+String _ltr(String key) {
+  final lang = appLangNotifier.value;
+  return _localStrings[key]?[lang] ?? _localStrings[key]!['en']!;
+}
+
 List<Color> _hwGradColors(String id) {
   const grads = <List<Color>>[
     [Color(0xFF6366F1), Color(0xFF8B5CF6)],
@@ -404,12 +413,12 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
           if (col == null) {
             debugPrint('[ClassHomeworkTab] homework ${h['id']} references unknown collection "$name"');
           }
-          final day = col?.days.firstWhere((d) => d.dayNumber == dayNum, orElse: () => WordDay(dayNumber: dayNum, topic: 'Day $dayNum', words: []));
+          final day = col?.days.firstWhere((d) => d.dayNumber == dayNum, orElse: () => WordDay(dayNumber: dayNum, topic: '${_ltr('day_cap')} $dayNum', words: []));
           collHwItems.add(_CollHW(
             homeworkId: h['id'] as String,
             collectionName: name,
             dayNumber: dayNum,
-            topic: day?.topic ?? 'Day $dayNum',
+            topic: day?.topic ?? '${_ltr('day_cap')} $dayNum',
             wordCount: day?.words.length ?? 0,
             hwModes: List<String>.from(h['modes'] as List? ?? []),
             hwDue: h['due_date'] as String?,

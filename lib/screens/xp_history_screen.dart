@@ -16,6 +16,7 @@ const _localStrings = <String, Map<String, String>>{
     'uz': 'XP olish uchun o\'quv sessiyalarini tugating',
     'ru': 'Завершайте учебные сессии, чтобы заработать XP',
   },
+  'yesterday': {'en': 'Yesterday', 'uz': 'Kecha', 'ru': 'Вчера'},
 };
 
 String _ltr(String key) {
@@ -89,16 +90,12 @@ class _XpHistoryScreenState extends State<XpHistoryScreen> {
     final yesterday = today.subtract(const Duration(days: 1));
     final yesterdayKey =
         '${yesterday.year}-${yesterday.month.toString().padLeft(2, '0')}-${yesterday.day.toString().padLeft(2, '0')}';
-    if (dateKey == todayKey) return 'Today';
-    if (dateKey == yesterdayKey) return 'Yesterday';
+    if (dateKey == todayKey) return l10n.tr('today');
+    if (dateKey == yesterdayKey) return _ltr('yesterday');
     final parts = dateKey.split('-');
     final d = DateTime(
         int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-    return '${months[d.month - 1]} ${d.day}';
+    return '${l10n.monthShortName(d.month)} ${d.day}';
   }
 
   String _icon(String reason) {

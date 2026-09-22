@@ -141,7 +141,7 @@ class _ImportScreenState extends State<ImportScreen> {
   }
 
   Future<void> _addWords() async {
-    final name = _collectionCtrl.text.trim().isEmpty ? 'My Words' : _collectionCtrl.text.trim();
+    final name = _collectionCtrl.text.trim().isEmpty ? tr('more_my_words') : _collectionCtrl.text.trim();
     setState(() => _adding = true);
     try {
       await StorageService.addImportedWords(_parsed, name, folderName: widget.prefilledFolder);
@@ -201,7 +201,7 @@ class _ImportScreenState extends State<ImportScreen> {
                 tr('add_words_to_collection_format')
                   .replaceFirst('{n}', '${_parsed.length}')
                   .replaceFirst('{word}', tr(_parsed.length == 1 ? 'word' : 'words'))
-                  .replaceFirst('{collection}', _collectionCtrl.text.trim().isEmpty ? 'My Words' : _collectionCtrl.text.trim()),
+                  .replaceFirst('{collection}', _collectionCtrl.text.trim().isEmpty ? tr('more_my_words') : _collectionCtrl.text.trim()),
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               ),
         ),

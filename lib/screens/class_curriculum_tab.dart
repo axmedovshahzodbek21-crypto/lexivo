@@ -12,6 +12,15 @@ import '../data/a2_collection.dart';
 import '../data/b1_collection.dart';
 import 'class_home_screen.dart';
 
+const _localStrings = <String, Map<String, String>>{
+  'day_cap': {'en': 'Day', 'uz': 'Kun', 'ru': 'День'},
+};
+
+String _ltr(String key) {
+  final lang = appLangNotifier.value;
+  return _localStrings[key]?[lang] ?? _localStrings[key]!['en']!;
+}
+
 // ── Models ────────────────────────────────────────────────────────────────────
 
 class _AssignedFolder {
@@ -209,13 +218,13 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
         if (passageId != null) {
           ReadingPassage? found;
           for (final p in readingPassages) { if (p.id == passageId) { found = p; break; } }
-          unitName = found?.title ?? 'Reading Passage';
+          unitName = found?.title ?? tr('reading_passage_fallback');
         } else if (collName != null) {
-          unitName = '$collName · Day $dayNum';
+          unitName = '$collName · ${_ltr('day_cap')} $dayNum';
         } else if (unitId != null) {
-          unitName = (tuMap?['name'] as String?) ?? 'Unit';
+          unitName = (tuMap?['name'] as String?) ?? tr('unit');
         } else {
-          unitName = (cwMap?['name'] as String?) ?? 'Unit';
+          unitName = (cwMap?['name'] as String?) ?? tr('unit');
         }
         // The topic was never persisted for collection-day homework — only
         // known transiently in _pickCollectionDay's sheet — so it's
@@ -623,7 +632,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
   Future<void> _showAssignCollectionHomework(String userId, String collName, WordDay day,
       {Set<String> preAssignedStudentIds = const {}}) {
     return _showAssignHomeworkSheet(
-      subtitle: '📗 $collName · Day ${day.dayNumber}: ${day.topic}  ·  ${day.words.length} words',
+      subtitle: '📗 $collName · ${_ltr('day_cap')} ${day.dayNumber}: ${day.topic}  ·  ${day.words.length} ${tr('words')}',
       buttonColor: const Color(0xFF22C55E),
       preAssignedStudentIds: preAssignedStudentIds,
       buildInsert: (modes, assignedTo, selectedStudents, dueDate) => {
@@ -814,7 +823,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
     if (fullyAssigned && existing.isNotEmpty) { _showHomeworkDetail(existing.first); return; }
 
     await _showAssignHomeworkSheet(
-      subtitle: '${unit.isClassWords ? '📝' : '📖'} ${unit.name}  ·  ${unit.wordCount} words',
+      subtitle: '${unit.isClassWords ? '📝' : '📖'} ${unit.name}  ·  ${unit.wordCount} ${tr('words')}',
       buttonColor: context.primary,
       preAssignedStudentIds: coverage,
       buildInsert: (modes, assignedTo, selectedStudents, dueDate) => {

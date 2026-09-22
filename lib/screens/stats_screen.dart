@@ -9,6 +9,36 @@ import 'achievements.dart';
 import 'xp_level_sheet.dart';
 import '../l10n.dart';
 
+// A handful of strings this screen needs that aren't in the shared l10n.dart
+// map — kept as a small local table, mirroring xp_history_screen.dart's
+// _localStrings pattern.
+const _localStrings = <String, Map<String, String>>{
+  'yesterday_short': {'en': 'Yest', 'uz': 'Kech', 'ru': 'Вчер'},
+  'xp_total_suffix': {'en': 'XP total', 'uz': 'jami XP', 'ru': 'всего XP'},
+  'xp_today_suffix': {'en': 'XP today', 'uz': 'bugungi XP', 'ru': 'XP сегодня'},
+  'xp_to_next_level_suffix': {
+    'en': 'XP to next level',
+    'uz': 'keyingi darajagacha XP',
+    'ru': 'XP до след. уровня',
+  },
+  'total_words_in_queue': {
+    'en': 'Total words in queue',
+    'uz': 'Navbatdagi so\'zlar soni',
+    'ru': 'Всего слов в очереди',
+  },
+  'track_learning_milestones': {
+    'en': 'Track your learning milestones',
+    'uz': 'O\'qish yutuqlaringizni kuzating',
+    'ru': 'Отслеживайте свои учебные достижения',
+  },
+  'days_active_suffix': {'en': 'days active', 'uz': 'faol kun', 'ru': 'активных дней'},
+};
+
+String _ltr(String key) {
+  final lang = appLangNotifier.value;
+  return _localStrings[key]?[lang] ?? _localStrings[key]!['en']!;
+}
+
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
 
@@ -109,8 +139,8 @@ class _StatsScreenState extends State<StatsScreen> {
   }
 
   String _dayLabel(int daysAgo) {
-    if (daysAgo == 0) return 'Today';
-    if (daysAgo == 1) return 'Yes';
+    if (daysAgo == 0) return tr('today');
+    if (daysAgo == 1) return _ltr('yesterday_short');
     final date = streakAdjustedNow().subtract(Duration(days: daysAgo));
     return weekdayAbbr(date.weekday);
   }
@@ -204,7 +234,7 @@ class _StatsScreenState extends State<StatsScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  '${StorageService.displayXP(_totalXP)} XP total',
+                                  '${StorageService.displayXP(_totalXP)} ${_ltr('xp_total_suffix')}',
                                   style: const TextStyle(
                                     fontSize: 13,
                                     color: Colors.white70,
@@ -222,7 +252,7 @@ class _StatsScreenState extends State<StatsScreen> {
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
-                                      '+${StorageService.displayXP(_todayXP)} XP today',
+                                      '+${StorageService.displayXP(_todayXP)} ${_ltr('xp_today_suffix')}',
                                       style: const TextStyle(
                                         fontSize: 12,
                                         color: Colors.white,
@@ -258,7 +288,7 @@ class _StatsScreenState extends State<StatsScreen> {
                                   ),
                                 ),
                                 Text(
-                                  '${StorageService.displayXP(nextLevelXP - _totalXP)} XP to next level',
+                                  '${StorageService.displayXP(nextLevelXP - _totalXP)} ${_ltr('xp_to_next_level_suffix')}',
                                   style: const TextStyle(
                                     fontSize: 11,
                                     color: Colors.white70,
@@ -276,13 +306,13 @@ class _StatsScreenState extends State<StatsScreen> {
                       if (_isDesktop)
                         Row(
                           children: [
-                            Expanded(child: _buildStatTile(context, '📚', '$_totalWords', 'Words Learned', const Color(0xFF6C63FF))),
+                            Expanded(child: _buildStatTile(context, '📚', '$_totalWords', tr('words_learned'), const Color(0xFF6C63FF))),
                             const SizedBox(width: 12),
-                            Expanded(child: _buildStatTile(context, '🔥', '$_streak', 'Day Streak', const Color(0xFFFF6B35))),
+                            Expanded(child: _buildStatTile(context, '🔥', '$_streak', tr('day_streak'), const Color(0xFFFF6B35))),
                             const SizedBox(width: 12),
-                            Expanded(child: _buildStatTile(context, '📅', '$_totalDays', 'Days Studied', const Color(0xFF2ECC71))),
+                            Expanded(child: _buildStatTile(context, '📅', '$_totalDays', tr('days_studied'), const Color(0xFF2ECC71))),
                             const SizedBox(width: 12),
-                            Expanded(child: _buildStatTile(context, '🔄', '$_srsTotal', 'In Review Queue', const Color(0xFFFF6584))),
+                            Expanded(child: _buildStatTile(context, '🔄', '$_srsTotal', tr('in_review_queue'), const Color(0xFFFF6584))),
                           ],
                         )
                       else
@@ -290,17 +320,17 @@ class _StatsScreenState extends State<StatsScreen> {
                           children: [
                             Row(
                               children: [
-                                Expanded(child: _buildStatTile(context, '📚', '$_totalWords', 'Words Learned', const Color(0xFF6C63FF))),
+                                Expanded(child: _buildStatTile(context, '📚', '$_totalWords', tr('words_learned'), const Color(0xFF6C63FF))),
                                 const SizedBox(width: 12),
-                                Expanded(child: _buildStatTile(context, '🔥', '$_streak', 'Day Streak', const Color(0xFFFF6B35))),
+                                Expanded(child: _buildStatTile(context, '🔥', '$_streak', tr('day_streak'), const Color(0xFFFF6B35))),
                               ],
                             ),
                             const SizedBox(height: 12),
                             Row(
                               children: [
-                                Expanded(child: _buildStatTile(context, '📅', '$_totalDays', 'Days Studied', const Color(0xFF2ECC71))),
+                                Expanded(child: _buildStatTile(context, '📅', '$_totalDays', tr('days_studied'), const Color(0xFF2ECC71))),
                                 const SizedBox(width: 12),
-                                Expanded(child: _buildStatTile(context, '🔄', '$_srsTotal', 'In Review Queue', const Color(0xFFFF6584))),
+                                Expanded(child: _buildStatTile(context, '🔄', '$_srsTotal', tr('in_review_queue'), const Color(0xFFFF6584))),
                               ],
                             ),
                           ],
@@ -414,7 +444,7 @@ class _StatsScreenState extends State<StatsScreen> {
                                       ),
                                     ),
                                     Text(
-                                      'Track your learning milestones',
+                                      _ltr('track_learning_milestones'),
                                       style: const TextStyle(
                                         fontSize: 12,
                                         color: Colors.white60,
@@ -484,7 +514,7 @@ class _StatsScreenState extends State<StatsScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '$studiedThisWeek / 7 days active',
+                '$studiedThisWeek / 7 ${_ltr('days_active_suffix')}',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: context.appText,
@@ -567,12 +597,12 @@ class _StatsScreenState extends State<StatsScreen> {
             _buildSectionHeader(context, tr('review_queue')),
             const SizedBox(height: 4),
           ],
-          _buildInfoRow(context, '🔄', 'Total words in queue', '$_srsTotal'),
+          _buildInfoRow(context, '🔄', _ltr('total_words_in_queue'), '$_srsTotal'),
           Divider(height: 20, color: context.border),
-          _buildInfoRow(context, '📅', 'Due today', '$_srsDue',
+          _buildInfoRow(context, '📅', tr('due_today'), '$_srsDue',
               valueColor: _srsDue > 0 ? Colors.red : Colors.green),
           Divider(height: 20, color: context.border),
-          _buildInfoRow(context, '✅', 'Not due yet', '${_srsTotal - _srsDue}'),
+          _buildInfoRow(context, '✅', tr('not_due_yet'), '${_srsTotal - _srsDue}'),
         ],
       ),
     );
@@ -596,7 +626,7 @@ class _StatsScreenState extends State<StatsScreen> {
           _buildInfoRow(
             context,
             '📖',
-            'Words per study day',
+            tr('words_per_study_day'),
             _totalDays > 0
                 ? (_totalWords / _totalDays).toStringAsFixed(1)
                 : '—',
@@ -605,7 +635,7 @@ class _StatsScreenState extends State<StatsScreen> {
           _buildInfoRow(
             context,
             '⚡',
-            'XP per study day',
+            tr('xp_per_study_day'),
             _totalDays > 0 ? StorageService.displayXP((_totalXP / _totalDays).round()) : '—',
           ),
         ],

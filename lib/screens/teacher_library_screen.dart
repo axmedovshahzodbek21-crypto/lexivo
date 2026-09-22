@@ -5,6 +5,17 @@ import '../app_theme.dart';
 import 'teacher_folder_screen.dart';
 import '../main.dart';
 
+const _localStrings = <String, Map<String, String>>{
+  'folder_caps': {'en': 'FOLDER', 'uz': 'PAPKA', 'ru': 'ПАПКА'},
+  'unit_caps': {'en': 'UNIT', 'uz': 'BO\'LIM', 'ru': 'ЮНИТ'},
+  'words_caps': {'en': 'WORDS', 'uz': 'SO\'ZLAR', 'ru': 'СЛОВА'},
+};
+
+String _ltr(String key) {
+  final lang = appLangNotifier.value;
+  return _localStrings[key]?[lang] ?? _localStrings[key]!['en']!;
+}
+
 class _Folder {
   final String id, name;
   final int unitCount;
@@ -426,11 +437,11 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
           crossAxisAlignment: WrapCrossAlignment.center,
           spacing: 8, runSpacing: 8,
           children: [
-            _exampleChip('FOLDER', '📁 Vocabulary 101', _cardColors[0]),
+            _exampleChip(_ltr('folder_caps'), '📁 Vocabulary 101', _cardColors[0]),
             Icon(Icons.arrow_forward, size: 14, color: context.textMuted),
-            _exampleChip('UNIT', '📖 Unit 1', _cardColors[1]),
+            _exampleChip(_ltr('unit_caps'), '📖 Unit 1', _cardColors[1]),
             Icon(Icons.arrow_forward, size: 14, color: context.textMuted),
-            _exampleChip('WORDS', 'apple · book · water', null),
+            _exampleChip(_ltr('words_caps'), 'apple · book · water', null),
           ],
         ),
       ]),

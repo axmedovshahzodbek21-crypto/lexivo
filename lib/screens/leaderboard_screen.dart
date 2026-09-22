@@ -6,6 +6,19 @@ import '../app_theme.dart';
 import '../date_utils.dart';
 import '../l10n.dart';
 
+const _localStrings = <String, Map<String, String>>{
+  'could_not_load_leaderboard': {
+    'en': 'Could not load leaderboard',
+    'uz': 'Reyting jadvalini yuklab bo\'lmadi',
+    'ru': 'Не удалось загрузить таблицу лидеров',
+  },
+};
+
+String _ltr(String key) {
+  final lang = appLangNotifier.value;
+  return _localStrings[key]?[lang] ?? _localStrings[key]!['en']!;
+}
+
 class LeaderboardEntry {
   final String userId;
   final String name;
@@ -145,7 +158,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       final list = (res as List).map((e) => LeaderboardEntry.fromMap(Map<String, dynamic>.from(e as Map))).toList();
       if (mounted) setState(() { _entries = list; _loading = false; });
     } catch (e) {
-      if (mounted) setState(() { _error = 'Could not load leaderboard'; _loading = false; });
+      if (mounted) setState(() { _error = _ltr('could_not_load_leaderboard'); _loading = false; });
     }
   }
 

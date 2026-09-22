@@ -186,7 +186,7 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> with Naviga
                       _buildLibraryBanner(),
                       const SizedBox(height: 16),
                       if (_myClasses.isEmpty)
-                        _emptyCard('📋', _loadError ? "Couldn't load — pull to retry" : tr('no_classes_yet'))
+                        _emptyCard('📋', _loadError ? tr('couldnt_load_pull_retry') : tr('no_classes_yet'))
                       else
                         GridView.builder(
                           shrinkWrap: true,

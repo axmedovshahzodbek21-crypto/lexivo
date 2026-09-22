@@ -967,7 +967,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
             style: ElevatedButton.styleFrom(backgroundColor: context.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: const EdgeInsets.symmetric(vertical: 13)),
             child: _importing
               ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-              : Text('${tr('import_all')} (${_parsed.length} words)', style: const TextStyle(fontWeight: FontWeight.bold)),
+              : Text('${tr('import_all')} (${_parsed.length} ${tr('words')})', style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
         ),
       ],
@@ -980,9 +980,13 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
 
   // _langs values stay English identifiers (they're fed to buildAiImportPrompt,
   // which expects plain English language names for the AI prompt) — only the
-  // on-screen label is localized, and only for the 3 languages l10n.dart
-  // already has lang_* keys for; the rest fall back to their English name.
-  static const _langKeys = {'English': 'lang_en', 'Uzbek': 'lang_uz', 'Russian': 'lang_ru'};
+  // on-screen label is localized.
+  static const _langKeys = {
+    'English': 'lang_en', 'Uzbek': 'lang_uz', 'Russian': 'lang_ru',
+    'Turkish': 'lang_tr', 'German': 'lang_de', 'French': 'lang_fr',
+    'Spanish': 'lang_es', 'Korean': 'lang_ko', 'Japanese': 'lang_ja',
+    'Chinese': 'lang_zh', 'Arabic': 'lang_ar',
+  };
   String _langLabel(String lang) {
     final key = _langKeys[lang];
     return key == null ? lang : tr(key);

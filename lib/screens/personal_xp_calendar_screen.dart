@@ -11,6 +11,37 @@ const _reasonIcons = <String, String>{
 String _displayXP(int raw) =>
     (raw / 10).toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '');
 
+// A handful of strings this screen needs that aren't in the shared l10n.dart
+// map — kept as a small local table, mirroring xp_history_screen.dart's
+// _localStrings pattern.
+const _localStrings = <String, Map<String, String>>{
+  'xp_reason_level_complete': {'en': 'Level Complete', 'uz': 'Daraja tugallandi', 'ru': 'Уровень завершён'},
+  'data_aged_out': {
+    'en': 'Detailed breakdown no longer available for this day — only recent activity is kept.',
+    'uz': 'Bu kun uchun batafsil ma\'lumot endi mavjud emas — faqat so\'nggi faoliyat saqlanadi.',
+    'ru': 'Подробная информация за этот день больше недоступна — сохраняется только недавняя активность.',
+  },
+};
+
+String _ltr(String key) {
+  final lang = l10n.appLangNotifier.value;
+  return _localStrings[key]?[lang] ?? _localStrings[key]!['en']!;
+}
+
+// xp_history.reason is a raw English constant stored in the DB at
+// award-time — map it to a translated label for display, falling back to
+// the raw string for any value not in this list.
+String _reasonLabel(String reason) {
+  switch (reason) {
+    case 'Learn': return l10n.tr('learn');
+    case 'Quiz': return l10n.tr('quiz');
+    case 'Flashcard': return l10n.tr('mode_flashcard');
+    case 'SRS Review': return l10n.tr('srs_review');
+    case 'Level Complete': return _ltr('xp_reason_level_complete');
+    default: return reason;
+  }
+}
+
 class PersonalXpCalendarScreen extends StatefulWidget {
   final int totalXpRaw;
 
@@ -360,7 +391,7 @@ class _PersonalXpCalendarScreenState extends State<PersonalXpCalendarScreen> {
                       child: Padding(
                         padding: const EdgeInsets.all(24),
                         child: Text(
-                          'Detailed breakdown no longer available for this day — only recent activity is kept.',
+                          _ltr('data_aged_out'),
                           textAlign: TextAlign.center,
                           style: TextStyle(fontSize: 13, color: context.textMuted),
                         ),
@@ -389,7 +420,7 @@ class _PersonalXpCalendarScreenState extends State<PersonalXpCalendarScreen> {
                           Text(icon, style: const TextStyle(fontSize: 20)),
                           const SizedBox(width: 10),
                           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text(reason, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: context.appText)),
+                            Text(_reasonLabel(reason), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: context.appText)),
                             Text(source ?? timeStr, style: TextStyle(fontSize: 11, color: context.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
                           ])),
                           Text('+${_displayXP(xp)} XP', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: color)),

@@ -262,17 +262,19 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
       // of the whole delete flow instead of guessing.
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not verify homework/class impact — try again: $e'), duration: const Duration(seconds: 3)));
+          SnackBar(content: Text('${tr('couldnt_verify_hw_class_impact')}: $e'), duration: const Duration(seconds: 3)));
       }
       return;
     }
     if (!mounted) return;
     final warnings = <String>[];
     if (assignedHw.isNotEmpty) {
-      warnings.add('assigned as homework in ${assignedHw.length} place${assignedHw.length != 1 ? 's' : ''} — deleting it will also remove that homework and every student\'s progress on it');
+      final n = assignedHw.length;
+      warnings.add(tr(n == 1 ? 'warn_assigned_hw_one' : 'warn_assigned_hw_many').replaceFirst('{n}', '$n'));
     }
     if (assignedClasses.isNotEmpty) {
-      warnings.add('assigned to ${assignedClasses.length} class${assignedClasses.length != 1 ? 'es' : ''} as browsable library content — students there will lose access to it');
+      final n = assignedClasses.length;
+      warnings.add(tr(n == 1 ? 'warn_assigned_classes_one' : 'warn_assigned_classes_many').replaceFirst('{n}', '$n'));
     }
     final ok = await showDialog<bool>(
       context: context,
@@ -282,7 +284,7 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
         title: Text(tr('delete_folder_q'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
         content: Text(warnings.isEmpty
             ? tr('delete_folder_body_perm').replaceFirst('{name}', folder.name)
-            : tr('delete_folder_body_perm_warn').replaceFirst('{name}', folder.name).replaceFirst('{warn}', warnings.join(', and ')),
+            : tr('delete_folder_body_perm_warn').replaceFirst('{name}', folder.name).replaceFirst('{warn}', warnings.join(tr('warn_join_and'))),
             style: TextStyle(color: context.textMuted)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(tr('cancel'), style: TextStyle(color: context.textMuted))),
@@ -303,7 +305,7 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete: $e'), duration: const Duration(seconds: 3)));
+          SnackBar(content: Text('${tr('failed_to_delete')}: $e'), duration: const Duration(seconds: 3)));
       }
     }
   }

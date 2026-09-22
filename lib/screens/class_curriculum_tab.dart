@@ -1358,7 +1358,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 4),
                                 child: Row(children: [
-                                  SizedBox(width: 60, child: Text('${{'learn':'📖','flashcard':'🃏','quiz':'🧠','match':'🎯','read':'📚'}[mode] ?? ''} ${mode[0].toUpperCase()}${mode.substring(1)}',
+                                  SizedBox(width: 60, child: Text('${{'learn':'📖','flashcard':'🃏','quiz':'🧠','match':'🎯','read':'📚'}[mode] ?? ''} ${{'learn': tr('mode_learn'), 'flashcard': tr('mode_flashcard'), 'quiz': tr('mode_quiz'), 'match': tr('mode_match'), 'read': tr('mode_read')}[mode] ?? mode}',
                                       style: TextStyle(fontSize: 11, color: color))),
                                   Expanded(child: ClipRRect(
                                     borderRadius: BorderRadius.circular(4),
@@ -1469,12 +1469,13 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                     ...hw.modes.map((mode) {
                       final count = hw.completionCounts[mode] ?? 0;
                       final emoji = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯', 'read': '📚'}[mode] ?? '';
+                      final modeLabel = {'learn': tr('mode_learn'), 'flashcard': tr('mode_flashcard'), 'quiz': tr('mode_quiz'), 'match': tr('mode_match'), 'read': tr('mode_read')}[mode] ?? mode;
                       final color = {'learn': const Color(0xFF6366F1), 'flashcard': const Color(0xFF8B5CF6), 'quiz': const Color(0xFFEC4899), 'match': const Color(0xFF14B8A6)}[mode] ?? context.primary;
                       final pct = totalStudents == 0 ? 0.0 : count / totalStudents;
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 5),
                         child: Row(children: [
-                          SizedBox(width: 70, child: Text('$emoji ${mode[0].toUpperCase()}${mode.substring(1)}',
+                          SizedBox(width: 70, child: Text('$emoji $modeLabel',
                               style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600))),
                           Expanded(child: ClipRRect(borderRadius: BorderRadius.circular(4),
                               child: LinearProgressIndicator(value: pct, minHeight: 6, backgroundColor: context.surface2, color: color))),

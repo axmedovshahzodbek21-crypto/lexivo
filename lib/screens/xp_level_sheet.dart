@@ -288,7 +288,7 @@ class _XpLevelSheetState extends State<_XpLevelSheet> {
     // Find next level name
     final nextName = StorageService.levels.firstWhere(
       (l) => l.$2 == _nextXP,
-      orElse: () => ('Master', 3000, -1),
+      orElse: () => StorageService.levels.last,
     ).$1;
 
     return Container(

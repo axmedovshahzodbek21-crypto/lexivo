@@ -147,8 +147,14 @@ class LeveledWordsScreen extends StatelessWidget {
 
             // Advanced card
             GestureDetector(
-              onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(tr('coming_soon'))),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CollectionsScreen(
+                    userProfile: 'default',
+                    collection: ContentService.advanced,
+                  ),
+                ),
               ),
               child: Container(
                 width: double.infinity,

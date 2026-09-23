@@ -97,7 +97,7 @@ class _RealEnglishVideoScreenState extends State<RealEnglishVideoScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          widget.video.title,
+          localizedTitle(widget.video.title, widget.video.titleUz, widget.video.titleRu),
           style: TextStyle(color: context.appText, fontWeight: FontWeight.bold, fontSize: 16),
         ),
       ),
@@ -216,7 +216,7 @@ class _HeroBanner extends StatelessWidget {
         children: [
           const Text('🎬', style: TextStyle(fontSize: 28)),
           const SizedBox(height: 8),
-          Text(video.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 17, height: 1.3)),
+          Text(localizedTitle(video.title, video.titleUz, video.titleRu), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 17, height: 1.3)),
           const SizedBox(height: 10),
           Wrap(
             spacing: 8,

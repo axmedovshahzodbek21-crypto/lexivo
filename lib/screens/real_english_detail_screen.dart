@@ -90,7 +90,7 @@ class _RealEnglishDetailScreenState extends State<RealEnglishDetailScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          widget.set.title,
+          localizedTitle(widget.set.title, widget.set.titleUz, widget.set.titleRu),
           style: TextStyle(
             color: context.appText,
             fontWeight: FontWeight.bold,
@@ -192,7 +192,7 @@ class _VideoCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        video.title,
+                        localizedTitle(video.title, video.titleUz, video.titleRu),
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w900,

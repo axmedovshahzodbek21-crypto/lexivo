@@ -2972,7 +2972,7 @@ const Map<String, Map<String, String>> _t = {
     'gt_no_match': 'Qidiruvingizga mos maslahat yo\'q.',
     'rd_no_passages': 'Hali matn yo\'q',
     'rd_passages_appear': 'Matnlar qo\'shilgach shu yerda ko\'rinadi.',
-    'rd_ideas_caps': 'IDEAS',
+    'rd_ideas_caps': 'G\'OYALAR',
     'rd_reading_passages': 'O\'qish matnlari',
     'rd_n_passages': 'o\'rganish uchun {n} ta matn',
     'sr_go_back_relearn': 'Qayta o\'rganish uchun ortga qaytish',

@@ -145,7 +145,7 @@ class _SetCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(set.title, maxLines: 2, overflow: TextOverflow.ellipsis,
+                    Text(localizedTitle(set.title, set.titleUz, set.titleRu), maxLines: 2, overflow: TextOverflow.ellipsis,
                       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12, height: 1.3)),
                     const SizedBox(height: 3),
                     Text(tr('re_n_videos').replaceFirst('{n}', '${set.videos.length}'),

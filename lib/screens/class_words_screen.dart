@@ -638,7 +638,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
           Row(children: [
             _statCard('$_learnedCount/${_words.length}', tr('learned'), context.primary),
             const SizedBox(width: 8),
-            _statCard('$_hardCount', tr('hard_plain'), const Color(0xFFEF4444)),
+            _statCard('$_hardCount', tr('hard_plain'), const Color(0xFFEF4444), onTap: _showHardWordsSheet),
             const SizedBox(width: 8),
             _statCard('$_starredCount', tr('starred'), const Color(0xFFF59E0B)),
           ]),
@@ -679,17 +679,84 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
     ),
   );
 
-  Widget _statCard(String value, String label, Color color) => Expanded(
-    child: Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(14), boxShadow: context.cardShadow),
-      child: Column(children: [
-        Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: color)),
-        const SizedBox(height: 2),
-        Text(label, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: context.textMuted, letterSpacing: 0.8)),
-      ]),
+  Widget _statCard(String value, String label, Color color, {VoidCallback? onTap}) => Expanded(
+    child: GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(14), boxShadow: context.cardShadow),
+        child: Column(children: [
+          Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: color)),
+          const SizedBox(height: 2),
+          Text(label, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: context.textMuted, letterSpacing: 0.8)),
+        ]),
+      ),
     ),
   );
+
+  // Student's own class Hard list, with a way to take a word off it once it's
+  // no longer hard (it then also leaves the teacher's class Hard words page).
+  Future<void> _showHardWordsSheet() async {
+    final user = currentUser;
+    if (user == null) return;
+    final words = (await getClassHardWordIds(userId: user.id, classId: widget.classId)).toList()..sort();
+    if (!mounted) return;
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: context.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (sheetCtx, setSheet) => SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(sheetCtx).size.height * 0.75),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: context.border, borderRadius: BorderRadius.circular(2)))),
+                const SizedBox(height: 14),
+                Text(tr('my_class_hard_words'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+                const SizedBox(height: 4),
+                Text(tr('my_class_hard_words_sub'), style: TextStyle(fontSize: 12, color: context.textMuted)),
+                const SizedBox(height: 12),
+                if (words.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Center(child: Text(tr('no_hard_words'), style: TextStyle(color: context.textMuted))),
+                  )
+                else
+                  Flexible(
+                    child: ListView(shrinkWrap: true, children: [
+                      for (final w in words)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 6),
+                          padding: const EdgeInsets.only(left: 12),
+                          decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(10)),
+                          child: Row(children: [
+                            Expanded(child: Text(w, style: TextStyle(fontSize: 14, color: context.appText))),
+                            TextButton(
+                              onPressed: () async {
+                                try {
+                                  await removeClassHardWord(userId: user.id, classId: widget.classId, word: w);
+                                  setSheet(() => words.remove(w));
+                                  if (mounted) setState(() => _hardCount = words.length);
+                                } catch (e) {
+                                  debugPrint('[ClassWordsScreen] remove hard word failed: $e');
+                                }
+                              },
+                              child: Text(tr('remove'), style: const TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.w600)),
+                            ),
+                          ]),
+                        ),
+                    ]),
+                  ),
+              ]),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

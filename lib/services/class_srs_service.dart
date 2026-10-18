@@ -327,3 +327,18 @@ Future<void> addClassHardWord({
     ignoreDuplicates: true,
   );
 }
+
+// A student taking a word off their class Hard list once it's no longer hard
+// — it then also drops off the teacher's class Hard words page.
+Future<void> removeClassHardWord({
+  required String userId,
+  required String classId,
+  required String word,
+}) async {
+  await supabase
+      .from('class_hard_words')
+      .delete()
+      .eq('user_id', userId)
+      .eq('class_id', classId)
+      .eq('word', word);
+}

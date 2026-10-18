@@ -86,6 +86,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
 
   bool _loading = true;
   List<ClassAnnouncement> _announcements = [];
+  List<ClassNote> _notes = [];
   List<ClassTarget> _targets = [];
   int _memberCount = 0;
   int _pendingHwCount = 0;
@@ -379,6 +380,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
 
       // ── Group 2: parallel dependent fetches ───────────────────────────────
       List<ClassTarget> targets = [];
+      List<ClassNote> notes = [];
       String teacherName = '';
       String fetchedTeacherId = '';
       String teacherBio = '';
@@ -437,6 +439,23 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
                 .order('created_at', ascending: false);
             targets = (targetRaw as List)
                 .map((t) => ClassTarget.fromMap(Map<String, dynamic>.from(t as Map)))
+                .toList();
+          } catch (_) {}
+        }(),
+
+        // Student: teacher notes for this class — a note push opens this
+        // screen, so the note has to be shown here.
+        if (!widget.isTeacher && user != null) () async {
+          try {
+            final notesRaw = await supabase
+                .from('class_notes')
+                .select('id, class_id, message, created_at, read_at')
+                .eq('class_id', widget.classId)
+                .eq('student_id', user.id)
+                .order('created_at', ascending: false)
+                .limit(5);
+            notes = (notesRaw as List)
+                .map((n) => ClassNote.fromMap(Map<String, dynamic>.from(n as Map)))
                 .toList();
           } catch (_) {}
         }(),
@@ -501,9 +520,21 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
         ).catchError((_) {});
       }
 
+      // Student: mark notes as read (fire-and-forget). _notes keeps the
+      // unread state from this load, so they still show as NEW this time.
+      final unreadNoteIds = notes.where((n) => n.readAt == null).map((n) => n.id).toList();
+      if (unreadNoteIds.isNotEmpty) {
+        supabase.from('class_notes')
+            .update({'read_at': DateTime.now().toUtc().toIso8601String()})
+            .inFilter('id', unreadNoteIds)
+            .then((_) {})
+            .catchError((e) { debugPrint('[ClassHomeScreen] mark-notes-read failed: $e'); });
+      }
+
       if (mounted) {
         setState(() {
           _announcements = anns;
+          _notes = notes;
           _targets = targets;
           _memberCount = memberCount;
           _teacherName = teacherName;
@@ -805,6 +836,14 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
             const SizedBox(height: 20),
           ],
 
+          // ── Notes from the teacher (student only) ──────────────────────────
+          if (!widget.isTeacher && _notes.isNotEmpty) ...[
+            _sectionLabel('✉️ ${tr('notes_from_teacher')}'),
+            const SizedBox(height: 8),
+            ..._notes.map(_buildNoteRow),
+            const SizedBox(height: 20),
+          ],
+
           // ── Announcements ──────────────────────────────────────────────────
           _sectionLabel('📢 ${tr('announcements')}'),
           const SizedBox(height: 8),
@@ -1020,6 +1059,36 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
               style: TextStyle(fontSize: 9, color: context.textMuted, fontWeight: FontWeight.w700)),
           )
         else if (isNew)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(color: context.primary, borderRadius: BorderRadius.circular(4)),
+            child: Text(tr('new_label'), style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800)),
+          ),
+      ]),
+    );
+  }
+
+  Widget _buildNoteRow(ClassNote n) {
+    final isNew = n.readAt == null;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isNew ? context.primaryBg : context.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: isNew
+            ? Border(left: BorderSide(color: context.primary, width: 3))
+            : Border.all(color: context.border),
+      ),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('✉️', style: TextStyle(fontSize: 16)),
+        const SizedBox(width: 10),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(n.message, style: TextStyle(fontSize: 13, color: context.appText)),
+          const SizedBox(height: 2),
+          Text(timeAgo(n.createdAt), style: TextStyle(fontSize: 11, color: context.textMuted)),
+        ])),
+        if (isNew)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(color: context.primary, borderRadius: BorderRadius.circular(4)),

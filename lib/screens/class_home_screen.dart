@@ -453,7 +453,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
                 .eq('class_id', widget.classId)
                 .eq('student_id', user.id)
                 .order('created_at', ascending: false)
-                .limit(5);
+                .limit(30);
             notes = (notesRaw as List)
                 .map((n) => ClassNote.fromMap(Map<String, dynamic>.from(n as Map)))
                 .toList();
@@ -521,14 +521,22 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
       }
 
       // Student: mark notes as read (fire-and-forget). _notes keeps the
-      // unread state from this load, so they still show as NEW this time.
+      // unread state from this load, so they show as NEW this time only and
+      // are behind the "Notes from teacher" button next time. The RPC sets
+      // read_at only (a plain student UPDATE was silently refused); the old
+      // update stays as a fallback until migration 20261019000002 is applied.
       final unreadNoteIds = notes.where((n) => n.readAt == null).map((n) => n.id).toList();
       if (unreadNoteIds.isNotEmpty) {
-        supabase.from('class_notes')
-            .update({'read_at': DateTime.now().toUtc().toIso8601String()})
-            .inFilter('id', unreadNoteIds)
+        supabase.rpc('mark_class_notes_read', params: {'p_class_id': widget.classId})
             .then((_) {})
-            .catchError((e) { debugPrint('[ClassHomeScreen] mark-notes-read failed: $e'); });
+            .catchError((e) {
+              debugPrint('[ClassHomeScreen] mark_class_notes_read failed: $e');
+              return supabase.from('class_notes')
+                  .update({'read_at': DateTime.now().toUtc().toIso8601String()})
+                  .inFilter('id', unreadNoteIds)
+                  .then((_) {})
+                  .catchError((e) { debugPrint('[ClassHomeScreen] mark-notes-read failed: $e'); });
+            });
       }
 
       if (mounted) {
@@ -837,10 +845,14 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
           ],
 
           // ── Notes from the teacher (student only) ──────────────────────────
+          // Only new notes show here, once; all of them are behind the button.
           if (!widget.isTeacher && _notes.isNotEmpty) ...[
-            _sectionLabel('✉️ ${tr('notes_from_teacher')}'),
-            const SizedBox(height: 8),
-            ..._notes.map(_buildNoteRow),
+            if (_notes.any((n) => n.readAt == null)) ...[
+              _sectionLabel('✉️ ${tr('notes_from_teacher')}'),
+              const SizedBox(height: 8),
+              ..._notes.where((n) => n.readAt == null).map(_buildNoteRow),
+            ],
+            _buildAllNotesButton(),
             const SizedBox(height: 20),
           ],
 
@@ -1095,6 +1107,49 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
             child: Text(tr('new_label'), style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800)),
           ),
       ]),
+    );
+  }
+
+  Widget _buildAllNotesButton() => InkWell(
+    borderRadius: BorderRadius.circular(12),
+    onTap: _showAllNotesSheet,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+      decoration: BoxDecoration(
+        color: context.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.border),
+      ),
+      child: Row(children: [
+        const Text('✉️', style: TextStyle(fontSize: 16)),
+        const SizedBox(width: 10),
+        Expanded(child: Text(tr('notes_from_teacher'),
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.appText))),
+        Text('${_notes.length} ›', style: TextStyle(fontSize: 12, color: context.textMuted)),
+      ]),
+    ),
+  );
+
+  void _showAllNotesSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: context.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (sheetContext) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.of(sheetContext).size.height * 0.7),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: context.border, borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 16),
+            Text('✉️ ${tr('notes_from_teacher')}',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+            const SizedBox(height: 12),
+            Flexible(child: ListView(shrinkWrap: true, children: _notes.map(_buildNoteRow).toList())),
+          ]),
+        ),
+      ),
     );
   }
 

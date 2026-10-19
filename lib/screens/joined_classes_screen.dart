@@ -134,16 +134,26 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
             teacherNames[pm['id'] as String] = pm['name'] as String? ?? tr('teacher');
           }
 
-          final unreadIds = <String>[];
+          final unreadByClass = <String, List<String>>{};
           for (final n in parallel[1] as List) {
             final note = ClassNote.fromMap(Map<String, dynamic>.from(n as Map));
             notes[note.classId] = [...(notes[note.classId] ?? []), note];
-            if (note.readAt == null) unreadIds.add(note.id);
+            if (note.readAt == null) (unreadByClass[note.classId] ??= []).add(note.id);
           }
-          if (unreadIds.isNotEmpty) {
-            supabase.from('class_notes').update({'read_at': DateTime.now().toIso8601String()}).inFilter('id', unreadIds)
+          // Mark read per class via the RPC (a plain student UPDATE is
+          // refused — see migration 20261019000002); the old update is the
+          // fallback.
+          for (final entry in unreadByClass.entries) {
+            supabase.rpc('mark_class_notes_read', params: {'p_class_id': entry.key})
                 .then((_) {})
-                .catchError((e) { debugPrint('[JoinedClassesScreen] mark-notes-read failed: $e'); });
+                .catchError((e) {
+                  debugPrint('[JoinedClassesScreen] mark_class_notes_read failed: $e');
+                  return supabase.from('class_notes')
+                      .update({'read_at': DateTime.now().toUtc().toIso8601String()})
+                      .inFilter('id', entry.value)
+                      .then((_) {})
+                      .catchError((e) { debugPrint('[JoinedClassesScreen] mark-notes-read failed: $e'); });
+                });
           }
 
           for (final t in parallel[2] as List) {

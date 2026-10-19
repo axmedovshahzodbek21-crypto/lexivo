@@ -114,13 +114,15 @@ typedef ReviewClassification = ({
 String _ymd(DateTime d) => '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
 ReviewClassification _classifyReview(List<DateTime> entryDates, int overdueCount) {
+  final today = DateTime.now();
+  final days = List.generate(_reviewWindowDays, (i) => _ymd(today.subtract(Duration(days: _reviewWindowDays - 1 - i))));
+  // Only reviews inside the window count — older ones made "total reviews"
+  // and the per-day average disagree with "days reviewed".
   final byDay = <String, int>{};
   for (final d in entryDates) {
     final key = _ymd(d);
-    byDay[key] = (byDay[key] ?? 0) + 1;
+    if (key.compareTo(days.first) >= 0) byDay[key] = (byDay[key] ?? 0) + 1;
   }
-  final today = DateTime.now();
-  final days = List.generate(_reviewWindowDays, (i) => _ymd(today.subtract(Duration(days: _reviewWindowDays - 1 - i))));
 
   final daysReviewed = days.where(byDay.containsKey).length;
   final coverage = daysReviewed / _reviewWindowDays;
@@ -135,11 +137,11 @@ ReviewClassification _classifyReview(List<DateTime> entryDates, int overdueCount
     if (byDay.containsKey(d)) { curGap = 0; } else { curGap++; if (curGap > longestGap) longestGap = curGap; }
   }
 
-  final totalReviews = entryDates.length;
+  final totalReviews = byDay.values.fold(0, (a, b) => a + b);
   final avgPerActiveDay = daysReviewed > 0 ? totalReviews / daysReviewed : 0.0;
 
   final ReviewLabel label;
-  if (totalReviews == 0) {
+  if (entryDates.isEmpty) {
     label = ReviewLabel.never;
   } else if (coverage >= 0.8) {
     label = ReviewLabel.daily;

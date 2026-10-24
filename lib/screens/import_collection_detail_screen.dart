@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/storage_service.dart';
@@ -34,10 +35,24 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
     'learn': [], 'flashcard': [], 'quiz': [], 'match': [],
   };
 
+  final FlutterTts _tts = FlutterTts();
+
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _tts.stop();
+    super.dispose();
+  }
+
+  Future<void> _speak(ImportedWord w) async {
+    await _tts.stop();
+    await _tts.setLanguage(w.language);
+    await _tts.speak(w.word);
   }
 
   Future<void> _loadProgress(List<ImportedWord> words) async {
@@ -371,6 +386,32 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
             ),
           ),
 
+        // ── Activity progress ─────────────────────────────────────────────
+        if (!_selectMode) ...[
+          Builder(builder: (context) {
+            final done = [_progress.learnDone, _progress.flashcardDone, _progress.quizDone, _progress.matchDone]
+                .where((d) => d).length;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: done / 4,
+                    minHeight: 8,
+                    backgroundColor: context.border,
+                    valueColor: AlwaysStoppedAnimation(context.primary),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(tr('n_activities_done').replaceFirst('{n}', '$done'),
+                  style: TextStyle(color: context.textMuted, fontSize: 12, fontWeight: FontWeight.w500)),
+              ],
+            );
+          }),
+          const SizedBox(height: 14),
+        ],
+
         // ── Study buttons ─────────────────────────────────────────────────
         // Each button is aware of its own "new words since I was last done"
         // count, independent of the other three activities. When done and
@@ -378,12 +419,12 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
         // with just those words instead of the full set.
         if (!_selectMode)
         GridView.count(
-          crossAxisCount: 2,
+          crossAxisCount: 4,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          childAspectRatio: 2.2,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+          childAspectRatio: 0.95,
           children: [
             _StudyButton(
               icon: '📖', label: tr('learn'),
@@ -452,8 +493,10 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
 
         // ── Word list ─────────────────────────────────────────────────────
         ..._words.map((w) => _WordCard(
+          key: ValueKey(w.id),
           word: w,
           onDelete: () => _deleteWord(w),
+          onSpeak: () => _speak(w),
           selectMode: _selectMode,
           selected: _selected.contains(w.id),
           onToggleSelected: () => _toggleSelected(w.id),
@@ -524,13 +567,16 @@ class _StudyButton extends StatelessWidget {
               children: [
                 Text(icon, style: const TextStyle(fontSize: 22)),
                 const SizedBox(height: 4),
-                Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12)),
+                Text(label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 11)),
               ],
             ),
             if (done)
               const Positioned(
-                top: 6, right: 6,
-                child: Text('✅', style: TextStyle(fontSize: 14)),
+                top: 4, right: 4,
+                child: Text('✅', style: TextStyle(fontSize: 12)),
               ),
             if (done && pendingNew > 0)
               Positioned(
@@ -552,80 +598,168 @@ class _StudyButton extends StatelessWidget {
   }
 }
 
-class _WordCard extends StatelessWidget {
+// Compact row (word + translation) that expands on tap to show the
+// definition and examples — a word with 10 examples used to fill the
+// whole screen on its own.
+class _WordCard extends StatefulWidget {
   final ImportedWord word;
   final VoidCallback onDelete;
+  final VoidCallback onSpeak;
   final bool selectMode;
   final bool selected;
   final VoidCallback onToggleSelected;
 
   const _WordCard({
+    super.key,
     required this.word,
     required this.onDelete,
+    required this.onSpeak,
     this.selectMode = false,
     this.selected = false,
     required this.onToggleSelected,
   });
 
   @override
+  State<_WordCard> createState() => _WordCardState();
+}
+
+class _WordCardState extends State<_WordCard> {
+  static const _previewExamples = 3;
+  bool _expanded = false;
+  bool _allExamples = false;
+
+  @override
   Widget build(BuildContext context) {
+    final word = widget.word;
+    final open = _expanded && !widget.selectMode;
+    final examples = _allExamples ? word.examples : word.examples.take(_previewExamples).toList();
+    final hiddenCount = word.examples.length - examples.length;
+
     return GestureDetector(
-      onTap: selectMode ? onToggleSelected : null,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
+      behavior: HitTestBehavior.opaque,
+      onTap: widget.selectMode ? widget.onToggleSelected : () => setState(() => _expanded = !_expanded),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
         decoration: BoxDecoration(
-          color: context.surface,
+          color: open ? context.primary.withValues(alpha: 0.06) : context.surface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: selected ? context.primary : context.border, width: selected ? 2 : 1),
-          boxShadow: context.cardShadow,
+          border: Border.all(
+            color: widget.selected || open ? context.primary : context.border,
+            width: widget.selected ? 2 : 1,
+          ),
         ),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (selectMode) ...[
-              Container(
-                width: 20, height: 20,
-                margin: const EdgeInsets.only(top: 1, right: 10),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: selected ? context.primary : Colors.transparent,
-                  border: Border.all(color: selected ? context.primary : context.border, width: 2),
+            Row(
+              children: [
+                if (widget.selectMode)
+                  Container(
+                    width: 20, height: 20,
+                    margin: const EdgeInsets.only(right: 10),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: widget.selected ? context.primary : Colors.transparent,
+                      border: Border.all(color: widget.selected ? context.primary : context.border, width: 2),
+                    ),
+                    child: widget.selected ? const Icon(Icons.check, color: Colors.white, size: 14) : null,
+                  ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(word.word,
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: context.appText)),
+                      const SizedBox(height: 2),
+                      Text(word.translation,
+                        maxLines: open ? null : 1,
+                        overflow: open ? null : TextOverflow.ellipsis,
+                        style: TextStyle(color: context.primary, fontWeight: FontWeight.w500, fontSize: 13)),
+                    ],
+                  ),
                 ),
-                child: selected ? const Icon(Icons.check, color: Colors.white, size: 14) : null,
-              ),
-            ],
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(children: [
-                    Text(word.word, style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
-                  ]),
-                  const SizedBox(height: 2),
-                  Text(word.translation, style: TextStyle(color: context.primary, fontWeight: FontWeight.w500, fontSize: 13)),
-                  if (word.definition.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(word.definition, style: TextStyle(color: context.textMuted, fontSize: 12)),
-                  ],
-                  for (final ex in word.examples) ...[
-                    const SizedBox(height: 4),
-                    Text('"${ex.sentence}"', style: TextStyle(color: context.appText, fontSize: 12, fontStyle: FontStyle.italic)),
-                  ],
+                if (!widget.selectMode) ...[
+                  if (word.examples.isNotEmpty && !open)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: context.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(tr('n_examples_short').replaceFirst('{n}', '${word.examples.length}'),
+                        style: TextStyle(color: context.primary, fontSize: 10, fontWeight: FontWeight.w600)),
+                    ),
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(Icons.volume_up_rounded, color: context.primary, size: 20),
+                    onPressed: widget.onSpeak,
+                  ),
+                  AnimatedRotation(
+                    turns: open ? 0.25 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(Icons.chevron_right, color: context.textMuted, size: 22),
+                  ),
                 ],
-              ),
+              ],
             ),
-            if (!selectMode)
-              GestureDetector(
-                onTap: onDelete,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 8),
-                  child: Icon(Icons.delete_outline, color: context.textMuted, size: 20),
-                ),
-              ),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+              alignment: Alignment.topCenter,
+              child: !open
+                  ? const SizedBox(width: double.infinity)
+                  : Padding(
+                      padding: const EdgeInsets.only(top: 10, right: 6),
+                      child: Container(
+                        padding: const EdgeInsets.only(left: 12),
+                        decoration: BoxDecoration(
+                          border: Border(left: BorderSide(color: context.primary, width: 3)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (word.definition.isNotEmpty)
+                              Text(word.definition,
+                                style: TextStyle(color: context.textMuted, fontSize: 13, height: 1.4)),
+                            for (final ex in examples) ...[
+                              const SizedBox(height: 8),
+                              Text('"${ex.sentence}"',
+                                style: TextStyle(color: context.appText, fontSize: 13, fontStyle: FontStyle.italic, height: 1.35)),
+                              if (ex.translation != null && ex.translation!.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Text('↳ ${ex.translation}',
+                                    style: TextStyle(color: context.textMuted, fontSize: 12)),
+                                ),
+                            ],
+                            Row(
+                              children: [
+                                if (hiddenCount > 0)
+                                  TextButton(
+                                    style: TextButton.styleFrom(padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
+                                    onPressed: () => setState(() => _allExamples = true),
+                                    child: Text(tr('n_more_examples').replaceFirst('{n}', '$hiddenCount'),
+                                      style: TextStyle(color: context.primary, fontWeight: FontWeight.w600, fontSize: 12)),
+                                  ),
+                                const Spacer(),
+                                IconButton(
+                                  visualDensity: VisualDensity.compact,
+                                  icon: Icon(Icons.delete_outline, color: context.textMuted, size: 20),
+                                  onPressed: widget.onDelete,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+            ),
           ],
         ),
       ),
     );
   }
 }
+

@@ -22,7 +22,7 @@ import 'pomodoro_setup_screen.dart';
 import 'battle_ready_hub_screen.dart';
 import 'more_screen.dart';
 import '../data/word_data.dart';
-import '../data/phrases_collection.dart';
+import 'phrases_levels_screen.dart';
 import '../data/storage_service.dart';
 import '../services/sync_service.dart';
 import '../services/supabase_service.dart';
@@ -3209,7 +3209,8 @@ class _CollectionPickerOverlayState extends State<_CollectionPickerOverlay>
       'name': tr('home_collection_phrases_name'),
       'description': tr('home_collection_phrases_desc'),
       'color': const Color(0xFF8B5CF6),
-      'collection': phrasesCollection,
+      // Opens a level picker (A1–C2) instead of a single collection.
+      'screen': const PhrasesLevelsScreen(),
     },
   ];
 
@@ -3354,6 +3355,7 @@ class _CollectionPickerOverlayState extends State<_CollectionPickerOverlay>
                                     description: item['description'],
                                     color: item['color'],
                                     collection: item['collection'],
+                                    screen: item['screen'],
                                   ),
                                 );
                               }),
@@ -3439,7 +3441,8 @@ class _CollectionPickerOverlayState extends State<_CollectionPickerOverlay>
     required String name,
     required String description,
     required Color color,
-    required WordCollection collection,
+    WordCollection? collection,
+    Widget? screen,
   }) {
     final lighter = Color.lerp(color, Colors.white, 0.38)!;
     final edge = Color.lerp(color, Colors.black, 0.28)!;
@@ -3447,9 +3450,9 @@ class _CollectionPickerOverlayState extends State<_CollectionPickerOverlay>
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => CollectionsScreen(
+          builder: (context) => screen ?? CollectionsScreen(
             userProfile: widget.userProfile,
-            collection: collection,
+            collection: collection!,
           ),
         ),
       ),

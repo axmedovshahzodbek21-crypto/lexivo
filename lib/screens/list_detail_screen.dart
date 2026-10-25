@@ -22,7 +22,7 @@ Map<String, WordItem> buildWordMap() {
     a2Collection,
     b1Collection,
     advancedCollection,
-    phrasesCollection,
+    ...phrasesByLevel.values,
   ]) {
     for (final day in col.days) {
       for (final w in day.words) {

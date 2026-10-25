@@ -1,10 +1,20 @@
 import 'word_data.dart';
 
-// Phrases collection — fixed expressions by CEFR level (B2 so far).
-// Deduplicated against every other built-in collection; a phrase that
-// already exists elsewhere (Word Mastery, B1, etc.) is left out here.
-final WordCollection phrasesCollection = WordCollection(
-  name: 'Phrases',
+// Phrases — fixed expressions split into one collection per CEFR level,
+// opened from PhrasesLevelsScreen. Deduplicated against every other built-in
+// collection; a phrase that already exists elsewhere (Word Mastery, B1, etc.)
+// is left out here.
+
+const phraseLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+
+/// Levels that have content so far. A level missing here shows as
+/// "coming soon" on PhrasesLevelsScreen.
+final Map<String, WordCollection> phrasesByLevel = {
+  'B2': phrasesB2Collection,
+};
+
+final WordCollection phrasesB2Collection = WordCollection(
+  name: 'Phrases B2',
   description: 'Everyday fixed expressions and phrases, B2 level',
   days: [
     WordDay(

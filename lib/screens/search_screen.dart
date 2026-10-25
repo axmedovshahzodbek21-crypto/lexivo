@@ -40,11 +40,12 @@ class _SearchScreenState extends State<SearchScreen> {
       'color': const Color(0xFF2ECC71),
       'icon': '🎯',
     },
-    {
-      'collection': phrasesCollection,
-      'color': const Color(0xFF8B5CF6),
-      'icon': '💬',
-    },
+    for (final c in phrasesByLevel.values)
+      {
+        'collection': c,
+        'color': const Color(0xFF8B5CF6),
+        'icon': '💬',
+      },
   ];
 
   @override

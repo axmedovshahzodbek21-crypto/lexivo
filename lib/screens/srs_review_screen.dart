@@ -313,7 +313,9 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     if (name == thirtyDaysCollection.name) return thirtyDaysCollection;
     if (name == vocabularyChallengeCollection.name) return vocabularyChallengeCollection;
     if (name == wordMasteryCollection.name) return wordMasteryCollection;
-    if (name == phrasesCollection.name) return phrasesCollection;
+    for (final c in phrasesByLevel.values) {
+      if (name == c.name) return c;
+    }
     return null;
   }
 

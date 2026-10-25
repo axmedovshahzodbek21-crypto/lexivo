@@ -52,7 +52,7 @@ class _HardWordsScreenState extends State<HardWordsScreen> {
     thirtyDaysCollection,
     vocabularyChallengeCollection,
     wordMasteryCollection,
-    phrasesCollection,
+    ...phrasesByLevel.values,
   ];
 
   Future<void> _load() async {

@@ -13,12 +13,12 @@ class MyWordsFolderScreen extends StatefulWidget {
   State<MyWordsFolderScreen> createState() => _MyWordsFolderScreenState();
 
   // Call when a folder is deleted/renamed elsewhere (imported_words_screen.dart)
-  // вЂ” the cache would otherwise keep showing that folder's stale collection
+  // — the cache would otherwise keep showing that folder's stale collection
   // list if the same folder name is reused, or (for a rename) keep serving
   // the old name's now-orphaned cache entry forever.
   static void invalidate(String folderName) => _MyWordsFolderScreenState._cache.remove(folderName);
 
-  // Call on sign-out вЂ” the cache is process-lifetime and keyed only by
+  // Call on sign-out — the cache is process-lifetime and keyed only by
   // folder name, so signing into a different account on the same device
   // without a full app restart could briefly paint the previous account's
   // cached collections before _load() overwrote it.
@@ -27,7 +27,7 @@ class MyWordsFolderScreen extends StatefulWidget {
 
 class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
   static final Map<String, List<ImportedCollection>> _cache = {};
-  // Unbounded otherwise вЂ” one entry per folder ever visited, for the app's
+  // Unbounded otherwise — one entry per folder ever visited, for the app's
   // entire lifetime. Evict the oldest (Map preserves insertion order) once
   // over the cap instead of growing forever.
   static const _cacheCap = 20;
@@ -117,8 +117,11 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final totalWords = _collections.fold<int>(0, (s, c) => s + c.count);
     return Scaffold(
       backgroundColor: context.bg,
+      // Same header as the Library folder: back, title + unit/word count,
+      // "+ New Unit".
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -126,24 +129,39 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
           icon: Icon(Icons.arrow_back, color: context.primary),
           onPressed: () => Navigator.pop(context),
         ),
+        titleSpacing: 0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(widget.folderName,
-              style: TextStyle(color: context.appText, fontWeight: FontWeight.bold, fontSize: 16),
+              style: TextStyle(color: context.appText, fontWeight: FontWeight.bold, fontSize: 18),
               overflow: TextOverflow.ellipsis),
             if (!_loading)
               Text(
-                _collections.isEmpty
-                    ? tr('n_units').replaceFirst('{n}', '0')
-                    : '${tr('n_units').replaceFirst('{n}', '${_collections.length}')} В· вњ… ${tr('n_of_m_done').replaceFirst('{n}', '${_completedUnits.length}').replaceFirst('{m}', '${_collections.length}')}',
+                [
+                  tr('n_units').replaceFirst('{n}', '${_collections.length}'),
+                  if (_collections.isNotEmpty) tr('n_words_plain').replaceFirst('{n}', '$totalWords'),
+                  if (_completedUnits.isNotEmpty) '✅ ${_completedUnits.length}/${_collections.length}',
+                ].join(' · '),
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(color: context.textMuted, fontSize: 12)),
           ],
         ),
         actions: [
-          IconButton(
-            icon: Icon(Icons.add, color: context.primary, size: 26),
-            onPressed: _createUnit,
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: GestureDetector(
+              onTap: _createUnit,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(colors: [context.primary, Color.lerp(context.primary, Colors.white, 0.3)!]),
+                ),
+                child: Text('+ ${tr('new_unit')}',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+              ),
+            ),
           ),
         ],
       ),
@@ -162,7 +180,7 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('рџ“–', style: TextStyle(fontSize: 64)),
+            const Text('📖', style: TextStyle(fontSize: 64)),
             const SizedBox(height: 16),
             Text(tr('no_units_yet'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
@@ -194,18 +212,17 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: 0.82,
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 16,
+        childAspectRatio: 1.25,
       ),
-      itemCount: _collections.length + 1,
+      itemCount: _collections.length,
       itemBuilder: (context, i) {
-        if (i == _collections.length) {
-          return AddTile(label: tr('new_unit'), onTap: _createUnit);
-        }
         final col = _collections[i];
         final color = myWordsCardColors[i % myWordsCardColors.length];
+        final lighter = Color.lerp(color, Colors.white, 0.25)!;
+        final darker = Color.lerp(color, Colors.black, 0.25)!;
         return GestureDetector(
           onTap: () async {
             await Navigator.push(context, MaterialPageRoute(
@@ -216,15 +233,27 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
             ));
             _load();
           },
+          // Same card as the Library's folders/units (teacher_library_screen.dart).
           child: HeartbeatCard(
             child: Container(
               decoration: BoxDecoration(
-                color: color,
                 borderRadius: BorderRadius.circular(18),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [lighter, color, darker],
+                ),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.25), offset: const Offset(0, 6)),
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.18), offset: const Offset(0, 10), blurRadius: 24),
+                  BoxShadow(color: color.withValues(alpha: 0.55), offset: const Offset(0, 8), blurRadius: 16),
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.3), offset: const Offset(0, 12), blurRadius: 24),
                 ],
+              ),
+              foregroundDecoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                border: Border(
+                  bottom: BorderSide(color: darker, width: 4),
+                  right: BorderSide(color: darker, width: 2),
+                ),
               ),
               padding: const EdgeInsets.all(12),
               child: Stack(
@@ -232,19 +261,19 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('рџ“–', style: TextStyle(fontSize: 26)),
+                      const Text('📖', style: TextStyle(fontSize: 26)),
                       const Spacer(),
                       Text(col.name,
                         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis),
                       const SizedBox(height: 2),
-                      Text(tr('n_items').replaceFirst('{n}', '${col.count}'),
+                      Text(tr('n_words_plain').replaceFirst('{n}', '${col.count}'),
                         style: const TextStyle(color: Colors.white70, fontSize: 11)),
                     ],
                   ),
                   if (_completedUnits.contains(col.name))
-                    const Positioned(top: 0, right: 0, child: Text('вњ…', style: TextStyle(fontSize: 14))),
+                    const Positioned(top: 0, right: 0, child: Text('✅', style: TextStyle(fontSize: 14))),
                 ],
               ),
             ),

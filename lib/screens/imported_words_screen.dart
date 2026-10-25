@@ -51,19 +51,11 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
   List<ImportedFolder> _folders = [];
   final Map<String, int> _completedCounts = {};
   bool _loading = true;
-  bool _creating = false;
-  final _folderCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _load();
-  }
-
-  @override
-  void dispose() {
-    _folderCtrl.dispose();
-    super.dispose();
   }
 
   Future<void> _load() async {
@@ -101,8 +93,6 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
     }
   }
 
-  void _startCreating() => setState(() { _creating = true; _folderCtrl.clear(); });
-
   Future<void> _resetProgress() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -134,13 +124,41 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
       }
     }
   }
-  void _cancelCreating() => setState(() { _creating = false; _folderCtrl.clear(); });
-
+  // Same dialog as the Library's "New Folder" (teacher_library_screen.dart).
   Future<void> _createFolder() async {
-    final name = _folderCtrl.text.trim();
-    if (name.isEmpty) return;
-    _cancelCreating();
-    if (!mounted) return;
+    final ctrl = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(tr('new_folder'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          decoration: InputDecoration(
+            hintText: tr('folder_name_hint'),
+            hintStyle: TextStyle(color: context.textMuted),
+            filled: true,
+            fillColor: context.surface2,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+          ),
+          style: TextStyle(color: context.appText),
+          onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(tr('cancel'), style: TextStyle(color: context.textMuted))),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+            style: ElevatedButton.styleFrom(backgroundColor: context.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            child: Text(tr('create')),
+          ),
+        ],
+      ),
+    );
+    ctrl.dispose();
+    if (name == null || name.isEmpty || !mounted) return;
     await Navigator.push(context, MaterialPageRoute(
       builder: (_) => MyWordsFolderScreen(folderName: name),
     ));
@@ -182,11 +200,21 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.bg,
+      // Same header as the Library: back, title + folder count, "+ New Folder".
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        automaticallyImplyLeading: false,
-        title: Text(tr('more_my_words'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold, fontSize: 20)),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: context.primary),
+          onPressed: () => Navigator.pop(context),
+        ),
+        titleSpacing: 0,
+        title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(tr('more_my_words'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold, fontSize: 18)),
+          if (!_loading)
+            Text(tr('n_folders').replaceFirst('{n}', '${_folders.length}'),
+                style: TextStyle(color: context.textMuted, fontSize: 12)),
+        ]),
         actions: [
           if (_folders.isNotEmpty)
             IconButton(
@@ -194,71 +222,28 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
               tooltip: tr('reset_my_words_tooltip'),
               onPressed: _resetProgress,
             ),
-          IconButton(
-            icon: Icon(Icons.add, color: context.primary, size: 26),
-            onPressed: _startCreating,
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: GestureDetector(
+              onTap: _createFolder,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(colors: [context.primary, Color.lerp(context.primary, Colors.white, 0.3)!]),
+                ),
+                child: Text('+ ${tr('new_folder')}',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+              ),
+            ),
           ),
         ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                if (_creating) _buildCreateRow(),
-                Expanded(
-                  child: _folders.isEmpty && !_creating
-                      ? _buildEmpty()
-                      : _buildGrid(),
-                ),
-              ],
-            ),
-    );
-  }
-
-  Widget _buildCreateRow() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: context.surface,
-        border: Border(bottom: BorderSide(color: context.border)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _folderCtrl,
-              autofocus: true,
-              onSubmitted: (_) => _createFolder(),
-              decoration: InputDecoration(
-                hintText: tr('folder_name_hint'),
-                hintStyle: TextStyle(color: context.textMuted),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: context.border)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: context.primary)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              ),
-              style: TextStyle(color: context.appText, fontSize: 14),
-            ),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton(
-            onPressed: _createFolder,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: context.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            ),
-            child: Text(tr('create'), style: const TextStyle(fontWeight: FontWeight.bold)),
-          ),
-          const SizedBox(width: 6),
-          TextButton(
-            onPressed: _cancelCreating,
-            child: Text(tr('cancel'), style: TextStyle(color: context.textMuted)),
-          ),
-        ],
-      ),
+          : _folders.isEmpty
+              ? _buildEmpty()
+              : _buildGrid(),
     );
   }
 
@@ -283,7 +268,7 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _startCreating,
+                onPressed: _createFolder,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: context.primary,
                   foregroundColor: Colors.white,
@@ -339,18 +324,18 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: 0.82,
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 16,
+        childAspectRatio: 1.25,
       ),
-      itemCount: _folders.length + 1,
+      itemCount: _folders.length,
       itemBuilder: (context, i) {
-        if (i == _folders.length) {
-          return AddTile(label: tr('new_folder'), onTap: _startCreating);
-        }
         final folder = _folders[i];
         final color = myWordsCardColors[i % myWordsCardColors.length];
+        final lighter = Color.lerp(color, Colors.white, 0.25)!;
+        final darker = Color.lerp(color, Colors.black, 0.25)!;
+        final done = _completedCounts[folder.name] ?? 0;
         return GestureDetector(
           onTap: () async {
             await Navigator.push(context, MaterialPageRoute(
@@ -359,15 +344,27 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
             _load();
           },
           onLongPress: () => _deleteFolder(folder.name),
+          // Same card as the Library's folders (teacher_library_screen.dart).
           child: HeartbeatCard(
             child: Container(
               decoration: BoxDecoration(
-                color: color,
                 borderRadius: BorderRadius.circular(18),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [lighter, color, darker],
+                ),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.25), offset: const Offset(0, 6)),
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.18), offset: const Offset(0, 10), blurRadius: 24),
+                  BoxShadow(color: color.withValues(alpha: 0.55), offset: const Offset(0, 8), blurRadius: 16),
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.3), offset: const Offset(0, 12), blurRadius: 24),
                 ],
+              ),
+              foregroundDecoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                border: Border(
+                  bottom: BorderSide(color: darker, width: 4),
+                  right: BorderSide(color: darker, width: 2),
+                ),
               ),
               padding: const EdgeInsets.all(12),
               child: Column(
@@ -381,12 +378,8 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
                     overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 2),
                   Text(
-                    (_completedCounts[folder.name] ?? 0) > 0
-                        ? tr('folder_words_completed')
-                            .replaceFirst('{n}', '${folder.wordCount}')
-                            .replaceFirst('{done}', '${_completedCounts[folder.name]}')
-                            .replaceFirst('{total}', '${folder.collectionCount}')
-                        : tr('n_words_plain').replaceFirst('{n}', '${folder.wordCount}'),
+                    tr('n_units_word').replaceFirst('{n}', '${folder.collectionCount}') +
+                        (done > 0 ? ' · ✅ $done/${folder.collectionCount}' : ''),
                     style: const TextStyle(color: Colors.white70, fontSize: 11)),
                 ],
               ),

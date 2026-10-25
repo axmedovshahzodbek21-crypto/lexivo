@@ -202,7 +202,20 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
         if (mounted) setState(() => _importing = false);
         return;
       }
-      final rows = _parsed.map((w) => {
+      // Same dedupe as My Words' addImportedWords: skip words already in this
+      // unit, and repeats within the same paste (first occurrence wins).
+      final existing = await supabase.from('teacher_unit_words').select('word').eq('unit_id', widget.unitId);
+      final seen = (existing as List).map((e) => (e['word'] as String).toLowerCase().trim()).toSet();
+      final fresh = _parsed.where((w) => seen.add(w.word.toLowerCase().trim())).toList();
+      if (fresh.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(tr('n_words_added').replaceFirst('{n}', '0')), duration: const Duration(seconds: 2)));
+          setState(() => _importing = false);
+        }
+        return;
+      }
+      final rows = fresh.map((w) => {
         'unit_id': widget.unitId,
         'teacher_id': user.id,
         'word': w.word,
@@ -211,7 +224,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
         if (w.partOfSpeech.isNotEmpty) 'part_of_speech': w.partOfSpeech,
         if (w.pronunciation.isNotEmpty) 'pronunciation': w.pronunciation,
         if (w.definitionUz.isNotEmpty) 'definition_uz': w.definitionUz,
-        if (w.examples.isNotEmpty) 'examples': w.examples,
+        if (w.examples.isNotEmpty) 'examples': w.examples.take(10).toList(),
       }).toList();
       await supabase.from('teacher_unit_words').insert(rows);
       if (!mounted) return;
@@ -679,6 +692,24 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
               filled: true, fillColor: context.surface2,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                final data = await Clipboard.getData('text/plain');
+                if (data?.text != null) _pasteCtrl.text = data!.text!;
+              },
+              icon: const Icon(Icons.paste, size: 16),
+              label: Text(tr('paste_from_clipboard')),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: context.primary,
+                side: BorderSide(color: context.primary),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+              ),
             ),
           ),
           if (_parsed.isNotEmpty) ...[

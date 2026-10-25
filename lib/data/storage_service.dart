@@ -2758,7 +2758,8 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     });
   }
 
-  static Future<void> addImportedWords(
+  // Returns how many words were actually added after dedupe.
+  static Future<int> addImportedWords(
     List<ImportedWord> words,
     String collectionName, {
     String? folderName,
@@ -2810,6 +2811,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     // words are new for each activity, so there's no need to force a full
     // redo — the existing ✅ badges stay, with a "N new" indicator alongside.
     SyncService.pushLists();
+    return fresh.length;
   });
 
   // Soft-delete: mark with a tombstone timestamp instead of removing

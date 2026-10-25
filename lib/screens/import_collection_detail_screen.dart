@@ -4,7 +4,8 @@ import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/storage_service.dart';
 import '../data/word_data.dart';
-import 'import_screen.dart';
+import '../services/ai_import.dart';
+import '../widgets/ai_add_words_tab.dart';
 import 'learning.dart';
 import 'flashcard.dart';
 import 'quiz_screen.dart';
@@ -20,7 +21,8 @@ class ImportCollectionDetailScreen extends StatefulWidget {
   State<ImportCollectionDetailScreen> createState() => _ImportCollectionDetailScreenState();
 }
 
-class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScreen> {
+class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabs;
   List<ImportedWord> _words = [];
   bool _loading = true;
   bool _selectMode = false;
@@ -40,11 +42,14 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
   @override
   void initState() {
     super.initState();
+    _tabs = TabController(length: 2, vsync: this);
+    _tabs.addListener(() { if (mounted) setState(() {}); });
     _load();
   }
 
   @override
   void dispose() {
+    _tabs.dispose();
     _tts.stop();
     super.dispose();
   }
@@ -168,11 +173,25 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
     return justCompleted;
   }
 
-  Future<void> _openImport() async {
-    await Navigator.push(context, MaterialPageRoute(
-      builder: (_) => ImportScreen(prefilledCollection: widget.collectionName, prefilledFolder: widget.folderName),
-    ));
-    _load();
+  void _openImport() => _tabs.animateTo(1);
+
+  // onAdd for the shared AiAddWordsTab (same tab Library units use).
+  Future<int> _addWords(List<AiParsedWord> parsed, String langCode) async {
+    final words = parsed.map((w) => ImportedWord(
+          word: w.word,
+          partOfSpeech: w.partOfSpeech,
+          pronunciation: w.pronunciation,
+          translation: w.translation,
+          definition: w.definition,
+          definitionUz: w.definitionUz,
+          examples: w.examples.map((e) => ImportedWordExample(sentence: e['sentence']!, translation: e['translation']?.isNotEmpty == true ? e['translation'] : null)).toList(),
+          language: langCode,
+          addedAt: DateTime.now().millisecondsSinceEpoch,
+          collectionName: widget.collectionName,
+        )).toList();
+    final added = await StorageService.addImportedWords(words, widget.collectionName, folderName: widget.folderName);
+    await _load();
+    return added;
   }
 
   Future<void> _deleteCollection() async {
@@ -252,27 +271,40 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
           ],
         ),
         actions: [
-          if (!_loading && _words.isNotEmpty)
+          if (!_loading && _words.isNotEmpty && _tabs.index == 0)
             TextButton(
               onPressed: _toggleSelectMode,
               child: Text(_selectMode ? tr('cancel') : tr('select_action'),
                 style: TextStyle(color: context.primary, fontWeight: FontWeight.w600)),
             ),
-          if (!_selectMode) ...[
+          if (!_selectMode && _tabs.index == 0)
             IconButton(
               icon: Icon(Icons.delete_outline, color: context.textMuted, size: 22),
               onPressed: _deleteCollection,
             ),
-            IconButton(
-              icon: Icon(Icons.add, color: context.primary, size: 26),
-              onPressed: _openImport,
-            ),
-          ],
         ],
+        bottom: TabBar(
+          controller: _tabs,
+          labelColor: context.primary,
+          unselectedLabelColor: context.textMuted,
+          indicatorColor: context.primary,
+          tabs: unitWordsTabs(),
+        ),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _words.isEmpty
+          : TabBarView(
+              controller: _tabs,
+              children: [
+                _buildWordsTab(),
+                AiAddWordsTab(onAdd: _addWords, onAdded: () => _tabs.animateTo(0)),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildWordsTab() {
+    return _words.isEmpty
               ? _buildEmpty()
               : Stack(
                   children: [
@@ -312,8 +344,7 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
                         ),
                       ),
                   ],
-                ),
-    );
+                );
   }
 
   Widget _buildEmpty() {
@@ -328,7 +359,7 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
             Text(tr('no_words_yet'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
             const SizedBox(height: 8),
-            Text(tr('import_from_ai_start'),
+            Text(tr('go_to_add_words_tab'),
               textAlign: TextAlign.center,
               style: TextStyle(color: context.textMuted, height: 1.5)),
             const SizedBox(height: 24),
@@ -342,7 +373,7 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: Text(tr('import_words'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                child: Text(tr('add_words'), style: const TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),
           ],

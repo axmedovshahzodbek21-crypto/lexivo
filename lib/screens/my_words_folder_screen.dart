@@ -1,9 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/storage_service.dart';
 import '../widgets/my_words_shared.dart';
-import 'import_screen.dart';
 import 'import_collection_detail_screen.dart';
 
 class MyWordsFolderScreen extends StatefulWidget {
@@ -14,12 +13,12 @@ class MyWordsFolderScreen extends StatefulWidget {
   State<MyWordsFolderScreen> createState() => _MyWordsFolderScreenState();
 
   // Call when a folder is deleted/renamed elsewhere (imported_words_screen.dart)
-  // — the cache would otherwise keep showing that folder's stale collection
+  // вЂ” the cache would otherwise keep showing that folder's stale collection
   // list if the same folder name is reused, or (for a rename) keep serving
   // the old name's now-orphaned cache entry forever.
   static void invalidate(String folderName) => _MyWordsFolderScreenState._cache.remove(folderName);
 
-  // Call on sign-out — the cache is process-lifetime and keyed only by
+  // Call on sign-out вЂ” the cache is process-lifetime and keyed only by
   // folder name, so signing into a different account on the same device
   // without a full app restart could briefly paint the previous account's
   // cached collections before _load() overwrote it.
@@ -28,7 +27,7 @@ class MyWordsFolderScreen extends StatefulWidget {
 
 class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
   static final Map<String, List<ImportedCollection>> _cache = {};
-  // Unbounded otherwise — one entry per folder ever visited, for the app's
+  // Unbounded otherwise вЂ” one entry per folder ever visited, for the app's
   // entire lifetime. Evict the oldest (Map preserves insertion order) once
   // over the cap instead of growing forever.
   static const _cacheCap = 20;
@@ -73,9 +72,45 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
     }
   }
 
-  Future<void> _openImport() async {
+  // Same "New unit" name dialog as Library (teacher_folder_screen.dart).
+  // My Words units only exist once they hold words, so instead of saving an
+  // empty unit this opens it straight away on its Words / Add words tabs.
+  Future<void> _createUnit() async {
+    final ctrl = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(tr('new_unit'), style: TextStyle(color: context.appText, fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          decoration: InputDecoration(
+            hintText: tr('unit_name'),
+            hintStyle: TextStyle(color: context.textMuted),
+            filled: true,
+            fillColor: context.surface2,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+          ),
+          style: TextStyle(color: context.appText),
+          onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(tr('cancel'), style: TextStyle(color: context.textMuted))),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+            style: ElevatedButton.styleFrom(backgroundColor: context.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            child: Text(tr('create')),
+          ),
+        ],
+      ),
+    );
+    ctrl.dispose();
+    if (name == null || name.isEmpty || !mounted) return;
     await Navigator.push(context, MaterialPageRoute(
-      builder: (_) => ImportScreen(prefilledFolder: widget.folderName),
+      builder: (_) => ImportCollectionDetailScreen(collectionName: name, folderName: widget.folderName),
     ));
     _load();
   }
@@ -101,14 +136,14 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
               Text(
                 _collections.isEmpty
                     ? tr('n_units').replaceFirst('{n}', '0')
-                    : '${tr('n_units').replaceFirst('{n}', '${_collections.length}')} · ✅ ${tr('n_of_m_done').replaceFirst('{n}', '${_completedUnits.length}').replaceFirst('{m}', '${_collections.length}')}',
+                    : '${tr('n_units').replaceFirst('{n}', '${_collections.length}')} В· вњ… ${tr('n_of_m_done').replaceFirst('{n}', '${_completedUnits.length}').replaceFirst('{m}', '${_collections.length}')}',
                 style: TextStyle(color: context.textMuted, fontSize: 12)),
           ],
         ),
         actions: [
           IconButton(
             icon: Icon(Icons.add, color: context.primary, size: 26),
-            onPressed: _openImport,
+            onPressed: _createUnit,
           ),
         ],
       ),
@@ -127,7 +162,7 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('📖', style: TextStyle(fontSize: 64)),
+            const Text('рџ“–', style: TextStyle(fontSize: 64)),
             const SizedBox(height: 16),
             Text(tr('no_units_yet'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
@@ -139,14 +174,14 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _openImport,
+                onPressed: _createUnit,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: context.primary,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: Text(tr('import_words'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                child: Text(tr('new_unit'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
               ),
             ),
           ],
@@ -167,7 +202,7 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
       itemCount: _collections.length + 1,
       itemBuilder: (context, i) {
         if (i == _collections.length) {
-          return AddTile(label: tr('new_unit'), onTap: _openImport);
+          return AddTile(label: tr('new_unit'), onTap: _createUnit);
         }
         final col = _collections[i];
         final color = myWordsCardColors[i % myWordsCardColors.length];
@@ -197,7 +232,7 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('📖', style: TextStyle(fontSize: 26)),
+                      const Text('рџ“–', style: TextStyle(fontSize: 26)),
                       const Spacer(),
                       Text(col.name,
                         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
@@ -209,7 +244,7 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
                     ],
                   ),
                   if (_completedUnits.contains(col.name))
-                    const Positioned(top: 0, right: 0, child: Text('✅', style: TextStyle(fontSize: 14))),
+                    const Positioned(top: 0, right: 0, child: Text('вњ…', style: TextStyle(fontSize: 14))),
                 ],
               ),
             ),

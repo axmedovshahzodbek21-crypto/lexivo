@@ -1,15 +1,12 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import '../l10n.dart';
-import 'package:flutter/services.dart';
 import '../services/supabase_service.dart';
 import '../app_theme.dart';
-import '../ai_import_samples.dart';
 import '../services/ai_import.dart';
+import '../widgets/ai_add_words_tab.dart';
 
 const _localStrings = <String, Map<String, String>>{
   'select': {'en': 'Select', 'uz': 'Tanlash', 'ru': 'Выбрать'},
-  'words_cap': {'en': 'Words', 'uz': 'So\'zlar', 'ru': 'Слова'},
 };
 
 String _ltr(String key) {
@@ -39,31 +36,6 @@ class _Word {
     );
   }
 }
-
-class _ParsedWord {
-  String word = '', translation = '', definition = '', partOfSpeech = '', pronunciation = '', definitionUz = '';
-  List<Map<String, String>> examples = [];
-}
-
-// Prompt-building and response-parsing now live in
-// lib/services/ai_import.dart, shared with import_screen.dart and
-// class_words_screen.dart (see that file's doc comment for how the three
-// copies had diverged and which behavior was kept).
-
-/// Converts a shared-parser result into this screen's local [_ParsedWord]
-/// (which uses non-nullable, default-empty-string fields rather than the
-/// shared [AiParsedWord]'s nullable ones).
-List<_ParsedWord> _toParsedWords(List<AiParsedWord> parsed) => parsed.map((w) {
-      final pw = _ParsedWord()
-        ..word = w.word
-        ..translation = w.translation
-        ..definition = w.definition
-        ..partOfSpeech = w.partOfSpeech ?? ''
-        ..pronunciation = w.pronunciation ?? ''
-        ..definitionUz = w.definitionUz ?? ''
-        ..examples = w.examples;
-      return pw;
-    }).toList();
 
 class TeacherUnitScreen extends StatefulWidget {
   final String unitId, unitName, folderName;
@@ -103,23 +75,12 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
   List<_Word> _words = [];
   bool _loading = true;
   bool _hasError = false;
-  bool _importing = false;
-
-  String _wordLang = 'English';
-  String _translationLang = 'Uzbek';
-  final _wordsInputCtrl = TextEditingController();
-  final _pasteCtrl = TextEditingController();
-  List<_ParsedWord> _parsed = [];
-  Timer? _parseDebounce;
-
-  static const _langs = ['English', 'Uzbek', 'Russian', 'Turkish', 'German', 'French', 'Spanish', 'Korean', 'Japanese', 'Chinese', 'Arabic'];
 
   @override
   void initState() {
     super.initState();
     _tabs = TabController(length: 2, vsync: this);
     _tabs.addListener(() { if (mounted) setState(() {}); });
-    _pasteCtrl.addListener(_onPasteChange);
     if (_cache.containsKey(_cacheKey)) {
       _words = _cache[_cacheKey]!;
       _loading = false;
@@ -130,33 +91,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
   @override
   void dispose() {
     _tabs.dispose();
-    _parseDebounce?.cancel();
-    _pasteCtrl.removeListener(_onPasteChange);
-    _pasteCtrl.dispose();
-    _wordsInputCtrl.dispose();
     super.dispose();
-  }
-
-  // Debounced — parseAiImportOutput does a full regex re-parse of the pasted
-  // text, and this listener fires on every keystroke (not just the single
-  // paste event), so editing a large AI-generated block afterward re-ran
-  // that parse from scratch on every character typed.
-  void _onPasteChange() {
-    _parseDebounce?.cancel();
-    _parseDebounce = Timer(const Duration(milliseconds: 300), () {
-      if (mounted) setState(() => _parsed = _toParsedWords(parseAiImportOutput(_pasteCtrl.text)));
-    });
-  }
-
-  void _copyPrompt(BuildContext context, {required bool hasTranslations}) {
-    final input = _wordsInputCtrl.text.trim();
-    final words = input.isEmpty
-        ? (hasTranslations ? kSampleWordsWithTranslations : kSampleWordsPlain)
-        : input;
-    final prompt = buildAiImportPrompt(wordLang: _wordLang, translationLang: _translationLang, words: words, hasTranslations: hasTranslations);
-    Clipboard.setData(ClipboardData(text: prompt));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(tr('prompt_copied')), duration: const Duration(seconds: 2)));
   }
 
   Future<void> _load() async {
@@ -188,62 +123,36 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
     }
   }
 
-  Future<void> _importAll() async {
-    if (_parsed.isEmpty) return;
-    setState(() => _importing = true);
-    try {
-      final user = currentUser;
-      if (user == null) { if (mounted) setState(() => _importing = false); return; }
-      // Defense-in-depth: confirm this unit is actually the caller's before
-      // importing words into it — RLS is the real backstop, but nothing here
-      // previously stopped an arbitrary unitId from being trusted outright.
-      final unit = await supabase.from('teacher_units').select('teacher_id').eq('id', widget.unitId).maybeSingle();
-      if (unit == null || unit['teacher_id'] != user.id) {
-        if (mounted) setState(() => _importing = false);
-        return;
-      }
-      // Same dedupe as My Words' addImportedWords: skip words already in this
-      // unit, and repeats within the same paste (first occurrence wins).
-      final existing = await supabase.from('teacher_unit_words').select('word').eq('unit_id', widget.unitId);
-      final seen = (existing as List).map((e) => (e['word'] as String).toLowerCase().trim()).toSet();
-      final fresh = _parsed.where((w) => seen.add(w.word.toLowerCase().trim())).toList();
-      if (fresh.isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(tr('n_words_added').replaceFirst('{n}', '0')), duration: const Duration(seconds: 2)));
-          setState(() => _importing = false);
-        }
-        return;
-      }
-      final rows = fresh.map((w) => {
-        'unit_id': widget.unitId,
-        'teacher_id': user.id,
-        'word': w.word,
-        'translation': w.translation,
-        if (w.definition.isNotEmpty) 'definition': w.definition,
-        if (w.partOfSpeech.isNotEmpty) 'part_of_speech': w.partOfSpeech,
-        if (w.pronunciation.isNotEmpty) 'pronunciation': w.pronunciation,
-        if (w.definitionUz.isNotEmpty) 'definition_uz': w.definitionUz,
-        if (w.examples.isNotEmpty) 'examples': w.examples.take(10).toList(),
-      }).toList();
-      await supabase.from('teacher_unit_words').insert(rows);
-      if (!mounted) return;
-      _pasteCtrl.clear();
-      _wordsInputCtrl.clear();
-      setState(() => _parsed = []);
-      await _load();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(tr('n_words_added').replaceFirst('{n}', '${rows.length}')), duration: const Duration(seconds: 2)));
-        _tabs.animateTo(0);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${tr('failed_to_add_words')}: $e'), duration: const Duration(seconds: 3)));
-      }
-    }
-    if (mounted) setState(() => _importing = false);
+  // onAdd for the shared AiAddWordsTab. Word language isn't stored for
+  // Library words (no column for it), so langCode is unused here.
+  Future<int> _addWords(List<AiParsedWord> parsed, String _) async {
+    final user = currentUser;
+    if (user == null) return 0;
+    // Defense-in-depth: confirm this unit is actually the caller's before
+    // importing words into it — RLS is the real backstop, but nothing here
+    // previously stopped an arbitrary unitId from being trusted outright.
+    final unit = await supabase.from('teacher_units').select('teacher_id').eq('id', widget.unitId).maybeSingle();
+    if (unit == null || unit['teacher_id'] != user.id) return 0;
+    // Same dedupe as My Words' addImportedWords: skip words already in this
+    // unit, and repeats within the same paste (first occurrence wins).
+    final existing = await supabase.from('teacher_unit_words').select('word').eq('unit_id', widget.unitId);
+    final seen = (existing as List).map((e) => (e['word'] as String).toLowerCase().trim()).toSet();
+    final fresh = parsed.where((w) => seen.add(w.word.toLowerCase().trim())).toList();
+    if (fresh.isEmpty) return 0;
+    final rows = fresh.map((w) => {
+      'unit_id': widget.unitId,
+      'teacher_id': user.id,
+      'word': w.word,
+      'translation': w.translation,
+      if (w.definition.isNotEmpty) 'definition': w.definition,
+      if (w.partOfSpeech?.isNotEmpty == true) 'part_of_speech': w.partOfSpeech,
+      if (w.pronunciation?.isNotEmpty == true) 'pronunciation': w.pronunciation,
+      if (w.definitionUz?.isNotEmpty == true) 'definition_uz': w.definitionUz,
+      if (w.examples.isNotEmpty) 'examples': w.examples.take(10).toList(),
+    }).toList();
+    await supabase.from('teacher_unit_words').insert(rows);
+    await _load();
+    return rows.length;
   }
 
   Future<void> _deleteWord(String id) async {
@@ -424,10 +333,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
           labelColor: context.primary,
           unselectedLabelColor: context.textMuted,
           indicatorColor: context.primary,
-          tabs: [
-            Tab(text: '📖 ${_ltr('words_cap')}'),
-            Tab(text: '🤖 ${tr('add_words')}'),
-          ],
+          tabs: unitWordsTabs(),
         ),
       ),
       body: _loading
@@ -438,7 +344,7 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
                   controller: _tabs,
                   children: [
                     _buildWordsTab(),
-                    _buildAiTab(),
+                    AiAddWordsTab(onAdd: _addWords, onAdded: () => _tabs.animateTo(0)),
                   ],
                 ),
                 if (_selectMode && _selected.isNotEmpty)
@@ -600,174 +506,4 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
       },
     );
   }
-
-  // ── AI Import tab ────────────────────────────────────────────────────────────
-
-  Widget _buildAiTab() => ListView(
-    padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-    children: [
-      // Language selectors
-      Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16), boxShadow: context.cardShadow),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(tr('word_lang_tr_lang'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted)),
-          const SizedBox(height: 10),
-          Row(children: [
-            Expanded(child: _langDropdown(_wordLang, (v) => setState(() => _wordLang = v!))),
-            Padding(padding: const EdgeInsets.symmetric(horizontal: 10), child: Text('→', style: TextStyle(color: context.textMuted, fontWeight: FontWeight.bold))),
-            Expanded(child: _langDropdown(_translationLang, (v) => setState(() => _translationLang = v!))),
-          ]),
-        ]),
-      ),
-      const SizedBox(height: 12),
-
-      // Words input + copy prompt
-      Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16), boxShadow: context.cardShadow),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(tr('enter_words_step'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _wordsInputCtrl,
-            maxLines: 4,
-            style: TextStyle(color: context.appText, fontSize: 13),
-            decoration: InputDecoration(
-              hintText: kSampleWordsHint,
-              hintStyle: TextStyle(color: context.textMuted, fontSize: 13),
-              filled: true, fillColor: context.surface2,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            ),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => _copyPrompt(context, hasTranslations: false),
-              icon: const Text('📋', style: TextStyle(fontSize: 14)),
-              label: Text(tr('copy_prompt_just_words'), style: const TextStyle(fontWeight: FontWeight.w600)),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: context.primary,
-                side: BorderSide(color: context.primary.withValues(alpha: 0.5)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => _copyPrompt(context, hasTranslations: true),
-              icon: const Text('📋', style: TextStyle(fontSize: 14)),
-              label: Text(tr('copy_prompt_have_translations'), style: const TextStyle(fontWeight: FontWeight.w600)),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: context.textMuted,
-                side: BorderSide(color: context.border),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-              ),
-            ),
-          ),
-        ]),
-      ),
-      const SizedBox(height: 12),
-
-      // Paste AI output
-      Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16), boxShadow: context.cardShadow),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(tr('paste_ai_step'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _pasteCtrl,
-            maxLines: 6,
-            style: TextStyle(color: context.appText, fontSize: 12, fontFamily: 'monospace'),
-            decoration: InputDecoration(
-              hintText: tr('paste_ai_response_hint'),
-              hintStyle: TextStyle(color: context.textMuted, fontSize: 12),
-              filled: true, fillColor: context.surface2,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            ),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () async {
-                final data = await Clipboard.getData('text/plain');
-                if (data?.text != null) _pasteCtrl.text = data!.text!;
-              },
-              icon: const Icon(Icons.paste, size: 16),
-              label: Text(tr('paste_from_clipboard')),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: context.primary,
-                side: BorderSide(color: context.primary),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-              ),
-            ),
-          ),
-          if (_parsed.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text(tr('n_words_recognized').replaceFirst('{n}', '${_parsed.length}'),
-                style: TextStyle(fontSize: 12, color: const Color(0xFF10B981), fontWeight: FontWeight.bold)),
-            const SizedBox(height: 6),
-            ..._parsed.map((w) => Container(
-              margin: const EdgeInsets.only(bottom: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(10)),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Expanded(child: Text(w.word, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText))),
-                  Text('${w.examples.length}ex', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: context.primary)),
-                ]),
-                Text(w.translation, style: TextStyle(fontSize: 12, color: context.primary)),
-                if (w.definition.isNotEmpty)
-                  Text(w.definition, style: TextStyle(fontSize: 11, color: context.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
-              ]),
-            )),
-          ],
-        ]),
-      ),
-
-      if (_parsed.isNotEmpty) ...[
-        const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _importing ? null : _importAll,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: context.primary, foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(vertical: 13),
-            ),
-            child: _importing
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : Text(tr('import_all_n').replaceFirst('{n}', '${_parsed.length}'), style: const TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ),
-      ],
-    ],
-  );
-
-  Widget _langDropdown(String value, void Function(String?) onChanged) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-    decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(10)),
-    child: DropdownButtonHideUnderline(
-      child: DropdownButton<String>(
-        value: value,
-        isExpanded: true,
-        dropdownColor: context.surface,
-        style: TextStyle(color: context.appText, fontSize: 13),
-        icon: Icon(Icons.keyboard_arrow_down, color: context.textMuted, size: 18),
-        items: _langs.map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
-        onChanged: onChanged,
-      ),
-    ),
-  );
 }

@@ -217,10 +217,23 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
         ]),
         actions: [
           if (_folders.isNotEmpty)
-            IconButton(
-              icon: Icon(Icons.restart_alt, color: context.textMuted, size: 24),
-              tooltip: tr('reset_my_words_tooltip'),
-              onPressed: _resetProgress,
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Tooltip(
+                message: tr('reset_my_words_tooltip'),
+                child: InkWell(
+                  onTap: _resetProgress,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFF59E0B), width: 1.5),
+                    ),
+                    child: const Icon(Icons.restart_alt, color: Color(0xFFF59E0B), size: 20),
+                  ),
+                ),
+              ),
             ),
           Padding(
             padding: const EdgeInsets.only(right: 12),

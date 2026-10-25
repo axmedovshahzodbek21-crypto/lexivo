@@ -3,6 +3,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import '../app_theme.dart';
 import '../data/storage_service.dart';
 import '../data/word_data.dart';
+import '../data/phrases_collection.dart';
 import '../l10n.dart';
 import 'learning.dart';
 import 'flashcard.dart';
@@ -51,6 +52,7 @@ class _HardWordsScreenState extends State<HardWordsScreen> {
     thirtyDaysCollection,
     vocabularyChallengeCollection,
     wordMasteryCollection,
+    phrasesCollection,
   ];
 
   Future<void> _load() async {

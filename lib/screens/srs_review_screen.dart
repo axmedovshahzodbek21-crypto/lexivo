@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../data/storage_service.dart';
 import '../data/word_data.dart';
+import '../data/phrases_collection.dart';
 import '../services/content_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
@@ -312,6 +313,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     if (name == thirtyDaysCollection.name) return thirtyDaysCollection;
     if (name == vocabularyChallengeCollection.name) return vocabularyChallengeCollection;
     if (name == wordMasteryCollection.name) return wordMasteryCollection;
+    if (name == phrasesCollection.name) return phrasesCollection;
     return null;
   }
 

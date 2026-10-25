@@ -22,6 +22,7 @@ import 'pomodoro_setup_screen.dart';
 import 'battle_ready_hub_screen.dart';
 import 'more_screen.dart';
 import '../data/word_data.dart';
+import '../data/phrases_collection.dart';
 import '../data/storage_service.dart';
 import '../services/sync_service.dart';
 import '../services/supabase_service.dart';
@@ -3202,6 +3203,13 @@ class _CollectionPickerOverlayState extends State<_CollectionPickerOverlay>
       'description': tr('home_collection_mastery_desc'),
       'color': const Color(0xFF2ECC71),
       'collection': wordMasteryCollection,
+    },
+    {
+      'icon': '💬',
+      'name': tr('home_collection_phrases_name'),
+      'description': tr('home_collection_phrases_desc'),
+      'color': const Color(0xFF8B5CF6),
+      'collection': phrasesCollection,
     },
   ];
 

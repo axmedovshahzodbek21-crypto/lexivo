@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../data/word_data.dart';
+import '../data/phrases_collection.dart';
 import 'learning.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
@@ -38,6 +39,11 @@ class _SearchScreenState extends State<SearchScreen> {
       'collection': wordMasteryCollection,
       'color': const Color(0xFF2ECC71),
       'icon': '🎯',
+    },
+    {
+      'collection': phrasesCollection,
+      'color': const Color(0xFF8B5CF6),
+      'icon': '💬',
     },
   ];
 

@@ -3,6 +3,7 @@ import 'quiz_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../data/word_data.dart';
+import '../data/phrases_collection.dart';
 import '../data/storage_service.dart';
 import '../app_theme.dart';
 import '../app_observers.dart';
@@ -27,6 +28,7 @@ String? _cefrDescription(String collectionName) {
     case '30 Days of Powerful Words': return tr('home_collection_30days_desc');
     case '24 Vocabulary Challenge': return tr('home_collection_challenge_desc');
     case 'Word Mastery': return tr('home_collection_mastery_desc');
+    case 'Phrases': return tr('home_collection_phrases_desc');
     default: return null;
   }
 }
@@ -117,18 +119,21 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
   Color get _color {
     if (widget.collection == thirtyDaysCollection) return const Color(0xFF6C63FF);
     if (widget.collection == vocabularyChallengeCollection) return const Color(0xFFFF6584);
+    if (widget.collection == phrasesCollection) return const Color(0xFF8B5CF6);
     return const Color(0xFF1a9a50);
   }
 
   Color get _colorLight {
     if (widget.collection == thirtyDaysCollection) return const Color(0xFF9b8fff);
     if (widget.collection == vocabularyChallengeCollection) return const Color(0xFFff9eb5);
+    if (widget.collection == phrasesCollection) return const Color(0xFFA78BFA);
     return const Color(0xFF2ECC71);
   }
 
   Color get _colorDark {
     if (widget.collection == thirtyDaysCollection) return const Color(0xFF4338CA);
     if (widget.collection == vocabularyChallengeCollection) return const Color(0xFFBE123C);
+    if (widget.collection == phrasesCollection) return const Color(0xFF5B21B6);
     return const Color(0xFF14532D);
   }
 
@@ -141,6 +146,7 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
   String get _icon {
     if (widget.collection == thirtyDaysCollection) return '🏆';
     if (widget.collection == vocabularyChallengeCollection) return '💡';
+    if (widget.collection == phrasesCollection) return '💬';
     return '🎯';
   }
 

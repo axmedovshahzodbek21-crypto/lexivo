@@ -6,6 +6,7 @@ import '../data/a1_collection.dart';
 import '../data/a2_collection.dart';
 import '../data/b1_collection.dart';
 import '../data/advanced_collection.dart';
+import '../data/phrases_collection.dart';
 import '../l10n.dart';
 import 'flashcard.dart';
 import 'quiz_screen.dart';
@@ -21,6 +22,7 @@ Map<String, WordItem> buildWordMap() {
     a2Collection,
     b1Collection,
     advancedCollection,
+    phrasesCollection,
   ]) {
     for (final day in col.days) {
       for (final w in day.words) {

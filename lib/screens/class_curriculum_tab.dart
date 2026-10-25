@@ -91,7 +91,7 @@ final _kCollectionEmoji = <WordCollection, String>{
 // read straight off the real collection objects instead of hand-typed
 // copies that could silently drift out of sync.
 final _kCollectionMeta = builtInCollections
-    .map((c) => (name: c.name, emoji: _kCollectionEmoji[c] ?? '📚', days: c.days.length))
+    .map((c) => (name: c.name, emoji: _kCollectionEmoji[c] ?? (c.name.startsWith('Phrases ') ? '💬' : '📚'), days: c.days.length))
     .toList();
 
 class _StudentProgress {

@@ -2,6 +2,7 @@ import '../data/word_data.dart';
 import '../data/a1_collection.dart';
 import '../data/a2_collection.dart';
 import '../data/b1_collection.dart';
+import '../data/phrases_collection.dart';
 
 /// class_xp_history/class_members.class_xp store XP ×10 (so partial-point
 /// awards can be recorded as integers) — this is the one place that /10
@@ -9,7 +10,7 @@ import '../data/b1_collection.dart';
 /// wherever a raw XP value needs to be shown to a user.
 String xpDisplay(num raw) => (raw / 10).toStringAsFixed(1);
 
-/// The 6 built-in word collections homework can be assigned from — the
+/// The built-in word collections homework can be assigned from — the
 /// single source of truth for their names. class_homework.collection_name
 /// (the DB join key) has no separate stable id column, only this name, so
 /// this list is what everything else (the assignment picker, the lookup
@@ -17,6 +18,7 @@ String xpDisplay(num raw) => (raw / 10).toStringAsFixed(1);
 final builtInCollections = <WordCollection>[
   thirtyDaysCollection, vocabularyChallengeCollection, wordMasteryCollection,
   a1Collection, a2Collection, b1Collection,
+  ...phrasesByLevel.values,
 ];
 
 /// Looks up one of the six built-in word collections by its exact display

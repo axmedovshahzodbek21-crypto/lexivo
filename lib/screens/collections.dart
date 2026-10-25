@@ -8,6 +8,8 @@ import '../data/storage_service.dart';
 import '../app_theme.dart';
 import '../app_observers.dart';
 import 'learning.dart';
+import 'pomodoro_service.dart';
+import 'pomodoro_setup_screen.dart';
 import 'flashcard.dart';
 import '../l10n.dart';
 import 'story_reader_screen.dart';
@@ -779,19 +781,7 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => LearningScreen(
-                    wordDay: day,
-                    userProfile: widget.userProfile,
-                    collectionName: widget.collection.name,
-                    collection: widget.collection,
-                    dayIndex: index,
-                    startIndex: savedIndex,
-                  ),
-                ),
-              ).then((_) => _loadProgress());
+              _withPomodoro(() => _launchLearning(day, index, savedIndex));
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: _color,
@@ -970,6 +960,35 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
   }
 
   void _startLearning(BuildContext context, WordDay day, int index) {
+    _withPomodoro(() => _launchLearning(day, index, 0));
+  }
+
+  // Offer the Pomodoro setup right before Learn opens; skipped when a
+  // Pomodoro session is already running so it doesn't nag on every unit.
+  void _withPomodoro(VoidCallback launch) {
+    if (PomodoroService().isActive) {
+      launch();
+      return;
+    }
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => PomodoroSetupScreen(
+        onSkip: () {
+          Navigator.pop(sheetContext);
+          launch();
+        },
+        onStart: () {
+          Navigator.pop(sheetContext);
+          launch();
+        },
+      ),
+    );
+  }
+
+  void _launchLearning(WordDay day, int index, int startIndex) {
+    if (!mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -979,6 +998,7 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
           collectionName: widget.collection.name,
           collection: widget.collection,
           dayIndex: index,
+          startIndex: startIndex,
         ),
       ),
     ).then((_) => _loadProgress());

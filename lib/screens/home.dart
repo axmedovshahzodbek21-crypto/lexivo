@@ -18,7 +18,6 @@ import 'progress_screens.dart';
 import 'search_screen.dart';
 import 'settings_screen.dart';
 import 'free_time_screen.dart';
-import 'pomodoro_setup_screen.dart';
 import 'battle_ready_hub_screen.dart';
 import 'more_screen.dart';
 import '../data/word_data.dart';
@@ -599,24 +598,6 @@ class _HomeScreenState extends State<HomeScreen>
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  void _showPomodoroThenPicker() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => PomodoroSetupScreen(
-        onSkip: () {
-          Navigator.pop(context);
-          _showCollectionPicker();
-        },
-        onStart: () {
-          Navigator.pop(context);
-          _showCollectionPicker();
-        },
       ),
     );
   }
@@ -2511,7 +2492,7 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
                 const SizedBox(width: 12),
                 ElevatedButton(
-                  onPressed: _showPomodoroThenPicker,
+                  onPressed: _showCollectionPicker,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: const Color(0xFF6C63FF),

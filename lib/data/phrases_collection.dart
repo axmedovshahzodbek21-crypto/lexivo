@@ -24,7 +24,7 @@ final WordCollection phrasesA1Collection = WordCollection(
   days: [
     WordDay(
       dayNumber: 1,
-      topic: 'Unit 1',
+      topic: 'Tanishuv',
       words: [
         WordItem(
           word: 'nice to meet you',
@@ -240,7 +240,7 @@ final WordCollection phrasesA1Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 2,
-      topic: 'Unit 2',
+      topic: 'Kundalik iboralar',
       words: [
         WordItem(
           word: 'would like',
@@ -456,7 +456,7 @@ final WordCollection phrasesA1Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 3,
-      topic: 'Unit 3',
+      topic: 'Kun tartibi va vaqt',
       words: [
         WordItem(
           word: 'go shopping',
@@ -679,7 +679,7 @@ final WordCollection phrasesA2Collection = WordCollection(
   days: [
     WordDay(
       dayNumber: 1,
-      topic: 'Unit 1',
+      topic: 'Salomlashish va xushmuomalalik',
       words: [
         WordItem(
           word: 'how do you do',
@@ -895,7 +895,7 @@ final WordCollection phrasesA2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 2,
-      topic: 'Unit 2',
+      topic: 'Suhbatdagi munosabat',
       words: [
         WordItem(
           word: 'oh dear',
@@ -1111,7 +1111,7 @@ final WordCollection phrasesA2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 3,
-      topic: 'Unit 3',
+      topic: 'Vaqt va bog\'lovchilar',
       words: [
         WordItem(
           word: 'all the time',
@@ -1327,7 +1327,7 @@ final WordCollection phrasesA2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 4,
-      topic: 'Unit 4',
+      topic: 'Kundalik hayot',
       words: [
         WordItem(
           word: 'get married',
@@ -1543,7 +1543,7 @@ final WordCollection phrasesA2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 5,
-      topic: 'Unit 5',
+      topic: 'Miqdor va tasvirlash',
       words: [
         WordItem(
           word: 'all sorts of',
@@ -1759,7 +1759,7 @@ final WordCollection phrasesA2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 6,
-      topic: 'Unit 6',
+      topic: 'Joylar va rejalar',
       words: [
         WordItem(
           word: 'on foot',
@@ -1982,7 +1982,7 @@ final WordCollection phrasesB1Collection = WordCollection(
   days: [
     WordDay(
       dayNumber: 1,
-      topic: 'Unit 1',
+      topic: 'Bog\'lovchi iboralar',
       words: [
         WordItem(
           word: 'above all',
@@ -2198,7 +2198,7 @@ final WordCollection phrasesB1Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 2,
-      topic: 'Unit 2',
+      topic: 'Vaqt',
       words: [
         WordItem(
           word: 'be about to',
@@ -2414,7 +2414,7 @@ final WordCollection phrasesB1Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 3,
-      topic: 'Unit 3',
+      topic: 'Suhbat',
       words: [
         WordItem(
           word: 'not at all',
@@ -2630,7 +2630,7 @@ final WordCollection phrasesB1Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 4,
-      topic: 'Unit 4',
+      topic: 'Iltimos va javoblar',
       words: [
         WordItem(
           word: 'would you mind',
@@ -2846,7 +2846,7 @@ final WordCollection phrasesB1Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 5,
-      topic: 'Unit 5',
+      topic: 'His-tuyg\'ular',
       words: [
         WordItem(
           word: 'feel bad about',
@@ -3062,7 +3062,7 @@ final WordCollection phrasesB1Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 6,
-      topic: 'Unit 6',
+      topic: 'Odamlar va muloqot',
       words: [
         WordItem(
           word: 'make friends',
@@ -3278,7 +3278,7 @@ final WordCollection phrasesB1Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 7,
-      topic: 'Unit 7',
+      topic: 'Kundalik hayot',
       words: [
         WordItem(
           word: 'daily life',
@@ -3494,7 +3494,7 @@ final WordCollection phrasesB1Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 8,
-      topic: 'Unit 8',
+      topic: 'Vaziyatlar',
       words: [
         WordItem(
           word: 'by accident',
@@ -3710,7 +3710,7 @@ final WordCollection phrasesB1Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 9,
-      topic: 'Unit 9',
+      topic: 'Tasvirlash',
       words: [
         WordItem(
           word: 'quite a bit',
@@ -3926,7 +3926,7 @@ final WordCollection phrasesB1Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 10,
-      topic: 'Unit 10',
+      topic: 'Turg\'un iboralar',
       words: [
         WordItem(
           word: 'attract attention',
@@ -4149,7 +4149,7 @@ final WordCollection phrasesB2Collection = WordCollection(
   days: [
     WordDay(
       dayNumber: 1,
-      topic: 'Unit 1',
+      topic: 'Bog\'lovchi iboralar',
       words: [
         WordItem(
           word: 'in other words',
@@ -4365,7 +4365,7 @@ final WordCollection phrasesB2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 2,
-      topic: 'Unit 2',
+      topic: 'Fikr bildirish',
       words: [
         WordItem(
           word: 'take something into account',
@@ -4581,7 +4581,7 @@ final WordCollection phrasesB2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 3,
-      topic: 'Unit 3',
+      topic: 'Vaqt',
       words: [
         WordItem(
           word: 'once in a while',
@@ -4797,7 +4797,7 @@ final WordCollection phrasesB2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 4,
-      topic: 'Unit 4',
+      topic: 'His-tuyg\'ular va odamlar',
       words: [
         WordItem(
           word: 'lose your temper',
@@ -5013,7 +5013,7 @@ final WordCollection phrasesB2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 5,
-      topic: 'Unit 5',
+      topic: 'Harakat va qarorlar',
       words: [
         WordItem(
           word: 'make a difference',
@@ -5229,7 +5229,7 @@ final WordCollection phrasesB2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 6,
-      topic: 'Unit 6',
+      topic: 'Holat va vaziyatlar',
       words: [
         WordItem(
           word: 'at risk',
@@ -5445,7 +5445,7 @@ final WordCollection phrasesB2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 7,
-      topic: 'Unit 7',
+      topic: 'Ish, o\'qish va hayot',
       words: [
         WordItem(
           word: 'earn a living',
@@ -5661,7 +5661,7 @@ final WordCollection phrasesB2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 8,
-      topic: 'Unit 8',
+      topic: 'Suhbat iboralari',
       words: [
         WordItem(
           word: 'Don\'t ask!',
@@ -5877,7 +5877,7 @@ final WordCollection phrasesB2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 9,
-      topic: 'Unit 9',
+      topic: 'Miqdor va daraja',
       words: [
         WordItem(
           word: 'a great deal of',
@@ -6093,7 +6093,7 @@ final WordCollection phrasesB2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 10,
-      topic: 'Unit 10',
+      topic: 'Rasmiy iboralar',
       words: [
         WordItem(
           word: 'take responsibility for',
@@ -6309,7 +6309,7 @@ final WordCollection phrasesB2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 11,
-      topic: 'Unit 11',
+      topic: 'Matnni bog\'lash',
       words: [
         WordItem(
           word: 'in actual fact',
@@ -6525,7 +6525,7 @@ final WordCollection phrasesB2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 12,
-      topic: 'Unit 12',
+      topic: 'Taassurot va fikr',
       words: [
         WordItem(
           word: 'be under the impression',
@@ -6741,7 +6741,7 @@ final WordCollection phrasesB2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 13,
-      topic: 'Unit 13',
+      topic: 'Takror va harakat',
       words: [
         WordItem(
           word: 'over and over again',
@@ -6957,7 +6957,7 @@ final WordCollection phrasesB2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 14,
-      topic: 'Unit 14',
+      topic: 'Kayfiyat va holat',
       words: [
         WordItem(
           word: 'be absorbed in',
@@ -7173,7 +7173,7 @@ final WordCollection phrasesB2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 15,
-      topic: 'Unit 15',
+      topic: 'Munosabatlar',
       words: [
         WordItem(
           word: 'leave someone alone',
@@ -7389,7 +7389,7 @@ final WordCollection phrasesB2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 16,
-      topic: 'Unit 16',
+      topic: 'Yutuq va qonun',
       words: [
         WordItem(
           word: 'break a record',
@@ -7605,7 +7605,7 @@ final WordCollection phrasesB2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 17,
-      topic: 'Unit 17',
+      topic: 'Joy va vaziyat',
       words: [
         WordItem(
           word: 'in the middle of nowhere',
@@ -7821,7 +7821,7 @@ final WordCollection phrasesB2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 18,
-      topic: 'Unit 18',
+      topic: 'Sog\'liq va maishiy hayot',
       words: [
         WordItem(
           word: 'upset stomach',
@@ -8037,7 +8037,7 @@ final WordCollection phrasesB2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 19,
-      topic: 'Unit 19',
+      topic: 'Akademik til',
       words: [
         WordItem(
           word: 'on account of',
@@ -8253,7 +8253,7 @@ final WordCollection phrasesB2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 20,
-      topic: 'Unit 20',
+      topic: 'Jonli nutq',
       words: [
         WordItem(
           word: 'sort of',
@@ -8476,7 +8476,7 @@ final WordCollection phrasesC1Collection = WordCollection(
   days: [
     WordDay(
       dayNumber: 1,
-      topic: 'Unit 1',
+      topic: 'Rasmiy bog\'lovchilar',
       words: [
         WordItem(
           word: 'in accordance with',
@@ -8692,7 +8692,7 @@ final WordCollection phrasesC1Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 2,
-      topic: 'Unit 2',
+      topic: 'Fikr va munosabat',
       words: [
         WordItem(
           word: 'be inclined to think',
@@ -8908,7 +8908,7 @@ final WordCollection phrasesC1Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 3,
-      topic: 'Unit 3',
+      topic: 'Vaqt',
       words: [
         WordItem(
           word: 'ahead of schedule',
@@ -9124,7 +9124,7 @@ final WordCollection phrasesC1Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 4,
-      topic: 'Unit 4',
+      topic: 'Harakat va muvaffaqiyat',
       words: [
         WordItem(
           word: 'do your utmost',
@@ -9340,7 +9340,7 @@ final WordCollection phrasesC1Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 5,
-      topic: 'Unit 5',
+      topic: 'Muloqot',
       words: [
         WordItem(
           word: 'crack a joke',
@@ -9556,7 +9556,7 @@ final WordCollection phrasesC1Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 6,
-      topic: 'Unit 6',
+      topic: 'His-tuyg\'ular',
       words: [
         WordItem(
           word: 'be lost without',
@@ -9772,7 +9772,7 @@ final WordCollection phrasesC1Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 7,
-      topic: 'Unit 7',
+      topic: 'Vaziyatlar',
       words: [
         WordItem(
           word: 'on hold',
@@ -9988,7 +9988,7 @@ final WordCollection phrasesC1Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 8,
-      topic: 'Unit 8',
+      topic: 'Jamiyat va ish',
       words: [
         WordItem(
           word: 'the labour market',
@@ -10204,7 +10204,7 @@ final WordCollection phrasesC1Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 9,
-      topic: 'Unit 9',
+      topic: 'Miqdor va qiyoslash',
       words: [
         WordItem(
           word: 'a host of',
@@ -10420,7 +10420,7 @@ final WordCollection phrasesC1Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 10,
-      topic: 'Unit 10',
+      topic: 'Turg\'un iboralar',
       words: [
         WordItem(
           word: 'when it comes to',
@@ -10643,7 +10643,7 @@ final WordCollection phrasesC2Collection = WordCollection(
   days: [
     WordDay(
       dayNumber: 1,
-      topic: 'Unit 1',
+      topic: 'Rasmiy bog\'lovchilar',
       words: [
         WordItem(
           word: 'as opposed to',
@@ -10859,7 +10859,7 @@ final WordCollection phrasesC2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 2,
-      topic: 'Unit 2',
+      topic: 'Fikr va baho',
       words: [
         WordItem(
           word: 'in my humble opinion',
@@ -11075,7 +11075,7 @@ final WordCollection phrasesC2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 3,
-      topic: 'Unit 3',
+      topic: 'Vaqt',
       words: [
         WordItem(
           word: 'at the earliest',
@@ -11291,7 +11291,7 @@ final WordCollection phrasesC2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 4,
-      topic: 'Unit 4',
+      topic: 'His-tuyg\'ular',
       words: [
         WordItem(
           word: 'be beside yourself',
@@ -11507,7 +11507,7 @@ final WordCollection phrasesC2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 5,
-      topic: 'Unit 5',
+      topic: 'Harakat va intilish',
       words: [
         WordItem(
           word: 'spare no effort',
@@ -11723,7 +11723,7 @@ final WordCollection phrasesC2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 6,
-      topic: 'Unit 6',
+      topic: 'Muloqot',
       words: [
         WordItem(
           word: 'under your breath',
@@ -11939,7 +11939,7 @@ final WordCollection phrasesC2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 7,
-      topic: 'Unit 7',
+      topic: 'Vaziyatlar',
       words: [
         WordItem(
           word: 'at stake',
@@ -12155,7 +12155,7 @@ final WordCollection phrasesC2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 8,
-      topic: 'Unit 8',
+      topic: 'Omad va tavakkal',
       words: [
         WordItem(
           word: 'strike gold',
@@ -12371,7 +12371,7 @@ final WordCollection phrasesC2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 9,
-      topic: 'Unit 9',
+      topic: 'Kundalik idiomalar',
       words: [
         WordItem(
           word: 'sleep on it',
@@ -12587,7 +12587,7 @@ final WordCollection phrasesC2Collection = WordCollection(
     ),
     WordDay(
       dayNumber: 10,
-      topic: 'Unit 10',
+      topic: 'Akademik iboralar',
       words: [
         WordItem(
           word: 'shed light on',

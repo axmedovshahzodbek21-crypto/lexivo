@@ -10,7 +10,7 @@ import '../services/supabase_service.dart';
 // Neither key is in clearAllProgress's keep-list, so sign-out wipes them.
 //
 // Mirrors lexivo-web/lib/page-tips.ts. The copy below is generated from that
-// file — edit the copy there, not here.
+// file by lexivo-web/scripts/page-tips-to-dart.js — edit it there, not here.
 class PageTips {
   static const _seenKey = 'seen_tips';
   static const _enabledKey = 'tips_enabled';

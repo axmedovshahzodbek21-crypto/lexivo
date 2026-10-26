@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'break_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
@@ -19,6 +20,7 @@ import '../services/supabase_service.dart';
 import '../services/class_srs_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
+import '../explain_prompt.dart';
 import '../widgets/not_enough_words_screen.dart';
 import '../widgets/page_tip_button.dart';
 
@@ -1247,6 +1249,30 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                                   padding: const EdgeInsets.symmetric(vertical: 12),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 ),
+                              ),
+                            ),
+                          ],
+                          // Last rung of the ladder: a prompt the student pastes
+                          // into any AI chat for a spoken-style explanation.
+                          // English words only — the prompt asks about "the
+                          // English phrase/word".
+                          if (_currentWord.language == null || _currentWord.language!.startsWith('en')) ...[
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: TextButton(
+                                onPressed: () {
+                                  Clipboard.setData(ClipboardData(
+                                      text: buildExplainPrompt(_currentWord.word, _currentWord.definition, appLangNotifier.value)));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(tr('explain_copied')), duration: const Duration(seconds: 3)));
+                                },
+                                style: TextButton.styleFrom(
+                                  foregroundColor: context.primary,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                child: Text(tr('explain_with_ai'), textAlign: TextAlign.center),
                               ),
                             ),
                           ],

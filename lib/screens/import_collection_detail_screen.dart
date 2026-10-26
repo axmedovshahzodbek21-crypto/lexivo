@@ -37,6 +37,8 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
   Map<String, List<String>> _pendingByActivity = const {
     'learn': [], 'flashcard': [], 'quiz': [], 'match': [],
   };
+  // The folder's "in order" lock (set on the folder screen).
+  bool _folderLocked = false;
 
   final FlutterTts _tts = FlutterTts();
 
@@ -70,8 +72,10 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
         activity: await StorageService.getMyActivityPendingNewWords(
           widget.folderName, widget.collectionName, activity, wordList),
     };
+    final folderLocked = widget.folderName != null && await StorageService.isMyFolderLocked(widget.folderName!);
     if (mounted) {
       setState(() {
+        _folderLocked = folderLocked;
         _completedAt = p.completedAt;
         _progress = p;
         _pendingNewWords = pending;
@@ -481,6 +485,7 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
               color: const Color(0xFFFF6B35),
               done: _progress.flashcardDone,
               pendingNew: _pendingByActivity['flashcard']!.length,
+              locked: _folderLocked && !_progress.learnDone,
               onTap: () => Navigator.push(context, MaterialPageRoute(
                 builder: (_) => FlashcardSettingsScreen(
                   wordDay: _wordDayFor(_progress.flashcardDone && _pendingByActivity['flashcard']!.isNotEmpty ? _pendingByActivity['flashcard']! : null),
@@ -497,6 +502,7 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
               color: const Color(0xFFF59E0B),
               done: _progress.quizDone,
               pendingNew: _pendingByActivity['quiz']!.length,
+              locked: _folderLocked && !_progress.learnDone,
               onTap: () => Navigator.push(context, MaterialPageRoute(
                 builder: (_) => QuizSettingsScreen(
                   wordDay: _wordDayFor(_progress.quizDone && _pendingByActivity['quiz']!.isNotEmpty ? _pendingByActivity['quiz']! : null),
@@ -512,6 +518,7 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
               color: const Color(0xFF10B981),
               done: _progress.matchDone,
               pendingNew: _pendingByActivity['match']!.length,
+              locked: _folderLocked && !_progress.learnDone,
               onTap: () => Navigator.push(context, MaterialPageRoute(
                 builder: (_) => MatchingScreen(
                   wordDay: _wordDayFor(_progress.matchDone && _pendingByActivity['match']!.isNotEmpty ? _pendingByActivity['match']! : null),
@@ -573,6 +580,9 @@ class _StudyButton extends StatelessWidget {
   final VoidCallback onTap;
   final bool done;
   final int pendingNew;
+  // Folder's "in order" lock while Learn isn't done — same look and
+  // snackbar as the pre-built collections' locked buttons.
+  final bool locked;
 
   const _StudyButton({
     required this.icon,
@@ -581,10 +591,36 @@ class _StudyButton extends StatelessWidget {
     required this.onTap,
     this.done = false,
     this.pendingNew = 0,
+    this.locked = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (locked) {
+      return GestureDetector(
+        onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(tr('complete_learn_first'))),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: context.surface2,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: context.border, width: 1.5),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('🔒', style: TextStyle(fontSize: 22)),
+              const SizedBox(height: 4),
+              Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: context.textMuted, fontWeight: FontWeight.w600, fontSize: 11)),
+            ],
+          ),
+        ),
+      );
+    }
     return GestureDetector(
       onTap: onTap,
       child: Container(

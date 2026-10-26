@@ -245,7 +245,7 @@ class SyncService {
       // right where this one left off — nothing is lost by deferring it.
       try {
         final cloudRow = await _sb.from('user_data')
-            .select('learned_words, srs_words, starred_words, hard_words, study_days, review_days, word_goal_days, unit_done_days, xp_history, unit_progress, my_unit_progress, review_log, last_review, achievements, imported_words, custom_lists')
+            .select('learned_words, srs_words, starred_words, hard_words, study_days, review_days, word_goal_days, unit_done_days, xp_history, unit_progress, my_unit_progress, review_log, last_review, achievements, imported_words, custom_lists, my_folder_locks')
             .eq('id', uid).maybeSingle();
         if (cloudRow != null) await _mergeListsFromCloudRow(cloudRow, prefs);
       } catch (e) {
@@ -313,6 +313,7 @@ class SyncService {
         'last_review':      obj('srs_last_review'),
         'imported_words':   arr('imported_words'),
         'custom_lists':     arr('custom_lists'), // includes tombstones (deletedAt) so deletions propagate
+        'my_folder_locks':  obj('my_folder_locks'),
         'achievements':     achievementEntries,
         'lists_updated_at': ts,
       });
@@ -1114,6 +1115,25 @@ class SyncService {
         }
       } catch (e) {
         debugPrint('[SyncService._mergeListsFromCloudRow] custom_lists merge failed: $e');
+      }
+
+      // my_folder_locks — per-folder last-write-wins by `at`. Mirrors web
+      // sync.ts's my_folder_locks block.
+      try {
+        final cloudLocks = (row['my_folder_locks'] as Map<String, dynamic>?) ?? {};
+        final localRaw = prefs.getString('my_folder_locks');
+        final local = localRaw == null ? <String, dynamic>{} : jsonDecode(localRaw) as Map<String, dynamic>;
+        int atOf(dynamic l) => l is Map ? ((l['at'] as num?)?.toInt() ?? 0) : 0;
+        bool changed = false;
+        for (final e in cloudLocks.entries) {
+          if (!local.containsKey(e.key) || atOf(e.value) > atOf(local[e.key])) {
+            local[e.key] = e.value;
+            changed = true;
+          }
+        }
+        if (changed) await prefs.setString('my_folder_locks', jsonEncode(local));
+      } catch (e) {
+        debugPrint('[SyncService._mergeListsFromCloudRow] my_folder_locks merge failed: $e');
       }
   }
 }

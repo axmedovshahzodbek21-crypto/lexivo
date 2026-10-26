@@ -2903,8 +2903,36 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
       for (final k in keysToRemove) { allProgress.remove(k); }
       await prefs.setString(_myUnitProgressKey, jsonEncode(allProgress.map((k, v) => MapEntry(k, v.toJson()))));
     }
+    // A new folder reusing this name later shouldn't inherit the lock.
+    if (await isMyFolderLocked(folderName)) await setMyFolderLocked(folderName, false);
     SyncService.pushLists();
   }));
+
+  // ── My Words folder "in order" lock ──────────────────────────────────────
+  // Off by default. When on, Cards / Quiz / Match in that folder's units stay
+  // locked until Learn is done — the pre-built collections' rule. Stored as
+  // { folder: { locked, at } }; `at` (epoch ms) is for last-write-wins
+  // merging in SyncService, same shape as web lib/storage.ts.
+  static const _myFolderLocksKey = 'my_folder_locks';
+
+  static Future<Map<String, dynamic>> getMyFolderLocks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_myFolderLocksKey);
+    if (raw == null) return {};
+    try { return jsonDecode(raw) as Map<String, dynamic>; } catch (_) { return {}; }
+  }
+
+  static Future<bool> isMyFolderLocked(String folderName) async {
+    final entry = (await getMyFolderLocks())[folderName];
+    return entry is Map && entry['locked'] == true;
+  }
+
+  static Future<void> setMyFolderLocked(String folderName, bool locked) async {
+    final prefs = await SharedPreferences.getInstance();
+    final all = await getMyFolderLocks();
+    all[folderName] = {'locked': locked, 'at': DateTime.now().millisecondsSinceEpoch};
+    await prefs.setString(_myFolderLocksKey, jsonEncode(all));
+  }
 
   static Future<void> markLevelCompletedViaTest(String levelId) async {
     final prefs = await SharedPreferences.getInstance();

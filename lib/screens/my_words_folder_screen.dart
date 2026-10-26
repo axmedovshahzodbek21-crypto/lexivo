@@ -2,9 +2,15 @@
 import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/storage_service.dart';
-import '../widgets/my_words_shared.dart';
+import '../services/sync_service.dart';
 import '../widgets/copy_word_list.dart';
+import '../widgets/unit_tile.dart';
 import 'import_collection_detail_screen.dart';
+
+// Same purple as the "30 Days of Powerful Words" hero/tiles (collections.dart).
+const _color = Color(0xFF6C63FF);
+const _colorLight = Color(0xFF9b8fff);
+const _colorDark = Color(0xFF4338CA);
 
 class MyWordsFolderScreen extends StatefulWidget {
   final String folderName;
@@ -40,7 +46,8 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
   }
 
   List<ImportedCollection> _collections = [];
-  final Set<String> _completedUnits = {};
+  Map<String, MyUnitProgress> _progress = {};
+  bool _locked = false;
   bool _loading = true;
 
   @override
@@ -55,22 +62,43 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
   }
 
   Future<void> _load() async {
-    final cols = await StorageService.getCollectionsByFolder(widget.folderName);
+    // Oldest first, so Unit 1 is the first unit made — the order pre-built
+    // collections number theirs in.
+    final cols = (await StorageService.getCollectionsByFolder(widget.folderName))
+      ..sort((a, b) => a.addedAt.compareTo(b.addedAt));
     // Parallelized instead of one sequential await per collection.
     final progresses = await Future.wait(
         cols.map((col) => StorageService.getMyUnitProgress(widget.folderName, col.name)));
-    final completed = <String>{
-      for (var i = 0; i < cols.length; i++)
-        if (progresses[i].completedAt != null) cols[i].name,
-    };
+    final locked = await StorageService.isMyFolderLocked(widget.folderName);
     if (mounted) {
       setState(() {
         _collections = cols;
         _cachePut(widget.folderName, cols);
-        _completedUnits..clear()..addAll(completed);
+        _progress = {for (var i = 0; i < cols.length; i++) cols[i].name: progresses[i]};
+        _locked = locked;
         _loading = false;
       });
     }
+  }
+
+  static bool _isComplete(MyUnitProgress p) => p.learnDone && p.flashcardDone && p.quizDone && p.matchDone;
+
+  Future<void> _toggleLock() async {
+    final next = !_locked;
+    await StorageService.setMyFolderLocked(widget.folderName, next);
+    SyncService.pushLists();
+    if (!mounted) return;
+    setState(() => _locked = next);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(tr(next ? 'order_locked_toast' : 'order_free_toast'))));
+  }
+
+  Future<void> _openUnit(String name) async {
+    await Navigator.push(context, MaterialPageRoute(
+      builder: (_) => ImportCollectionDetailScreen(collectionName: name, folderName: widget.folderName),
+    ));
+    _load();
   }
 
   // Same "New unit" name dialog as Library (teacher_folder_screen.dart).
@@ -110,19 +138,18 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
     );
     ctrl.dispose();
     if (name == null || name.isEmpty || !mounted) return;
-    await Navigator.push(context, MaterialPageRoute(
-      builder: (_) => ImportCollectionDetailScreen(collectionName: name, folderName: widget.folderName),
-    ));
-    _load();
+    await _openUnit(name);
+  }
+
+  Future<List<String>> _wordsOf(String unit) async {
+    final words = await StorageService.getImportedWordsByCollection(unit, folderName: widget.folderName);
+    return words.map((w) => w.word).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final totalWords = _collections.fold<int>(0, (s, c) => s + c.count);
     return Scaffold(
       backgroundColor: context.bg,
-      // Same header as the Library folder: back, title + unit/word count,
-      // "+ New Unit".
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -130,24 +157,9 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
           icon: Icon(Icons.arrow_back, color: context.primary),
           onPressed: () => Navigator.pop(context),
         ),
-        titleSpacing: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(widget.folderName,
-              style: TextStyle(color: context.appText, fontWeight: FontWeight.bold, fontSize: 18),
-              overflow: TextOverflow.ellipsis),
-            if (!_loading)
-              Text(
-                [
-                  tr('n_units').replaceFirst('{n}', '${_collections.length}'),
-                  if (_collections.isNotEmpty) tr('n_words_plain').replaceFirst('{n}', '$totalWords'),
-                  if (_completedUnits.isNotEmpty) '✅ ${_completedUnits.length}/${_collections.length}',
-                ].join(' · '),
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: context.textMuted, fontSize: 12)),
-          ],
-        ),
+        title: Text(widget.folderName,
+          style: TextStyle(color: context.appText, fontWeight: FontWeight.bold, fontSize: 16),
+          overflow: TextOverflow.ellipsis),
         actions: [
           if (_collections.isNotEmpty)
             CopyFolderWordListButton(
@@ -160,37 +172,120 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
                 ];
               },
             ),
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: GestureDetector(
-              onTap: _createUnit,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  gradient: LinearGradient(colors: [context.primary, Color.lerp(context.primary, Colors.white, 0.3)!]),
-                ),
-                child: Text('+ ${tr('new_unit')}',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-              ),
-            ),
-          ),
         ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _collections.isEmpty
-              ? _buildEmpty()
-              : _buildList(),
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHero(),
+                  if (_collections.isEmpty) _buildEmpty() else _buildGrid(),
+                ],
+              ),
+            ),
+    );
+  }
+
+  Widget _statPill(String label) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.22),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+  );
+
+  // Same hero as the pre-built collections (collections.dart), plus the
+  // "+ New unit" button and the "in order" lock toggle.
+  Widget _buildHero() {
+    final totalWords = _collections.fold<int>(0, (s, c) => s + c.count);
+    final completedUnits = _collections.where((c) => _progress[c.name] != null && _isComplete(_progress[c.name]!)).length;
+    final progressPct = _collections.isEmpty ? 0.0 : completedUnits / _collections.length;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [_color, _colorLight], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: _color.withValues(alpha: 0.45), offset: const Offset(0, 8), blurRadius: 24)],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('📁', style: TextStyle(fontSize: 32)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(widget.folderName,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white,
+                    shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 4)]),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              _statPill(tr('units_count').replaceFirst('{n}', '${_collections.length}')),
+              _statPill(tr('words_count').replaceFirst('{n}', '$totalWords')),
+              _statPill(tr('done_count').replaceFirst('{n}', '$completedUnits')),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progressPct,
+              minHeight: 6,
+              backgroundColor: Colors.white.withValues(alpha: 0.25),
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              GestureDetector(
+                onTap: _createUnit,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                  child: Text('+ ${tr('new_unit')}',
+                    style: const TextStyle(color: _color, fontWeight: FontWeight.bold, fontSize: 13)),
+                ),
+              ),
+              GestureDetector(
+                onTap: _toggleLock,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                  decoration: BoxDecoration(
+                    color: _locked ? Colors.black.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(_locked ? '🔒 ${tr('order_locked')}' : '🔓 ${tr('order_free')}',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildEmpty() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 40),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Text('📖', style: TextStyle(fontSize: 64)),
             const SizedBox(height: 16),
@@ -200,95 +295,41 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
             Text(tr('import_from_ai_add_unit'),
               textAlign: TextAlign.center,
               style: TextStyle(color: context.textMuted, height: 1.5, fontSize: 14)),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _createUnit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: context.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                child: Text(tr('new_unit'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-              ),
-            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildList() {
+  Widget _buildGrid() {
     return GridView.builder(
-      padding: const EdgeInsets.all(16),
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+        crossAxisCount: 3,
         crossAxisSpacing: 12,
-        mainAxisSpacing: 16,
-        childAspectRatio: 1.25,
+        mainAxisSpacing: 12,
+        childAspectRatio: 0.86,
       ),
       itemCount: _collections.length,
       itemBuilder: (context, i) {
         final col = _collections[i];
-        final color = myWordsCardColors[i % myWordsCardColors.length];
-        final lighter = Color.lerp(color, Colors.white, 0.25)!;
-        final darker = Color.lerp(color, Colors.black, 0.25)!;
+        final p = _progress[col.name] ?? const MyUnitProgress();
         return GestureDetector(
-          onTap: () async {
-            await Navigator.push(context, MaterialPageRoute(
-              builder: (_) => ImportCollectionDetailScreen(
-                collectionName: col.name,
-                folderName: widget.folderName,
-              ),
-            ));
-            _load();
-          },
-          // Same card as the Library's folders/units (teacher_library_screen.dart).
-          child: HeartbeatCard(
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [lighter, color, darker],
-                ),
-                boxShadow: [
-                  BoxShadow(color: color.withValues(alpha: 0.55), offset: const Offset(0, 8), blurRadius: 16),
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.3), offset: const Offset(0, 12), blurRadius: 24),
-                ],
-              ),
-              foregroundDecoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                border: Border(
-                  bottom: BorderSide(color: darker, width: 4),
-                  right: BorderSide(color: darker, width: 2),
-                ),
-              ),
-              padding: const EdgeInsets.all(12),
-              child: Stack(
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('📖', style: TextStyle(fontSize: 26)),
-                      const Spacer(),
-                      Text(col.name,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis),
-                      const SizedBox(height: 2),
-                      Text(tr('n_words_plain').replaceFirst('{n}', '${col.count}'),
-                        style: const TextStyle(color: Colors.white70, fontSize: 11)),
-                    ],
-                  ),
-                  if (_completedUnits.contains(col.name))
-                    const Positioned(top: 0, right: 0, child: Text('✅', style: TextStyle(fontSize: 14))),
-                ],
-              ),
-            ),
+          onTap: () => _openUnit(col.name),
+          child: UnitTile(
+            number: i + 1,
+            title: col.name,
+            wordCount: col.count,
+            color: _color,
+            colorLight: _colorLight,
+            colorDark: _colorDark,
+            isComplete: _isComplete(p),
+            stages: [('📖', p.learnDone), ('🃏', p.flashcardDone), ('🧠', p.quizDone), ('🔗', p.matchDone)],
+            onCopy: () async {
+              final words = await _wordsOf(col.name);
+              if (context.mounted) copyWordListText(context, formatWordList(words));
+            },
           ),
         );
       },

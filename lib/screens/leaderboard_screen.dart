@@ -5,6 +5,7 @@ import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import '../date_utils.dart';
 import '../l10n.dart';
+import '../widgets/page_tip_button.dart';
 
 const _localStrings = <String, Map<String, String>>{
   'could_not_load_leaderboard': {
@@ -284,6 +285,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                       ],
                     ),
                   ),
+                  const PageTipButton('leaderboard', color: Colors.white),
                   Container(
                     width: 36, height: 36,
                     decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),

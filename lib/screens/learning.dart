@@ -20,6 +20,7 @@ import '../services/class_srs_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import '../widgets/not_enough_words_screen.dart';
+import '../widgets/page_tip_button.dart';
 
 class LearningScreen extends StatefulWidget {
   final WordDay wordDay;
@@ -963,6 +964,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
           ),
           centerTitle: true,
           actions: [
+            const PageTipButton('learn'),
             IconButton(
               icon: Icon(
                 isStarred ? Icons.star_rounded : Icons.star_border_rounded,

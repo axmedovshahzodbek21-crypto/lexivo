@@ -31,6 +31,7 @@ import 'xp_level_sheet.dart';
 import 'personal_xp_calendar_screen.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
+import '../widgets/page_tip_button.dart';
 
 const _kClassGradients = [
   [Color(0xFF6366F1), Color(0xFF8B5CF6)],
@@ -1380,6 +1381,7 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
         actions: [
+          const PageTipButton('home'),
           IconButton(
             icon: Icon(Icons.search, color: context.primary),
             onPressed: () => Navigator.push(

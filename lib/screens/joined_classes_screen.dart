@@ -7,6 +7,7 @@ import 'class_models.dart';
 import 'class_shell.dart';
 import 'class_home_screen.dart';
 import '../widgets/navigate_once.dart';
+import '../widgets/page_tip_button.dart';
 
 String _timeAgo(String iso) {
   final diff = DateTime.now().difference(DateTime.parse(iso));
@@ -358,6 +359,8 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, shadows: [Shadow(color: Color(0x40000000), blurRadius: 8, offset: Offset(0, 2))]),
                 ),
               ]),
+              const Spacer(),
+              const PageTipButton('classes_joined', color: Colors.white),
             ]),
             const SizedBox(height: 8),
             Text(tr('classes_you_enrolled'), style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.65))),

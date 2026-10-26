@@ -6,6 +6,7 @@ import '../data/storage_service.dart';
 import '../services/sync_service.dart';
 import '../widgets/my_words_shared.dart';
 import 'my_words_folder_screen.dart';
+import '../widgets/page_tip_button.dart';
 
 const _exampleSeededKey = 'mywords_example_seeded';
 
@@ -216,6 +217,7 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
                 style: TextStyle(color: context.textMuted, fontSize: 12)),
         ]),
         actions: [
+          const PageTipButton('my_words'),
           if (_folders.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(right: 8),

@@ -7,6 +7,7 @@ import 'structures_day_picker_screen.dart';
 import 'structures_flashcards_screen.dart';
 import 'structures_review_screen.dart';
 import 'structures_detective_screen.dart';
+import '../widgets/page_tip_button.dart';
 
 const Map<String, String> _kUnitIcons = {
   'Speaking Part 1': '🗣️',
@@ -89,6 +90,7 @@ class _StructuresHubScreenState extends State<StructuresHubScreen> {
           '🧩 ${tr('ielts_structures')}',
           style: TextStyle(color: context.appText, fontWeight: FontWeight.bold),
         ),
+        actions: const [PageTipButton('structures')],
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),

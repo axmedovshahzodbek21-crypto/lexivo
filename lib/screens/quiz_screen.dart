@@ -9,6 +9,7 @@ import '../app_theme.dart';
 import '../l10n.dart';
 import 'matching_screen.dart';
 import '../widgets/not_enough_words_screen.dart';
+import '../widgets/page_tip_button.dart';
 // Removed unused import: '../data/storage_service.dart'
 
 enum QuizType { wordToTranslation, translationToWord, definitionToWord }
@@ -82,6 +83,7 @@ class _QuizSettingsScreenState extends State<QuizSettingsScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: const [PageTipButton('quiz')],
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),

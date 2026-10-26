@@ -4,6 +4,7 @@ import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import 'teacher_folder_screen.dart';
 import '../main.dart';
+import '../widgets/page_tip_button.dart';
 
 const _localStrings = <String, Map<String, String>>{
   'folder_caps': {'en': 'FOLDER', 'uz': 'PAPKA', 'ru': 'ПАПКА'},
@@ -363,6 +364,7 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
                 style: TextStyle(color: context.textMuted, fontSize: 12)),
         ]),
         actions: [
+          const PageTipButton('library'),
           IconButton(
             icon: Icon(Icons.add, color: context.primary, size: 26),
             onPressed: _createFolder,

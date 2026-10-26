@@ -11,6 +11,7 @@ import '../services/onesignal_service.dart';
 import '../services/supabase_service.dart';
 import '../services/sync_service.dart';
 import '../data/storage_service.dart';
+import '../data/page_tips.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import 'login_screen.dart';
@@ -48,6 +49,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _pulseSpeed = 'normal'; // 'slow' | 'normal' | 'fast'
   bool _reduceMotion = false;
   bool _showBattleReady = false;
+  bool _tipsEnabled = true;
+  bool _tipsReset = false;
   bool _autoPlayOnReveal = true;
   bool _loading = true;
   Map<String, bool> _pushPrefs = {
@@ -68,6 +71,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     _load();
     _loadBio();
+    PageTips.isEnabled().then((on) { if (mounted) setState(() => _tipsEnabled = on); });
     appLangNotifier.addListener(_onLangChange);
   }
 
@@ -463,6 +467,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     SyncService.pushSettings();
   }
 
+  Map<String, String> get _tipsUi => pageTipsUi[appLangNotifier.value] ?? pageTipsUi['en']!;
+
   Future<void> _setShowBattleReady(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('show_battle_ready', value);
@@ -807,6 +813,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         value: _showBattleReady,
                         activeThumbColor: context.primary,
                         onChanged: _setShowBattleReady,
+                      ),
+                      const Divider(height: 8),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(_tipsUi['setting']!, style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
+                        subtitle: Text(_tipsUi['settingHelper']!, style: TextStyle(fontSize: 12, color: context.textMuted)),
+                        value: _tipsEnabled,
+                        activeThumbColor: context.primary,
+                        onChanged: (v) {
+                          setState(() => _tipsEnabled = v);
+                          PageTips.setEnabled(v);
+                        },
+                      ),
+                      TextButton(
+                        style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                        onPressed: _tipsReset
+                            ? null
+                            : () {
+                                setState(() { _tipsEnabled = true; _tipsReset = true; });
+                                PageTips.reset();
+                              },
+                        child: Text(_tipsReset ? _tipsUi['shownAgain']! : _tipsUi['showAgain']!,
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _tipsReset ? context.textMuted : context.primary)),
                       ),
                     ],
                   ),

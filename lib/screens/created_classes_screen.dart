@@ -9,6 +9,7 @@ import 'class_shell.dart';
 import 'teacher_library_screen.dart';
 import '../widgets/create_class_sheet.dart';
 import '../widgets/navigate_once.dart';
+import '../widgets/page_tip_button.dart';
 
 const _kGradients = [
   [Color(0xFF6366F1), Color(0xFF8B5CF6)],
@@ -283,6 +284,8 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> with Naviga
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, shadows: [Shadow(color: Color(0x40000000), blurRadius: 8, offset: Offset(0, 2))]),
                 ),
               ]),
+              const Spacer(),
+              const PageTipButton('classes_created', color: Colors.white),
             ]),
             const SizedBox(height: 8),
             Text(tr('classes_you_created'), style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.65))),

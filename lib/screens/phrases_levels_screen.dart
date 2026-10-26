@@ -4,6 +4,7 @@ import '../app_theme.dart';
 import '../data/storage_service.dart';
 import '../data/phrases_collection.dart';
 import 'collections.dart';
+import '../widgets/page_tip_button.dart';
 
 /// Level picker for the Phrases collection — one card per CEFR level
 /// (A1–C2). Levels without content yet show as "coming soon".
@@ -60,6 +61,7 @@ class _PhrasesLevelsScreenState extends State<PhrasesLevelsScreen> {
           tr('home_collection_phrases_name'),
           style: TextStyle(color: context.appText, fontWeight: FontWeight.bold),
         ),
+        actions: const [PageTipButton('phrases')],
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),

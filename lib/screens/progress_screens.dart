@@ -6,6 +6,7 @@ import '../services/sync_service.dart';
 import '../app_theme.dart';
 import 'srs_review_screen.dart';
 import '../l10n.dart';
+import '../widgets/page_tip_button.dart';
 
 // ─────────────────────────────────────────────
 //  WORDS LEARNED SCREEN
@@ -1411,6 +1412,7 @@ class _ReviewsDueScreenState extends State<ReviewsDueScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: const [PageTipButton('srs')],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())

@@ -6,6 +6,7 @@ import 'created_classes_screen.dart';
 import 'joined_classes_screen.dart';
 import '../widgets/create_class_sheet.dart';
 import '../widgets/navigate_once.dart';
+import '../widgets/page_tip_button.dart';
 
 class ClassesScreen extends StatefulWidget {
   const ClassesScreen({super.key});
@@ -166,6 +167,8 @@ class _ClassesScreenState extends State<ClassesScreen> with NavigateOnceMixin {
                       Text('LEXIVO', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white.withValues(alpha: 0.5), letterSpacing: 1.5)),
                       Text(tr('nav_classes'), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, shadows: [Shadow(color: Color(0x40000000), blurRadius: 8, offset: Offset(0, 2))])),
                     ]),
+                    const Spacer(),
+                    const PageTipButton('classes', color: Colors.white),
                   ]),
                   const SizedBox(height: 8),
                   Text(tr('create_or_join_class'), style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.65))),

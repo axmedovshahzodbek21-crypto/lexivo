@@ -7,6 +7,7 @@ import '../data/reading_data.dart';
 import '../data/storage_service.dart';
 import '../services/supabase_service.dart';
 import 'reading_passage_screen.dart';
+import '../widgets/page_tip_button.dart';
 
 const _kTopicColors = [
   [Color(0xFF6C63FF), Color(0xFF8B5CF6)],
@@ -177,6 +178,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
           ),
         ),
         actions: [
+          const PageTipButton('reading'),
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: GestureDetector(

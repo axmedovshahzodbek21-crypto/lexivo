@@ -3,6 +3,7 @@ import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/real_english_data.dart';
 import 'real_english_detail_screen.dart';
+import '../widgets/page_tip_button.dart';
 
 const _kSetColors = [
   [Color(0xFF5B8AF0), Color(0xFF3D6ECC)],
@@ -32,6 +33,7 @@ class RealEnglishScreen extends StatelessWidget {
           '🗣️ ${tr('more_real_english')}',
           style: TextStyle(color: context.appText, fontWeight: FontWeight.bold, fontSize: 20),
         ),
+        actions: const [PageTipButton('real_english')],
       ),
       body: realEnglishSets.isEmpty
           ? Center(

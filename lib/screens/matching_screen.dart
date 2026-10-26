@@ -7,6 +7,7 @@ import '../services/supabase_service.dart';
 import '../data/word_data.dart';
 import '../l10n.dart';
 import '../widgets/not_enough_words_screen.dart';
+import '../widgets/page_tip_button.dart';
 
 const _batchSize = 6;
 
@@ -455,6 +456,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
         elevation: 0,
         title: Text('🎯 ${tr('match_title')}', style: const TextStyle(fontWeight: FontWeight.bold)),
         actions: [
+          const PageTipButton('matching'),
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Center(

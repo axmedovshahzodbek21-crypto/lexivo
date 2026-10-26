@@ -15,6 +15,7 @@ import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import '../widgets/not_enough_words_screen.dart';
+import '../widgets/page_tip_button.dart';
 
 enum CardMode { wordToTranslation, wordToDefinition, translationToWord }
 
@@ -122,6 +123,7 @@ class _FlashcardSettingsScreenState extends State<FlashcardSettingsScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: const [PageTipButton('flashcards')],
       ),
       // FIX 1: Moved button to bottomNavigationBar so it's always pinned
       bottomNavigationBar: Padding(

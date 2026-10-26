@@ -6,6 +6,7 @@ import '../app_theme.dart';
 import '../data/battle_ready_data.dart';
 import '../data/battle_ready_progress_service.dart';
 import 'battle_ready_topic_screen.dart';
+import '../widgets/page_tip_button.dart';
 
 const int _kSurpriseTicks = 9;
 
@@ -129,6 +130,7 @@ class _BattleReadyHubScreenState extends State<BattleReadyHubScreen> {
           style: TextStyle(color: context.appText, fontWeight: FontWeight.bold),
         ),
         actions: [
+          const PageTipButton('battle_ready'),
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: Center(

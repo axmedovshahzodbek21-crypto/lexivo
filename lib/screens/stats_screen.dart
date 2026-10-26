@@ -8,6 +8,7 @@ import '../app_theme.dart';
 import 'achievements.dart';
 import 'xp_level_sheet.dart';
 import '../l10n.dart';
+import '../widgets/page_tip_button.dart';
 
 // A handful of strings this screen needs that aren't in the shared l10n.dart
 // map — kept as a small local table, mirroring xp_history_screen.dart's
@@ -177,6 +178,7 @@ class _StatsScreenState extends State<StatsScreen> {
           ),
         ),
         actions: [
+          const PageTipButton('progress'),
           IconButton(
             icon: Icon(Icons.emoji_events, color: context.primary),
             onPressed: () => Navigator.push(

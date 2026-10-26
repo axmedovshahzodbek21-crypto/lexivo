@@ -395,6 +395,15 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
                       const Icon(Icons.check_circle_rounded, color: Colors.white, size: 14)
                     else if (storyInfo.anyUnlocked)
                       const Text('📚', style: TextStyle(fontSize: 10)),
+                    // Own tap target so copying doesn't also open the unit.
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => copyWordListText(context, formatWordList(day.words.map((w) => w.word).toList())),
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: Icon(Icons.copy_rounded, color: Colors.white.withValues(alpha: 0.85), size: 14),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 5),

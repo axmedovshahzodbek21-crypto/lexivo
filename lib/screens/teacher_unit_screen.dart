@@ -4,6 +4,7 @@ import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import '../services/ai_import.dart';
 import '../widgets/ai_add_words_tab.dart';
+import '../widgets/copy_word_list.dart';
 
 const _localStrings = <String, Map<String, String>>{
   'select': {'en': 'Select', 'uz': 'Tanlash', 'ru': 'Выбрать'},
@@ -327,6 +328,8 @@ class _TeacherUnitScreenState extends State<TeacherUnitScreen> with SingleTicker
               child: Text(_selectMode ? tr('cancel') : _ltr('select'),
                 style: TextStyle(color: context.primary, fontWeight: FontWeight.w600)),
             ),
+          if (!_loading && _words.isNotEmpty && _tabs.index == 0 && !_selectMode)
+            CopyWordListButton(words: _words.map((w) => w.word).toList()),
         ],
         bottom: TabBar(
           controller: _tabs,

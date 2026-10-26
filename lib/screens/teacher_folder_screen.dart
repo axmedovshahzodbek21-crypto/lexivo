@@ -3,6 +3,7 @@ import '../l10n.dart';
 import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import 'teacher_unit_screen.dart';
+import '../widgets/copy_word_list.dart';
 import '../main.dart';
 
 class _Unit {
@@ -304,6 +305,24 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
                 style: TextStyle(color: context.textMuted, fontSize: 12)),
         ]),
         actions: [
+          if (_units.isNotEmpty)
+            CopyFolderWordListButton(
+              units: [for (final u in _units) (name: u.name, count: u.wordCount)],
+              loadWords: () async {
+                final units = _units;
+                final data = await supabase
+                    .from('teacher_unit_words')
+                    .select('unit_id, word')
+                    .inFilter('unit_id', units.map((u) => u.id).toList())
+                    .order('position')
+                    .order('created_at');
+                final byUnit = <String, List<String>>{};
+                for (final row in data as List) {
+                  byUnit.putIfAbsent(row['unit_id'] as String, () => []).add(row['word'] as String);
+                }
+                return [for (final u in units) byUnit[u.id] ?? const []];
+              },
+            ),
           IconButton(
             icon: Icon(Icons.add, color: context.primary, size: 26),
             onPressed: _createUnit,

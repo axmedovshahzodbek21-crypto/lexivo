@@ -15,6 +15,7 @@ import '../l10n.dart';
 import 'story_reader_screen.dart';
 import 'matching_screen.dart';
 import '../services/supabase_service.dart';
+import '../widgets/copy_word_list.dart';
 
 // The *_collection.dart / word_data.dart files ship only an English
 // description — this overrides it per UI language for the known curated
@@ -192,6 +193,12 @@ class _CollectionsScreenState extends State<CollectionsScreen> with RouteAware {
             fontSize: 16,
           ),
         ),
+        actions: [
+          CopyFolderWordListButton(
+            units: [for (final d in nonEmptyDays) (name: d.topic, count: d.words.length)],
+            loadWords: () async => [for (final d in nonEmptyDays) d.words.map((w) => w.word).toList()],
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(_isDesktop ? 32 : 20),

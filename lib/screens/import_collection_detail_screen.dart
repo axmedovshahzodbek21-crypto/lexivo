@@ -6,6 +6,7 @@ import '../data/storage_service.dart';
 import '../data/word_data.dart';
 import '../services/ai_import.dart';
 import '../widgets/ai_add_words_tab.dart';
+import '../widgets/copy_word_list.dart';
 import 'learning.dart';
 import 'flashcard.dart';
 import 'quiz_screen.dart';
@@ -277,6 +278,8 @@ class _ImportCollectionDetailScreenState extends State<ImportCollectionDetailScr
               child: Text(_selectMode ? tr('cancel') : tr('select_action'),
                 style: TextStyle(color: context.primary, fontWeight: FontWeight.w600)),
             ),
+          if (!_selectMode && _tabs.index == 0 && _words.isNotEmpty)
+            CopyWordListButton(words: _words.map((w) => w.word).toList()),
           if (!_selectMode && _tabs.index == 0)
             IconButton(
               icon: Icon(Icons.delete_outline, color: context.textMuted, size: 22),

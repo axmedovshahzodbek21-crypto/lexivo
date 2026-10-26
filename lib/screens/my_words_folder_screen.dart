@@ -3,6 +3,7 @@ import '../l10n.dart';
 import '../app_theme.dart';
 import '../data/storage_service.dart';
 import '../widgets/my_words_shared.dart';
+import '../widgets/copy_word_list.dart';
 import 'import_collection_detail_screen.dart';
 
 class MyWordsFolderScreen extends StatefulWidget {
@@ -148,6 +149,17 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
           ],
         ),
         actions: [
+          if (_collections.isNotEmpty)
+            CopyFolderWordListButton(
+              units: [for (final c in _collections) (name: c.name, count: c.count)],
+              loadWords: () async {
+                final all = await StorageService.getImportedWords();
+                return [
+                  for (final c in _collections)
+                    [for (final w in all) if (w.folderName == widget.folderName && w.collectionName == c.name) w.word],
+                ];
+              },
+            ),
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: GestureDetector(

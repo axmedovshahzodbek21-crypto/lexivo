@@ -8,6 +8,7 @@ import 'hard_words_screen.dart';
 import 'custom_lists_screen.dart';
 import 'leveled_words_screen.dart' show LeveledWordsScreen;
 import 'progress_screens.dart' show WordsLearnedScreen;
+import 'teacher_library_screen.dart';
 import 'imported_words_screen.dart';
 import 'reading_screen.dart';
 import 'real_english_screen.dart';
@@ -40,6 +41,8 @@ class MoreScreen extends StatelessWidget {
                 (_) => const CustomListsScreen()),
             _MoreItem(tr('more_learned_words'), Icons.verified_rounded, const Color(0xFF4D7C0F),
                 (_) => const WordsLearnedScreen()),
+            _MoreItem(tr('my_library'), Icons.folder_copy_rounded, const Color(0xFF6366F1),
+                (_) => const TeacherLibraryScreen()),
             _MoreItem(tr('more_leveled_words'), Icons.stairs_rounded, const Color(0xFF7E22CE),
                 (_) => const LeveledWordsScreen()),
             _MoreItem(tr('more_my_words'), Icons.folder_open_rounded, const Color(0xFF84CC16),

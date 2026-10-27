@@ -19,14 +19,10 @@ class LeveledLearningScreen extends StatefulWidget {
 
 class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
   final FlutterTts _tts = FlutterTts();
-  static const int _dailyLimit = 40;
-  static const int _overLimitWarning = 50;
 
   List<WordItem> _todayWords = [];
   int _currentIndex = 0;
   bool _loading = true;
-  bool _limitReached = false;
-  bool _overLimitWarningShown = false;
   Set<String> _skippedWords = {};
 
   int _learnedAllTime = 0;
@@ -57,8 +53,7 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
 
   String get _sessionKey => 'leveled_position_${widget.collection.id}';
 
-  // The daily count (global, across every leveled collection — an
-  // anti-burnout cap on the whole "Leveled" mode for the day) and this
+  // The daily count (global, across every leveled collection) and this
   // collection's learned-word list used to live in two separate
   // SharedPreferences keys, written by two separate calls in
   // _onWordLearned. A crash between those two writes could leave the count
@@ -126,18 +121,6 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
     _learnedThisSession = widget.collection.words
         .where((w) => progress.words.contains(w.word))
         .toList();
-
-    if (_learnedToday >= _dailyLimit) {
-      if (!mounted) return;
-      setState(() {
-        _limitReached = true;
-        _loading = false;
-      });
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _showLimitDialog();
-      });
-      return;
-    }
 
     final learnedWords = (await StorageService.getLearnedWords())
         .where((l) => l.collectionName == levelId)
@@ -271,214 +254,6 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
     }
   }
 
-  void _showLimitDialog() {
-    bool flipped = false;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: GestureDetector(
-            onTap: () => setDialogState(() => flipped = !flipped),
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 400),
-              child: flipped
-                  ? _buildLimitDialogBack(context)
-                  : _buildLimitDialogFront(context),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLimitDialogFront(BuildContext context) {
-    return Container(
-      key: const ValueKey('front'),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('⚠️', style: TextStyle(fontSize: 48)),
-          const SizedBox(height: 16),
-          Text(
-            tr('leveled_limit_why_title'),
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            tr('leveled_limit_why_body'),
-            style: const TextStyle(color: Colors.white70, height: 1.6),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            tr('leveled_limit_tap_uzbek'),
-            style: const TextStyle(color: Colors.white38, fontSize: 12),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.of(context, rootNavigator: true).pop();
-                    _goToFlashcardWithLearned();
-                  },
-                  child: Text(
-                    tr('go_to_flashcard'),
-                    style: const TextStyle(color: Color(0xFF6C63FF)),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    setState(() => _limitReached = false);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.shade700,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(tr('learn_anyway')),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLimitDialogBack(BuildContext context) {
-    return Container(
-      key: const ValueKey('back'),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: const Color(0xFF2ECC71),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('⚠️', style: TextStyle(fontSize: 48)),
-          const SizedBox(height: 16),
-          Text(
-            tr('leveled_limit_why_title_uz'),
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            tr('leveled_limit_why_body_uz'),
-            style: const TextStyle(color: Colors.white, height: 1.6),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            tr('leveled_limit_tap_english'),
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.of(context, rootNavigator: true).pop();
-                    _goToFlashcardWithLearned();
-                  },
-                  child: Text(
-                    tr('leveled_go_to_flashcard_uz'),
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    setState(() => _limitReached = false);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.shade700,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(tr('learn_anyway')),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showOverLimitWarning() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          tr('leveled_flashcard_time_title'),
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        content: Text(
-          tr('leveled_flashcard_time_body')
-              .replaceFirst('{n}', '$_learnedToday')
-              .replaceFirst('{over}', '${_learnedToday - _dailyLimit}'),
-          style: const TextStyle(color: Colors.grey, height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              tr('leveled_keep_learning'),
-              style: const TextStyle(color: Colors.grey),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _goToFlashcardWithLearned();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: context.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text(tr('go_to_flashcard')),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _goToFlashcardWithLearned() {
     final wordsForFlashcard = _learnedThisSession.isNotEmpty
         ? _learnedThisSession
@@ -538,29 +313,6 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
           _learnedThisSession.map((w) => w.word).toList(),
         );
         if (!mounted) return;
-
-        if (_learnedToday == _dailyLimit) {
-          await _savePosition();
-          if (!mounted) return;
-          setState(() => _limitReached = true);
-          _showLimitDialog();
-          return;
-        }
-
-        if (_learnedToday == _overLimitWarning && !_overLimitWarningShown) {
-          _overLimitWarningShown = true;
-          // Unlike the _dailyLimit branch above, this doesn't switch the whole
-          // screen into a different full-screen state — it's just an
-          // AlertDialog shown over the normal card view, with a "Keep
-          // learning" option that simply dismisses it. Returning early here
-          // (as this used to) left _currentIndex unadvanced, so dismissing
-          // the dialog showed the same already-learned word again. Show the
-          // dialog (non-blocking — showDialog doesn't need to be awaited to
-          // display) and fall through to the same advance/day-complete logic
-          // below that every other path already goes through, instead of
-          // duplicating it here.
-          _showOverLimitWarning();
-        }
       }
 
       if (newIndex >= _todayWords.length) {
@@ -648,30 +400,8 @@ class _LeveledLearningScreenState extends State<LeveledLearningScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    if (_todayWords.isEmpty && !_limitReached) {
+    if (_todayWords.isEmpty) {
       return Scaffold(
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: context.primary),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: Text(
-            widget.collection.title,
-            style: TextStyle(
-              color: context.appText,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (_limitReached) {
-      return Scaffold(
-        backgroundColor: context.bg,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,

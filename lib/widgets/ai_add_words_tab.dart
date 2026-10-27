@@ -137,8 +137,10 @@ class _AiAddWordsTabState extends State<AiAddWordsTab> with AutomaticKeepAliveCl
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+    // Import button pinned under the list so a long preview doesn't push it off-screen.
+    return Column(children: [
+      Expanded(child: ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
         // Language selectors
         Container(
@@ -265,10 +267,13 @@ class _AiAddWordsTabState extends State<AiAddWordsTab> with AutomaticKeepAliveCl
             ],
           ]),
         ),
-
-        if (_parsed.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          SizedBox(
+      ],
+      )),
+      if (_parsed.isNotEmpty)
+        SafeArea(
+          top: false,
+          minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _importing ? null : _importAll,
@@ -282,9 +287,8 @@ class _AiAddWordsTabState extends State<AiAddWordsTab> with AutomaticKeepAliveCl
                   : Text(tr('import_all_n').replaceFirst('{n}', '${_parsed.length}'), style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),
-        ],
-      ],
-    );
+        ),
+    ]);
   }
 
   Widget _langDropdown(String value, void Function(String?) onChanged) => Container(

@@ -2012,7 +2012,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
               Wrap(spacing: 14, runSpacing: 4, children: [
                 _reviewStat('${c.daysReviewed}', tr('days_reviewed_suffix').replaceFirst('{n}', '$_reviewWindowDays')),
                 _reviewStat('${c.streak}', tr('day_streak_suffix')),
-                _reviewStat('${c.longestGap}', tr('longest_gap_suffix')),
+                if (c.label != ReviewLabel.never) _reviewStat('${c.longestGap}', tr('longest_gap_suffix')),
                 if (c.totalReviews > 0) _reviewStat(c.avgPerActiveDay.toStringAsFixed(1), tr('words_active_day_suffix')),
               ]),
             ]),

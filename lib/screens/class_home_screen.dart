@@ -371,10 +371,18 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
           .toSet();
       final approvedRows = await supabase
           .from('class_members')
-          .select('student_id')
+          .select('student_id, joined_at')
           .eq('class_id', widget.classId)
           .eq('status', 'approved');
       final approvedIds = (approvedRows as List).map((m) => (m as Map)['student_id'] as String).toSet();
+      // Local join date per student — the fallback "last active" for someone
+      // who hasn't studied yet, so a fresh joiner isn't flagged on day one.
+      final joinedByStudent = <String, String>{
+        for (final m in approvedRows)
+          if ((m as Map)['joined_at'] != null)
+            m['student_id'] as String:
+                DateTime.parse(m['joined_at'] as String).toLocal().toIso8601String().substring(0, 10),
+      };
       final memberIds = rpcMemberIds.intersection(approvedIds).toList();
       final memberCount = memberIds.length;
 
@@ -422,7 +430,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
             }
             activeToday = memberIds.where((id) => lastStudyByStudent[id] == today).length;
             needsAttentionCount = memberIds.where((id) {
-              final date = lastStudyByStudent[id];
+              final date = lastStudyByStudent[id] ?? joinedByStudent[id];
               return date == null || date.compareTo(threeDaysAgo) < 0;
             }).length;
           } catch (_) {}

@@ -47,7 +47,10 @@ class StudentRow {
   final int xp, streak, totalWords;
   final Map<String, int> collectionProgress;
   final String? lastStudyDate;
-  const StudentRow({required this.studentId, required this.name, this.avatarUrl, required this.xp, required this.streak, required this.totalWords, required this.collectionProgress, this.lastStudyDate});
+  // From class_members.joined_at — the fallback for a student who hasn't
+  // studied yet, so a fresh joiner isn't flagged inactive on day one.
+  final DateTime? joinedAt;
+  const StudentRow({required this.studentId, required this.name, this.avatarUrl, required this.xp, required this.streak, required this.totalWords, required this.collectionProgress, this.lastStudyDate, this.joinedAt});
   factory StudentRow.fromMap(Map<String, dynamic> m) => StudentRow(
     studentId: m['student_id'] as String? ?? m['id'] as String? ?? '',
     name: m['name'] as String? ?? tr('student'),
@@ -59,12 +62,14 @@ class StudentRow {
       ((m['collection_progress'] as Map?) ?? {}).map((k, v) => MapEntry(k as String, (v as num?)?.toInt() ?? 0)),
     ),
     lastStudyDate: m['last_study_date'] as String?,
+    joinedAt: m['joined_at'] != null ? DateTime.parse(m['joined_at'] as String).toLocal() : null,
   );
   int progressFor(String collectionName) => collectionProgress[collectionName] ?? 0;
   int get totalProgress => collectionProgress.values.fold(0, (a, b) => a + b);
   bool get isInactive {
-    if (lastStudyDate == null) return true;
-    return DateTime.now().difference(DateTime.parse(lastStudyDate!)).inDays >= 3;
+    final last = lastStudyDate != null ? DateTime.parse(lastStudyDate!) : joinedAt;
+    if (last == null) return true;
+    return DateTime.now().difference(last).inDays >= 3;
   }
 }
 
@@ -693,17 +698,19 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         supabase.rpc('get_class_activity', params: {'p_class_id': widget.classId}),
         supabase.from('collections').select().order('display_order'),
         supabase.rpc('get_hard_words', params: {'p_class_id': widget.classId}),
-        supabase.from('class_members').select('student_id').eq('class_id', widget.classId).eq('status', 'approved'),
+        supabase.from('class_members').select('student_id, joined_at').eq('class_id', widget.classId).eq('status', 'approved'),
       ]);
 
       // get_class_dashboard's own definition isn't reconstructible from this
       // repo's migrations (created directly via the Supabase dashboard), so
       // whether it excludes pending members server-side can't be verified —
       // cross-check against class_members.status here instead of trusting it.
-      final approvedIds = (results[4] as List).map((m) => (m as Map)['student_id'] as String).toSet();
+      final joinedById = <String, dynamic>{
+        for (final m in results[4] as List) (m as Map)['student_id'] as String: m['joined_at'],
+      };
       final students = (results[0] as List)
-        .map((e) => StudentRow.fromMap(Map<String, dynamic>.from(e as Map)))
-        .where((s) => approvedIds.contains(s.studentId))
+        .map((e) => StudentRow.fromMap({...Map<String, dynamic>.from(e as Map), 'joined_at': joinedById[e['student_id'] ?? e['id']]}))
+        .where((s) => joinedById.containsKey(s.studentId))
         .toList();
       final activity = (results[1] as List)
         .map((e) => ActivityRow.fromMap(Map<String, dynamic>.from(e as Map)))

@@ -232,7 +232,7 @@ _Pick? _contextPick(List<HistoryEntry> history, String today, String? joinDate, 
   final ev = <String, List<Object>>{'days': _dayItems(history, week)};
   if (week.length >= 6) return _Pick('ctx_week_high', {'active': week.length}, ev);
   if (week.length >= 3) return _Pick('ctx_week_mid', {'active': week.length}, ev);
-  if (week.isNotEmpty) return _Pick('ctx_week_low', {'active': week.length}, ev);
+  if (week.isNotEmpty) return _Pick('ctx_week_low', {'active': week.length, 'dayWord': week.length == 1 ? w['day1']! : w['dayN']!}, ev);
   return _Pick('ctx_week_none', {'last': _fmtLong(active.first)}, {'days': _dayItems(history, [active.first])});
 }
 
@@ -344,14 +344,22 @@ int _variantIndex(String seed, int n) {
 
 // Splits [[label|key]] markup before filling placeholders, so a homework
 // title containing "|" or "]]" can't break the parse.
-({List<Segment> sentence, bool usesName}) _render(_Pick p, String lang, String name, String seed) {
+// English verb endings after {name}: singular for "Student 1", plural for "they".
+const _agreeOne = {'s': 's', 'es': 'es', 'has': 'has', 'hasnt': "hasn't", 'is': 'is', 'was': 'was', 'doesnt': "doesn't"};
+const _agreeThey = {'s': '', 'es': '', 'has': 'have', 'hasnt': "haven't", 'is': 'are', 'was': 'were', 'doesnt': "don't"};
+
+({List<Segment> sentence, bool usesName}) _render(_Pick p, String lang, String name, String seed, bool pronoun) {
   final versions = summarySentences[p.code]![lang]!;
   final text = versions[_variantIndex('$seed:${p.code}', versions.length)];
-  return (sentence: _renderText(text, p, name), usesName: text.contains('{name}'));
+  final w = summaryWords[lang]!;
+  final who = pronoun
+      ? <String, Object>{'name': w['pronoun']!, 'nameObj': w['pronounObj']!, ..._agreeThey}
+      : <String, Object>{'name': name, 'nameObj': name, ..._agreeOne};
+  return (sentence: _renderText(text, p, who), usesName: RegExp(r'\{name(Obj)?\}').hasMatch(text));
 }
 
-List<Segment> _renderText(String text, _Pick p, String name) {
-  final vars = <String, Object>{'name': name, ...p.vars};
+List<Segment> _renderText(String text, _Pick p, Map<String, Object> who) {
+  final vars = <String, Object>{...who, ...p.vars};
   final out = <Segment>[];
   var at = 0;
   for (final m in RegExp(r'\[\[(.+?)\|(\w+)\]\]').allMatches(text)) {
@@ -394,12 +402,11 @@ List<List<Segment>> buildStudentSummary({
   ].whereType<_Pick>().toList();
   if (picks.isEmpty) picks.add(const _Pick('not_enough_data'));
   final seed = '$studentId:$today';
-  // The paragraph names the student once; in Uzbek later sentences say "u"
-  // (he/she — Uzbek has no gendered pronoun). English keeps the name, since
-  // "they" would need different verb forms ("they have", not "they has").
+  // The paragraph names the student once; later sentences say "u" (Uzbek
+  // has no gendered pronoun) or "they" / "them".
   var named = false;
   return picks.map((p) {
-    final r = _render(p, lang, lang == 'uz' && named ? w['pronoun']! : name, seed);
+    final r = _render(p, lang, name, seed, named);
     named = named || r.usesName;
     return r.sentence;
   }).toList();

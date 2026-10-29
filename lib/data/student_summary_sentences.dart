@@ -10,6 +10,9 @@ const summaryWords = <String, Map<String, String>>{
     'sinceYesterday': "kecha",
     'sinceDays': "{n} kun oldin",
     'pronoun': "u",
+    'pronounObj': "u",
+    'day1': "kun",
+    'dayN': "kun",
     'and': "va",
     'andMore': "{a}, {b} va yana {n} ta",
     'daysLate': "{n} kun kech",
@@ -34,6 +37,9 @@ const summaryWords = <String, Map<String, String>>{
     'sinceYesterday': "yesterday",
     'sinceDays': "{n} days ago",
     'pronoun': "they",
+    'pronounObj': "them",
+    'day1': "day",
+    'dayN': "days",
     'and': "and",
     'andMore': "{a}, {b} and {n} more",
     'daysLate': "{n} days late",
@@ -68,7 +74,7 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Sinfga bugun qo'shilgan {name} [[darhol mashq boshladi|days]].",
     ],
     'en': [
-      "{name} joined the class today and [[has already practised|days]].",
+      "{name} joined the class today and [[{has} already practised|days]].",
       "{name} came to the class today and [[got to work on day one|days]].",
       "Having joined today, {name} [[started practising right away|days]].",
     ],
@@ -91,10 +97,10 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Sinfga {since} qo'shilgan {name} [[har kuni faol|days]] bo'lib kelmoqda.",
     ],
     'en': [
-      "{name} joined the class {since} and [[has been active every day|days]].",
-      "Since joining {since}, {name} [[has practised every single day|days]].",
-      "{name} came to the class {since} and [[has studied every day since|days]].",
-      "Having joined {since}, {name} [[has been active daily|days]].",
+      "{name} joined the class {since} and [[{has} been active every day|days]].",
+      "Since joining {since}, {name} [[{has} practised every single day|days]].",
+      "{name} came to the class {since} and [[{has} studied every day since|days]].",
+      "Having joined {since}, {name} [[{has} been active daily|days]].",
     ],
   },
   'ctx_new_some_active': {
@@ -104,8 +110,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} sinfga {since} kelgan va [[{days} kundan {active} kunida|days]] shug'ullangan.",
     ],
     'en': [
-      "{name} joined the class {since} and [[has been active on {active} of {days} days|days]].",
-      "Since joining {since}, {name} [[has practised on {active} days|days]].",
+      "{name} joined the class {since} and [[{has} been active on {active} of {days} days|days]].",
+      "Since joining {since}, {name} [[{has} practised on {active} days|days]].",
       "{name} came to the class {since} and [[studied on {active} of {days} days|days]].",
     ],
   },
@@ -115,7 +121,7 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} {since} sinfga kelgan; birinchi mashq hali oldinda.",
     ],
     'en': [
-      "{name} joined the class {since} but hasn't practised yet.",
+      "{name} joined the class {since} but {hasnt} practised yet.",
       "{name} came to the class {since}; the first practice is still ahead.",
     ],
   },
@@ -127,10 +133,10 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} muntazam ishlaydi: [[so'nggi 7 kunning {active} kunida|days]] faol bo'ldi.",
     ],
     'en': [
-      "In the last 7 days {name} [[was active on {active} days|days]] — very steady.",
+      "In the last 7 days {name} [[{was} active on {active} days|days]] — very steady.",
       "{name} [[practised almost every day|days]] this week.",
       "{name} [[studied on {active} days|days]] over the last week.",
-      "{name} works regularly: [[active on {active} of the last 7 days|days]].",
+      "{name} work{s} regularly: [[active on {active} of the last 7 days|days]].",
     ],
   },
   'ctx_week_mid': {
@@ -140,7 +146,7 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} so'nggi bir haftada [[{active} kun shug'ullandi|days]].",
     ],
     'en': [
-      "{name} [[was active on {active} days|days]] in the last 7 days.",
+      "{name} [[{was} active on {active} days|days]] in the last 7 days.",
       "This week {name} [[practised on {active} days|days]].",
       "{name} [[studied on {active} days|days]] over the last week.",
     ],
@@ -152,9 +158,9 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} so'nggi bir haftada [[faqat {active} kun|days]] shug'ullandi.",
     ],
     'en': [
-      "{name} [[practised on {active} day(s)|days]] in the last 7 days.",
-      "This week {name} [[was active on {active} day(s)|days]] — possibly less than usual.",
-      "{name} [[studied on only {active} day(s)|days]] over the last week.",
+      "{name} [[practised on {active} {dayWord}|days]] in the last 7 days.",
+      "This week {name} [[{was} active on {active} {dayWord}|days]] — possibly less than usual.",
+      "{name} [[studied on only {active} {dayWord}|days]] over the last week.",
     ],
   },
   'ctx_week_none': {
@@ -163,8 +169,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Oxirgi mashq [[{last}|days]] bo'lgan — o'shandan beri {name} faol emas.",
     ],
     'en': [
-      "{name} hasn't practised in the last 7 days; last active [[{last}|days]].",
-      "The last practice was [[{last}|days]] — {name} has not been active since.",
+      "{name} {hasnt} practised in the last 7 days; last active [[{last}|days]].",
+      "The last practice was [[{last}|days]] — {name} {hasnt} been active since.",
     ],
   },
   'ctx_never': {
@@ -173,8 +179,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} hali mashq boshlamagan.",
     ],
     'en': [
-      "{name} hasn't practised yet.",
-      "{name} hasn't started practising yet.",
+      "{name} {hasnt} practised yet.",
+      "{name} {hasnt} started practising yet.",
     ],
   },
   'act_review_cleared': {
@@ -279,7 +285,7 @@ const summarySentences = <String, Map<String, List<String>>>{
     ],
     'en': [
       "The last review was [[{days} days ago|review]]; {n} words are waiting now.",
-      "{name} [[hasn't reviewed for {days} days|review]] — {n} words are waiting.",
+      "{name} [[{hasnt} reviewed for {days} days|review]] — {n} words are waiting.",
       "There is a [[{days}-day break|review]] in reviewing; {n} words on the list.",
     ],
   },
@@ -289,7 +295,7 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Takrorlash hali boshlanmagan — ro'yxatda {n} ta so'z bor.",
     ],
     'en': [
-      "{name} hasn't started reviewing yet; {n} words are waiting.",
+      "{name} {hasnt} started reviewing yet; {n} words are waiting.",
       "Reviewing hasn't started yet — {n} words on the list.",
     ],
   },
@@ -340,7 +346,7 @@ const summarySentences = <String, Map<String, List<String>>>{
     'en': [
       "[[{hw}|homework]] is [[not done yet|timing]] — {left} left.",
       "[[{hw}|homework]] still has [[{left} left|timing]].",
-      "[[{hw}|homework]] is still [[open|timing]] for {name}: {left} left.",
+      "[[{hw}|homework]] is still [[open|timing]] for {nameObj}: {left} left.",
     ],
   },
   'hw_few_open_many': {
@@ -350,7 +356,7 @@ const summarySentences = <String, Map<String, List<String>>>{
     ],
     'en': [
       "[[{hw}|homework]] are [[not done yet|timing]].",
-      "[[{hw}|homework]] are still [[open|timing]] for {name}.",
+      "[[{hw}|homework]] are still [[open|timing]] for {nameObj}.",
     ],
   },
   'hw_few_mixed': {
@@ -360,7 +366,7 @@ const summarySentences = <String, Map<String, List<String>>>{
     ],
     'en': [
       "Of [[{hw}|homework]], one is done and one is [[still open|timing]].",
-      "{name} has finished one of [[{hw}|homework]]; [[the other is waiting|timing]].",
+      "{name} {has} finished one of [[{hw}|homework]]; [[the other is waiting|timing]].",
     ],
   },
   'hw_early': {
@@ -371,10 +377,10 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[Vazifalar|homework]] {name} uchun [[oxirgi kunga qolmaydi|timing]] — odatda oldinroq bajariladi.",
     ],
     'en': [
-      "{name} usually finishes [[homework|homework]] [[before the deadline|timing]].",
-      "{name} starts [[homework|homework]] early and [[doesn't wait for the deadline|timing]].",
-      "{name} often finishes [[homework|homework]] [[well ahead of time|timing]].",
-      "[[Homework|homework]] [[rarely waits until the last day|timing]] for {name}.",
+      "{name} usually finish{es} [[homework|homework]] [[before the deadline|timing]].",
+      "{name} start{s} [[homework|homework]] early and [[{doesnt} wait for the deadline|timing]].",
+      "{name} often finish{es} [[homework|homework]] [[well ahead of time|timing]].",
+      "[[Homework|homework]] [[rarely waits until the last day|timing]] for {nameObj}.",
     ],
   },
   'hw_last_day': {
@@ -385,10 +391,10 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} [[oxirgi kunni afzal ko'radi|timing]], lekin [[muddatni|homework]] o'tkazib yubormaydi.",
     ],
     'en': [
-      "{name} [[often does homework on the last day|timing]], but never skips [[one|homework]].",
-      "{name} usually works [[close to the deadline|timing]], but still hands [[everything|homework]] in on time.",
-      "[[Homework|homework]] [[often waits until the last day|timing]], but {name} always finishes it.",
-      "{name} [[prefers the last day|timing]], but doesn't miss [[a deadline|homework]].",
+      "{name} [[often do{es} homework on the last day|timing]], but never skip{s} [[one|homework]].",
+      "{name} usually work{s} [[close to the deadline|timing]], but still hand{s} [[everything|homework]] in on time.",
+      "[[Homework|homework]] [[often waits until the last day|timing]], but {name} always finish{es} it.",
+      "{name} [[prefer{s} the last day|timing]], but {doesnt} miss [[a deadline|homework]].",
     ],
   },
   'hw_on_time': {
@@ -398,8 +404,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} [[so'nggi {total} ta vazifaning|homework]] [[hammasini vaqtida|timing]] topshirgan.",
     ],
     'en': [
-      "{name} has done [[every homework|homework]] [[on time|timing]].",
-      "{name} [[hasn't missed a single deadline|timing]].",
+      "{name} {has} done [[every homework|homework]] [[on time|timing]].",
+      "{name} [[{hasnt} missed a single deadline|timing]].",
       "{name} handed in [[all of the last {total} assignments|homework]] [[on time|timing]].",
     ],
   },
@@ -410,9 +416,9 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[Vazifa|homework]] berilgan kuni {name} [[odatda uni tugatib qo'yadi|timing]].",
     ],
     'en': [
-      "{name} [[often does homework|homework]] [[on the day it is assigned|timing]].",
-      "{name} [[gets to work right away|timing]] when [[homework|homework]] is assigned.",
-      "{name} [[usually finishes|timing]] [[homework|homework]] on the day it is set.",
+      "{name} [[often do{es} homework|homework]] [[on the day it is assigned|timing]].",
+      "{name} [[get{s} to work right away|timing]] when [[homework|homework]] is assigned.",
+      "{name} [[usually finish{es}|timing]] [[homework|homework]] on the day it is set.",
     ],
   },
   'hw_late_finishes': {
@@ -422,9 +428,9 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Muddat {name} uchun [[{freq} qiyin bo'ladi|timing]], lekin [[ish|homework]] doim bajariladi.",
     ],
     'en': [
-      "{name} is [[{freq} late|timing]], but always finishes [[the homework|homework]] in the end.",
-      "{name} [[{freq} hands in after the deadline|timing]], but never abandons [[an assignment|homework]].",
-      "The deadline is [[{freq} hard|timing]] for {name}, but [[the work|homework]] always gets done.",
+      "{name} [[{is} {freq} late|timing]], but always finish{es} [[the homework|homework]] in the end.",
+      "{name} [[{freq} hand{s} in after the deadline|timing]], but never abandon{s} [[an assignment|homework]].",
+      "The deadline is [[{freq} hard|timing]] for {nameObj}, but [[the work|homework]] always gets done.",
     ],
   },
   'hw_some_missing': {
@@ -434,9 +440,9 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[{total} ta vazifadan|homework]] [[{missed} tasi hali kutmoqda|timing]] — qolganlarini {name} bajargan.",
     ],
     'en': [
-      "{name} has done {done} of [[{total} assignments|homework]]; [[{missed} still open|timing]].",
-      "{name} does most homework — only [[{missed} not done yet|timing]].",
-      "[[{missed} of {total} assignments|timing]] are still waiting — {name} has done [[the rest|homework]].",
+      "{name} {has} done {done} of [[{total} assignments|homework]]; [[{missed} still open|timing]].",
+      "{name} do{es} most homework — only [[{missed} not done yet|timing]].",
+      "[[{missed} of {total} assignments|timing]] are still waiting — {name} {has} done [[the rest|homework]].",
     ],
   },
   'hw_many_missing': {
@@ -446,9 +452,9 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[{total} ta vazifadan|homework]] [[{missed} tasi hali bajarilmagan|timing]] — {name} bilan gaplashib ko'rish foydali bo'lishi mumkin.",
     ],
     'en': [
-      "{name} has done {done} assignments, but [[{missed} are still open|timing]] — some help may be needed.",
-      "[[Several assignments are still open|timing]] for {name}; a short talk could help find out why.",
-      "[[{missed} of {total} assignments|timing]] are not done yet — a chat with {name} could help.",
+      "{name} {has} done {done} assignments, but [[{missed} are still open|timing]] — some help may be needed.",
+      "[[Several assignments are still open|timing]] for {nameObj}; a short talk could help find out why.",
+      "[[{missed} of {total} assignments|timing]] are not done yet — a chat with {nameObj} could help.",
     ],
   },
   'hw_none_done': {
@@ -457,8 +463,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} [[so'nggi {total} ta vazifani|timing]] hali tugatmagan; qisqa suhbat sababini bilishga yordam berishi mumkin.",
     ],
     'en': [
-      "[[The last {total} assignments|timing]] are not done yet — a chat with {name} could help.",
-      "{name} hasn't finished [[the last {total} assignments|timing]] yet; a short talk could help find out why.",
+      "[[The last {total} assignments|timing]] are not done yet — a chat with {nameObj} could help.",
+      "{name} {hasnt} finished [[the last {total} assignments|timing]] yet; a short talk could help find out why.",
     ],
   },
   'hw_improving': {
@@ -490,9 +496,9 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} uchun [[eslatma yaxshi ishlaydi|reminders]] — javob tez keladi.",
     ],
     'en': [
-      "{name} [[responds to reminders quickly|reminders]] — usually practises within a day.",
-      "[[After a reminder|reminders]] {name} often gets to work the same day.",
-      "[[Reminders work well|reminders]] for {name} — the response comes fast.",
+      "{name} [[respond{s} to reminders quickly|reminders]] — usually practise{s} within a day.",
+      "[[After a reminder|reminders]] {name} often get{s} to work the same day.",
+      "[[Reminders work well|reminders]] for {nameObj} — the response comes fast.",
     ],
   },
   'rem_slow': {
@@ -502,9 +508,9 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[Eslatmalar|reminders]] {name} uchun ta'sir qiladi — faqat javob uchun biroz vaqt kerak.",
     ],
     'en': [
-      "{name} [[responds to reminders a little late|reminders]], but then always practises.",
-      "{name} comes back within a day or two [[after a reminder|reminders]], not right away.",
-      "[[Reminders|reminders]] do work for {name} — the response just takes a little time.",
+      "{name} [[respond{s} to reminders a little late|reminders]], but then always practise{s}.",
+      "{name} come{s} back within a day or two [[after a reminder|reminders]], not right away.",
+      "[[Reminders|reminders]] do work for {nameObj} — the response just takes a little time.",
     ],
   },
   'rem_mixed': {
@@ -513,8 +519,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[Eslatmalar|reminders]] {name} uchun har doim ham ta'sir qilmaydi — ba'zan ishlaydi, ba'zan yo'q.",
     ],
     'en': [
-      "{name} [[sometimes practises after a reminder|reminders]], sometimes not.",
-      "[[Reminders|reminders]] don't always work for {name} — sometimes they do, sometimes not.",
+      "{name} [[sometimes practise{s} after a reminder|reminders]], sometimes not.",
+      "[[Reminders|reminders]] don't always work for {nameObj} — sometimes they do, sometimes not.",
     ],
   },
   'rem_read_no_action': {
@@ -523,7 +529,7 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[Eslatmalar o'qilgan|reminders]], ammo mashqqa olib kelmagan; jonli suhbat foydaliroq bo'lishi mumkin.",
     ],
     'en': [
-      "{name} [[reads reminders|reminders]], but often doesn't start practising — a different approach may help.",
+      "{name} [[read{s} reminders|reminders]], but often {doesnt} start practising — a different approach may help.",
       "[[Reminders were read|reminders]] but didn't lead to practice; talking in person may work better.",
     ],
   },
@@ -533,7 +539,7 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[Eslatmalar o'qilmagan|reminders]]; darsda og'zaki eslatish samaraliroq bo'lishi mumkin.",
     ],
     'en': [
-      "{name} [[hasn't opened the recent reminders|reminders]] — they may not be reaching them.",
+      "{name} [[{hasnt} opened the recent reminders|reminders]] — they may not be reaching {nameObj}.",
       "[[Reminders haven't been read|reminders]]; mentioning it in class may work better.",
     ],
   },
@@ -543,8 +549,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} uchun eslatma kerak emas — [[o'zi muntazam shug'ullanadi|days]].",
     ],
     'en': [
-      "{name} [[practises regularly|days]] without reminders.",
-      "{name} doesn't need reminders — [[practises regularly on their own|days]].",
+      "{name} [[practise{s} regularly|days]] without reminders.",
+      "{name} {doesnt} need reminders — [[practise{s} regularly on their own|days]].",
     ],
   },
   'rem_single_responded': {
@@ -563,7 +569,7 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[Oxirgi eslatma o'qilgan|reminders]], ammo mashq hali bo'lmagan.",
     ],
     'en': [
-      "{name} [[read the last reminder|reminders]] but hasn't practised yet.",
+      "{name} [[read the last reminder|reminders]] but {hasnt} practised yet.",
       "[[The last reminder was read|reminders]], but no practice yet.",
     ],
   },
@@ -573,7 +579,7 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[Oxirgi eslatma|reminders]] hali o'qilmagan.",
     ],
     'en': [
-      "{name} [[hasn't opened the last reminder|reminders]] yet.",
+      "{name} [[{hasnt} opened the last reminder|reminders]] yet.",
       "[[The last reminder|reminders]] hasn't been read yet.",
     ],
   },

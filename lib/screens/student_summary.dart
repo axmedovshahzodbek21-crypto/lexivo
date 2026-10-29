@@ -148,6 +148,7 @@ String _joinList(List<String> list, Map<String, String> w) {
   }
   if (t.length == 1) return t[0];
   if (t.length == 2) return '${t[0]} ${w['and']} ${t[1]}';
+  if (t.length == 3) return '${t[0]}, ${t[1]} ${w['and']} ${t[2]}';
   return _fill(w['andMore']!, {'a': t[0], 'b': t[1], 'n': t.length - 2});
 }
 
@@ -368,12 +369,17 @@ _Pick? _trendPick(List<HistoryEntry> history, String today, String? joinDate) {
   if (base.where((w) => w.xp > 0).length < 2) return null;
   final usual = base.fold<int>(0, (s, w) => s + w.xp) / base.length;
   final ratio = cur.xp / usual;
-  if (prev.length >= 3 && ratio >= 1.3 && prev.every((w) => cur.xp > w.xp)) return _Pick('trd_record', const {}, ev);
-  if (ratio >= 2) return _Pick('trd_up_strong', {'pct': ((ratio - 1) * 100).round()}, ev);
-  if (ratio >= 1.3) return _Pick('trd_up', {'pct': ((ratio - 1) * 100).round()}, ev);
-  if (ratio > 0.7) return _Pick('trd_steady', const {}, ev);
-  if (ratio > 0.3) return _Pick('trd_down', {'pct': ((1 - ratio) * 100).round()}, ev);
-  return _Pick('trd_down_strong', {'pct': ((1 - ratio) * 100).round()}, ev);
+  // XP and active days must agree: one long session isn't a "better week"
+  // if there were fewer days than usual (and vice versa).
+  final usualDays = (base.fold<int>(0, (s, w) => s + w.activeDays) / base.length).round();
+  final up = cur.activeDays >= usualDays, down = cur.activeDays <= usualDays;
+  if (up && prev.length >= 3 && ratio >= 1.3 && prev.every((w) => cur.xp > w.xp)) return _Pick('trd_record', const {}, ev);
+  if (up && ratio >= 2) return _Pick('trd_up_strong', {'pct': ((ratio - 1) * 100).round()}, ev);
+  if (up && ratio >= 1.3) return _Pick('trd_up', {'pct': ((ratio - 1) * 100).round()}, ev);
+  if (ratio > 0.7 && ratio < 1.3) return _Pick('trd_steady', const {}, ev);
+  if (down && ratio <= 0.7 && ratio > 0.3) return _Pick('trd_down', {'pct': ((1 - ratio) * 100).round()}, ev);
+  if (down && ratio <= 0.3) return _Pick('trd_down_strong', {'pct': ((1 - ratio) * 100).round()}, ev);
+  return null;
 }
 
 // ── Streaks ──────────────────────────────────────────────────────────────────
@@ -821,6 +827,8 @@ List<Segment> _renderText(String text, _Pick p, Map<String, Object> who) {
   final w = summaryWords[lang]!;
   final hw = _homeworkPicks(homework, today, w);
   final act = _activityPicks(history, homework, hw.named, today, dueCount, w);
+  final activeWeek = history.any((e) => _localDate(e.createdAt).compareTo(_addDays(today, -7)) > 0);
+  final pref = _preferencePick(history, homework, today, w);
   final streak = _streakPick(history, today, joinDate);
   final trend = _trendPick(history, today, joinDate);
   final picks = [
@@ -833,9 +841,11 @@ List<Segment> _renderText(String text, _Pick p, Map<String, Object> who) {
     ..._reviewQualityPicks(answers, today, w),
     _classPick(classAnswers, classNames, studentId, today),
     ...hw.picks,
-    _preferencePick(history, homework, today, w),
+    // Habits and preferences are noise for someone who has stopped; only a
+    // skipped homework mode is still worth saying.
+    activeWeek || pref?.code == 'mode_skips' ? pref : null,
     _milestonePick(homework, hw.picks.map((p) => p.code).toList(), today, mastered, learned, answers.length),
-    _habitPick(history, today),
+    activeWeek ? _habitPick(history, today) : null,
     _reminderPick(notes, history, now, today, joinDate),
   ].whereType<_Pick>().toList();
   if (picks.isEmpty) picks.add(const _Pick('not_enough_data'));

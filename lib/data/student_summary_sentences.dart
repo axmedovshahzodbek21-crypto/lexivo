@@ -972,11 +972,11 @@ const summarySentences = <String, Map<String, List<String>>>{
   'rq_dropping': {
     'uz': [
       "Takrorlash aniqligi [[{from}% dan {to}% ga|accuracy]] tushdi — so'zlarni qayta ko'rish foydali.",
-      "{name} takrorlashda biroz ko'proq adashmoqda: [[{from}% → {to}%|accuracy]].",
+      "{name} takrorlashda ko'proq adashmoqda: [[{from}% → {to}%|accuracy]].",
       "So'nggi ikki haftada aniqlik [[{to}% ga tushdi|accuracy]] (avval {from}%).",
       "{name} so'zlarni [[avvalgidan qiyinroq|accuracy]] eslayapti ({from}% → {to}%); yangi so'zlar ko'p bo'lgan bo'lishi mumkin.",
       "Takrorlash natijasi pasaygan: [[{to}% to'g'ri|accuracy]], ikki hafta oldin {from}% edi.",
-      "{name} uchun aniqlik [[biroz kamaydi|accuracy]]: {to}% — qiyin so'zlarga e'tibor berish mumkin.",
+      "{name} uchun aniqlik [[{to}% gacha kamaydi|accuracy]] — qiyin so'zlarga e'tibor berish mumkin.",
       "So'zlar biroz unutilmoqda — aniqlik [[{from}% dan {to}% gacha|accuracy]] tushdi.",
       "{name} takrorlashda [[orqaga ketdi|accuracy]]: {from}% dan {to}% ga; qisqa qayta o'rganish yordam beradi.",
       "{name} so'zlarni [[avvalgidek eslay olmayapti|accuracy]]: {from}% → {to}%.",
@@ -984,11 +984,11 @@ const summarySentences = <String, Map<String, List<String>>>{
     ],
     'en': [
       "Review accuracy [[fell from {from}% to {to}%|accuracy]] — going over the words again would help.",
-      "{name} {is} making a few more mistakes in review: [[{from}% → {to}%|accuracy]].",
+      "{name} {is} making more mistakes in review: [[{from}% → {to}%|accuracy]].",
       "In the last two weeks accuracy [[dropped to {to}%|accuracy]] (from {from}%).",
       "{name} {is} finding words [[harder to recall than before|accuracy]] ({from}% → {to}%); there may have been many new words.",
       "Review results went down: [[{to}% correct|accuracy]], from {from}% two weeks earlier.",
-      "Accuracy [[dipped a little|accuracy]] for {nameObj}: {to}% — the hard words could use attention.",
+      "Accuracy [[went down to {to}%|accuracy]] for {nameObj} — the hard words could use attention.",
       "Some words are fading — accuracy [[went from {from}% to {to}%|accuracy]].",
       "{name} [[slipped back|accuracy]] in review: from {from}% to {to}%; a short relearn would help.",
       "{name} {is} [[not recalling words as well as before|accuracy]]: {from}% → {to}%.",

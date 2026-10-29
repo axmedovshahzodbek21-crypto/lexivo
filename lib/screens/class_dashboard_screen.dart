@@ -15,6 +15,7 @@ import '../widgets/member_avatar.dart';
 import 'class_words_screen.dart';
 import 'class_curriculum_tab.dart';
 import 'class_home_screen.dart';
+import 'missed_homework.dart';
 
 // ── Models ───────────────────────────────────────────────────────────────────
 
@@ -986,6 +987,15 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
         children: [
           _buildPendingSection(),
+
+          // Missed homework deadlines
+          if (_students.isNotEmpty)
+            MissedHomeworkSection(
+              classId: widget.classId,
+              students: _students.map((s) => (id: s.studentId, joinedAt: s.joinedAt)).toList(),
+              onlyMissing: true,
+              nameOf: (id) => _students.where((s) => s.studentId == id).firstOrNull?.name ?? tr('student'),
+            ),
 
           // Studying now (live presence)
           _buildStudyingNow(),

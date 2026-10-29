@@ -4,6 +4,7 @@ import '../date_utils.dart';
 import '../l10n.dart' as l10n;
 import '../services/supabase_service.dart';
 import 'class_models.dart';
+import 'missed_homework.dart';
 
 const _reasonIcons = <String, String>{
   'Learn': '📖', 'Cards': '🃏', 'Flashcard': '🃏', 'Quiz': '🧠', 'Quiz (perfect)': '🧠', 'Match': '🎯',
@@ -111,6 +112,7 @@ class ClassXpCalendarScreen extends StatefulWidget {
 class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
   bool _loading = true;
   List<Map<String, dynamic>> _entries = [];
+  DateTime? _joinedAt; // teacher view only — for the missed-deadlines list
   late DateTime _month;
   @override
   void initState() {
@@ -131,16 +133,23 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
       // list (it uses widget.totalXpRaw directly), so a cap only affects
       // how far back day-by-day detail is visible — same tradeoff already
       // accepted for the personal calendar.
-      final rows = await supabase
-          .from('class_xp_history')
-          .select('id, amount, reason, created_at')
-          .eq('user_id', uid)
-          .eq('class_id', widget.classId)
-          .order('created_at', ascending: false)
-          .limit(500);
+      final results = await Future.wait([
+        supabase
+            .from('class_xp_history')
+            .select('id, amount, reason, created_at')
+            .eq('user_id', uid)
+            .eq('class_id', widget.classId)
+            .order('created_at', ascending: false)
+            .limit(500),
+        if (widget.studentId != null)
+          supabase.from('class_members').select('joined_at').eq('class_id', widget.classId).eq('student_id', uid).maybeSingle(),
+      ]);
+      final rows = results[0];
+      final joined = results.length > 1 ? ((results[1] as Map?)?['joined_at'] as String?) : null;
       if (mounted) {
         setState(() {
           _entries = (rows as List).map((r) => Map<String, dynamic>.from(r as Map)).toList();
+          _joinedAt = joined != null ? DateTime.parse(joined).toLocal() : null;
           _loading = false;
         });
       }
@@ -355,6 +364,17 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
                     ),
                   ]),
                 ),
+
+                // ── Missed deadlines (teacher viewing a student) ─────────────
+                // Only opened with a studentId from the teacher's ranks list; a
+                // student can't read a classmate's homework progress anyway.
+                if (widget.studentId != null) ...[
+                  const SizedBox(height: 16),
+                  MissedHomeworkSection(
+                    classId: widget.classId,
+                    students: [(id: widget.studentId!, joinedAt: _joinedAt)],
+                  ),
+                ],
 
               ]),
             ),

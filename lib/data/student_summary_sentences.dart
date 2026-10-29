@@ -67,12 +67,20 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Hozircha xulosa uchun yetarli ma'lumot yo'q; birinchi vazifalardan keyin to'liqroq bo'ladi.",
       "Ma'lumot hali kam — o'quvchi bir oz shug'ullangach, xulosa kengayadi.",
       "To'liq xulosa uchun biroz vaqt kerak: mashqlar va vazifalar to'planishi bilan paydo bo'ladi.",
+      "Xulosa uchun yetarli faollik hali to'planmagan — bir-ikki kundan keyin qaytib ko'ring.",
+      "O'quvchi hali endi boshlamoqda; xulosa ma'lumot ko'paygan sari aniqlashadi.",
+      "Hozircha aytish uchun gap kam — birinchi mashq va vazifalar xulosani boyitadi.",
+      "Ma'lumot yig'ilmoqda: tez orada bu yerda batafsil xulosa paydo bo'ladi.",
     ],
     'en': [
       "Not enough data yet for a fuller summary — it grows as homework gets done or passes its deadline.",
       "There is not enough data for a summary yet; it fills in after the first assignments.",
       "Data is still thin — the summary will grow once there is a bit more practice.",
       "A full summary needs a little more time: it builds up as practice and homework come in.",
+      "Not enough activity has built up for a summary yet — check back in a day or two.",
+      "The student is only just starting; the summary sharpens as more data comes in.",
+      "There is little to say for now — the first practice and homework will fill it in.",
+      "Data is being collected: a detailed summary will appear here soon.",
     ],
   },
   'ctx_joined_today_active': {
@@ -85,6 +93,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} sinfdagi birinchi kunini [[mashq bilan boshladi|days]].",
       "{name} bugun sinfga qo'shilishi bilan [[ishga kirishdi|days]].",
       "Sinfdagi birinchi kunida {name} [[allaqachon faol bo'ldi|days]].",
+      "{name} bugun qo'shildi va [[ilk mashqini allaqachon bajardi|days]].",
+      "Birinchi kunidayoq {name} [[sinfda faol bo'ldi|days]].",
     ],
     'en': [
       "{name} joined the class today and [[{has} already practised|days]].",
@@ -95,6 +105,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} [[started their first day in the class with practice|days]].",
       "As soon as {name} joined today, [[the practice began|days]].",
       "On their first day in the class, {name} [[{was} already active|days]].",
+      "{name} joined today and [[{has} already done the first practice|days]].",
+      "On day one {name} [[{was} already active in the class|days]].",
     ],
   },
   'ctx_joined_today': {
@@ -107,6 +119,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} sinfga endigina qo'shildi.",
       "{name} bugun qo'shildi — hali mashq boshlamagan.",
       "Sinfga bugun kelgan {name} hali birinchi qadamni qo'ymagan.",
+      "{name} bugundan boshlab sinf a'zosi.",
+      "{name} bugun sinfga qo'shildi; hali mashqlar yo'q.",
     ],
     'en': [
       "{name} joined the class today.",
@@ -117,6 +131,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} {has} only just joined the class.",
       "{name} joined today and {hasnt} started practising yet.",
       "Having joined today, {name} {hasnt} taken the first step yet.",
+      "{name} became a member of the class today.",
+      "{name} joined the class today; no practice yet.",
     ],
   },
   'ctx_new_all_active': {
@@ -129,6 +145,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} sinfga kelganidan beri [[biror kunni o'tkazib yubormadi|days]].",
       "Sinfga {since} qo'shilganidan buyon {name} [[har kuni shug'ullanib kelmoqda|days]].",
       "{name} {since} qo'shildi va [[o'shandan beri har kuni faol|days]].",
+      "{name} {since} kelganidan beri [[har kuni sinfga qaytmoqda|days]].",
+      "Qo'shilganidan buyon {name} [[mashqsiz kun qoldirmadi|days]].",
     ],
     'en': [
       "{name} joined the class {since} and [[{has} been active every day|days]].",
@@ -139,6 +157,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Since joining the class, {name} [[{has} practised every day|days]].",
       "{name} [[{has} been active every day|days]] since joining {since}.",
       "Every day since joining {since}, {name} [[{has} put in some practice|days]].",
+      "Since arriving {since}, {name} [[{has} come back every day|days]].",
+      "Since joining, {name} [[{hasnt} had a day without practice|days]].",
     ],
   },
   'ctx_new_some_active': {
@@ -151,6 +171,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Sinfga {since} qo'shilgach, {name} [[{active} kun mashq qildi|days]].",
       "{name} qo'shilganidan beri o'tgan {days} kunning [[{active} kunida mashq qilgan|days]].",
       "{name} {since} keldi va hozircha [[{active} kun faol bo'ldi|days]].",
+      "{name} {since} qo'shilgan va [[{active} kun mashq qilgan|days]]; hammasi bo'lib {days} kun o'tdi.",
+      "Sinfdagi dastlabki {days} kunda {name} [[{active} kun faol bo'ldi|days]].",
     ],
     'en': [
       "{name} joined the class {since} and [[{has} been active on {active} of {days} days|days]].",
@@ -161,6 +183,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Out of {days} days in the class, {name} [[{was} active on {active}|days]].",
       "{name} [[{has} put in practice on {active} days|days]] since joining {since}.",
       "So far {name} [[{has} been active on {active} of {days} days|days]].",
+      "{name} joined {since} and [[{has} practised on {active} days|days]]; {days} days have passed in total.",
+      "In the first {days} days in the class, {name} [[{was} active on {active}|days]].",
     ],
   },
   'ctx_new_inactive': {
@@ -173,6 +197,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} sinfga {since} qo'shilgan — kichik eslatma birinchi qadamga yordam berishi mumkin.",
       "Sinfga {since} kelganiga qaramay, {name} hali mashq qilmagan.",
       "{name} hali birinchi mashqini bajarmagan; sinfga {since} qo'shilgan.",
+      "{name} {since} qo'shilgan; birinchi qadam uchun kichik turtki foydali bo'lishi mumkin.",
+      "{since} sinfga kelgan {name} hali birorta mashq bajarmagan.",
     ],
     'en': [
       "{name} joined the class {since} but {hasnt} practised yet.",
@@ -183,6 +209,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} joined the class {since} — a small nudge could help with the first step.",
       "Although {name} joined {since}, no practice has been done yet.",
       "{name} {hasnt} done a first practice yet; they joined {since}.",
+      "{name} joined {since}; a small nudge could help with the first step.",
+      "Having joined {since}, {name} {hasnt} done any practice yet.",
     ],
   },
   'ctx_week_high': {
@@ -195,6 +223,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Hafta davomida {name} [[deyarli bir kun ham qoldirmadi|days]].",
       "{name} har kuni shug'ullanishga odatlangan: [[7 kundan {active} kuni|days]] faol.",
       "So'nggi haftada {name} [[{active} kun mashq qildi|days]] — bu juda yaxshi ko'rsatkich.",
+      "{name} bir haftadan beri [[deyarli to'xtovsiz|days]] shug'ullanmoqda.",
+      "So'nggi 7 kunning [[{active} kunida|days]] {name} mashq qildi — a'lo ritm.",
     ],
     'en': [
       "In the last 7 days {name} [[{was} active on {active} days|days]] — very steady.",
@@ -205,6 +235,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Over the past week {name} [[hardly missed a day|days]].",
       "{name} {has} built a daily habit: [[{active} of the last 7 days|days]] active.",
       "Last week {name} [[practised on {active} days|days]] — a strong result.",
+      "{name} {has} practised [[almost non-stop|days]] for a week.",
+      "On [[{active} of the last 7 days|days]] {name} practised — an excellent rhythm.",
     ],
   },
   'ctx_week_mid': {
@@ -217,6 +249,9 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Oxirgi 7 kunning [[{active} kunida|days]] {name} shug'ullandi.",
       "{name} uchun so'nggi hafta [[{active} kunlik mashq|days]] bilan o'tdi.",
       "Bu hafta {name} [[{active} kun shug'ullandi|days]]; bir-ikki kun qo'shilsa, yanada yaxshi bo'ladi.",
+      "{name} haftaning [[{active} kunini|days]] mashqqa ajratdi.",
+      "So'nggi 7 kun ichida {name} [[{active} marta|days]] sinfga kirdi.",
+      "{name} bu hafta [[{active} kun|days]] sinf bilan ishladi.",
     ],
     'en': [
       "{name} [[{was} active on {active} days|days]] in the last 7 days.",
@@ -227,6 +262,9 @@ const summarySentences = <String, Map<String, List<String>>>{
       "On [[{active} of the last 7 days|days]] {name} put in some practice.",
       "The last week brought [[{active} days of practice|days]] for {nameObj}.",
       "{name} [[studied on {active} days|days]] this week; a day or two more would help.",
+      "{name} set aside [[{active} days|days]] of the week for practice.",
+      "In the last 7 days {name} came to the class [[on {active} days|days]].",
+      "{name} worked with the class on [[{active} days|days]] this week.",
     ],
   },
   'ctx_week_low': {
@@ -239,6 +277,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Oxirgi 7 kunda {name} [[{active} kun faol bo'ldi|days]]; ritmni tiklash uchun kichik turtki kerak bo'lishi mumkin.",
       "{name} so'nggi haftada [[{active} kun|days]] mashq qildi — har kuni oz-ozdan qilish foydali bo'lardi.",
       "Bu hafta {name} uchun mashq kunlari kam bo'ldi: [[{active} kun|days]].",
+      "Oxirgi hafta {name} uchun [[{active} kunlik|days]] mashq bilan o'tdi.",
+      "{name} so'nggi 7 kunda [[{active} kun|days]] faol bo'ldi — ko'proq kunlar yordam beradi.",
     ],
     'en': [
       "{name} [[practised on {active} {dayWord}|days]] in the last 7 days.",
@@ -249,6 +289,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "In the last 7 days {name} [[{was} active on {active} {dayWord}|days]]; a small nudge could help get the rhythm back.",
       "{name} practised on [[{active} {dayWord}|days]] last week — a little every day would help.",
       "This week had few practice days for {nameObj}: [[{active} {dayWord}|days]].",
+      "The last week brought [[{active} practice {dayWord}|days]] for {nameObj}.",
+      "{name} {was} active on [[{active} {dayWord}|days]] in the last 7 days — more days would help.",
     ],
   },
   'ctx_week_none': {
@@ -261,6 +303,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} uchun bir haftalik tanaffus bor: oxirgi mashq [[{last}|days]].",
       "Oxirgi faol kun [[{last}|days]] bo'lgan; {name} bilan qisqa suhbat foydali bo'lishi mumkin.",
       "{name} [[{last}|days]] kunidan beri mashq qilmagan.",
+      "{name} uchun oxirgi faol kun — [[{last}|days]]; o'shandan beri mashq yo'q.",
+      "Bir haftadan ko'proq vaqt mashqsiz o'tdi; oxirgisi — [[{last}|days]].",
     ],
     'en': [
       "{name} {hasnt} practised in the last 7 days; last active [[{last}|days]].",
@@ -271,6 +315,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "There is a week-long break for {nameObj}: the last practice was [[{last}|days]].",
       "The last active day was [[{last}|days]]; a short chat with {nameObj} could help.",
       "{name} {hasnt} practised since [[{last}|days]].",
+      "The last active day for {nameObj} was [[{last}|days]]; no practice since.",
+      "More than a week has passed without practice; the last was [[{last}|days]].",
     ],
   },
   'ctx_never': {
@@ -283,6 +329,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} sinfda hali faol bo'lmagan.",
       "{name} hali shug'ullanishni boshlamagan — kichik turtki yordam berishi mumkin.",
       "Sinfda {name} uchun hali hech qanday mashq qayd etilmagan.",
+      "{name} hali sinf mashqlarini boshlamagan.",
+      "{name} tomonidan hali hech qanday faollik bo'lmagan.",
     ],
     'en': [
       "{name} {hasnt} practised yet.",
@@ -293,6 +341,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} {hasnt} been active in the class yet.",
       "{name} {hasnt} started yet — a small nudge could help.",
       "No practice has been recorded for {nameObj} in the class yet.",
+      "{name} {hasnt} begun the class practice yet.",
+      "There has been no activity from {nameObj} yet.",
     ],
   },
   'trd_up_strong': {
@@ -305,6 +355,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} bu hafta [[sezilarli darajada ko'proq mashq qildi|weeks]] — odatdagidan {pct}% ko'p.",
       "Oxirgi 7 kunda {name} [[o'z odatidan ancha oshib ketdi|weeks]].",
       "{name} bu hafta [[kuchli sur'at|weeks]] ko'rsatdi: odatdagidan {pct}% ko'proq.",
+      "Bu hafta {name} [[ancha ko'p ishladi|weeks]] — odatiy haftadan {pct}% ortiq.",
+      "{name} uchun bu hafta [[kuchli sakrash|weeks]] bo'ldi: +{pct}%.",
     ],
     'en': [
       "This week {name} [[practised {pct}% more than usual|weeks]].",
@@ -315,6 +367,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} [[practised noticeably more|weeks]] this week — {pct}% more than usual.",
       "Over the last 7 days {name} [[went well beyond their usual pace|weeks]].",
       "{name} showed [[a strong pace|weeks]] this week: {pct}% more than usual.",
+      "This week {name} [[worked a lot more|weeks]] — {pct}% above a usual week.",
+      "This week was [[a big jump|weeks]] for {nameObj}: +{pct}%.",
     ],
   },
   'trd_up': {
@@ -327,6 +381,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Oxirgi 7 kunda {name} [[odatdagidan ko'proq shug'ullandi|weeks]].",
       "{name} uchun bu hafta [[o'sish bor|weeks]]: +{pct}%.",
       "Bu hafta {name} [[yaxshi tomonga o'zgardi|weeks]] — faollik {pct}% yuqori.",
+      "{name} bu hafta [[odatdagidan bir oz ko'proq|weeks]] mashq qildi (+{pct}%).",
+      "Bu hafta {name} uchun [[ijobiy o'zgarish|weeks]]: faollik {pct}% oshdi.",
     ],
     'en': [
       "This week {name} [[practised {pct}% more than usual|weeks]].",
@@ -337,6 +393,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Over the last 7 days {name} [[practised more than usual|weeks]].",
       "This week shows [[growth|weeks]] for {nameObj}: +{pct}%.",
       "This week {name} [[stepped it up|weeks]] — activity is {pct}% higher.",
+      "{name} practised [[a bit more than usual|weeks]] this week (+{pct}%).",
+      "This week brought [[a positive change|weeks]] for {nameObj}: activity up {pct}%.",
     ],
   },
   'trd_record': {
@@ -349,6 +407,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} uchun [[rekord hafta|weeks]]: hech qachon bunchalik faol bo'lmagan.",
       "Bu hafta {name} [[eng yuqori haftalik natijaga|weeks]] erishdi.",
       "{name} bu hafta [[oldingi haftalarining hammasidan o'zib ketdi|weeks]].",
+      "{name} bu hafta [[shu vaqtgacha bo'lmagan natija|weeks]] ko'rsatdi.",
+      "Bu hafta {name} uchun [[eng samarali hafta|weeks]] bo'ldi.",
     ],
     'en': [
       "This was [[the most active week since joining|weeks]] for {nameObj}.",
@@ -359,6 +419,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[A record week|weeks]] for {nameObj}: never this active before.",
       "This week {name} [[reached their highest weekly total|weeks]].",
       "{name} [[outdid all of their previous weeks|weeks]] this week.",
+      "{name} showed [[a result never seen before|weeks]] this week.",
+      "This week was [[the most productive week|weeks]] for {nameObj}.",
     ],
   },
   'trd_steady': {
@@ -371,6 +433,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} [[o'z ritmidan chiqmayapti|weeks]].",
       "{name} uchun sur'at [[haftadan haftaga barqaror|weeks]].",
       "{name} bu hafta ham [[odatdagi hajmda|weeks]] mashq qildi.",
+      "{name} [[odatiy sur'atda|weeks]] davom etmoqda.",
+      "Bu hafta ham {name} [[o'z me'yorida|weeks]] ishladi.",
     ],
     'en': [
       "{name} {is} [[keeping their usual pace|weeks]].",
@@ -381,6 +445,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} {is} [[sticking to their rhythm|weeks]].",
       "The pace for {nameObj} is [[steady from week to week|weeks]].",
       "{name} practised [[their usual amount|weeks]] this week too.",
+      "{name} {is} carrying on [[at the usual pace|weeks]].",
+      "This week too {name} worked [[at their normal level|weeks]].",
     ],
   },
   'trd_down': {
@@ -393,6 +459,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Oxirgi 7 kunda {name} [[odatdagidan kamroq mashq qildi|weeks]]; band hafta bo'lgan bo'lishi mumkin.",
       "{name} uchun bu hafta [[biroz pasayish|weeks]] bor: -{pct}%.",
       "Bu hafta {name} [[odatdagidan kamroq faol|weeks]]; kichik turtki ritmni tiklashi mumkin.",
+      "{name} bu hafta [[odatdagidan sekinroq|weeks]] ishladi (-{pct}%).",
+      "Bu hafta faollik [[{pct}% kamroq|weeks]] — {name} uchun kichik eslatma foydali.",
     ],
     'en': [
       "This week {name} [[practised {pct}% less than usual|weeks]].",
@@ -403,6 +471,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Over the last 7 days {name} [[practised less than usual|weeks]]; it may have been a busy week.",
       "There is [[a small dip|weeks]] this week for {nameObj}: -{pct}%.",
       "This week {name} {was} [[below their usual activity|weeks]]; a small nudge could restore the rhythm.",
+      "{name} worked [[more slowly than usual|weeks]] this week (-{pct}%).",
+      "Activity this week is [[{pct}% lower|weeks]] — a small reminder could help {nameObj}.",
     ],
   },
   'trd_down_strong': {
@@ -415,6 +485,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} bu hafta [[odatdagidan {pct}% kam|weeks]] ishladi; qisqa suhbat foydali bo'lishi mumkin.",
       "Bu hafta {name} uchun [[sokin o'tdi|weeks]] — odatiy faollikdan ancha past.",
       "{name} odatda faolroq, lekin bu hafta [[faollik {pct}% kam|weeks]] bo'ldi.",
+      "Bu hafta {name} [[deyarli shug'ullanmadi|weeks]] — odatdagidan {pct}% kam.",
+      "{name} uchun bu hafta [[keskin sustlashuv|weeks]] bo'ldi (-{pct}%); sababini bilish foydali.",
     ],
     'en': [
       "This week {name} [[practised much less than usual|weeks]] — {pct}% less.",
@@ -425,6 +497,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} worked [[{pct}% less than usual|weeks]] this week; a short chat could help.",
       "This week was [[quiet|weeks]] for {nameObj} — well below the usual activity.",
       "{name} {is} usually more active, but this week [[activity was {pct}% lower|weeks]].",
+      "This week {name} [[hardly practised|weeks]] — {pct}% less than usual.",
+      "This week brought [[a sharp slowdown|weeks]] for {nameObj} (-{pct}%); finding out why would help.",
     ],
   },
   'trd_back': {
@@ -437,6 +511,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Bu hafta {name} [[yana shug'ullana boshladi|weeks]]; o'tgan hafta tanaffus edi.",
       "{name} [[sinfga qaytdi|weeks]] — bir hafta tanaffusdan keyin.",
       "O'tgan haftadagi sukutdan so'ng {name} [[yana faol bo'ldi|weeks]].",
+      "{name} tanaffusdan so'ng [[sinfga qaytib keldi|weeks]].",
+      "Bir hafta jim turgan {name} [[yana mashq qilmoqda|weeks]].",
     ],
     'en': [
       "After a week off, {name} [[came back to practice|weeks]].",
@@ -447,6 +523,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "This week {name} [[started practising again|weeks]]; last week was a break.",
       "{name} [[returned to the class|weeks]] after a week off.",
       "After a quiet week, {name} [[{is} active again|weeks]].",
+      "{name} [[came back to the class|weeks]] after a break.",
+      "After a quiet week, {name} {is} [[practising again|weeks]].",
     ],
   },
   'str_record': {
@@ -459,6 +537,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} o'z rekordini yangiladi — [[{streak} kun uzluksiz|days]].",
       "[[Ketma-ket {streak} kun|days]] — {name} uchun eng yaxshi seriya.",
       "{name} [[{streak} kunlik uzluksiz mashq|days]] bilan rekord o'rnatdi.",
+      "{name} [[{streak} kunlik rekord seriyada|days]].",
+      "Hech qachon bunchalik uzoq emas: {name} [[{streak} kun ketma-ket|days]] faol.",
     ],
     'en': [
       "{name} {has} practised [[{streak} days in a row|days]] — their longest streak yet.",
@@ -469,6 +549,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} beat their own record — [[{streak} days straight|days]].",
       "[[{streak} days in a row|days]] — the best streak yet for {nameObj}.",
       "{name} set a record with [[{streak} days of non-stop practice|days]].",
+      "{name} {is} on [[a record {streak}-day streak|days]].",
+      "Never this long before: {name} {has} been active [[{streak} days in a row|days]].",
     ],
   },
   'str_long': {
@@ -481,6 +563,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Ketma-ket [[{streak} kun|days]] — {name} barqaror.",
       "{name} har kuni qaytmoqda: [[{streak} kun ketma-ket|days]].",
       "{name} uchun [[{streak} kunlik uzluksiz mashq|days]] — ajoyib.",
+      "{name} [[{streak} kundan beri to'xtamay|days]] shug'ullanmoqda.",
+      "[[{streak} kun ketma-ket|days]] mashq — {name} uchun mustahkam odat.",
     ],
     'en': [
       "{name} {has} practised [[{streak} days in a row|days]].",
@@ -491,6 +575,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[{streak} days straight|days]] — {name} {is} steady.",
       "{name} keep{s} coming back every day: [[{streak} days in a row|days]].",
       "[[{streak} days of non-stop practice|days]] for {nameObj} — great.",
+      "{name} {has} been practising [[non-stop for {streak} days|days]].",
+      "[[{streak} days in a row|days]] of practice — a solid habit for {nameObj}.",
     ],
   },
   'str_mid': {
@@ -503,6 +589,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} [[{streak} kundan beri|days]] har kuni faol.",
       "{name} ritmga kirmoqda: [[{streak} kun uzluksiz|days]].",
       "{name} uchun [[{streak} kunlik seriya|days]] o'sib bormoqda.",
+      "{name} [[{streak} kun uzluksiz|days]] mashq qilmoqda.",
+      "Kichik seriya shakllanmoqda: [[{streak} kun|days]].",
     ],
     'en': [
       "{name} {has} practised [[{streak} days in a row|days]].",
@@ -513,6 +601,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} {has} been active every day [[for {streak} days|days]].",
       "{name} {is} getting into a rhythm: [[{streak} days straight|days]].",
       "[[A {streak}-day streak|days]] is growing for {nameObj}.",
+      "{name} {has} practised [[{streak} days without a break|days]].",
+      "A small streak is forming: [[{streak} days|days]].",
     ],
   },
   'str_broken': {
@@ -525,6 +615,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} ilgari [[{longest} kun uzluksiz|days]] ishlagan; so'nggi {days} kunda mashq yo'q.",
       "[[{longest} kunlik seriyadan|days]] keyin {name} {days} kundan beri faol emas.",
       "{name} uchun [[{longest} kunlik seriya|days]] to'xtadi — {days} kun bo'ldi.",
+      "{name} oldin [[{longest} kun|days]] uzluksiz ishlagan edi; hozir {days} kunlik tanaffus.",
+      "[[{longest} kunlik seriya|days]] tugagach, {days} kun mashq bo'lmadi.",
     ],
     'en': [
       "{name} once kept [[a {longest}-day streak|days]]; it has been {days} days since the last practice.",
@@ -535,6 +627,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} once worked [[{longest} days without a break|days]]; no practice in the last {days} days.",
       "After [[a {longest}-day streak|days]], {name} {hasnt} been active for {days} days.",
       "[[The {longest}-day streak|days]] has stopped for {nameObj} — {days} days now.",
+      "{name} once practised [[{longest} days straight|days]]; now there is a {days}-day break.",
+      "After [[the {longest}-day streak|days]] ended, {days} days passed without practice.",
     ],
   },
   'tim_same_hour': {
@@ -547,6 +641,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} [[kunning bir xil vaqtida (~{hour})|sessions]] shug'ullanishni odat qilgan.",
       "{name} odatda [[soat {hour} ga yaqin|sessions]] sinfga kiradi.",
       "{name} mashq vaqtini kamdan-kam o'zgartiradi: [[asosan soat {hour}|sessions]].",
+      "{name} uchun mashq soati deyarli o'zgarmaydi — [[{hour} atrofida|sessions]].",
+      "{name} [[har kuni {hour} ga yaqin|sessions]] mashq qilishga odatlangan.",
     ],
     'en': [
       "{name} usually practise{s} [[around {hour}|sessions]].",
@@ -557,6 +653,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} {has} made a habit of studying [[at the same time of day (~{hour})|sessions]].",
       "{name} usually come{s} to the class [[close to {hour}|sessions]].",
       "{name} rarely change{s} their practice time: [[mostly at {hour}|sessions]].",
+      "The practice hour for {nameObj} hardly changes — [[around {hour}|sessions]].",
+      "{name} {is} used to practising [[close to {hour} every day|sessions]].",
     ],
   },
   'tim_morning': {
@@ -569,6 +667,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} uchun eng faol vaqt — [[ertalab|sessions]].",
       "{name} [[erta tongda|sessions]] ishlashni afzal ko'radi.",
       "{name} mashqlarini ko'pincha [[tushgacha|sessions]] bajaradi.",
+      "{name} [[ertalabki soatlarda|sessions]] eng faol.",
+      "{name} uchun o'qish vaqti — [[kunning boshi|sessions]].",
     ],
     'en': [
       "{name} mostly practise{s} [[in the morning|sessions]].",
@@ -579,6 +679,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "The most active time for {nameObj} is [[the morning|sessions]].",
       "{name} prefer{s} to work [[early in the day|sessions]].",
       "{name} often get{s} practice done [[before noon|sessions]].",
+      "{name} {is} most active [[in the morning hours|sessions]].",
+      "For {nameObj}, study time is [[the start of the day|sessions]].",
     ],
   },
   'tim_afternoon': {
@@ -591,6 +693,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} [[kunning o'rtasida|sessions]] o'qishga vaqt topadi.",
       "{name} mashqlarini ko'pincha [[peshindan keyin|sessions]] bajaradi.",
       "{name} [[kunduzgi vaqtni|sessions]] o'qishga ajratadi.",
+      "{name} [[tushlikdan keyingi vaqtda|sessions]] eng faol.",
+      "{name} uchun o'qish vaqti — [[kunning o'rtasi|sessions]].",
     ],
     'en': [
       "{name} mostly practise{s} [[in the afternoon|sessions]].",
@@ -601,6 +705,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} find{s} time to study [[in the middle of the day|sessions]].",
       "{name} often get{s} practice done [[after lunch|sessions]].",
       "{name} set{s} aside [[afternoon time|sessions]] for study.",
+      "{name} {is} most active [[after lunch|sessions]].",
+      "For {nameObj}, study time is [[the middle of the day|sessions]].",
     ],
   },
   'tim_evening': {
@@ -613,6 +719,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} [[kechki vaqtni|sessions]] o'qishga ajratadi.",
       "{name} mashqlarini ko'pincha [[kun oxirida|sessions]] bajaradi.",
       "{name} [[kechki payt|sessions]] o'qishni afzal ko'radi.",
+      "{name} [[kechki soatlarda|sessions]] eng faol.",
+      "{name} uchun o'qish vaqti — [[kunning oxiri|sessions]].",
     ],
     'en': [
       "{name} mostly practise{s} [[in the evening|sessions]].",
@@ -623,6 +731,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} set{s} aside [[evening time|sessions]] for study.",
       "{name} often get{s} practice done [[at the end of the day|sessions]].",
       "{name} prefer{s} to study [[in the evening|sessions]].",
+      "{name} {is} most active [[in the evening hours|sessions]].",
+      "For {nameObj}, study time is [[the end of the day|sessions]].",
     ],
   },
   'tim_night': {
@@ -635,6 +745,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} [[kechasi|sessions]] shug'ullanishni odat qilgan.",
       "{name} mashqlarini ko'pincha [[kun tugagach, tunda|sessions]] bajaradi.",
       "{name} [[tungi vaqtda|sessions]] o'qishga vaqt topadi.",
+      "{name} [[tungi soatlarda|sessions]] eng faol.",
+      "{name} uchun o'qish vaqti — [[kech tun|sessions]]; dam olish yetarli ekanini so'rab qo'yish mumkin.",
     ],
     'en': [
       "{name} often practise{s} [[late at night|sessions]].",
@@ -645,6 +757,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} {has} a habit of studying [[at night|sessions]].",
       "{name} often get{s} practice done [[at night, after the day is over|sessions]].",
       "{name} find{s} time to study [[at night|sessions]].",
+      "{name} {is} most active [[in the night hours|sessions]].",
+      "For {nameObj}, study time is [[late at night|sessions]]; it may be worth checking there is enough rest.",
     ],
   },
   'tim_varied': {
@@ -657,6 +771,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} [[kun davomida turli paytlarda|sessions]] o'qiydi.",
       "{name} mashq vaqtini [[kunga qarab|sessions]] tanlaydi.",
       "{name} uchun belgilangan vaqt yo'q — [[mashqlar kun bo'yi tarqalgan|sessions]].",
+      "{name} [[turli soatlarda|sessions]] mashq qiladi — moslashuvchan tartib.",
+      "{name} uchun mashq vaqti [[har kuni boshqacha|sessions]].",
     ],
     'en': [
       "{name} practise{s} [[at different times of day|sessions]].",
@@ -667,6 +783,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} practise{s} [[at various points through the day|sessions]].",
       "{name} pick{s} a practice time [[day by day|sessions]].",
       "There is no set time for {nameObj} — [[practice is spread across the day|sessions]].",
+      "{name} practise{s} [[at different hours|sessions]] — a flexible routine.",
+      "Practice time for {nameObj} [[differs from day to day|sessions]].",
     ],
   },
   'wk_weekend': {
@@ -679,6 +797,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} [[shanba-yakshanba|days]] kunlari faolroq.",
       "Hafta ichida qisqa takrorlash qo'shilsa, [[dam olish kunlaridagi|days]] mehnat yanada samarali bo'ladi.",
       "{name} o'qishga asosan [[hafta oxirida|days]] vaqt topadi.",
+      "{name} uchun asosiy o'qish kunlari — [[shanba va yakshanba|days]].",
+      "Hafta ichida kamroq, [[hafta oxirida|days]] ko'proq — {name} shunday ishlaydi.",
     ],
     'en': [
       "{name} mostly practise{s} [[at the weekend|days]].",
@@ -689,6 +809,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} {is} more active [[on Saturdays and Sundays|days]].",
       "A short review on weekdays would make [[the weekend work|days]] go further.",
       "{name} mostly find{s} time to study [[at the weekend|days]].",
+      "The main study days for {nameObj} are [[Saturday and Sunday|days]].",
+      "Less on weekdays, more [[at the weekend|days]] — that is how {name} work{s}.",
     ],
   },
   'ses_multi': {
@@ -701,6 +823,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} bir martalik emas, [[kun davomida bir necha bor|sessions]] o'qiydi.",
       "{name} kuniga [[o'rtacha {x} ta mashg'ulot|sessions]] qiladi.",
       "{name} [[kun bo'yi qaytib-qaytib|sessions]] shug'ullanadi — bu yaxshi odat.",
+      "{name} kun davomida [[o'rtacha {x} marta|sessions]] mashqqa qaytadi.",
+      "{name} mashqni [[kun bo'yi bir necha qismga|sessions]] bo'ladi.",
     ],
     'en': [
       "{name} come{s} back [[about {x} times a day|sessions]] on average.",
@@ -711,6 +835,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} {doesnt} study in one go, but [[several times through the day|sessions]].",
       "{name} do{es} [[about {x} sessions a day|sessions]].",
       "{name} keep{s} [[coming back throughout the day|sessions]] — a good habit.",
+      "{name} return{s} to practice [[about {x} times through the day|sessions]].",
+      "{name} split{s} practice into [[several parts across the day|sessions]].",
     ],
   },
   'rq_strong': {
@@ -723,6 +849,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} uchun takrorlash oson kechmoqda — [[{pct}% to'g'ri javob|accuracy]].",
       "{name} o'rgangan so'zlarini [[yaxshi eslab qolgan|accuracy]]: {pct}% to'g'ri.",
       "Takrorlashdagi aniqlik yuqori — [[{pct}%|accuracy]]; so'zlar puxta o'zlashtirilmoqda.",
+      "{name} so'zlarni [[juda yaxshi eslaydi|accuracy]] — {pct}%.",
+      "[[{total} ta javobning {pct} foizi|accuracy]] to'g'ri — {name} uchun a'lo natija.",
     ],
     'en': [
       "{name} remember{s} [[{pct}% of words|accuracy]] correctly in review.",
@@ -733,6 +861,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Review is going smoothly for {nameObj} — [[{pct}% correct answers|accuracy]].",
       "{name} {has} [[remembered the learned words well|accuracy]]: {pct}% correct.",
       "Accuracy in review is high — [[{pct}%|accuracy]]; the words are sticking.",
+      "{name} remember{s} words [[very well|accuracy]] — {pct}%.",
+      "[[{pct}% of {total} answers|accuracy]] correct — an excellent result for {nameObj}.",
     ],
   },
   'rq_good': {
@@ -745,6 +875,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Takrorlashda {name} [[yaxshi natija|accuracy]] ko'rsatmoqda: {pct}%.",
       "{name} o'rgangan so'zlarining [[aksariyatini eslaydi|accuracy]] — {pct}%.",
       "Takrorlash yaxshi ketmoqda: [[{total} ta javobdan {pct}% to'g'ri|accuracy]].",
+      "{name} so'zlarni [[yaxshi eslaydi|accuracy]] — {pct}%.",
+      "[[{total} ta javobning {pct} foizi|accuracy]] to'g'ri — yaxshi natija.",
     ],
     'en': [
       "{name} remember{s} [[{pct}% of words|accuracy]] correctly in review.",
@@ -755,6 +887,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} {is} doing [[well in review|accuracy]]: {pct}%.",
       "{name} remember{s} [[most of the learned words|accuracy]] — {pct}%.",
       "Review is going well: [[{pct}% correct out of {total} answers|accuracy]].",
+      "{name} remember{s} words [[well|accuracy]] — {pct}%.",
+      "[[{pct}% of {total} answers|accuracy]] correct — a good result.",
     ],
   },
   'rq_mixed': {
@@ -767,6 +901,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Takrorlashda natija aralash — [[{total} ta javobdan {pct}% to'g'ri|accuracy]].",
       "{name} so'zlarning [[yarmidan ko'pini|accuracy]] to'g'ri eslaydi ({pct}%); takroriy mashq yordam beradi.",
       "Takrorlash davom etmoqda, aniqlik [[{pct}%|accuracy]] — hali o'sish uchun joy bor.",
+      "{name} so'zlarning bir qismini [[hali chalkashtiradi|accuracy]] ({pct}% to'g'ri).",
+      "[[{total} ta javobning {pct} foizi|accuracy]] to'g'ri — mustahkamlash kerak bo'lgan so'zlar bor.",
     ],
     'en': [
       "In review {name} remember{s} [[{pct}% of words|accuracy]] correctly — some are still hard.",
@@ -777,6 +913,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Review results are mixed — [[{pct}% correct out of {total} answers|accuracy]].",
       "{name} remember{s} [[more than half|accuracy]] correctly ({pct}%); repeated practice will help.",
       "Review is ongoing, accuracy is [[{pct}%|accuracy]] — there is room to grow.",
+      "{name} still [[mix{es} up some of the words|accuracy]] ({pct}% correct).",
+      "[[{pct}% of {total} answers|accuracy]] correct — some words need strengthening.",
     ],
   },
   'rq_hard': {
@@ -789,6 +927,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} so'zlarning [[faqat {pct} foizini|accuracy]] to'g'ri eslayapti; qisqa suhbat qayerda qiyinligini ko'rsatadi.",
       "So'zlar {name} uchun hali yangi tuyulmoqda — [[{pct}% to'g'ri|accuracy]].",
       "Takrorlashda qiyinchilik bor ([[{pct}%|accuracy]]); so'zlarni sekinroq o'rganish foydali bo'lishi mumkin.",
+      "{name} uchun so'zlarni eslash [[hozircha qiyin|accuracy]] ({pct}%); qisqa, tez-tez takrorlash yordam beradi.",
+      "[[{total} ta javobning faqat {pct} foizi|accuracy]] to'g'ri — so'zlarni qayta o'rganish foydali.",
     ],
     'en': [
       "Review is hard for {nameObj} right now: [[{pct}% correct|accuracy]] — relearning the words could help.",
@@ -799,6 +939,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} {is} remembering [[only {pct}% of words|accuracy]]; a short chat could show where it gets hard.",
       "The words still feel new to {nameObj} — [[{pct}% correct|accuracy]].",
       "There is some difficulty in review ([[{pct}%|accuracy]]); learning words more slowly may help.",
+      "Recalling words is [[hard for now|accuracy]] for {nameObj} ({pct}%); short, frequent review would help.",
+      "[[Only {pct}% of {total} answers|accuracy]] correct — relearning the words would help.",
     ],
   },
   'rq_improving': {
@@ -811,6 +953,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} uchun takrorlash natijasi [[sezilarli yaxshilandi|accuracy]]: {to}%.",
       "So'zlar mustahkamlanmoqda — aniqlik [[{from}% dan {to}% gacha|accuracy]] oshdi.",
       "{name} takrorlashda [[oldinga siljidi|accuracy]]: {from}% dan {to}% ga.",
+      "{name} so'zlarni [[tobora yaxshiroq|accuracy]] eslamoqda: {from}% → {to}%.",
+      "Aniqlik [[ikki hafta ichida {to}% gacha|accuracy]] o'sdi ({from}% dan).",
     ],
     'en': [
       "Review accuracy [[rose from {from}% to {to}%|accuracy]].",
@@ -821,6 +965,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Review results [[improved noticeably|accuracy]] for {nameObj}: {to}%.",
       "The words are sticking — accuracy [[went up from {from}% to {to}%|accuracy]].",
       "{name} [[moved forward|accuracy]] in review: from {from}% to {to}%.",
+      "{name} {is} remembering words [[better and better|accuracy]]: {from}% → {to}%.",
+      "Accuracy [[grew to {to}% in two weeks|accuracy]] (from {from}%).",
     ],
   },
   'rq_dropping': {
@@ -833,6 +979,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} uchun aniqlik [[biroz kamaydi|accuracy]]: {to}% — qiyin so'zlarga e'tibor berish mumkin.",
       "So'zlar biroz unutilmoqda — aniqlik [[{from}% dan {to}% gacha|accuracy]] tushdi.",
       "{name} takrorlashda [[orqaga ketdi|accuracy]]: {from}% dan {to}% ga; qisqa qayta o'rganish yordam beradi.",
+      "{name} so'zlarni [[avvalgidek eslay olmayapti|accuracy]]: {from}% → {to}%.",
+      "Aniqlik [[ikki hafta ichida {to}% gacha|accuracy]] pasaydi ({from}% dan).",
     ],
     'en': [
       "Review accuracy [[fell from {from}% to {to}%|accuracy]] — going over the words again would help.",
@@ -843,6 +991,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Accuracy [[dipped a little|accuracy]] for {nameObj}: {to}% — the hard words could use attention.",
       "Some words are fading — accuracy [[went from {from}% to {to}%|accuracy]].",
       "{name} [[slipped back|accuracy]] in review: from {from}% to {to}%; a short relearn would help.",
+      "{name} {is} [[not recalling words as well as before|accuracy]]: {from}% → {to}%.",
+      "Accuracy [[fell to {to}% in two weeks|accuracy]] (from {from}%).",
     ],
   },
   'rq_hard_words': {
@@ -855,6 +1005,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[{words}|words]] — {name} tez-tez unutadigan so'zlar.",
       "Darsda [[{words}|words]] so'zlariga qisqa to'xtalish {name} uchun foydali bo'lishi mumkin.",
       "{name} [[{words}|words]] so'zlarini hali to'liq eslab qolmagan.",
+      "[[{words}|words]] so'zlari {name} uchun eng ko'p xato bo'lyapti.",
+      "Diqqat talab qiladigan so'zlar: [[{words}|words]].",
     ],
     'en': [
       "The hardest words: [[{words}|words]].",
@@ -865,6 +1017,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[{words}|words]] — the words {name} tend{s} to forget.",
       "A quick look at [[{words}|words]] in class could help {nameObj}.",
       "{name} {hasnt} fully remembered [[{words}|words]] yet.",
+      "[[{words}|words]] are the words {name} get{s} wrong most.",
+      "Words that need attention: [[{words}|words]].",
     ],
   },
   'rq_recovered': {
@@ -877,6 +1031,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} uchun [[{words}|words]] endi tanish so'zlarga aylandi.",
       "Qiyin so'zlar ham yengilmoqda: [[{words}|words]] endi to'g'ri.",
       "{name} [[{words}|words]] so'zlarini endi ishonch bilan eslaydi.",
+      "{name} [[{words}|words]] so'zlarini yengdi — endi xato qilmayapti.",
+      "Oldingi qiyin so'zlar — [[{words}|words]] — endi o'zlashtirildi.",
     ],
     'en': [
       "[[{words}|words]], hard before, are now remembered correctly.",
@@ -887,6 +1043,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "For {nameObj}, [[{words}|words]] have become familiar words.",
       "Even the hard words are giving way: [[{words}|words]] are now correct.",
       "{name} now recall{s} [[{words}|words]] with confidence.",
+      "{name} {has} conquered [[{words}|words]] — no more mistakes there.",
+      "The earlier hard words — [[{words}|words]] — are now learned.",
     ],
   },
   'mst_hw_streak': {
@@ -899,6 +1057,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[{n} ta vazifa ketma-ket|timing]] o'z vaqtida — {name} uchun yaxshi odat.",
       "{name} muddatlarga sodiq: [[ketma-ket {n} ta vazifa|timing]] vaqtida.",
       "[[So'nggi {n} ta vazifaning|timing]] hammasi {name} tomonidan muddatida bajarildi.",
+      "{name} [[{n} ta vazifani|timing]] ketma-ket muddatida topshirdi.",
+      "Ketma-ket [[{n} ta vazifa|timing]] — birortasi kechikmagan.",
     ],
     'en': [
       "{name} {has} done [[{n} assignments in a row|timing]] on time.",
@@ -909,6 +1069,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[{n} assignments in a row|timing]] on time — a good habit for {nameObj}.",
       "{name} {is} reliable with deadlines: [[{n} assignments in a row|timing]] on time.",
       "[[All of the last {n} assignments|timing]] were done on time by {nameObj}.",
+      "{name} handed in [[{n} assignments|timing]] on time in a row.",
+      "[[{n} assignments|timing]] in a row — not one was late.",
     ],
   },
   'mst_mastered_first': {
@@ -921,6 +1083,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Ilk muvaffaqiyat: {name} {n} ta so'zni oxirgi takrorlashgacha yetkazdi.",
       "{name} uchun {n} ta so'z endi o'zlashtirilganlar qatorida.",
       "{name} birinchi {n} ta so'zni butunlay o'rganib bo'ldi.",
+      "{name} uchun birinchi {n} ta so'z to'liq o'zlashtirildi.",
+      "Ilk natija ko'rindi: {n} ta so'z butunlay o'rganilgan.",
     ],
     'en': [
       "{name} {has} fully mastered their first words — {n} words passed every review.",
@@ -931,6 +1095,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "A first success: {name} took {n} words through the final review.",
       "For {nameObj}, {n} words are now among the mastered ones.",
       "{name} {has} completely learned their first {n} words.",
+      "The first {n} words are fully mastered for {nameObj}.",
+      "A first result is visible: {n} words completely learned.",
     ],
   },
   'mst_mastered_small': {
@@ -943,6 +1109,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{n} ta so'z to'liq o'rganildi; jami {learned} ta so'z takrorlash jarayonida.",
       "{name} {n} ta so'zni oxirgi bosqichgacha yetkazdi.",
       "To'liq o'zlashtirilgan so'zlar: {n} ta — {name} uchun yaxshi qadam.",
+      "{name} {n} ta so'zni butunlay o'zlashtirgan; yana ko'plari yo'lda.",
+      "{learned} ta so'zdan {n} tasi to'liq o'rganilgan — yaxshi boshlanish.",
     ],
     'en': [
       "{name} {has} fully mastered {n} words.",
@@ -953,6 +1121,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{n} words are fully learned; {learned} words in total are in review.",
       "{name} {has} taken {n} words all the way to the final stage.",
       "Fully mastered words: {n} — a good step for {nameObj}.",
+      "{name} {has} fully mastered {n} words; many more are on the way.",
+      "{n} of {learned} words are fully learned — a good start.",
     ],
   },
   'mst_mastered_mid': {
@@ -965,6 +1135,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{n} ta so'z to'liq o'rganilgan — {name} izchil ishlamoqda.",
       "{name} {n} ta so'zni oxirgi bosqichgacha yetkazgan.",
       "To'liq o'zlashtirilgan so'zlar: {n} ta, jami o'rganilgani {learned} ta.",
+      "Lug'at o'smoqda: {name} {n} ta so'zni to'liq o'zlashtirgan.",
+      "{learned} ta so'zdan {n} tasi — to'liq o'zlashtirilgan.",
     ],
     'en': [
       "{name} {has} fully mastered {n} words — a big result.",
@@ -975,6 +1147,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{n} words are fully learned — {name} {is} working steadily.",
       "{name} {has} taken {n} words to the final stage.",
       "Fully mastered words: {n}, out of {learned} learned in total.",
+      "The vocabulary is growing: {name} {has} fully mastered {n} words.",
+      "{n} out of {learned} words — fully mastered.",
     ],
   },
   'mst_mastered_big': {
@@ -987,6 +1161,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{n} ta to'liq o'zlashtirilgan so'z — {name} uchun katta yutuq.",
       "{name} lug'at boyligini oshirmoqda: {n} ta so'z to'liq o'rganilgan.",
       "Yuzdan ortiq so'z: {name} {n} ta so'zni oxirgi bosqichgacha yetkazgan.",
+      "{name} {n} ta so'zni mustahkam o'zlashtirgan — bu ulkan ish.",
+      "{learned} ta so'zdan {n} tasi butunlay mustahkam — ajoyib.",
     ],
     'en': [
       "{name} {has} fully mastered {n} words — an excellent result.",
@@ -997,6 +1173,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{n} fully mastered words — a big achievement for {nameObj}.",
       "{name} {is} growing their vocabulary: {n} words fully learned.",
       "Over a hundred words: {name} {has} taken {n} words to the final stage.",
+      "{name} {has} solidly mastered {n} words — a huge amount of work.",
+      "{n} of {learned} words are completely secure — excellent.",
     ],
   },
   'mst_reviews_total': {
@@ -1009,6 +1187,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Sinfga kelganidan beri {name} {n} martadan ko'p takrorlagan.",
       "{name} takrorlash bo'yicha {n} chegarasidan o'tdi.",
       "{n} dan ortiq takrorlangan so'z — {name} izchil ishlamoqda.",
+      "{name} {n} martadan ortiq so'z takrorlagan — izchil mehnat.",
+      "Takrorlashlar {n} tadan oshdi — {name} uchun katta yutuq.",
     ],
     'en': [
       "{name} {has} done over {n} word reviews in the class.",
@@ -1019,6 +1199,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Since joining, {name} {has} reviewed more than {n} times.",
       "{name} {has} passed the {n}-review mark.",
       "Over {n} words reviewed — {name} {is} working steadily.",
+      "{name} {has} reviewed words more than {n} times — steady work.",
+      "Reviews have gone past {n} — a big achievement for {nameObj}.",
     ],
   },
   'mode_skips': {
@@ -1031,6 +1213,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[{mode}|timing]] — {name} eng kam bajaradigan mashq turi ({m} tadan {n} tasida yo'q).",
       "{name} vazifalarni deyarli to'liq qiladi, faqat [[{mode} mashqi|timing]] tez-tez qoladi.",
       "[[{mode} mashqiga|timing]] alohida eslatma {name} uchun foydali bo'lishi mumkin: {n} marta qolgan.",
+      "{name} [[{mode} mashqini|timing]] {m} ta vazifadan {n} tasida qilmagan.",
+      "Vazifalardagi eng ko'p bajarilmagan qism — [[{mode}|timing]] ({n} marta).",
     ],
     'en': [
       "{name} often skip{s} [[the {mode} part|timing]] of homework — missing in {n} of {m}.",
@@ -1041,6 +1225,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[{mode}|timing]] is the activity {name} do{es} least ({n} of {m} missing).",
       "{name} complete{s} almost everything, except that [[{mode}|timing]] is often left.",
       "A separate reminder about [[{mode}|timing]] could help {nameObj}: left undone {n} times.",
+      "{name} {hasnt} done [[{mode}|timing]] in {n} of {m} assignments.",
+      "The part most often left undone in homework is [[{mode}|timing]] ({n} times).",
     ],
   },
   'mode_favourite': {
@@ -1053,6 +1239,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Qo'shimcha mashqlarning ko'pi [[{mode}|modes]] — {name} uchun qulay format.",
       "{name} [[{mode} mashqini|modes]] afzal ko'radi.",
       "{name} o'z xohishi bilan ko'pincha [[{mode} mashqini|modes]] tanlaydi.",
+      "{name} uchun eng qulay mashq turi — [[{mode}|modes]].",
+      "Qo'shimcha mashqda {name} ko'pincha [[{mode} mashqiga|modes]] murojaat qiladi.",
     ],
     'en': [
       "In self-practice {name} usually choose{s} [[{mode}|modes]].",
@@ -1063,6 +1251,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Most extra practice is [[{mode}|modes]] — a format that suits {nameObj}.",
       "{name} prefer{s} [[{mode}|modes]].",
       "Given the choice, {name} often go{es} for [[{mode}|modes]].",
+      "The most comfortable activity for {nameObj} is [[{mode}|modes]].",
+      "For extra practice {name} often turn{s} to [[{mode}|modes]].",
     ],
   },
   'mode_review_only': {
@@ -1075,6 +1265,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} o'rganganlarini mustahkamlayapti: [[deyarli faqat takrorlash|modes]].",
       "{name} yangi so'z o'rganishdan ko'ra [[takrorlashni|modes]] ko'proq qiladi.",
       "Hozircha {name} [[takrorlash rejimida|modes]] — yangi bo'lim berish vaqti bo'lishi mumkin.",
+      "{name} ko'p [[takrorlaydi|modes]], lekin yangi so'zlar kam qo'shilmoqda.",
+      "Faollik [[asosan takrorlashdan|modes]] iborat — yangi bo'lim foydali bo'ladi.",
     ],
     'en': [
       "{name} mostly [[review{s}|modes]] and learn{s} few new words.",
@@ -1085,6 +1277,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} {is} consolidating what they learned: [[almost only review|modes]].",
       "{name} do{es} [[more reviewing|modes]] than learning new words.",
       "For now {name} {is} [[in review mode|modes]] — it may be time for a new unit.",
+      "{name} [[review{s} a lot|modes]], but few new words are being added.",
+      "Activity is [[mostly review|modes]] — a new unit would be useful.",
     ],
   },
   'mode_learn_heavy': {
@@ -1097,6 +1291,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Yangi so'zlar ko'p, takrorlash kam — [[faollik|modes]] shunday taqsimlangan.",
       "{name} [[o'rganishni|modes]] yaxshi ko'radi; har kuni qisqa takrorlash qo'shish foydali bo'ladi.",
       "{name} oldinga intilmoqda — [[yangi so'zlar|modes]] ko'p, lekin eskilarini takrorlash ham kerak.",
+      "{name} [[yangi so'zlarga|modes]] ko'p e'tibor beradi; takrorlash ortda qolmasin.",
+      "Faollik [[asosan yangi so'z o'rganishdan|modes]] iborat — takrorlash kerak.",
     ],
     'en': [
       "{name} [[learn{s} a lot of new words|modes]], but review{s} less.",
@@ -1107,6 +1303,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Lots of new words, little review — that is how [[the activity|modes]] is split.",
       "{name} enjoy{s} [[learning|modes]]; a short daily review would help.",
       "{name} {is} moving forward — [[plenty of new words|modes]], but the old ones need review too.",
+      "{name} focus{es} on [[new words|modes]]; review should not fall behind.",
+      "Activity is [[mostly learning new words|modes]] — review is needed.",
     ],
   },
   'cls_review_top': {
@@ -1119,6 +1317,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} takrorlash soni bo'yicha [[sinfning eng yaxshilari|ranking]] orasida.",
       "Bu hafta {name} [[sinfdoshlarining ko'pidan ko'proq|ranking]] takrorladi — {rank}-o'rin.",
       "Takrorlash bo'yicha {name} [[top-3 ichida|ranking]].",
+      "Bu hafta takrorlashda {name} [[{total} kishilik sinfda {rank}-o'rinda|ranking]].",
+      "{name} [[takrorlash bo'yicha oldingi qatorda|ranking]] — {rank}-o'rin.",
     ],
     'en': [
       "This week {name} {is} [[number {rank} in the class|ranking]] for review.",
@@ -1129,6 +1329,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} {is} [[among the best in the class|ranking]] for number of reviews.",
       "This week {name} reviewed [[more than most classmates|ranking]] — place {rank}.",
       "For review, {name} {is} [[in the top 3|ranking]].",
+      "In review this week, {name} {is} [[place {rank} in a class of {total}|ranking]].",
+      "{name} {is} [[at the front for review|ranking]] — place {rank}.",
     ],
   },
   'cls_review_above': {
@@ -1141,6 +1343,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} takrorlash bo'yicha [[sinfning yuqori yarmida|ranking]].",
       "Bu hafta takrorlashda {name} [[o'rtachadan yaxshiroq|ranking]] natija ko'rsatdi.",
       "{name} sinfdoshlariga nisbatan [[ko'proq takrorlamoqda|ranking]].",
+      "{name} takrorlashda [[sinfdoshlarining ko'pchiligidan oldinda|ranking]].",
+      "Bu hafta {name} [[o'rtacha o'quvchidan ko'proq|ranking]] takrorladi.",
     ],
     'en': [
       "{name} reviewed [[more than the class average|ranking]] this week.",
@@ -1151,6 +1355,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} {is} [[in the top half of the class|ranking]] for review.",
       "This week {name} did [[better than average|ranking]] in review.",
       "{name} {is} [[reviewing more|ranking]] than classmates.",
+      "{name} {is} [[ahead of most classmates|ranking]] in review.",
+      "This week {name} reviewed [[more than the average student|ranking]].",
     ],
   },
   'cls_review_below': {
@@ -1163,6 +1369,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} takrorlash bo'yicha [[sinfning quyi qismida|ranking]] — ritm topishga yordam kerak bo'lishi mumkin.",
       "Bu hafta takrorlashda {name} [[o'rtachadan kamroq|ranking]] faol bo'ldi.",
       "Sinfdoshlariga nisbatan {name} [[kamroq takrorlayapti|ranking]]; kundalik qisqa odat yordam beradi.",
+      "{name} takrorlashda [[sinfning ko'pchiligidan kamroq|ranking]] faol — kichik kundalik odat yordam beradi.",
+      "Bu hafta {name} [[o'rtacha o'quvchidan kamroq|ranking]] takrorladi; qisqa eslatma foydali.",
     ],
     'en': [
       "This week {name} reviewed [[less than the class average|ranking]] — a short daily review would help.",
@@ -1173,6 +1381,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} {is} [[in the lower part of the class|ranking]] for review — some help finding a rhythm may be needed.",
       "This week {name} {was} [[less active than average|ranking]] in review.",
       "Compared with classmates, {name} {is} [[reviewing less|ranking]]; a short daily habit would help.",
+      "{name} {is} [[less active than most of the class|ranking]] in review — a small daily habit would help.",
+      "This week {name} reviewed [[less than the average student|ranking]]; a short reminder could help.",
     ],
   },
   'cls_accuracy_top': {
@@ -1185,6 +1395,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} so'zlarni [[sinfdoshlarining ko'pidan yaxshiroq|ranking]] eslaydi.",
       "To'g'ri javoblar ulushi bo'yicha {name} [[top-3 da|ranking]].",
       "{name} takrorlash sifati bo'yicha [[sinfda {rank}-o'rinni|ranking]] egallaydi.",
+      "{name} [[sinfdagi eng aniq javob beruvchilardan|ranking]] — {pct}%.",
+      "Aniqlik bo'yicha {name} [[{total} kishidan {rank}-o'rinni|ranking]] egalladi.",
     ],
     'en': [
       "For review accuracy, {name} {is} [[number {rank} in the class|ranking]] ({pct}%).",
@@ -1195,6 +1407,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} remember{s} words [[better than most classmates|ranking]].",
       "For share of correct answers, {name} {is} [[in the top 3|ranking]].",
       "For review quality, {name} hold{s} [[place {rank} in the class|ranking]].",
+      "{name} {is} [[one of the most accurate in the class|ranking]] — {pct}%.",
+      "For accuracy, {name} took [[place {rank} of {total}|ranking]].",
     ],
   },
   'cls_accuracy_above': {
@@ -1207,6 +1421,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{pct}% aniqlik — [[sinf o'rtachasidan ({avg}%) yuqori|ranking]].",
       "{name} so'zlarni [[sinfdagidan mustahkamroq|ranking]] biladi: {pct}% (o'rtacha {avg}%).",
       "Takrorlash sifati bo'yicha {name} [[o'rtachadan yaxshi|ranking]].",
+      "{name} uchun to'g'ri javoblar [[sinfdagidan ko'proq|ranking]]: {pct}% (o'rtacha {avg}%).",
+      "{name} so'zlarni [[o'rtachadan aniqroq|ranking]] eslaydi.",
     ],
     'en': [
       "{name} remember{s} words [[better than the class average|ranking]]: {pct}% vs {avg}%.",
@@ -1217,6 +1433,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{pct}% accuracy — [[above the class average of {avg}%|ranking]].",
       "{name} know{s} the words [[more solidly than the class overall|ranking]]: {pct}% (average {avg}%).",
       "For review quality, {name} {is} [[better than average|ranking]].",
+      "Correct answers for {nameObj} are [[above the class level|ranking]]: {pct}% (average {avg}%).",
+      "{name} recall{s} words [[more accurately than average|ranking]].",
     ],
   },
   'cls_accuracy_below': {
@@ -1229,6 +1447,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} to'g'ri javoblar ulushi bo'yicha [[sinfning quyi qismida|ranking]]; qisqa suhbat sababini ochishi mumkin.",
       "Takrorlash sifati bo'yicha {name} [[ortda qolmoqda|ranking]] — yordam foydali bo'ladi.",
       "{name} so'zlarni [[sinfdagidan kamroq mustahkam|ranking]] biladi: {pct}% (o'rtacha {avg}%).",
+      "{name} uchun to'g'ri javoblar [[sinfdagidan kamroq|ranking]]: {pct}% (o'rtacha {avg}%) — qayta takrorlash foydali.",
+      "{name} so'zlarni [[o'rtachadan kamroq aniqlik|ranking]] bilan eslaydi; qo'shimcha yordam kerak bo'lishi mumkin.",
     ],
     'en': [
       "Review accuracy for {nameObj} is [[below the class average|ranking]]: {pct}% vs {avg}% — relearning would help.",
@@ -1239,6 +1459,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} {is} [[in the lower part of the class|ranking]] for correct answers; a short chat could reveal why.",
       "For review quality, {name} {is} [[falling behind|ranking]] — some support would help.",
       "{name} know{s} the words [[less solidly than the class overall|ranking]]: {pct}% (average {avg}%).",
+      "Correct answers for {nameObj} are [[below the class level|ranking]]: {pct}% (average {avg}%) — more review would help.",
+      "{name} recall{s} words [[less accurately than average|ranking]]; some extra support may be needed.",
     ],
   },
   'sug_overdue_hw': {
@@ -1253,6 +1475,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Birinchi navbatda [[{hw}|homework]] — tugatish uchun aniq muddat belgilash mumkin.",
       "[[{hw}|homework]] vazifasini bo'laklarga bo'lib bajarishni taklif qilish mumkin.",
       "Eslatma yuborilsa, [[{hw}|homework]] tez orada yakunlanishi mumkin.",
+      "[[{hw}|homework]] vazifasini bugun tugatishni taklif qilish mumkin.",
+      "Yakunlanmagan [[{hw}|homework]] haqida qisqa xabar yaxshi boshlanish bo'ladi.",
     ],
     'en': [
       "First, a reminder about finishing [[{hw}|homework]] could help.",
@@ -1265,6 +1489,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "First things first: [[{hw}|homework]] — setting a clear finish date could help.",
       "Suggesting to do [[{hw}|homework]] in smaller parts could help.",
       "With a reminder, [[{hw}|homework]] could be finished soon.",
+      "Suggesting to finish [[{hw}|homework]] today could help.",
+      "A short message about the unfinished [[{hw}|homework]] would be a good start.",
     ],
   },
   'sug_inactive': {
@@ -1279,6 +1505,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} uchun kichik maqsad — kuniga bitta qisqa mashq — qaytishni yengillashtiradi.",
       "Tanaffus uzayib ketmasligi uchun hozir eslatma yuborish mumkin.",
       "Qo'llab-quvvatlovchi bir jumla ham {name} uchun katta turtki bo'lishi mumkin.",
+      "Bugun bitta kichik mashq taklif qilish {name} uchun qaytishning eng oson yo'li.",
+      "Sinf uni kutayotganini bildiruvchi qisqa xabar yordam berishi mumkin.",
     ],
     'en': [
       "A short personal message could make it easier for {nameObj} to come back.",
@@ -1291,6 +1519,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "A small goal — one short practice a day — would make coming back easier for {nameObj}.",
       "Sending a reminder now could keep the break from growing.",
       "Even one supportive sentence can be a big push for {nameObj}.",
+      "Suggesting one small practice today is the easiest way back for {nameObj}.",
+      "A short message saying the class is waiting could help.",
     ],
   },
   'sug_review_restart': {
@@ -1305,6 +1535,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Bugun kichik takrorlash bilan boshlash {name} uchun ritmni tiklaydi.",
       "Takrorlashni kunning odatiy qismiga aylantirishga yordam berish mumkin.",
       "{n} ta so'z kutmoqda — har kuni oz-ozdan takrorlash maslahati foydali bo'ladi.",
+      "{n} ta so'zni bir necha kunga bo'lib takrorlash rejasini taklif qilish mumkin.",
+      "Bugungi kichik takrorlash ro'yxatni qisqartirishni boshlaydi.",
     ],
     'en': [
       "A short reminder could restart reviewing — {n} words are waiting.",
@@ -1317,6 +1549,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Starting with a small review today would bring back the rhythm for {nameObj}.",
       "Helping make review a regular part of the day would be useful.",
       "{n} words are waiting — the advice of a little every day would help.",
+      "Suggesting a plan to review the {n} words over several days could help.",
+      "A small review today would start shrinking the list.",
     ],
   },
   'sug_hard': {
@@ -1331,6 +1565,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "So'zlarni ovoz chiqarib aytib takrorlash foydali bo'ladi.",
       "Har bir so'zga misol topib takrorlash tavsiya qilinadi.",
       "Bir necha kun yangi so'zsiz, faqat takrorlash bilan ishlash mumkin.",
+      "Qiyin so'zlar uchun rasm yoki misol bilan eslatma tayyorlash foydali.",
+      "Bugun yangi so'z o'rniga eski so'zlarni takrorlashni taklif qilish mumkin.",
     ],
     'en': [
       "Relearning the words in smaller groups, with examples, would help.",
@@ -1343,6 +1579,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Reviewing the words out loud would be useful.",
       "Finding an example for each word while reviewing is recommended.",
       "A few days of review only, without new words, could help.",
+      "Preparing a picture or example for the hard words would be useful.",
+      "Suggesting old words instead of new ones today could help.",
     ],
   },
   'sug_skipped_mode': {
@@ -1357,6 +1595,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Keyingi safar {mode} mashqi bajarilganini tekshirib qo'yish mumkin.",
       "{mode} mashqi yoqmasa, sababini bilish foydali bo'ladi.",
       "{mode} mashqiga qisqa eslatma keyingi vazifalarda yordam beradi.",
+      "{mode} mashqini bajarish uchun qo'shimcha vaqt berish mumkin.",
+      "{mode} mashqi bo'yicha qisqa ko'rsatma yordam berishi mumkin.",
     ],
     'en': [
       "In the next homework, {mode} could be mentioned separately.",
@@ -1369,6 +1609,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Next time it could help to check that {mode} was done.",
       "If {mode} is not enjoyable, finding out why would be useful.",
       "A short reminder about {mode} would help in the next assignments.",
+      "Extra time for {mode} could be given.",
+      "Short instructions on {mode} could help.",
     ],
   },
   'sug_low_activity': {
@@ -1383,6 +1625,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Kichik yutuqlarni maqtash {name} uchun yaxshi turtki bo'ladi.",
       "Bu hafta uchun bitta aniq, oson maqsad qo'yish mumkin.",
       "Band hafta bo'lsa, qisqa takrorlash ham yetarli — buni eslatib qo'yish mumkin.",
+      "Haftaning qolgan kunlari uchun kichik maqsad belgilash mumkin.",
+      "Har kuni bitta qisqa mashq — {name} uchun yaxshi qadam bo'ladi.",
     ],
     'en': [
       "A small goal — 10 words a day — would help restore the rhythm.",
@@ -1395,6 +1639,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Praising small wins would be a good push for {nameObj}.",
       "One clear, easy goal could be set for this week.",
       "If the week is busy, a short review is enough — this could be mentioned.",
+      "A small goal for the rest of the week could be set.",
+      "One short practice a day would be a good step for {nameObj}.",
     ],
   },
   'sug_new_student': {
@@ -1409,6 +1655,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Savollar bo'lsa, chat orqali yozish mumkinligini {name} uchun eslatib qo'yish mumkin.",
       "Dastlabki kunlarda faollikni kuzatib borish foydali bo'ladi.",
       "Yangi o'quvchiga ilovadagi takrorlash qanday ishlashini ko'rsatib qo'yish mumkin.",
+      "Birinchi haftada qisqa maqtov xabari {name} uchun kuchli motivatsiya bo'ladi.",
+      "Yangi o'quvchiga birinchi vazifani tushuntirib berish foydali.",
     ],
     'en': [
       "A supportive message in the first days would be a good start for {nameObj}.",
@@ -1421,6 +1669,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "It may help to remind {nameObj} that questions can be asked in the chat.",
       "Keeping an eye on activity in the first days would be useful.",
       "Showing a new student how review works in the app could help.",
+      "A short message of praise in the first week would be strong motivation for {nameObj}.",
+      "Explaining the first homework to a new student would be useful.",
     ],
   },
   'sug_praise': {
@@ -1435,6 +1685,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Izchil mehnat ko'rinib turibdi — buni e'tirof etish mumkin.",
       "{name} boshqalarga namuna bo'lishi mumkin — ijobiy so'z yaxshi ta'sir qiladi.",
       "Yaxshi natija uchun qisqa barakalla ham yetarli.",
+      "Shu sur'atni saqlash uchun qisqa rag'bat so'zi yetarli.",
+      "Bu mehnatni darsda e'tirof etish mumkin.",
     ],
     'en': [
       "Praising this result would be a good push for {nameObj}.",
@@ -1447,6 +1699,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Steady work is visible — it could be acknowledged.",
       "{name} could be a good example for others — a positive word would go a long way.",
       "A short well done is enough for a good result.",
+      "A short word of encouragement is enough to keep this pace.",
+      "This effort could be recognised in class.",
     ],
   },
   'sug_new_unit': {
@@ -1461,6 +1715,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} oldinga yurishga tayyor ko'rinadi.",
       "Yangi so'zlar to'plamini berish uchun ayni vaqt.",
       "Bo'sh ro'yxat — yangi vazifa uchun yaxshi signal.",
+      "Keyingi bo'limni tayyorlash vaqti keldi.",
+      "Yangi so'zlar {name} uchun keyingi qadam bo'ladi.",
     ],
     'en': [
       "It may be time for new homework — the current work is done.",
@@ -1473,6 +1729,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} seem{s} ready to move ahead.",
       "It is the right moment to set a new word set.",
       "An empty list is a good signal for new homework.",
+      "It is time to prepare the next unit.",
+      "New words would be the next step for {nameObj}.",
     ],
   },
   'act_review_cleared': {
@@ -1485,6 +1743,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{when} kutayotgan so'zlar qolmadi — {name} [[{n} ta so'zni|review]] takrorladi.",
       "{when} {name} takrorlashni oxirigacha yetkazdi: [[{n} ta so'z|review]], ro'yxat bo'sh.",
       "{when} [[{n} ta so'z takrorlanib|review]], ro'yxatda hech narsa qolmadi.",
+      "{when} {name} [[{n} ta so'z bilan|review]] takrorlashni yakunladi — hech narsa qolmadi.",
+      "{when} ro'yxatdagi barcha so'zlar takrorlandi: [[{n} ta|review]].",
     ],
     'en': [
       "{when} {name} [[reviewed {n} words|review]] and cleared the whole waiting list.",
@@ -1495,6 +1755,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{when} no words are left waiting — {name} [[reviewed all {n}|review]].",
       "{when} {name} finished reviewing: [[{n} words|review]], list empty.",
       "{when} [[{n} words got reviewed|review]] and nothing is left on the list.",
+      "{when} {name} finished review with [[{n} words|review]] — nothing is left.",
+      "{when} every word on the list got reviewed: [[{n} of them|review]].",
     ],
   },
   'act_review_hw': {
@@ -1507,6 +1769,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{when} {name} [[{hw}|homework]] vazifasini yakunlab, [[{n} ta so'zni|review]] ham takrorladi.",
       "{when} [[{hw}|homework]] tugadi, ustiga [[{n} ta so'z|review]] takrorlandi.",
       "{when} {name} samarali ishladi: [[{hw}|homework]] va [[{n} ta so'z|review]].",
+      "{when} {name} [[{n} ta so'zni|review]] takrorlab, [[{hw}|homework]] vazifasini ham tugatdi.",
+      "{when} [[{hw}|homework]] tayyor bo'ldi, [[{n} ta so'z|review]] esa takrorlandi.",
     ],
     'en': [
       "{when} {name} [[reviewed {n} words|review]] and finished [[{hw}|homework]].",
@@ -1517,6 +1781,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{when} {name} completed [[{hw}|homework]] and also [[reviewed {n} words|review]].",
       "{when} [[{hw}|homework]] was finished, plus [[{n} words|review]] reviewed.",
       "{when} {name} had a productive session: [[{hw}|homework]] and [[{n} words|review]].",
+      "{when} {name} reviewed [[{n} words|review]] and also finished [[{hw}|homework]].",
+      "{when} [[{hw}|homework]] got done and [[{n} words|review]] were reviewed.",
     ],
   },
   'act_review': {
@@ -1529,6 +1795,9 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{when} {name} [[{n} ta so'z|review]] ustida takrorlash qildi.",
       "{when} [[{n} ta so'z|review]] yana bir bor takrorlandi.",
       "{when} {name} takrorlashga vaqt ajratdi — [[{n} ta so'z|review]].",
+      "{when} {name} [[{n} ta so'zni|review]] takrorlab chiqdi.",
+      "{when} [[{n} ta so'z|review]] ustida takrorlash bo'ldi.",
+      "{when} {name} [[{n} ta so'zni|review]] yana bir bor eslab ko'rdi.",
     ],
     'en': [
       "{when} {name} [[reviewed {n} words|review]].",
@@ -1539,6 +1808,9 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{when} {name} worked through [[{n} words|review]] in review.",
       "{when} [[{n} words|review]] were reviewed once more.",
       "{when} {name} made time for review — [[{n} words|review]].",
+      "{when} {name} went through [[{n} words|review]] in review.",
+      "{when} a review of [[{n} words|review]] took place.",
+      "{when} {name} refreshed [[{n} words|review]].",
     ],
   },
   'act_hw': {
@@ -1551,6 +1823,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{when} {name} [[{hw}|homework]] vazifasining barcha mashqlarini tugatdi.",
       "{when} [[{hw}|homework]] — tayyor.",
       "{when} {name} [[{hw}|homework]] ustidagi ishni yakunladi.",
+      "{when} [[{hw}|homework]] vazifasi to'liq topshirildi.",
+      "{when} {name} [[{hw}|homework]] vazifasini nihoyasiga yetkazdi.",
     ],
     'en': [
       "{when} {name} fully finished [[{hw}|homework]].",
@@ -1561,6 +1835,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{when} {name} finished every activity in [[{hw}|homework]].",
       "{when} [[{hw}|homework]] — done.",
       "{when} {name} wrapped up the work on [[{hw}|homework]].",
+      "{when} [[{hw}|homework]] was handed in in full.",
+      "{when} {name} brought [[{hw}|homework]] to completion.",
     ],
   },
   'act_hw_partial': {
@@ -1573,6 +1849,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{when} [[{hw}|homework]] yarim yo'lda: [[{left} qolgan|timing]].",
       "{when} {name} [[{hw}|homework]] vazifasiga kirishdi; tugatish uchun [[{left} qoldi|timing]].",
       "{when} [[{hw}|homework]] qisman bajarildi — [[{left} hali bajarilmagan|timing]].",
+      "{when} {name} [[{hw}|homework]] vazifasini boshlab qo'ydi; [[{left} hali kutmoqda|timing]].",
+      "{when} [[{hw}|homework]] bo'yicha ish bo'ldi — [[{left} qolgan|timing]].",
     ],
     'en': [
       "{when} {name} worked on [[{hw}|homework]]; [[{left} still left|timing]].",
@@ -1583,6 +1861,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{when} [[{hw}|homework]] got halfway: [[{left} left|timing]].",
       "{when} {name} got into [[{hw}|homework]]; [[{left} left|timing]] to finish it.",
       "{when} [[{hw}|homework]] was partly done — [[{left} not yet|timing]].",
+      "{when} {name} got [[{hw}|homework]] started; [[{left} still waiting|timing]].",
+      "{when} there was work on [[{hw}|homework]] — [[{left} left|timing]].",
     ],
   },
   'act_other': {
@@ -1595,6 +1875,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{when} {name} [[bir oz mashq qildi|days]].",
       "{when} [[sinf mashg'ulotlari|days]] bajarildi.",
       "{when} {name} [[o'qishga vaqt ajratdi|days]].",
+      "{when} {name} [[sinfda biroz ishladi|days]].",
+      "{when} [[mashg'ulot bo'ldi|days]].",
     ],
     'en': [
       "{when} {name} [[did class practice|days]].",
@@ -1605,6 +1887,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{when} {name} [[did a bit of practice|days]].",
       "{when} [[class activities|days]] got done.",
       "{when} {name} [[made time for study|days]].",
+      "{when} {name} [[did some work in the class|days]].",
+      "{when} [[a practice session took place|days]].",
     ],
   },
   'rev_waiting': {
@@ -1617,6 +1901,9 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Takrorlash uchun {n} ta so'z tayyor turibdi.",
       "Hozircha {n} ta so'z takrorlanishini kutmoqda.",
       "Bugungi takrorlash ro'yxati: {n} ta so'z.",
+      "{n} ta so'z takrorlanishga navbatda.",
+      "Takrorlash uchun tayyor so'zlar: {n} ta.",
+      "Kutayotgan so'zlar soni — {n} ta.",
     ],
     'en': [
       "{n} words are waiting for review.",
@@ -1627,6 +1914,9 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{n} words are ready for review.",
       "For now, {n} words are waiting to be reviewed.",
       "Today's review list: {n} words.",
+      "{n} words are in line for review.",
+      "Words ready for review: {n}.",
+      "Words waiting: {n}.",
     ],
   },
   'rev_overdue': {
@@ -1639,6 +1929,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{m} ta so'zning takrorlashi kechikdi; ro'yxatda jami {n} ta.",
       "Takrorlash ro'yxati: {n} ta so'z, ulardan {m} tasi muddatidan o'tgan.",
       "{n} ta so'zdan {m} tasi uchun takrorlash vaqti o'tib ketgan.",
+      "{n} ta kutayotgan so'zning {m} tasi kechikmoqda.",
+      "Ro'yxatda {n} ta so'z; ularning {m} tasi vaqtida takrorlanmagan.",
     ],
     'en': [
       "{n} words are waiting, {m} of them overdue.",
@@ -1649,6 +1941,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{m} words have slipped past their review time; {n} on the list in total.",
       "Review list: {n} words, {m} of them overdue.",
       "Of {n} waiting words, {m} are past their review time.",
+      "{m} of the {n} waiting words are running late.",
+      "{n} words on the list; {m} of them were not reviewed on time.",
     ],
   },
   'rev_stopped': {
@@ -1661,6 +1955,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} oxirgi marta [[{days} kun oldin|review]] takrorlagan; hozir {n} ta so'z navbatda.",
       "[[{days} kunlik takrorlashsiz davr|review]] bor; {n} ta so'z to'planib qolgan.",
       "{n} ta so'z kutmoqda, oxirgi takrorlash esa [[{days} kun oldin|review]] bo'lgan.",
+      "{name} [[{days} kun|review]] takrorlamay qo'ydi; {n} ta so'z to'plandi.",
+      "[[{days} kundan beri|review]] takrorlash yo'q — ro'yxatda {n} ta so'z.",
     ],
     'en': [
       "The last review was [[{days} days ago|review]]; {n} words are waiting now.",
@@ -1671,6 +1967,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} last reviewed [[{days} days ago|review]]; {n} words are queued now.",
       "There has been [[no review for {days} days|review]]; {n} words have piled up.",
       "{n} words are waiting, and the last review was [[{days} days ago|review]].",
+      "{name} {has} gone [[{days} days|review]] without reviewing; {n} words have built up.",
+      "No review [[for {days} days|review]] — {n} words on the list.",
     ],
   },
   'rev_never': {
@@ -1683,6 +1981,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} uchun birinchi takrorlash hali oldinda — {n} ta so'z tayyor.",
       "Hali takrorlash bo'lmagan; {n} ta so'z navbatda.",
       "{name} takrorlashni boshlasa bo'ladi: {n} ta so'z kutmoqda.",
+      "{n} ta so'z birinchi takrorlashni kutyapti — {name} hali boshlamagan.",
+      "Takrorlash ro'yxati tayyor ({n} ta so'z), lekin hali ochilmagan.",
     ],
     'en': [
       "{name} {hasnt} started reviewing yet; {n} words are waiting.",
@@ -1693,6 +1993,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "The first review is still ahead for {nameObj} — {n} words are ready.",
       "No review has happened yet; {n} words are queued.",
       "{name} can start reviewing any time: {n} words are waiting.",
+      "{n} words are waiting for a first review — {name} {hasnt} started yet.",
+      "The review list is ready ({n} words), but has not been opened yet.",
     ],
   },
   'hw_few_early': {
@@ -1705,6 +2007,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[{hw}|homework]] [[muddatdan {early}|timing]] topshirildi.",
       "{name} [[{hw}|homework]] vazifasini [[vaqtidan {early}|timing]] yakunladi.",
       "[[{hw}|homework]]: [[muddatidan {early}|timing]] bajarilgan.",
+      "[[{hw}|homework]] vazifasini {name} [[muddatidan {early}|timing]] yopdi.",
+      "{name} [[{hw}|homework]] vazifasini oldindan bajardi — [[muddatidan {early}|timing]].",
     ],
     'en': [
       "{name} finished [[{hw}|homework]] [[{early} before the deadline|timing]].",
@@ -1715,6 +2019,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[{hw}|homework]] was handed in [[{early} ahead of the deadline|timing]].",
       "{name} wrapped up [[{hw}|homework]] [[{early} before it was due|timing]].",
       "[[{hw}|homework]]: done [[{early} before the deadline|timing]].",
+      "{name} closed [[{hw}|homework]] [[{early} before the deadline|timing]].",
+      "{name} did [[{hw}|homework]] ahead of time — [[{early} early|timing]].",
     ],
   },
   'hw_few_on_time': {
@@ -1727,6 +2033,9 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} [[{hw}|homework]] bo'yicha [[muddatga amal qildi|timing]].",
       "[[{hw}|homework]] vazifasi [[kechikmasdan|timing]] topshirildi.",
       "{name} hozircha vazifalarni [[vaqtida|timing]] bajaryapti: [[{hw}|homework]].",
+      "{name} [[{hw}|homework]] vazifasini [[o'z muddatida|timing]] yakunladi.",
+      "[[{hw}|homework]]: [[muddat buzilmagan|timing]].",
+      "{name} [[{hw}|homework]] vazifasini [[o'z vaqtida|timing]] topshirib, yaxshi boshladi.",
     ],
     'en': [
       "[[{hw}|homework]] was done [[on time|timing]].",
@@ -1737,6 +2046,9 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} met the deadline for [[{hw}|homework]] — [[on time|timing]].",
       "[[{hw}|homework]] was handed in [[without delay|timing]].",
       "So far {name} {is} keeping to deadlines: [[{hw}|homework]] [[on time|timing]].",
+      "{name} completed [[{hw}|homework]] [[within the deadline|timing]].",
+      "[[{hw}|homework]]: [[deadline kept|timing]].",
+      "{name} handed [[{hw}|homework]] in [[on time|timing]] — a good start.",
     ],
   },
   'hw_few_late': {
@@ -1749,6 +2061,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} [[{hw}|homework]] vazifasini [[{late}|timing]] topshirdi, lekin hammasini qildi.",
       "[[{hw}|homework]] — [[{late}|timing]], ammo to'liq.",
       "{name} [[{hw}|homework]] bilan biroz kechikdi ([[{late}|timing]]), ammo uni tugatdi.",
+      "[[{hw}|homework]] [[{late}|timing]] topshirildi, lekin hech bir qismi qolmadi.",
+      "{name} [[{hw}|homework]] vazifasida biroz ortda qoldi ([[{late}|timing]]), ammo hammasini bajardi.",
     ],
     'en': [
       "[[{hw}|homework]] was done [[{late}|timing]], but in full.",
@@ -1759,6 +2073,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} handed in [[{hw}|homework]] [[{late}|timing]], but did all of it.",
       "[[{hw}|homework]] — [[{late}|timing]], but complete.",
       "{name} ran a little behind on [[{hw}|homework]] ([[{late}|timing]]), but finished it.",
+      "[[{hw}|homework]] came in [[{late}|timing]], but no part was left out.",
+      "{name} fell a little behind on [[{hw}|homework]] ([[{late}|timing]]), but did all of it.",
     ],
   },
   'hw_few_open': {
@@ -1771,6 +2087,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[{hw}|homework]] muddati o'tgan, [[{left} hali bajarilmagan|timing]].",
       "[[{hw}|homework]] bo'yicha [[{left} hali kutmoqda|timing]].",
       "{name} uchun [[{hw}|homework]] vazifasida [[{left} qolgan|timing]] — eslatma yordam berishi mumkin.",
+      "[[{hw}|homework]] vazifasida [[{left} hali bajarilishi kerak|timing]].",
+      "{name} uchun [[{hw}|homework]] tugallanmagan — [[{left} qolgan|timing]].",
     ],
     'en': [
       "[[{hw}|homework]] is [[not done yet|timing]] — {left} left.",
@@ -1781,6 +2099,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "The deadline for [[{hw}|homework]] has passed, with [[{left} not done yet|timing]].",
       "For [[{hw}|homework]], there is still [[{left} to do|timing]].",
       "[[{hw}|homework]] still has [[{left} left|timing]] for {nameObj} — a reminder could help.",
+      "[[{hw}|homework]] still needs [[{left}|timing]] to be done.",
+      "[[{hw}|homework]] is unfinished for {nameObj} — [[{left} left|timing]].",
     ],
   },
   'hw_few_open_many': {
@@ -1793,6 +2113,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[{hw}|homework]] hali [[kutmoqda|timing]] — eslatma yordam berishi mumkin.",
       "{name} uchun [[{hw}|homework]] vazifalari [[ochiq qolmoqda|timing]].",
       "[[{hw}|homework]] bo'yicha ish [[hali tugamagan|timing]].",
+      "[[{hw}|homework]] hali [[topshirilmagan|timing]].",
+      "{name} [[{hw}|homework]] vazifalarini [[hali yakunlamagan|timing]].",
     ],
     'en': [
       "[[{hw}|homework]] are [[not done yet|timing]].",
@@ -1803,6 +2125,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[{hw}|homework]] are still [[waiting|timing]] — a reminder could help.",
       "[[{hw}|homework]] remain [[open|timing]] for {nameObj}.",
       "Work on [[{hw}|homework]] is [[not finished yet|timing]].",
+      "[[{hw}|homework]] have [[not been handed in yet|timing]].",
+      "{name} {hasnt} [[completed|timing]] [[{hw}|homework]] yet.",
     ],
   },
   'hw_few_mixed': {
@@ -1815,6 +2139,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Ikki vazifadan biri tayyor, [[ikkinchisi|timing]] hali bajarilmagan ([[{hw}|homework]]).",
       "{name} [[{hw}|homework]] vazifalarining yarmini tugatgan — [[biri qoldi|timing]].",
       "[[{hw}|homework]] vazifalaridan [[biri hali ochiq|timing]], biri esa bajarilgan.",
+      "[[{hw}|homework]]: biri topshirildi, [[ikkinchisi hali kutmoqda|timing]].",
+      "{name} ikki vazifadan birini yakunladi; [[biri qoldi|timing]] ([[{hw}|homework]]).",
     ],
     'en': [
       "Of [[{hw}|homework]], one is done and one is [[still open|timing]].",
@@ -1825,6 +2151,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Of the two assignments ([[{hw}|homework]]), one is ready and [[one is not done yet|timing]].",
       "{name} {has} finished half of [[{hw}|homework]] — [[one left|timing]].",
       "[[One of {hw}|timing]] is still open, the other is done.",
+      "[[{hw}|homework]]: one handed in, [[the second still waiting|timing]].",
+      "{name} completed one of the two; [[one is left|timing]] ([[{hw}|homework]]).",
     ],
   },
   'hw_early': {
@@ -1837,6 +2165,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[Ko'p vazifalar|homework]] {name} tomonidan [[muddatidan oldin|timing]] tugatiladi.",
       "{name} [[vazifalar|homework]] bo'yicha [[oldinda yuradi|timing]] — muddatni kutmaydi.",
       "[[Vazifalar|homework]] odatda [[muddatidan bir necha kun oldin|timing]] tayyor bo'ladi — {name} erta harakat qiladi.",
+      "{name} [[vazifalarni|homework]] [[muddatni kutmasdan|timing]] topshiradi.",
+      "[[Vazifalar|homework]] {name} tomonidan [[odatda erta|timing]] yakunlanadi.",
     ],
     'en': [
       "{name} usually finish{es} [[homework|homework]] [[before the deadline|timing]].",
@@ -1847,6 +2177,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[Most homework|homework]] gets finished [[ahead of the deadline|timing]] by {nameObj}.",
       "{name} stay{s} [[ahead|timing]] on [[homework|homework]] — no waiting for the deadline.",
       "[[Homework|homework]] is usually ready [[a few days early|timing]] — {name} start{s} early.",
+      "{name} hand{s} in [[homework|homework]] [[without waiting for the deadline|timing]].",
+      "[[Homework|homework]] is [[usually finished early|timing]] by {nameObj}.",
     ],
   },
   'hw_last_day': {
@@ -1859,6 +2191,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[Vazifalar|homework]] ko'pincha [[oxirgi kuni|timing]] topshiriladi — lekin doim vaqtida.",
       "{name} [[so'nggi kungacha kutadi|timing]], biroq [[birorta vazifani|homework]] qoldirmaydi.",
       "[[Oxirgi kun|timing]] {name} uchun ish kuni: [[vazifalar|homework]] aynan o'sha kuni bajariladi.",
+      "{name} uchun [[muddat kuni — ish kuni|timing]], ammo [[vazifalar|homework]] doim topshiriladi.",
+      "[[Vazifalar|homework]] odatda [[so'nggi kunda|timing]] yakunlanadi, lekin hech biri kechikmaydi.",
     ],
     'en': [
       "{name} [[often do{es} homework on the last day|timing]], but never skip{s} [[one|homework]].",
@@ -1869,6 +2203,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[Homework|homework]] often comes in [[on the last day|timing]] — but always on time.",
       "{name} [[wait{s} until the final day|timing]], yet never miss{es} [[an assignment|homework]].",
       "[[The last day|timing]] is the working day for {nameObj}: [[homework|homework]] gets done right then.",
+      "For {nameObj}, [[the due day is the working day|timing]], but [[homework|homework]] is always handed in.",
+      "[[Homework|homework]] is usually finished [[on the final day|timing]], but none of it is late.",
     ],
   },
   'hw_on_time': {
@@ -1881,6 +2217,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} uchun muddat muammo emas: [[{total} ta vazifa|homework]], [[hammasi vaqtida|timing]].",
       "{name} [[vazifalarni|homework]] [[o'z vaqtida bajarishda barqaror|timing]].",
       "[[{total} ta vazifaning|homework]] [[hammasi muddatida|timing]] tayyor bo'lgan.",
+      "{name} [[vazifalarni|homework]] [[doimo vaqtida|timing]] topshiradi.",
+      "[[{total} ta vazifa|homework]] — [[birortasi ham kechikmagan|timing]].",
     ],
     'en': [
       "{name} {has} done [[every homework|homework]] [[on time|timing]].",
@@ -1891,6 +2229,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Deadlines are no problem for {nameObj}: [[{total} assignments|homework]], [[all on time|timing]].",
       "{name} {is} [[consistently on time|timing]] with [[homework|homework]].",
       "[[All {total} assignments|homework]] were ready [[by their deadlines|timing]].",
+      "{name} always hand{s} in [[homework|homework]] [[on time|timing]].",
+      "[[{total} assignments|homework]] — [[not a single one late|timing]].",
     ],
   },
   'hw_same_day': {
@@ -1903,6 +2243,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} [[vazifalarni|homework]] [[berilgan kuni yakunlashni|timing]] afzal ko'radi.",
       "[[Ko'p vazifalar|homework]] [[berilgan kuniyoq|timing]] tayyor bo'ladi — {name} tez harakat qiladi.",
       "{name} uchun [[vazifa|homework]] — [[darhol bajariladigan ish|timing]].",
+      "{name} [[vazifani|homework]] [[olgan kuniyoq|timing]] tugatadi.",
+      "[[Vazifa|homework]] berilgan zahoti {name} [[uni bajarib qo'yadi|timing]].",
     ],
     'en': [
       "{name} [[often do{es} homework|homework]] [[on the day it is assigned|timing]].",
@@ -1913,6 +2255,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} prefer{s} to finish [[homework|homework]] [[on the day it is given|timing]].",
       "[[Most homework|homework]] is ready [[on the day it is set|timing]] — {name} move{s} fast.",
       "For {nameObj}, [[homework|homework]] is [[something to do right away|timing]].",
+      "{name} finish{es} [[homework|homework]] [[the same day it arrives|timing]].",
+      "As soon as [[homework|homework]] is set, {name} [[get{s} it done|timing]].",
     ],
   },
   'hw_late_finishes': {
@@ -1925,6 +2269,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} uchun [[muddat {freq} qiyin|timing]], biroq [[vazifalar|homework]] doim tugatiladi.",
       "{name} [[{freq} biroz kech qoladi|timing]], ammo [[har bir vazifani|homework]] oxiriga yetkazadi.",
       "[[Kechikishlar {freq} bo'ladi|timing]], lekin {name} [[vazifalarni|homework]] baribir bajaradi.",
+      "{name} [[{freq} muddatdan o'tib ketadi|timing]], lekin [[vazifalar|homework]] tashlab ketilmaydi.",
+      "[[Kechikish {freq} uchraydi|timing]], ammo {name} [[har bir vazifani|homework]] tugatadi.",
     ],
     'en': [
       "{name} [[{is} {freq} late|timing]], but always finish{es} [[the homework|homework]] in the end.",
@@ -1935,6 +2281,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Deadlines are [[{freq} a challenge|timing]] for {nameObj}, yet [[the work|homework]] is always finished.",
       "{name} [[{freq} fall{s} a little behind|timing]], but see{s} [[every assignment|homework]] through.",
       "[[Delays happen {freq}|timing]], but {name} still finish{es} [[the homework|homework]].",
+      "{name} [[{freq} go{es} past the deadline|timing]], but [[the homework|homework]] is never dropped.",
+      "[[Lateness happens {freq}|timing]], but {name} finish{es} [[every assignment|homework]].",
     ],
   },
   'hw_some_missing': {
@@ -1947,6 +2295,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} yaxshi ishlayapti, faqat [[{missed} ta vazifa|timing]] hali bajarilmagan.",
       "[[Vazifalarning aksariyati|homework]] bajarilgan — [[{missed} tasi qolgan|timing]].",
       "{name} {done} ta vazifani tugatgan; [[{missed} tasi hali oldinda|timing]] — eslatma yordam berishi mumkin.",
+      "[[{total} ta vazifaning|homework]] ko'pi bajarilgan; [[{missed} tasi qolgan|timing]].",
+      "{name} {done} ta vazifani yopgan, [[{missed} tasi hali ochiq|timing]] — eslatma yordam beradi.",
     ],
     'en': [
       "{name} {has} done {done} of [[{total} assignments|homework]]; [[{missed} still open|timing]].",
@@ -1957,6 +2307,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} {is} doing well, with only [[{missed} not done yet|timing]].",
       "[[Most assignments|homework]] are done — [[{missed} left|timing]].",
       "{name} {has} finished {done} assignments; [[{missed} still ahead|timing]] — a reminder could help.",
+      "Most of [[{total} assignments|homework]] are done; [[{missed} left|timing]].",
+      "{name} {has} closed {done} assignments, with [[{missed} still open|timing]] — a reminder would help.",
     ],
   },
   'hw_many_missing': {
@@ -1969,6 +2321,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} uchun [[{missed} ta vazifa|timing]] to'planib qolgan — kichik qadamlar bilan boshlash yordam berishi mumkin.",
       "[[{missed} ta vazifa|timing]] kutmoqda, lekin {name} {done} tasini bajargan — bu yaxshi boshlanish.",
       "{name} vazifalarning bir qismini bajargan; [[qolgan {missed} tasi|timing]] uchun yordam kerak bo'lishi mumkin.",
+      "[[{missed} ta vazifa|timing]] hali ochiq; {name} bilan birga reja tuzish foydali bo'lishi mumkin.",
+      "{name} [[{total} ta vazifadan|homework]] faqat {done} tasini yopgan; [[qolganlari|timing]] uchun yordam kerak bo'lishi mumkin.",
     ],
     'en': [
       "{name} {has} done {done} assignments, but [[{missed} are still open|timing]] — some help may be needed.",
@@ -1979,6 +2333,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[{missed} assignments|timing]] have piled up for {nameObj} — starting with small steps could help.",
       "[[{missed} assignments|timing]] are waiting, but {name} {has} done {done} — a good base to build on.",
       "{name} {has} done part of the homework; [[the other {missed}|timing]] may need some support.",
+      "[[{missed} assignments|timing]] are still open; making a plan with {nameObj} could help.",
+      "{name} {has} closed only {done} of [[{total} assignments|homework]]; [[the rest|timing]] may need support.",
     ],
   },
   'hw_none_done': {
@@ -1991,6 +2347,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Hozircha [[{total} ta vazifa|timing]] ochiq; qisqa gaplashuv sababini aniqlashga yordam beradi.",
       "{name} uchun [[barcha so'nggi vazifalar|timing]] hali bajarilmagan — eslatma yoki suhbat yordam berishi mumkin.",
       "[[{total} ta vazifa|timing]] tugallanmagan; {name} qiynalayotgan bo'lishi mumkin.",
+      "[[{total} ta vazifa|timing]] hali kutmoqda — qayerdan boshlashni birga hal qilish mumkin.",
+      "{name} uchun [[so'nggi vazifalar|timing]] hali ochiq; qisqa suhbat yordam beradi.",
     ],
     'en': [
       "[[The last {total} assignments|timing]] are not done yet — a chat with {nameObj} could help.",
@@ -2001,6 +2359,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "For now [[{total} assignments|timing]] are open; a short talk could help find the reason.",
       "[[All recent assignments|timing]] are still open for {nameObj} — a reminder or a chat could help.",
       "[[{total} assignments|timing]] are unfinished; {name} may be finding things hard.",
+      "[[{total} assignments|timing]] are still waiting — deciding together where to start could help.",
+      "[[The recent assignments|timing]] are still open for {nameObj}; a short chat would help.",
     ],
   },
   'hw_improving': {
@@ -2013,6 +2373,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[Oxirgi uchta vazifa|timing]] avvalgilaridan yaxshiroq natija ko'rsatdi.",
       "{name} [[muddatlarga ko'proq e'tibor bera boshladi|timing]].",
       "[[Vazifalardagi o'sish|timing]] seziladi: kechikishlar kamaydi.",
+      "[[So'nggi vazifalarda|timing]] muddatga rioya qilish sezilarli yaxshilandi.",
+      "{name} [[vazifalarni avvalgidan tezroq|timing]] topshirmoqda.",
     ],
     'en': [
       "[[Recent homework|timing]] shows improvement.",
@@ -2023,6 +2385,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[The last three assignments|timing]] went better than the ones before.",
       "{name} {has} [[started paying more attention to deadlines|timing]].",
       "[[Progress in homework|timing]] is visible: fewer delays.",
+      "Keeping to deadlines [[improved noticeably in recent homework|timing]].",
+      "{name} {is} handing in [[homework faster than before|timing]].",
     ],
   },
   'hw_slipping': {
@@ -2035,6 +2399,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[Vazifalar ritmi|timing]] biroz pasaygan; qisqa eslatma yordam berishi mumkin.",
       "{name} [[so'nggi vazifalarni|timing]] avvalgidan kechroq bajaryapti.",
       "[[Oxirgi vazifalar|timing]] muddatga yaqinroq yoki kechroq topshirilmoqda.",
+      "[[Oxirgi vazifalarda|timing]] kechikishlar biroz oshdi.",
+      "{name} [[vazifalarni avvalgidan sekinroq|timing]] topshirmoqda.",
     ],
     'en': [
       "[[Recent homework|timing]] has slipped a little.",
@@ -2045,6 +2411,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[The homework rhythm|timing]] has dropped a bit; a short reminder could help.",
       "{name} {is} doing [[the latest assignments|timing]] later than before.",
       "[[Recent assignments|timing]] have come in closer to or after the deadline.",
+      "[[Recent homework|timing]] shows a few more delays.",
+      "{name} {is} handing in [[homework more slowly than before|timing]].",
     ],
   },
   'rem_quick': {
@@ -2057,6 +2425,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} [[eslatmani e'tiborsiz qoldirmaydi|reminders]], odatda o'sha kuni shug'ullanadi.",
       "[[Eslatma yuborilsa|reminders]], {name} tez harakat qiladi.",
       "{name} uchun [[bitta eslatma kifoya|reminders]] — ko'pincha shu kuniyoq mashq qiladi.",
+      "{name} [[eslatma olishi bilan|reminders]] mashqqa o'tadi.",
+      "[[Eslatmalarga javob|reminders]] tez — odatda bir kun ichida.",
     ],
     'en': [
       "{name} [[respond{s} to reminders quickly|reminders]] — usually practise{s} within a day.",
@@ -2067,6 +2437,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} [[{doesnt} ignore reminders|reminders]] and usually practise{s} the same day.",
       "[[When a reminder is sent|reminders]], {name} act{s} quickly.",
       "For {nameObj}, [[one reminder is enough|reminders]] — practice often follows the same day.",
+      "{name} move{s} to practice [[as soon as a reminder arrives|reminders]].",
+      "[[Replies to reminders|reminders]] are quick — usually within a day.",
     ],
   },
   'rem_slow': {
@@ -2079,6 +2451,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} uchun [[eslatma ishlaydi|reminders]], faqat sekinroq.",
       "[[Eslatmadan keyin|reminders]] {name} odatda ertasi yoki indiniga mashq qiladi.",
       "{name} [[eslatmalarni qabul qiladi|reminders]] — javob bir oz kechikib keladi.",
+      "{name} [[eslatmalarga|reminders]] bir-ikki kunda javob beradi.",
+      "[[Eslatmadan keyin|reminders]] {name} biroz o'tib, lekin ishonchli tarzda qaytadi.",
     ],
     'en': [
       "{name} [[respond{s} to reminders a little late|reminders]], but then always practise{s}.",
@@ -2089,6 +2463,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[Reminders work|reminders]] for {nameObj}, just more slowly.",
       "[[After a reminder|reminders]] {name} usually practise{s} the next day or the day after.",
       "{name} take{s} [[reminders|reminders]] on board — the response just comes a little later.",
+      "{name} answer{s} [[reminders|reminders]] within a day or two.",
+      "[[After a reminder|reminders]] {name} come{s} back a bit later, but reliably.",
     ],
   },
   'rem_mixed': {
@@ -2101,6 +2477,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} [[eslatmalarga turlicha javob beradi|reminders]] — boshqa usulni ham sinab ko'rish mumkin.",
       "[[Ayrim eslatmalar|reminders]] natija bergan, ayrimlari — yo'q.",
       "{name} uchun [[eslatma har doim ham ishlamaydi|reminders]]; jonli eslatma qo'shimcha yordam bo'lishi mumkin.",
+      "{name} [[eslatmalarning bir qismiga|reminders]] javob beradi.",
+      "[[Eslatmalar natijasi|reminders]] {name} uchun bir xil emas.",
     ],
     'en': [
       "{name} [[sometimes practise{s} after a reminder|reminders]], sometimes not.",
@@ -2111,6 +2489,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} respond{s} [[unevenly to reminders|reminders]] — another approach could be worth a try.",
       "[[Some reminders|reminders]] worked, others did not.",
       "For {nameObj}, [[a reminder doesn't always work|reminders]]; a word in person could add to it.",
+      "{name} respond{s} to [[some of the reminders|reminders]].",
+      "[[The result of reminders|reminders]] varies for {nameObj}.",
     ],
   },
   'rem_read_no_action': {
@@ -2123,6 +2503,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[O'qilgan eslatmalar|reminders]] hali mashqqa olib kelmagan; darsda gaplashib ko'rish mumkin.",
       "{name} [[eslatmalardan xabardor|reminders]], ammo mashqni boshlash qiyin bo'layotgan bo'lishi mumkin.",
       "[[Eslatmalar|reminders]] yetib bormoqda, lekin harakatga aylanmayapti — kichik, aniq vazifa berib ko'rish mumkin.",
+      "{name} [[xabarlarni ko'rib chiqadi|reminders]], lekin mashq keyin kelmaydi — boshqacha usul sinab ko'rish mumkin.",
+      "[[Eslatmalar o'qilyapti|reminders]], ammo natija hali yo'q; darsda gaplashib olish foydali.",
     ],
     'en': [
       "{name} [[read{s} reminders|reminders]], but often {doesnt} start practising — a different approach may help.",
@@ -2133,6 +2515,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[Read reminders|reminders]] have not led to practice yet; talking it over in class could help.",
       "{name} {is} [[aware of the reminders|reminders]], but getting started may be hard.",
       "[[Reminders|reminders]] are getting through but not turning into action — a small, specific task might help.",
+      "{name} [[look{s} at the messages|reminders]], but practice does not follow — another approach could be tried.",
+      "[[The reminders are read|reminders]], but no result yet; talking in class would help.",
     ],
   },
   'rem_unread': {
@@ -2145,6 +2529,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[Yuborilgan xabarlar|reminders]] {name} tomonidan hali ochilmagan.",
       "{name} [[eslatmalarni o'qimagan|reminders]]; og'zaki eslatish samaraliroq bo'lishi mumkin.",
       "[[Eslatmalar|reminders]] javobsiz va o'qilmagan qolmoqda — ilova sozlamalarini tekshirish foydali bo'lishi mumkin.",
+      "[[Yuborilgan eslatmalar|reminders]] hali ochilmagan — darsda og'zaki aytish yaxshiroq bo'lishi mumkin.",
+      "{name} [[xabarlarni ko'rmayapti|reminders]] shekilli; bildirishnomalarni tekshirish foydali.",
     ],
     'en': [
       "{name} [[{hasnt} opened the recent reminders|reminders]] — they may not be reaching {nameObj}.",
@@ -2155,6 +2541,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[The messages sent|reminders]] have not been opened by {nameObj} yet.",
       "{name} {hasnt} [[read the reminders|reminders]]; a word in person may work better.",
       "[[Reminders|reminders]] are going unread and unanswered — checking the app settings could help.",
+      "[[The reminders sent|reminders]] have not been opened — saying it in class may work better.",
+      "{name} seem{s} [[not to see the messages|reminders]]; checking notifications could help.",
     ],
   },
   'rem_not_needed': {
@@ -2167,6 +2555,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "Eslatmalarga ehtiyoj yo'q — {name} [[haftaning ko'p kunida faol|days]].",
       "{name} [[mustaqil va muntazam ishlaydi|days]].",
       "{name} [[o'zi vaqt topib shug'ullanadi|days]] — eslatma kerak bo'lmayapti.",
+      "{name} [[eslatmalarsiz ham|days]] o'z vaqtida shug'ullanadi.",
+      "{name} uchun tashqi turtki kerak emas — [[o'zi muntazam|days]].",
     ],
     'en': [
       "{name} [[practise{s} regularly|days]] without reminders.",
@@ -2177,6 +2567,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "No need for reminders — {name} {is} [[active most days of the week|days]].",
       "{name} [[work{s} independently and regularly|days]].",
       "{name} [[find{s} time to practise without prompting|days]] — no reminders needed.",
+      "{name} practise{s} [[on time even without reminders|days]].",
+      "No outside push is needed — {name} {is} [[regular on their own|days]].",
     ],
   },
   'rem_single_responded': {
@@ -2189,6 +2581,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} [[oxirgi xabardan keyin|reminders]] {hours} soat o'tib shug'ullandi.",
       "[[Eslatma yuborilgach|reminders]], {name} {hours} soat ichida ishga kirishdi.",
       "{name} [[oxirgi eslatmaga|reminders]] mashq bilan javob berdi ({hours} soatda).",
+      "[[Oxirgi xabardan|reminders]] keyin {name} {hours} soatda mashq qildi.",
+      "{name} [[eslatmani|reminders]] tez qabul qildi — {hours} soatdan keyin mashq.",
     ],
     'en': [
       "{name} practised within {hours} h of [[the last reminder|reminders]].",
@@ -2199,6 +2593,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} studied {hours} h after [[the last message|reminders]].",
       "[[Once the reminder was sent|reminders]], {name} got to work within {hours} h.",
       "{name} responded to [[the last reminder|reminders]] with practice ({hours} h later).",
+      "After [[the last message|reminders]], {name} practised within {hours} h.",
+      "{name} acted on [[the reminder|reminders]] — practice {hours} h later.",
     ],
   },
   'rem_single_read': {
@@ -2211,6 +2607,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[Eslatma|reminders]] yetib bordi — endi mashq navbati.",
       "{name} [[oxirgi eslatmadan xabardor|reminders]], biroq hali shug'ullanmagan.",
       "[[Oxirgi xabar o'qildi|reminders]], ammo undan keyin mashq bo'lmadi.",
+      "{name} [[xabarni o'qidi|reminders]]; mashq hali kutilmoqda.",
+      "[[Eslatma|reminders]] ko'rildi, lekin hali mashq qilinmadi.",
     ],
     'en': [
       "{name} [[read the last reminder|reminders]] but {hasnt} practised yet.",
@@ -2221,6 +2619,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[The reminder|reminders]] got through — now it is time to practise.",
       "{name} {is} [[aware of the last reminder|reminders]], but {hasnt} practised yet.",
       "[[The last message was read|reminders]], but no practice followed.",
+      "{name} [[read the message|reminders]]; practice is still to come.",
+      "[[The reminder|reminders]] was seen, but no practice yet.",
     ],
   },
   'rem_single_unread': {
@@ -2233,6 +2633,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "{name} uchun [[oxirgi eslatma|reminders]] hali ochilmay turibdi.",
       "[[Oxirgi eslatma|reminders]] {name} tomonidan hali o'qilmagan.",
       "{name} [[xabarni hali ochmagan|reminders]] — bildirishnomalar o'chiq bo'lishi mumkin.",
+      "{name} [[oxirgi xabarni|reminders]] hali ko'rmadi.",
+      "[[Eslatma|reminders]] hali ochilmagan — darsda aytib qo'yish mumkin.",
     ],
     'en': [
       "{name} [[{hasnt} opened the last reminder|reminders]] yet.",
@@ -2243,6 +2645,8 @@ const summarySentences = <String, Map<String, List<String>>>{
       "[[The last reminder|reminders]] is still unopened for {nameObj}.",
       "[[The last reminder|reminders]] hasn't been read by {nameObj} yet.",
       "{name} {hasnt} [[opened the message|reminders]] yet — notifications may be off.",
+      "{name} {hasnt} seen [[the last message|reminders]] yet.",
+      "[[The reminder|reminders]] is still unopened — it could be mentioned in class.",
     ],
   },
 };

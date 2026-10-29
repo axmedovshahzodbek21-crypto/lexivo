@@ -6,6 +6,7 @@ import '../services/supabase_service.dart';
 import '../services/class_srs_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
+import 'class_models.dart' show xpDisplay;
 
 // Kahoot-style answer tiles for SRS review — ported from the web review page
 // (app/classes/[id]/review/page.tsx). Keep the palette in sync.
@@ -62,6 +63,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
   bool _flipped = false; // !dueOnly flip-card only
   int _knew = 0;
   int _didntKnow = 0;
+  int _sessionXP = 0; // !dueOnly flashcards only — shown on the finish screen
   bool _done = false;
 
   // MCQ state (dueOnly). _distractorPool = every class translation, drawn on
@@ -323,6 +325,13 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
       });
 
       if (_index + 1 >= _cards.length) {
+        // Class Cards (all-words flashcards): 3 per word, once per completed
+        // session, class pool only — same as web's flashcards page with
+        // source=class. SRS review XP is server-awarded per card instead.
+        if (!widget.dueOnly && user != null) {
+          _sessionXP = _cards.length * 3;
+          recordClassActivity(user.id, widget.classId, reason: 'Flashcard', xp: _sessionXP);
+        }
         setState(() => _done = true);
         return;
       }
@@ -392,6 +401,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
       _flipped = false;
       _knew = 0;
       _didntKnow = 0;
+      _sessionXP = 0;
       _done = false;
       _gradeUnlocked = false;
       _cardLocked = false;
@@ -509,6 +519,11 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
             Text(pct >= 80 ? '🏆' : pct >= 50 ? '⭐' : '💪', style: const TextStyle(fontSize: 56)),
             const SizedBox(height: 16),
             Text(tr('session_complete_excl'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: context.appText)),
+            if (_sessionXP > 0) ...[
+              const SizedBox(height: 6),
+              Text('+${xpDisplay(_sessionXP)} XP',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: context.primary)),
+            ],
             if (remaining > 0) ...[
               const SizedBox(height: 6),
               Text(tr('n_more_due').replaceFirst('{n}', '$remaining'),

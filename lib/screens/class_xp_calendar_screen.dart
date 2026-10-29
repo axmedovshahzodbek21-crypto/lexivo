@@ -6,6 +6,7 @@ import '../services/supabase_service.dart';
 import 'class_models.dart';
 import 'missed_homework.dart';
 import 'student_summary.dart';
+import 'student_summary_view.dart';
 
 const _reasonIcons = <String, String>{
   'Learn': '📖', 'Cards': '🃏', 'Flashcard': '🃏', 'Quiz': '🧠', 'Quiz (perfect)': '🧠', 'Match': '🎯',
@@ -117,7 +118,7 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
   List<Map<String, dynamic>> _entries = [];
   DateTime? _joinedAt; // teacher view only — for the missed-deadlines list
   Future<List<HomeworkRecord>>? _records; // teacher view only, shared by the summary and the deadline card
-  List<String> _summary = [];
+  List<List<Segment>> _summary = [];
   bool _summaryOpen = false; // collapsed under a "Xulosa" row until tapped
   late DateTime _month;
   @override
@@ -166,33 +167,37 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
     }
   }
 
-  // Homework-timing and reminder sentences (student_summary.dart).
+  // The teacher's Xulosa paragraph (student_summary.dart).
   Future<void> _loadSummary(String uid) async {
     try {
+      final now = DateTime.now();
+      final today = formatStreakDate(now);
       final notesQuery = supabase.from('class_notes').select('created_at, read_at')
           .eq('class_id', widget.classId).eq('student_id', uid)
           .order('created_at', ascending: false).limit(20);
+      // Same "waiting for review" count as the web's XP History.
+      final srsQuery = supabase.from('class_srs_states').select('stage, next_due')
+          .eq('user_id', uid).eq('class_id', widget.classId).lte('next_due', today);
       final records = await _records!;
       final notes = (await notesQuery).map((n) => SentNote(
         DateTime.parse(n['created_at'] as String),
         n['read_at'] != null ? DateTime.parse(n['read_at'] as String) : null,
       )).toList();
-      final now = DateTime.now();
-      final today = formatStreakDate(now);
-      final weekAgo = formatStreakDate(now.subtract(const Duration(days: 7)));
-      final activity = _entries.map((e) => DateTime.parse(e['created_at'] as String).toLocal()).toList();
-      final activeDays7 = activity.map(formatStreakDate).where((d) => d.compareTo(weekAgo) > 0).toSet().length;
+      final pending = (await srsQuery).where((r) => ((r['stage'] as num?) ?? 0) < 5).toList();
       final summary = buildStudentSummary(
         studentId: uid,
         name: widget.studentName ?? l10n.tr('student'),
         lang: l10n.appLangNotifier.value == 'uz' ? 'uz' : 'en',
         today: today,
         now: now,
+        joinDate: _joinedAt != null ? formatStreakDate(_joinedAt!) : null,
         homework: records,
         notes: notes,
-        activity: activity,
-        activeDays7: activeDays7,
-        daysInClass: _joinedAt != null ? now.difference(_joinedAt!).inDays : null,
+        history: _entries.map((e) => HistoryEntry(
+          e['reason'] as String? ?? '', (e['amount'] as num?)?.toInt() ?? 0, DateTime.parse(e['created_at'] as String),
+        )).toList(),
+        dueCount: pending.length,
+        overdueCount: pending.where((r) => (r['next_due'] as String).compareTo(today) < 0).length,
       );
       if (mounted) setState(() => _summary = summary);
     } catch (e) {
@@ -307,11 +312,7 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
                         ]),
                         if (_summaryOpen) ...[
                           const SizedBox(height: 8),
-                          for (final s in _summary)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 6),
-                              child: Text(s, style: TextStyle(fontSize: 13, height: 1.35, color: context.appText)),
-                            ),
+                          StudentSummaryView(sentences: _summary, classId: widget.classId, className: widget.className, reasonLabel: _reasonLabel),
                         ],
                       ]),
                     ),

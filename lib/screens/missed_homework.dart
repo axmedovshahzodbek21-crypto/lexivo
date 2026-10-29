@@ -14,9 +14,11 @@ import '../data/reading_data.dart';
 class HomeworkRecord {
   final String homeworkId, studentId, title, dueDate, assignedDate; // dates yyyy-mm-dd
   final String? finishedDate; // day the last mode was done; null = not fully done
-  final List<String> missingModes;
+  final List<String> modes, missingModes;
+  final Map<String, String> doneModes; // mode -> yyyy-mm-dd it was done
   const HomeworkRecord({required this.homeworkId, required this.studentId, required this.title,
-    required this.dueDate, required this.assignedDate, required this.finishedDate, required this.missingModes});
+    required this.dueDate, required this.assignedDate, required this.finishedDate,
+    required this.modes, required this.missingModes, required this.doneModes});
 }
 
 // A past-due homework that wasn't fully done by its due date. Every mode
@@ -48,7 +50,7 @@ const _strings = <String, Map<String, String>>{
 
 String _s(String key) => _strings[key]?[l10n.appLangNotifier.value] ?? _strings[key]!['en']!;
 
-String _modeLabel(String mode) {
+String homeworkModeLabel(String mode) {
   switch (mode) {
     case 'learn': return l10n.tr('learn');
     case 'flashcard': return l10n.tr('cards');
@@ -123,17 +125,20 @@ Future<List<HomeworkRecord>> loadHomeworkRecords(String classId, List<String> st
       final joined = joinedAt[sid];
       if (joined != null && createdAt.isBefore(joined) && due.compareTo(formatStreakDate(joined.toLocal())) <= 0) continue;
       final missing = <String>[];
+      final doneModes = <String, String>{};
       var last = '';
       for (final m in modes) {
         final d = doneOn['${h['id']}:$sid:$m'];
         if (d == null) {
           missing.add(m);
-        } else if (d.compareTo(last) > 0) {
-          last = d;
+          continue;
         }
+        doneModes[m] = d;
+        if (d.compareTo(last) > 0) last = d;
       }
       out.add(HomeworkRecord(homeworkId: h['id'] as String, studentId: sid, title: title, dueDate: due,
-          assignedDate: assignedDate, finishedDate: missing.isEmpty ? last : null, missingModes: missing));
+          assignedDate: assignedDate, finishedDate: missing.isEmpty ? last : null,
+          modes: modes, missingModes: missing, doneModes: doneModes));
     }
   }
   return out;
@@ -244,7 +249,7 @@ class _MissedHomeworkSectionState extends State<MissedHomeworkSection> {
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: context.appText)),
               Text(
                 '${_s('due').replaceFirst('{d}', fmt(m.dueDate))} · ${m.isMissing
-                    ? _s('left').replaceFirst('{m}', m.missingModes.map(_modeLabel).join(', '))
+                    ? _s('left').replaceFirst('{m}', m.missingModes.map(homeworkModeLabel).join(', '))
                     : _s('late').replaceFirst('{n}', '${m.lateDays}')}',
                 style: TextStyle(fontSize: 11, color: m.isMissing ? danger : context.textMuted),
               ),

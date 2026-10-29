@@ -108,7 +108,8 @@ typedef _UnitRef = ({String id, String name, int wordCount, bool isClassWords});
 class ClassCurriculumTab extends StatefulWidget {
   final String classId, className;
   final List<({String studentId, String name})> students;
-  const ClassCurriculumTab({super.key, required this.classId, required this.className, this.students = const []});
+  final String? openHomeworkId; // open this homework's sheet once loaded
+  const ClassCurriculumTab({super.key, required this.classId, required this.className, this.students = const [], this.openHomeworkId});
 
   @override
   State<ClassCurriculumTab> createState() => _ClassCurriculumTabState();
@@ -122,6 +123,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
   bool _loading = true;
   final Set<String> _expandedFolders = {};
   final Set<String> _expandedCWUnits = {};
+  bool _openedHomework = false;
 
   @override
   void initState() { super.initState(); _students = List.of(widget.students); _load(); }
@@ -255,6 +257,12 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
       }).toList();
 
       if (mounted) setState(() { _folders = folders; _classUnits = classUnits; _homework = homework; _loading = false; });
+      // Opened from an "Open homework" link (student summary): show that sheet once.
+      final openId = widget.openHomeworkId;
+      if (openId != null && !_openedHomework && mounted) {
+        final hw = homework.where((h) => h.id == openId).firstOrNull;
+        if (hw != null) { _openedHomework = true; _showHomeworkDetail(hw); }
+      }
     } catch (e, st) {
       debugPrint('_load error: $e\n$st');
       if (mounted) { setState(() => _loading = false); }

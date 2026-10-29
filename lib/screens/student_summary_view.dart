@@ -27,6 +27,8 @@ const _strings = <String, Map<String, String>>{
   'this_week': {'en': 'This week', 'uz': 'Bu hafta', 'ru': 'Эта неделя'},
   'active_days': {'en': '{n} active days', 'uz': '{n} faol kun', 'ru': '{n} акт. дн.'},
   'correct_of': {'en': '{r}/{t} correct', 'uz': "{r}/{t} to'g'ri", 'ru': '{r}/{t} верно'},
+  'more_details': {'en': 'More details', 'uz': 'Batafsil', 'ru': 'Подробнее'},
+  'hide_details': {'en': 'Hide details', 'uz': "Yig'ish", 'ru': 'Скрыть'},
 };
 
 String _s(String key) => _strings[key]?[l10n.appLangNotifier.value] ?? _strings[key]!['en']!;
@@ -42,9 +44,10 @@ String _fmtDateTime(DateTime t) => '${_fmtYmd(formatStreakDate(t.toLocal()))} ${
 /// that sentence. Mirrors lexivo-web components/StudentSummary.tsx.
 class StudentSummaryView extends StatefulWidget {
   final List<List<Segment>> sentences;
+  final List<List<Segment>> more; // shown after "Batafsil"
   final String classId, className;
   final String Function(String reason) reasonLabel;
-  const StudentSummaryView({super.key, required this.sentences, required this.classId, required this.className, required this.reasonLabel});
+  const StudentSummaryView({super.key, required this.sentences, this.more = const [], required this.classId, required this.className, required this.reasonLabel});
 
   @override
   State<StudentSummaryView> createState() => _StudentSummaryViewState();
@@ -52,28 +55,30 @@ class StudentSummaryView extends StatefulWidget {
 
 class _StudentSummaryViewState extends State<StudentSummaryView> {
   ({int s, int g})? _open;
+  bool _showMore = false;
 
   @override
   Widget build(BuildContext context) {
     final accent = context.primary;
     final base = TextStyle(fontSize: 13, height: 1.45, color: context.appText);
+    final all = _showMore ? [...widget.sentences, ...widget.more] : widget.sentences;
     final open = _open;
-    final ev = open != null ? widget.sentences[open.s][open.g].evidence : null;
+    final ev = open != null && open.s < all.length ? all[open.s][open.g].evidence : null;
     // One paragraph; the evidence card opens under it.
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text.rich(TextSpan(style: base, children: [
-        for (var s = 0; s < widget.sentences.length; s++) ...[
+        for (var s = 0; s < all.length; s++) ...[
           if (s > 0) const TextSpan(text: ' '),
-          for (var g = 0; g < widget.sentences[s].length; g++)
-            if (widget.sentences[s][g].evidence == null)
-              TextSpan(text: widget.sentences[s][g].text)
+          for (var g = 0; g < all[s].length; g++)
+            if (all[s][g].evidence == null)
+              TextSpan(text: all[s][g].text)
             else
               WidgetSpan(
                 alignment: PlaceholderAlignment.baseline,
                 baseline: TextBaseline.alphabetic,
                 child: GestureDetector(
                   onTap: () => setState(() => _open = open?.s == s && open?.g == g ? null : (s: s, g: g)),
-                  child: Text(widget.sentences[s][g].text, style: base.copyWith(
+                  child: Text(all[s][g].text, style: base.copyWith(
                     color: accent, fontWeight: FontWeight.w700,
                     backgroundColor: open?.s == s && open?.g == g ? accent.withValues(alpha: 0.15) : null,
                     decoration: TextDecoration.underline, decorationStyle: TextDecorationStyle.dotted, decorationColor: accent,
@@ -82,6 +87,18 @@ class _StudentSummaryViewState extends State<StudentSummaryView> {
               ),
         ],
       ])),
+      if (widget.more.isNotEmpty)
+        GestureDetector(
+          onTap: () => setState(() {
+            if (_showMore && open != null && open.s >= widget.sentences.length) _open = null;
+            _showMore = !_showMore;
+          }),
+          child: Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text('${_s(_showMore ? 'hide_details' : 'more_details')} ${_showMore ? '▴' : '▾'}',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: context.textMuted)),
+          ),
+        ),
       if (ev != null) ...[
         const SizedBox(height: 4),
         _evidenceCard(context, ev),

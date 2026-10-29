@@ -659,6 +659,47 @@ _Pick? _classPick(List<ClassAnswer> classAnswers, Map<String, String> names, Str
   return null;
 }
 
+// ── Closing suggestion: one next step for the biggest issue ─────────────────
+// First match wins: unfinished past-due homework, a week without activity,
+// stalled review, hard words, a skipped mode, a slow week, a new student,
+// something worth praising, nothing left to do.
+const _praise = ['ctx_week_high', 'ctx_new_all_active', 'str_record', 'str_long', 'trd_up', 'trd_up_strong', 'trd_record',
+  'rq_strong', 'rq_improving', 'cls_review_top', 'cls_accuracy_top', 'mst_hw_streak'];
+
+_Pick? _suggestionPick(List<_Pick> picks, List<HomeworkRecord> records, List<HistoryEntry> history, String today, String? joinDate, int dueCount) {
+  bool has(List<String> codes) => picks.any((p) => codes.contains(p.code));
+  final open = records.where((r) => r.finishedDate == null && r.dueDate.compareTo(today) < 0).toList()
+    ..sort((a, b) => b.dueDate.compareTo(a.dueDate));
+  if (open.isNotEmpty) return _Pick('sug_overdue_hw', {'hw': open.first.title}, {'homework': [_hwEvidence(open.first, today)]});
+  final activeWeek = history.any((e) => _localDate(e.createdAt).compareTo(_addDays(today, -7)) > 0);
+  final newStudent = joinDate != null && _dayDiff(joinDate, today) < 7;
+  if (!activeWeek && history.isNotEmpty && !newStudent) return const _Pick('sug_inactive');
+  if (has(const ['rev_stopped', 'rev_never']) && dueCount > 0) return _Pick('sug_review_restart', {'n': dueCount});
+  if (has(const ['rq_hard', 'rq_dropping', 'cls_accuracy_below'])) return const _Pick('sug_hard');
+  final skip = picks.where((p) => p.code == 'mode_skips').firstOrNull;
+  if (skip != null) return _Pick('sug_skipped_mode', {'mode': skip.vars['mode']!});
+  if (has(const ['ctx_week_low', 'trd_down', 'trd_down_strong', 'cls_review_below'])) return const _Pick('sug_low_activity');
+  if (newStudent) return const _Pick('sug_new_student');
+  if (has(_praise)) return const _Pick('sug_praise');
+  final pending = records.any((r) => r.finishedDate == null && r.dueDate.compareTo(today) >= 0);
+  if (dueCount == 0 && !pending && activeWeek) return const _Pick('sug_new_unit');
+  return null;
+}
+
+// Which sentences stay visible when there are many: the rest go behind
+// "Batafsil". Lower = more important.
+int _importance(String code) {
+  if (code.startsWith('ctx_') || code == 'not_enough_data') return 1;
+  if (code == 'hw_improving' || code == 'hw_slipping') return 14;
+  if (code.startsWith('hw_')) return 2;
+  if (code == 'rq_hard_words') return 3;
+  const order = ['rq_', 'rev_', 'act_', 'trd_', 'cls_', 'mode_', 'str_', 'rem_', 'mst_'];
+  final i = order.indexWhere(code.startsWith);
+  return i >= 0 ? 4 + i : 13; // habits (tim_/wk_/ses_) = 13
+}
+
+const _visible = 6;
+
 // ── Reminders ────────────────────────────────────────────────────────────────
 // A teacher message counts only if the student hadn't studied in the 24h
 // before it (otherwise they'd have practised anyway). R studied within 24h,
@@ -757,7 +798,9 @@ List<Segment> _renderText(String text, _Pick p, Map<String, Object> who) {
   return out;
 }
 
-List<List<Segment>> buildStudentSummary({
+/// main = the visible paragraph (most important sentences + the closing
+/// suggestion); more = the rest, shown after "Batafsil".
+({List<List<Segment>> main, List<List<Segment>> more}) buildStudentSummary({
   required String studentId,
   required String name,
   required String lang, // 'uz' or 'en'
@@ -796,13 +839,25 @@ List<List<Segment>> buildStudentSummary({
     _reminderPick(notes, history, now, today, joinDate),
   ].whereType<_Pick>().toList();
   if (picks.isEmpty) picks.add(const _Pick('not_enough_data'));
+  final suggestion = _suggestionPick(picks, homework, history, today, joinDate, dueCount);
+  // Keep the _visible most important in paragraph order; the rest go under
+  // "Batafsil". The suggestion always closes the visible paragraph.
+  final ranked = [for (var i = 0; i < picks.length; i++) (p: picks[i], i: i)]
+    ..sort((a, b) {
+      final d = _importance(a.p.code) - _importance(b.p.code);
+      return d != 0 ? d : a.i - b.i;
+    });
+  final keep = ranked.take(_visible).map((x) => x.p).toSet();
+  final ordered = [...picks.where(keep.contains), ?suggestion, ...picks.where((p) => !keep.contains(p))];
   final seed = '$studentId:$today';
   // The paragraph names the student once; later sentences say "u" (Uzbek
   // has no gendered pronoun) or "they" / "them".
   var named = false;
-  return picks.map((p) {
+  final sentences = ordered.map((p) {
     final r = _render(p, lang, name, seed, named);
     named = named || r.usesName;
     return r.sentence;
   }).toList();
+  final split = keep.length + (suggestion != null ? 1 : 0);
+  return (main: sentences.sublist(0, split), more: sentences.sublist(split));
 }

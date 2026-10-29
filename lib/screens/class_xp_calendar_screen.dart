@@ -118,7 +118,7 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
   List<Map<String, dynamic>> _entries = [];
   DateTime? _joinedAt; // teacher view only — for the missed-deadlines list
   Future<List<HomeworkRecord>>? _records; // teacher view only, shared by the summary and the deadline card
-  List<List<Segment>> _summary = [];
+  List<List<Segment>> _summary = [], _summaryMore = [];
   bool _summaryOpen = false; // collapsed under a "Xulosa" row until tapped
   late DateTime _month;
   @override
@@ -230,7 +230,12 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
             (m as Map)['student_id'] as String: m['name'] as String? ?? '—',
         },
       );
-      if (mounted) setState(() => _summary = summary);
+      if (mounted) {
+        setState(() {
+          _summary = summary.main;
+          _summaryMore = summary.more;
+        });
+      }
     } catch (e) {
       debugPrint('[ClassXpCalendarScreen] summary $e');
     }
@@ -343,7 +348,7 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
                         ]),
                         if (_summaryOpen) ...[
                           const SizedBox(height: 8),
-                          StudentSummaryView(sentences: _summary, classId: widget.classId, className: widget.className, reasonLabel: _reasonLabel),
+                          StudentSummaryView(sentences: _summary, more: _summaryMore, classId: widget.classId, className: widget.className, reasonLabel: _reasonLabel),
                         ],
                       ]),
                     ),

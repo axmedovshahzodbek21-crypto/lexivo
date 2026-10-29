@@ -55,6 +55,9 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
   // session. Lets the UI tell the student more is waiting instead of the
   // session's own size quietly looking like the whole picture.
   int _totalDue = 0;
+  // Max never-reviewed words per session (0 = all) — the student's own pick,
+  // loaded from this device in _load().
+  int _newCap = newWordsPerSession;
   int _index = 0;
   bool _flipped = false; // !dueOnly flip-card only
   int _knew = 0;
@@ -169,8 +172,9 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
     }
     try {
       if (widget.dueOnly) {
+        final newCap = await getClassReviewNewCap();
         final fetched = await Future.wait([
-          getClassDueWords(userId: user.id, classId: widget.classId),
+          getClassDueWords(userId: user.id, classId: widget.classId, newCap: newCap),
           getClassSRSAll(userId: user.id, classId: widget.classId),
         ]);
         final due = fetched[0];
@@ -181,6 +185,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
                   word: e.word, translation: e.translation, isSRS: true, failStreak: e.failStreak,
                 )).toList();
             _totalDue = countDueClassWords(all);
+            _newCap = newCap;
             _distractorPool = all
                 .map((e) => e.translation)
                 .where((t) => t.isNotEmpty)
@@ -399,6 +404,46 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
     _load();
   }
 
+  // Changing the cap mid-session is safe: grades are persisted per card, so
+  // the reload just re-fetches whatever is still due under the new cap.
+  Future<void> _changeNewCap(int cap) async {
+    if (cap == _newCap) return;
+    await setClassReviewNewCap(cap);
+    if (mounted) _resetAndReload();
+  }
+
+  // New-words-per-session picker. Only shown when it would change something:
+  // words are being held back, or the student already moved off the default.
+  bool get _showCapPicker =>
+      widget.dueOnly && (_totalDue > _cards.length || _newCap != newWordsPerSession);
+
+  Widget _buildCapPicker() => Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 6,
+        runSpacing: 6,
+        children: [
+          Text('${tr('new_words_per_session')}:',
+              style: TextStyle(fontSize: 12, color: context.textMuted)),
+          for (final cap in newWordsCapOptions)
+            GestureDetector(
+              onTap: () => _changeNewCap(cap),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(
+                  color: cap == _newCap ? context.primary : context.primaryBg,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(cap == 0 ? tr('all_option') : '$cap',
+                    style: TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w700,
+                      color: cap == _newCap ? Colors.white : context.primary,
+                    )),
+              ),
+            ),
+        ],
+      );
+
   @override
   Widget build(BuildContext context) {
     final body = _buildBody(context);
@@ -468,6 +513,8 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
               const SizedBox(height: 6),
               Text(tr('n_more_due').replaceFirst('{n}', '$remaining'),
                   style: TextStyle(fontSize: 13, color: context.textMuted)),
+              const SizedBox(height: 10),
+              _buildCapPicker(),
             ],
             const SizedBox(height: 20),
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -534,6 +581,10 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
               style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.textMuted),
             ),
           ]),
+          if (_showCapPicker) ...[
+            const SizedBox(height: 10),
+            _buildCapPicker(),
+          ],
           const SizedBox(height: 20),
 
           // "Struggling with this one" hint — fail_streak climbs on repeated

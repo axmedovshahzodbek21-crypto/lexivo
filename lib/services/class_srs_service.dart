@@ -1,3 +1,4 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/supabase_service.dart';
 
 const _intervals = [1, 3, 7, 14, 30]; // days, same as personal SRS
@@ -6,7 +7,22 @@ const _intervals = [1, 3, 7, 14, 30]; // days, same as personal SRS
 // freshly-learned batch doesn't land as one wall. Genuine spaced repetitions
 // (lastReviewed set) are never capped. Keep in sync with web's
 // NEW_WORDS_PER_SESSION.
-const _newWordsPerSession = 10;
+const newWordsPerSession = 10;
+
+// The student can pick their own per-session cap (0 = no cap) on the review
+// screen. Stored per device, not synced. Keep in sync with web's
+// getClassReviewNewCap.
+const newWordsCapOptions = [10, 20, 30, 0];
+const _newWordsCapKey = 'lexivo_class_review_new_cap';
+
+Future<int> getClassReviewNewCap() async {
+  final v = (await SharedPreferences.getInstance()).getInt(_newWordsCapKey);
+  return v != null && newWordsCapOptions.contains(v) ? v : newWordsPerSession;
+}
+
+Future<void> setClassReviewNewCap(int cap) async {
+  await (await SharedPreferences.getInstance()).setInt(_newWordsCapKey, cap);
+}
 
 // Grace period (days overdue) a word gets at each stage before it demotes one
 // stage — indexed by stage 0-4. A fresh Stage 0 word is fragile and gets a
@@ -156,11 +172,12 @@ Future<void> checkAndDemoteClassSRS({
 }
 
 // Returns the words to review now: every due spaced repetition, plus at most
-// _newWordsPerSession never-reviewed words (oldest first) so a big fresh batch
+// newCap never-reviewed words (oldest first; 0 = no cap) so a big fresh batch
 // is paced instead of dumped all at once.
 Future<List<ClassSRSEntry>> getClassDueWords({
   required String userId,
   required String classId,
+  int newCap = newWordsPerSession,
 }) async {
   await checkAndDemoteClassSRS(userId: userId, classId: classId);
   final today = _todayStr();
@@ -175,7 +192,7 @@ Future<List<ClassSRSEntry>> getClassDueWords({
   final all = (data as List).map((e) => ClassSRSEntry.fromMap(e as Map<String, dynamic>)).toList();
   final review = all.where((e) => e.lastReviewed != null).toList();
   final fresh = all.where((e) => e.lastReviewed == null).toList();
-  return [...review, ...fresh.take(_newWordsPerSession)];
+  return [...review, ...(newCap > 0 ? fresh.take(newCap) : fresh)];
 }
 
 // Returns all SRS entries for the student in this class (all stages).

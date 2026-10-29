@@ -1666,7 +1666,7 @@ class FlashcardFinishScreen extends StatelessWidget {
                           wordDay: originalWordDay,
                           userProfile: userProfile,
                           collectionName: collectionName,
-                          quizType: QuizType.wordToTranslation,
+                          quizType: QuizType.mixed,
                           questionCount: originalWordDay.words.length.clamp(1, 20),
                           onSessionComplete: onQuizComplete,
                           onMatchComplete: onMatchComplete,

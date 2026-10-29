@@ -548,7 +548,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
         wordDay: _buildWordDay(),
         userProfile: '',
         collectionName: widget.className,
-        quizType: QuizType.wordToTranslation,
+        quizType: QuizType.mixed,
         questionCount: _words.length.clamp(1, 20),
         classId: widget.classId,
         className: widget.className,

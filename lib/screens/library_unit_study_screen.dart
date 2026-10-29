@@ -304,7 +304,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
         await Navigator.push(context, MaterialPageRoute(
           builder: (_) => QuizSessionScreen(
             wordDay: wd, userProfile: '', collectionName: widget.unitName,
-            quizType: QuizType.wordToTranslation,
+            quizType: QuizType.mixed,
             questionCount: wd.words.length.clamp(5, 20),
             noXP: true, onHomeworkCompleted: onCompleted,
           ),

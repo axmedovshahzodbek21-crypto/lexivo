@@ -12,7 +12,10 @@ import '../widgets/not_enough_words_screen.dart';
 import '../widgets/page_tip_button.dart';
 // Removed unused import: '../data/storage_service.dart'
 
-enum QuizType { wordToTranslation, translationToWord, definitionToWord }
+// mixed: rotates word→translation, translation→word, definition→word per
+// question, like the web quiz (app/quiz/page.tsx). A word with no definition
+// gets translation→word instead of an empty prompt.
+enum QuizType { wordToTranslation, translationToWord, definitionToWord, mixed }
 
 class QuizSettingsScreen extends StatefulWidget {
   final WordDay wordDay;
@@ -323,14 +326,29 @@ class _QuizSessionScreenState extends State<QuizSessionScreen>
     final shuffled = List<WordItem>.from(widget.wordDay.words)
       ..shuffle(Random());
     _questions = shuffled;
+    const rotation = [QuizType.wordToTranslation, QuizType.translationToWord, QuizType.definitionToWord];
+    _types = [
+      for (var i = 0; i < shuffled.length; i++)
+        () {
+          final t = widget.quizType == QuizType.mixed ? rotation[i % 3] : widget.quizType;
+          return t == QuizType.definitionToWord && shuffled[i].definition.trim().isEmpty
+              ? QuizType.translationToWord
+              : t;
+        }(),
+    ];
   }
 
+  // Per-question type (see QuizType.mixed); never `mixed` itself.
+  late List<QuizType> _types;
+  QuizType get _type => _types[_currentIndex];
+
   String _optionValue(WordItem w) {
-    switch (widget.quizType) {
+    switch (_type) {
       case QuizType.wordToTranslation:
         return w.translation;
       case QuizType.translationToWord:
       case QuizType.definitionToWord:
+      case QuizType.mixed:
         return w.word;
     }
   }
@@ -360,10 +378,11 @@ class _QuizSessionScreenState extends State<QuizSessionScreen>
 
   String get _questionText {
     final word = _questions[_currentIndex];
-    switch (widget.quizType) {
+    switch (_type) {
       case QuizType.wordToTranslation:
         return word.word;
       case QuizType.translationToWord:
+      case QuizType.mixed:
         return word.translation;
       case QuizType.definitionToWord:
         return word.definition;
@@ -371,10 +390,11 @@ class _QuizSessionScreenState extends State<QuizSessionScreen>
   }
 
   String get _questionLabel {
-    switch (widget.quizType) {
+    switch (_type) {
       case QuizType.wordToTranslation:
         return tr('choose_answer');
       case QuizType.translationToWord:
+      case QuizType.mixed:
         return tr('choose_word');
       case QuizType.definitionToWord:
         return tr('choose_definition');

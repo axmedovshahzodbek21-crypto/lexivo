@@ -120,7 +120,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     SyncService.pushSettings();
     final user = currentUser;
     if (user != null && name.trim().isNotEmpty) {
-      supabase.from('profiles').upsert({'id': user.id, 'name': name.trim()});
+      // .then() is what actually sends it — postgrest builders are lazy.
+      supabase.from('profiles').upsert({'id': user.id, 'name': name.trim()})
+          .then((_) {})
+          .catchError((e) { debugPrint('[settings] profile name save failed: $e'); });
     }
   }
 

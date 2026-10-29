@@ -237,6 +237,16 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
                   ]),
                 ),
 
+                // ── Homework deadlines (teacher viewing a student) ───────────
+                // Only opened with a studentId from the teacher's ranks list; a
+                // student can't read a classmate's homework progress anyway.
+                if (widget.studentId != null)
+                  MissedHomeworkSection(
+                    classId: widget.classId,
+                    students: [(id: widget.studentId!, joinedAt: _joinedAt)],
+                    alwaysShow: true,
+                  ),
+
                 // ── Calendar ─────────────────────────────────────────────────
                 Container(
                   padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
@@ -364,17 +374,6 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
                     ),
                   ]),
                 ),
-
-                // ── Missed deadlines (teacher viewing a student) ─────────────
-                // Only opened with a studentId from the teacher's ranks list; a
-                // student can't read a classmate's homework progress anyway.
-                if (widget.studentId != null) ...[
-                  const SizedBox(height: 16),
-                  MissedHomeworkSection(
-                    classId: widget.classId,
-                    students: [(id: widget.studentId!, joinedAt: _joinedAt)],
-                  ),
-                ],
 
               ]),
             ),

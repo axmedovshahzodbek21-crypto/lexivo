@@ -22,6 +22,9 @@ class MissedHomework {
 
 const _strings = <String, Map<String, String>>{
   'title': {'en': 'Missed deadlines', 'uz': "Muddati o'tgan vazifalar", 'ru': 'Просроченные задания'},
+  'header': {'en': 'Homework deadlines', 'uz': 'Vazifa muddatlari', 'ru': 'Сроки заданий'},
+  'all_on_time': {'en': 'All homework done on time.', 'uz': "Barcha vazifalar o'z vaqtida bajarilgan.", 'ru': 'Все задания сданы вовремя.'},
+  'none_due': {'en': 'No homework has passed its deadline yet.', 'uz': "Hali muddati o'tgan vazifa yo'q.", 'ru': 'Пока ни у одного задания не истёк срок.'},
   'due': {'en': 'due {d}', 'uz': 'muddat {d}', 'ru': 'срок {d}'},
   'left': {'en': '{m} left', 'uz': '{m} qolgan', 'ru': 'осталось: {m}'},
   'late': {'en': 'done {n} days late', 'uz': '{n} kun kech bajarilgan', 'ru': 'сдано с опозданием на {n} дн.'},
@@ -46,11 +49,12 @@ String _modeLabel(String mode) {
 
 const _page = 1000; // PostgREST row cap — a truncated progress list would show done homework as missed
 
-Future<List<MissedHomework>> loadMissedHomework(
+// checked = past-due (homework × student) pairs looked at.
+Future<({List<MissedHomework> items, int checked})> loadMissedHomework(
   String classId,
   List<({String id, DateTime? joinedAt})> students,
 ) async {
-  if (students.isEmpty) return [];
+  if (students.isEmpty) return (items: <MissedHomework>[], checked: 0);
   final today = formatStreakDate(DateTime.now());
   final hws = (await supabase
       .from('class_homework')
@@ -59,7 +63,7 @@ Future<List<MissedHomework>> loadMissedHomework(
       .lt('due_date', today) as List)
       .map((e) => Map<String, dynamic>.from(e as Map))
       .toList();
-  if (hws.isEmpty) return [];
+  if (hws.isEmpty) return (items: <MissedHomework>[], checked: 0);
 
   final studentIds = students.map((s) => s.id).toList();
   final doneOn = <String, String>{}; // '$hw:$student:$mode' -> local yyyy-mm-dd
@@ -79,6 +83,7 @@ Future<List<MissedHomework>> loadMissedHomework(
   }
 
   final out = <MissedHomework>[];
+  var checked = 0;
   for (final h in hws) {
     final due = h['due_date'] as String;
     final modes = List<String>.from(h['modes'] as List? ?? const []);
@@ -103,6 +108,7 @@ Future<List<MissedHomework>> loadMissedHomework(
       // Due on or before the join day — never had a fair chance (same rule as the insights score).
       final joinDate = s.joinedAt != null ? formatStreakDate(s.joinedAt!) : null;
       if (joinDate != null && due.compareTo(joinDate) <= 0) continue;
+      checked++;
       final missing = <String>[];
       var lateDays = 0;
       for (final m in modes) {
@@ -120,18 +126,19 @@ Future<List<MissedHomework>> loadMissedHomework(
     }
   }
   out.sort((a, b) => b.dueDate.compareTo(a.dueDate));
-  return out;
+  return (items: out, checked: checked);
 }
 
 /// Self-loading list. Dashboard: all students, [onlyMissing] (late-but-done
-/// rows only show per student), [nameOf] prefixes each row. XP calendar: one
-/// student, both kinds. Renders nothing when there's nothing to show.
+/// rows only show per student), [nameOf] prefixes each row, hidden when
+/// empty. XP calendar ([alwaysShow]): one student, both kinds, and an
+/// all-on-time / nothing-due-yet line instead of disappearing.
 class MissedHomeworkSection extends StatefulWidget {
   final String classId;
   final List<({String id, DateTime? joinedAt})> students;
-  final bool onlyMissing;
+  final bool onlyMissing, alwaysShow;
   final String Function(String studentId)? nameOf;
-  const MissedHomeworkSection({super.key, required this.classId, required this.students, this.onlyMissing = false, this.nameOf});
+  const MissedHomeworkSection({super.key, required this.classId, required this.students, this.onlyMissing = false, this.alwaysShow = false, this.nameOf});
 
   @override
   State<MissedHomeworkSection> createState() => _MissedHomeworkSectionState();
@@ -140,6 +147,7 @@ class MissedHomeworkSection extends StatefulWidget {
 class _MissedHomeworkSectionState extends State<MissedHomeworkSection> {
   static const _collapsed = 5;
   List<MissedHomework> _items = [];
+  int? _checked; // null until loaded
   bool _expanded = false;
 
   @override
@@ -158,8 +166,13 @@ class _MissedHomeworkSectionState extends State<MissedHomeworkSection> {
 
   Future<void> _load() async {
     try {
-      final rows = await loadMissedHomework(widget.classId, widget.students);
-      if (mounted) setState(() => _items = widget.onlyMissing ? rows.where((r) => r.isMissing).toList() : rows);
+      final r = await loadMissedHomework(widget.classId, widget.students);
+      if (mounted) {
+        setState(() {
+          _items = widget.onlyMissing ? r.items.where((m) => m.isMissing).toList() : r.items;
+          _checked = r.checked;
+        });
+      }
     } catch (e) {
       debugPrint('[MissedHomeworkSection] $e');
     }
@@ -167,22 +180,28 @@ class _MissedHomeworkSectionState extends State<MissedHomeworkSection> {
 
   @override
   Widget build(BuildContext context) {
-    if (_items.isEmpty) return const SizedBox.shrink();
+    if (_items.isEmpty && !(widget.alwaysShow && _checked != null)) return const SizedBox.shrink();
     final shown = _expanded ? _items : _items.take(_collapsed).toList();
     final danger = context.dangerColor;
+    final tone = _items.any((m) => m.isMissing) ? danger
+        : _items.isNotEmpty ? const Color(0xFFD97706)
+        : const Color(0xFF22C55E);
     String fmt(String ymd) => ymd.split('-').reversed.join('.');
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: danger.withValues(alpha: 0.06),
+        color: tone.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: danger.withValues(alpha: 0.3)),
+        border: Border.all(color: tone.withValues(alpha: 0.3)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('⏰ ${_s('title')} (${_items.length})', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: danger)),
+        Text(widget.alwaysShow ? '⏰ ${_s('header')}' : '⏰ ${_s('title')} (${_items.length})',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: tone)),
         const SizedBox(height: 8),
+        if (_items.isEmpty)
+          Text(_checked! > 0 ? _s('all_on_time') : _s('none_due'), style: TextStyle(fontSize: 12, color: context.appText)),
         ...shown.map((m) => Padding(
           padding: const EdgeInsets.only(bottom: 6),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [

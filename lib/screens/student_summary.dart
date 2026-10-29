@@ -87,8 +87,30 @@ class WordEvidence {
   const WordEvidence(this.word, this.right, this.wrong);
 }
 
+/// mode: learn | flashcard | quiz | match | read | review
+class ModeEvidence {
+  final String mode;
+  final int count;
+  const ModeEvidence(this.mode, this.count);
+}
+
+class RankEvidence {
+  final int place, value;
+  final String name, unit; // unit: words | pct
+  final bool me;
+  const RankEvidence(this.place, this.name, this.value, this.unit, this.me);
+}
+
+/// One whole-class class_review_events row.
+class ClassAnswer {
+  final String userId;
+  final bool knew;
+  final DateTime createdAt;
+  const ClassAnswer(this.userId, this.knew, this.createdAt);
+}
+
 /// kind: homework | timing | reminders | days | review | weeks | sessions |
-/// accuracy | words; items are the matching *Evidence objects.
+/// accuracy | words | modes | ranking; items are the matching *Evidence objects.
 class Evidence {
   final String kind;
   final List<Object> items;
@@ -342,8 +364,9 @@ _Pick? _trendPick(List<HistoryEntry> history, String today, String? joinDate) {
   final ev = <String, List<Object>>{'weeks': weeks.take(4).toList()};
   if (prev.first.xp == 0 && prev.skip(1).any((w) => w.xp > 0)) return _Pick('trd_back', const {}, ev);
   final base = prev.take(3).toList();
+  // "Usual" needs a real baseline: activity in at least 2 of the 3 weeks before.
+  if (base.where((w) => w.xp > 0).length < 2) return null;
   final usual = base.fold<int>(0, (s, w) => s + w.xp) / base.length;
-  if (usual == 0) return null;
   final ratio = cur.xp / usual;
   if (prev.length >= 3 && ratio >= 1.3 && prev.every((w) => cur.xp > w.xp)) return _Pick('trd_record', const {}, ev);
   if (ratio >= 2) return _Pick('trd_up_strong', {'pct': ((ratio - 1) * 100).round()}, ev);
@@ -530,6 +553,112 @@ _Pick? _milestonePick(List<HomeworkRecord> records, List<String> hwCodes, String
   return null;
 }
 
+// ── Activity preferences: one sentence at most ──────────────────────────────
+// A homework mode left undone in 2+ past-due assignments (half or more of
+// those that had it, with other modes done), else nearly-only review, else
+// mostly new words with little review, else a favourite practice mode
+// (counted in days used, not rows — Cards writes a row per word).
+const _practiceMode = {'Flashcard': 'flashcard', 'Cards': 'flashcard', 'Quiz': 'quiz', 'Quiz (perfect)': 'quiz', 'Match': 'match'};
+
+_Pick? _preferencePick(List<HistoryEntry> history, List<HomeworkRecord> records, String today, Map<String, String> w) {
+  final past = records.where((r) => r.dueDate.compareTo(today) < 0 && r.doneModes.isNotEmpty).toList();
+  final missing = <String, int>{}, total = <String, int>{};
+  for (final r in past) {
+    for (final m in r.modes) {
+      total[m] = (total[m] ?? 0) + 1;
+      if (r.missingModes.contains(m)) missing[m] = (missing[m] ?? 0) + 1;
+    }
+  }
+  // Most misses wins; ties go to the first-seen mode (same as the web's stable sort).
+  String? mode;
+  for (final m in total.keys) {
+    if ((missing[m] ?? 0) >= 2 && missing[m]! / total[m]! >= 0.5 && (mode == null || missing[m]! > missing[mode]!)) mode = m;
+  }
+  if (mode != null) {
+    final ev = past.where((r) => r.missingModes.contains(mode)).map((r) => _hwEvidence(r, today)).toList();
+    return _Pick('mode_skips', {'mode': w[mode] ?? mode, 'n': missing[mode]!, 'm': total[mode]!}, {'timing': ev});
+  }
+  final rows = history.where((e) => _localDate(e.createdAt).compareTo(_addDays(today, -30)) > 0).toList();
+  if (rows.length >= 20) {
+    final review = rows.where((e) => e.reason == 'SRS Review').length;
+    final learn = rows.where((e) => e.reason == 'Learn' || e.reason == 'learn').length;
+    final modes = <ModeEvidence>[
+      ModeEvidence('review', review), ModeEvidence('learn', learn),
+      for (final m in const ['flashcard', 'quiz', 'match'])
+        ModeEvidence(m, rows.where((e) => _practiceMode[e.reason] == m || e.reason == m).length),
+    ].where((x) => x.count > 0).toList();
+    if (review / rows.length >= 0.85 && learn == 0) return _Pick('mode_review_only', const {}, {'modes': modes});
+    if (learn / rows.length >= 0.5 && review / rows.length < 0.15) return _Pick('mode_learn_heavy', const {}, {'modes': modes});
+  }
+  final days = <String, Set<String>>{};
+  for (final e in rows) {
+    final m = _practiceMode[e.reason];
+    if (m != null) (days[m] ??= {}).add(_localDate(e.createdAt));
+  }
+  final used = days.entries.map((e) => ModeEvidence(e.key, e.value.length)).toList()..sort((a, b) => b.count.compareTo(a.count));
+  final sum = used.fold<int>(0, (s, x) => s + x.count);
+  if (sum >= 5 && used.first.count / sum >= 0.6) return _Pick('mode_favourite', {'mode': w[used.first.mode]!}, {'modes': used});
+  return null;
+}
+
+// ── Compared with the class: one sentence at most ──────────────────────────
+// From the whole class's class_review_events: words reviewed in the last 7
+// days, and accuracy over 30 days (students with 20+ answers). Needs 3+
+// comparable students. "Top" = place 1–3 in a class of 5+ (or place 1 in
+// 3–4); otherwise above / below the median.
+List<RankEvidence> _rankItems(Map<String, int> values, String studentId, Map<String, String> names, String unit) {
+  final sorted = values.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+  int place(int v) => 1 + sorted.where((e) => e.value > v).length;
+  final items = sorted.map((e) => RankEvidence(place(e.value), names[e.key] ?? '—', e.value, unit, e.key == studentId)).toList();
+  final top = items.take(5).toList();
+  final me = items.where((x) => x.me).firstOrNull;
+  return me != null && !top.contains(me) ? [...top, me] : top;
+}
+
+double _median(Iterable<int> xs) {
+  final s = xs.toList()..sort();
+  final m = s.length >> 1;
+  return s.length.isOdd ? s[m].toDouble() : (s[m - 1] + s[m]) / 2;
+}
+
+_Pick? _classPick(List<ClassAnswer> classAnswers, Map<String, String> names, String studentId, String today) {
+  final from7 = _addDays(today, -6), from30 = _addDays(today, -29);
+  final week = <String, int>{}, right = <String, int>{}, total = <String, int>{};
+  for (final a in classAnswers) {
+    if (!names.containsKey(a.userId)) continue; // approved members only
+    final d = _localDate(a.createdAt);
+    if (d.compareTo(from7) >= 0) week[a.userId] = (week[a.userId] ?? 0) + 1;
+    if (d.compareTo(from30) >= 0) {
+      total[a.userId] = (total[a.userId] ?? 0) + 1;
+      if (a.knew) right[a.userId] = (right[a.userId] ?? 0) + 1;
+    }
+  }
+  final acc = <String, int>{
+    for (final e in total.entries)
+      if (e.value >= 20) e.key: ((right[e.key] ?? 0) / e.value * 100).round(),
+  };
+  bool isTop(int place, int n) => (n >= 5 && place <= 3) || (n >= 3 && place == 1);
+
+  final myWeek = week[studentId] ?? 0;
+  final weekOk = week.length >= 3 && myWeek > 0;
+  final weekPlace = 1 + week.values.where((v) => v > myWeek).length;
+  final myAcc = acc[studentId];
+  final accOk = acc.length >= 3 && myAcc != null;
+  final accPlace = myAcc == null ? 0 : 1 + acc.values.where((v) => v > myAcc).length;
+  Map<String, List<Object>> weekEv() => {'ranking': _rankItems(week, studentId, names, 'words')};
+  Map<String, List<Object>> accEv() => {'ranking': _rankItems(acc, studentId, names, 'pct')};
+
+  if (weekOk && isTop(weekPlace, week.length)) return _Pick('cls_review_top', {'rank': weekPlace, 'total': week.length}, weekEv());
+  if (accOk && isTop(accPlace, acc.length)) return _Pick('cls_accuracy_top', {'rank': accPlace, 'total': acc.length, 'pct': myAcc}, accEv());
+  final weekMed = weekOk ? _median(week.values) : 0.0;
+  final accMed = accOk ? _median(acc.values).round() : 0;
+  if (weekOk && myWeek >= 1.25 * weekMed) return _Pick('cls_review_above', const {}, weekEv());
+  if (accOk && myAcc >= accMed + 10) return _Pick('cls_accuracy_above', {'pct': myAcc, 'avg': accMed}, accEv());
+  if (weekOk && myWeek <= 0.5 * weekMed) return _Pick('cls_review_below', const {}, weekEv());
+  if (accOk && myAcc <= accMed - 15) return _Pick('cls_accuracy_below', {'pct': myAcc, 'avg': accMed}, accEv());
+  return null;
+}
+
 // ── Reminders ────────────────────────────────────────────────────────────────
 // A teacher message counts only if the student hadn't studied in the 24h
 // before it (otherwise they'd have practised anyway). R studied within 24h,
@@ -643,6 +772,8 @@ List<List<Segment>> buildStudentSummary({
   required List<ReviewAnswer> answers, // class_review_events
   required int mastered,               // class_srs_states at stage 5
   required int learned,                // class_srs_states rows
+  required List<ClassAnswer> classAnswers,  // whole class, last 30 days
+  required Map<String, String> classNames,  // approved members: id -> name
 }) {
   final w = summaryWords[lang]!;
   final hw = _homeworkPicks(homework, today, w);
@@ -657,7 +788,9 @@ List<List<Segment>> buildStudentSummary({
     ...act.picks,
     act.cleared ? null : _reviewPick(history, today, dueCount, overdueCount),
     ..._reviewQualityPicks(answers, today, w),
+    _classPick(classAnswers, classNames, studentId, today),
     ...hw.picks,
+    _preferencePick(history, homework, today, w),
     _milestonePick(homework, hw.picks.map((p) => p.code).toList(), today, mastered, learned, answers.length),
     _habitPick(history, today),
     _reminderPick(notes, history, now, today, joinDate),

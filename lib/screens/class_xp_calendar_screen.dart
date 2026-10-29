@@ -167,6 +167,21 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
     }
   }
 
+  // Whole class's review answers for the last 30 days (for the class
+  // comparison sentence). Paged — PostgREST returns at most 1000 rows per request.
+  Future<List<ClassAnswer>> _loadClassAnswers() async {
+    final since = DateTime.now().subtract(const Duration(days: 30)).toUtc().toIso8601String();
+    final out = <ClassAnswer>[];
+    for (var from = 0; from < 20000; from += 1000) {
+      final rows = await supabase.from('class_review_events').select('user_id, knew, created_at')
+          .eq('class_id', widget.classId).gte('created_at', since)
+          .order('created_at', ascending: false).range(from, from + 999);
+      out.addAll(rows.map((r) => ClassAnswer(r['user_id'] as String, r['knew'] == true, DateTime.parse(r['created_at'] as String))));
+      if (rows.length < 1000) break;
+    }
+    return out;
+  }
+
   // The teacher's Xulosa paragraph (student_summary.dart).
   Future<void> _loadSummary(String uid) async {
     try {
@@ -180,6 +195,8 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
           .eq('user_id', uid).eq('class_id', widget.classId);
       final answersQuery = supabase.from('class_review_events').select('word, knew, created_at')
           .eq('user_id', uid).eq('class_id', widget.classId).order('created_at', ascending: false).limit(5000);
+      final membersQuery = supabase.rpc('get_class_dashboard', params: {'p_class_id': widget.classId});
+      final classAnswersFuture = _loadClassAnswers();
       final records = await _records!;
       final notes = (await notesQuery).map((n) => SentNote(
         DateTime.parse(n['created_at'] as String),
@@ -207,6 +224,11 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
         answers: answers,
         mastered: srs.where((r) => ((r['stage'] as num?) ?? 0) >= 5).length,
         learned: srs.length,
+        classAnswers: await classAnswersFuture,
+        classNames: {
+          for (final m in (await membersQuery) as List)
+            (m as Map)['student_id'] as String: m['name'] as String? ?? '—',
+        },
       );
       if (mounted) setState(() => _summary = summary);
     } catch (e) {

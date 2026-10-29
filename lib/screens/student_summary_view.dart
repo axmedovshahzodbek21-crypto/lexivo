@@ -184,6 +184,20 @@ class _StudentSummaryViewState extends State<StudentSummaryView> {
             ])),
           ]));
         }
+      case 'modes':
+        for (final x in ev.items.cast<ModeEvidence>()) {
+          rows.add(_row([
+            Text('${x.mode == 'review' ? widget.reasonLabel('SRS Review') : homeworkModeLabel(x.mode)} · ${x.count}', style: strong),
+          ]));
+        }
+      case 'ranking':
+        for (final x in ev.items.cast<RankEvidence>()) {
+          final value = x.unit == 'pct' ? '${x.value}%' : l10n.tr('words_count').replaceFirst('{n}', '${x.value}');
+          rows.add(Container(
+            color: x.me ? context.primary.withValues(alpha: 0.12) : null,
+            child: _row([Text('${x.place}. ${x.name} · $value', style: x.me ? strong : plain)]),
+          ));
+        }
       case 'review':
         for (final r in ev.items.cast<ReviewEvidence>()) {
           final from = _fmtTime(r.from), to = _fmtTime(r.to);

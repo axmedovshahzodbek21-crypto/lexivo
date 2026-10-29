@@ -7,6 +7,14 @@ const summaryFreq = <String, Map<String, String>>{
 };
 
 const summarySentences = <String, Map<String, List<String>>>{
+  'not_enough_data': {
+    'uz': [
+      "Batafsil xulosa uchun hali ma'lumot kam — vazifalar bajarilgani yoki muddati o'tgani sari paydo bo'ladi.",
+    ],
+    'en': [
+      "Not enough data yet for a fuller summary — it grows as homework gets done or passes its deadline.",
+    ],
+  },
   'hw_early': {
     'uz': [
       "{name} vazifalarni odatda muddatidan oldin bajaradi.",

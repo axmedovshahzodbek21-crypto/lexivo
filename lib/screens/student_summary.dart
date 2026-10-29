@@ -158,7 +158,8 @@ List<String> buildStudentSummary({
   final picks = [
     ..._homeworkPicks(homework, today),
     _reminderPick(notes, activity, now, activeDays7, daysInClass),
-  ].whereType<_Pick>();
+  ].whereType<_Pick>().toList();
+  if (picks.isEmpty) picks.add(const _Pick('not_enough_data'));
   final seed = '$studentId:$today';
   return picks.map((p) => _render(p, lang, name, seed)).toList();
 }

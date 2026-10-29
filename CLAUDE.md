@@ -34,7 +34,7 @@ Solo-maintained.
 
 These intervals are deliberate. Changing them silently breaks every learner's schedule.
 
-- Review intervals: **+1, +5, +7, +14, +30 days**.
+- Review intervals: **+1, +3, +7, +14, +30 days**.
 - A missed day propagates forward — it does not reset the card to zero.
 - **3 consecutive missed reviews → the word is unlearned** and re-enters the queue.
 - "Vaziyat cards" (situation-based comprehension cards) unlock at the **4th successful

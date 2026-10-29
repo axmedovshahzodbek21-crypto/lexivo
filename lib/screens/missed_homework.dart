@@ -5,12 +5,24 @@ import '../l10n.dart' as l10n;
 import '../services/supabase_service.dart';
 import '../data/reading_data.dart';
 
-// One row per (past-due homework × assigned student) that wasn't fully done
-// by its due date. Every mode counts (not just Learn, unlike the Smart
-// Insights score), and partly-done homework is missed — same rule as the
-// student "overdue" push in send-scheduled-push. Computed client-side from
-// class_homework + class_homework_progress, which the teacher can already
-// read. Keep in sync with lexivo-web/lib/homework-deadlines.ts.
+// One (homework × assigned student) with a due date: when it was set, when
+// it's due, and how far the student got. Feeds both the missed-deadline
+// tracker below and the per-student summary (student_summary.dart).
+// Computed client-side from class_homework + class_homework_progress, which
+// the teacher can already read. Keep in sync with
+// lexivo-web/lib/homework-deadlines.ts.
+class HomeworkRecord {
+  final String homeworkId, studentId, title, dueDate, assignedDate; // dates yyyy-mm-dd
+  final String? finishedDate; // day the last mode was done; null = not fully done
+  final List<String> missingModes;
+  const HomeworkRecord({required this.homeworkId, required this.studentId, required this.title,
+    required this.dueDate, required this.assignedDate, required this.finishedDate, required this.missingModes});
+}
+
+// A past-due homework that wasn't fully done by its due date. Every mode
+// counts (not just Learn, unlike the Smart Insights score), and partly-done
+// homework is missed — same rule as the student "overdue" push in
+// send-scheduled-push.
 class MissedHomework {
   final String homeworkId, studentId, title, dueDate;
   final List<String> missingModes; // still not done; empty = all done, but late
@@ -49,21 +61,19 @@ String _modeLabel(String mode) {
 
 const _page = 1000; // PostgREST row cap — a truncated progress list would show done homework as missed
 
-// checked = past-due (homework × student) pairs looked at.
-Future<({List<MissedHomework> items, int checked})> loadMissedHomework(
+Future<List<HomeworkRecord>> loadHomeworkRecords(
   String classId,
   List<({String id, DateTime? joinedAt})> students,
 ) async {
-  if (students.isEmpty) return (items: <MissedHomework>[], checked: 0);
-  final today = formatStreakDate(DateTime.now());
+  if (students.isEmpty) return [];
   final hws = (await supabase
       .from('class_homework')
-      .select('id, unit_id, class_unit_id, collection_name, day_number, passage_id, modes, due_date, student_ids, teacher_units(name), class_word_units(name)')
+      .select('id, unit_id, class_unit_id, collection_name, day_number, passage_id, modes, due_date, created_at, student_ids, teacher_units(name), class_word_units(name)')
       .eq('class_id', classId)
-      .lt('due_date', today) as List)
+      .not('due_date', 'is', null) as List)
       .map((e) => Map<String, dynamic>.from(e as Map))
       .toList();
-  if (hws.isEmpty) return (items: <MissedHomework>[], checked: 0);
+  if (hws.isEmpty) return [];
 
   final studentIds = students.map((s) => s.id).toList();
   final doneOn = <String, String>{}; // '$hw:$student:$mode' -> local yyyy-mm-dd
@@ -82,8 +92,7 @@ Future<({List<MissedHomework> items, int checked})> loadMissedHomework(
     if (prog.length < _page) break;
   }
 
-  final out = <MissedHomework>[];
-  var checked = 0;
+  final out = <HomeworkRecord>[];
   for (final h in hws) {
     final due = h['due_date'] as String;
     final modes = List<String>.from(h['modes'] as List? ?? const []);
@@ -102,43 +111,61 @@ Future<({List<MissedHomework> items, int checked})> loadMissedHomework(
     } else {
       title = ((h['teacher_units'] as Map?)?['name'] as String?) ?? l10n.tr('unit');
     }
+    final assignedDate = formatStreakDate(DateTime.parse(h['created_at'] as String).toLocal());
     final assigned = (h['student_ids'] as List?)?.cast<String>();
     for (final s in students) {
       if (assigned != null && !assigned.contains(s.id)) continue;
       // Due on or before the join day — never had a fair chance (same rule as the insights score).
       final joinDate = s.joinedAt != null ? formatStreakDate(s.joinedAt!) : null;
       if (joinDate != null && due.compareTo(joinDate) <= 0) continue;
-      checked++;
       final missing = <String>[];
-      var lateDays = 0;
+      var last = '';
       for (final m in modes) {
         final d = doneOn['${h['id']}:${s.id}:$m'];
         if (d == null) {
           missing.add(m);
-        } else if (d.compareTo(due) > 0) {
-          final n = DateTime.parse(d).difference(DateTime.parse(due)).inDays;
-          if (n > lateDays) lateDays = n;
+        } else if (d.compareTo(last) > 0) {
+          last = d;
         }
       }
-      if (missing.isEmpty && lateDays == 0) continue;
-      out.add(MissedHomework(homeworkId: h['id'] as String, studentId: s.id, title: title, dueDate: due,
-          missingModes: missing, lateDays: missing.isEmpty ? lateDays : 0));
+      out.add(HomeworkRecord(homeworkId: h['id'] as String, studentId: s.id, title: title, dueDate: due,
+          assignedDate: assignedDate, finishedDate: missing.isEmpty ? last : null, missingModes: missing));
     }
   }
-  out.sort((a, b) => b.dueDate.compareTo(a.dueDate));
-  return (items: out, checked: checked);
+  return out;
 }
 
-/// Self-loading list. Dashboard: all students, [onlyMissing] (late-but-done
-/// rows only show per student), [nameOf] prefixes each row, hidden when
-/// empty. XP calendar ([alwaysShow]): one student, both kinds, and an
-/// all-on-time / nothing-due-yet line instead of disappearing.
+// checked = past-due records looked at (lets the UI say "all on time" vs "nothing due yet").
+({List<MissedHomework> items, int checked}) missedFromRecords(List<HomeworkRecord> records) {
+  final today = formatStreakDate(DateTime.now());
+  final past = records.where((r) => r.dueDate.compareTo(today) < 0).toList();
+  final items = <MissedHomework>[];
+  for (final r in past) {
+    if (r.missingModes.isNotEmpty) {
+      items.add(MissedHomework(homeworkId: r.homeworkId, studentId: r.studentId, title: r.title,
+          dueDate: r.dueDate, missingModes: r.missingModes, lateDays: 0));
+    } else if (r.finishedDate!.compareTo(r.dueDate) > 0) {
+      items.add(MissedHomework(homeworkId: r.homeworkId, studentId: r.studentId, title: r.title,
+          dueDate: r.dueDate, missingModes: const [],
+          lateDays: DateTime.parse(r.finishedDate!).difference(DateTime.parse(r.dueDate)).inDays));
+    }
+  }
+  items.sort((a, b) => b.dueDate.compareTo(a.dueDate));
+  return (items: items, checked: past.length);
+}
+
+/// Dashboard: all students, [onlyMissing] (late-but-done rows only show per
+/// student), [nameOf] prefixes each row, hidden when empty. XP calendar
+/// ([alwaysShow]): one student, both kinds, and an all-on-time /
+/// nothing-due-yet line instead of disappearing. Loads its own data unless
+/// the caller passes [records] it already loaded.
 class MissedHomeworkSection extends StatefulWidget {
   final String classId;
   final List<({String id, DateTime? joinedAt})> students;
+  final Future<List<HomeworkRecord>>? records;
   final bool onlyMissing, alwaysShow;
   final String Function(String studentId)? nameOf;
-  const MissedHomeworkSection({super.key, required this.classId, required this.students, this.onlyMissing = false, this.alwaysShow = false, this.nameOf});
+  const MissedHomeworkSection({super.key, required this.classId, required this.students, this.records, this.onlyMissing = false, this.alwaysShow = false, this.nameOf});
 
   @override
   State<MissedHomeworkSection> createState() => _MissedHomeworkSectionState();
@@ -161,12 +188,12 @@ class _MissedHomeworkSectionState extends State<MissedHomeworkSection> {
     super.didUpdateWidget(old);
     // Callers rebuild the students list on every build — compare by ids, not identity.
     String ids(MissedHomeworkSection w) => w.students.map((s) => s.id).join(',');
-    if (old.classId != widget.classId || ids(old) != ids(widget)) _load();
+    if (old.classId != widget.classId || ids(old) != ids(widget) || old.records != widget.records) _load();
   }
 
   Future<void> _load() async {
     try {
-      final r = await loadMissedHomework(widget.classId, widget.students);
+      final r = missedFromRecords(await (widget.records ?? loadHomeworkRecords(widget.classId, widget.students)));
       if (mounted) {
         setState(() {
           _items = widget.onlyMissing ? r.items.where((m) => m.isMissing).toList() : r.items;

@@ -5,6 +5,7 @@ import '../l10n.dart' as l10n;
 import '../services/supabase_service.dart';
 import 'class_models.dart';
 import 'missed_homework.dart';
+import 'student_summary.dart';
 
 const _reasonIcons = <String, String>{
   'Learn': '📖', 'Cards': '🃏', 'Flashcard': '🃏', 'Quiz': '🧠', 'Quiz (perfect)': '🧠', 'Match': '🎯',
@@ -75,6 +76,7 @@ List<_XpGroup> _groupEntries(List<Map<String, dynamic>> newestFirst) {
 // file, mirroring its {placeholder} style and en/uz/ru shape.
 const _localStrings = <String, Map<String, String>>{
   'total_class_xp': {'en': 'Total class XP', 'uz': 'Jami sinf XP-si', 'ru': 'Всего XP класса'},
+  'summary': {'en': 'Summary', 'uz': 'Xulosa', 'ru': 'Сводка'},
   'student_class_xp': {'en': "{name}'s class XP", 'uz': '{name} sinfdagi XP-si', 'ru': 'XP класса {name}'},
   'just_now': {'en': 'just now', 'uz': 'hozirgina', 'ru': 'только что'},
   'min_ago': {'en': '{n}m ago', 'uz': '{n} daq. oldin', 'ru': '{n} мин назад'},
@@ -113,6 +115,8 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
   bool _loading = true;
   List<Map<String, dynamic>> _entries = [];
   DateTime? _joinedAt; // teacher view only — for the missed-deadlines list
+  Future<List<HomeworkRecord>>? _records; // teacher view only, shared by the summary and the deadline card
+  List<String> _summary = [];
   late DateTime _month;
   @override
   void initState() {
@@ -150,11 +154,47 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
         setState(() {
           _entries = (rows as List).map((r) => Map<String, dynamic>.from(r as Map)).toList();
           _joinedAt = joined != null ? DateTime.parse(joined).toLocal() : null;
+          if (widget.studentId != null) _records = loadHomeworkRecords(widget.classId, [(id: uid, joinedAt: _joinedAt)]);
           _loading = false;
         });
+        if (_records != null) _loadSummary(uid);
       }
     } catch (_) {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  // Homework-timing and reminder sentences (student_summary.dart).
+  Future<void> _loadSummary(String uid) async {
+    try {
+      final notesQuery = supabase.from('class_notes').select('created_at, read_at')
+          .eq('class_id', widget.classId).eq('student_id', uid)
+          .order('created_at', ascending: false).limit(20);
+      final records = await _records!;
+      final notes = (await notesQuery).map((n) => SentNote(
+        DateTime.parse(n['created_at'] as String),
+        n['read_at'] != null ? DateTime.parse(n['read_at'] as String) : null,
+      )).toList();
+      final now = DateTime.now();
+      final today = formatStreakDate(now);
+      final weekAgo = formatStreakDate(now.subtract(const Duration(days: 7)));
+      final activity = _entries.map((e) => DateTime.parse(e['created_at'] as String).toLocal()).toList();
+      final activeDays7 = activity.map(formatStreakDate).where((d) => d.compareTo(weekAgo) > 0).toSet().length;
+      final summary = buildStudentSummary(
+        studentId: uid,
+        name: widget.studentName ?? l10n.tr('student'),
+        lang: l10n.appLangNotifier.value == 'uz' ? 'uz' : 'en',
+        today: today,
+        now: now,
+        homework: records,
+        notes: notes,
+        activity: activity,
+        activeDays7: activeDays7,
+        daysInClass: _joinedAt != null ? now.difference(_joinedAt!).inDays : null,
+      );
+      if (mounted) setState(() => _summary = summary);
+    } catch (e) {
+      debugPrint('[ClassXpCalendarScreen] summary $e');
     }
   }
 
@@ -240,10 +280,27 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
                 // ── Homework deadlines (teacher viewing a student) ───────────
                 // Only opened with a studentId from the teacher's ranks list; a
                 // student can't read a classmate's homework progress anyway.
+                if (_summary.isNotEmpty)
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: context.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: context.primary.withValues(alpha: 0.3)),
+                    ),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('✨ ${_ltr('summary')}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: context.primary)),
+                      const SizedBox(height: 6),
+                      Text(_summary.join(' '), style: TextStyle(fontSize: 13, height: 1.35, color: context.appText)),
+                    ]),
+                  ),
                 if (widget.studentId != null)
                   MissedHomeworkSection(
                     classId: widget.classId,
                     students: [(id: widget.studentId!, joinedAt: _joinedAt)],
+                    records: _records,
                     alwaysShow: true,
                   ),
 

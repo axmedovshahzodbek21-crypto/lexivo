@@ -177,13 +177,19 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
           .order('created_at', ascending: false).limit(20);
       // Same "waiting for review" count as the web's XP History.
       final srsQuery = supabase.from('class_srs_states').select('stage, next_due')
-          .eq('user_id', uid).eq('class_id', widget.classId).lte('next_due', today);
+          .eq('user_id', uid).eq('class_id', widget.classId);
+      final answersQuery = supabase.from('class_review_events').select('word, knew, created_at')
+          .eq('user_id', uid).eq('class_id', widget.classId).order('created_at', ascending: false).limit(5000);
       final records = await _records!;
       final notes = (await notesQuery).map((n) => SentNote(
         DateTime.parse(n['created_at'] as String),
         n['read_at'] != null ? DateTime.parse(n['read_at'] as String) : null,
       )).toList();
-      final pending = (await srsQuery).where((r) => ((r['stage'] as num?) ?? 0) < 5).toList();
+      final srs = await srsQuery;
+      final pending = srs.where((r) => ((r['stage'] as num?) ?? 0) < 5 && (r['next_due'] as String? ?? '9999').compareTo(today) <= 0).toList();
+      final answers = (await answersQuery).map((a) => ReviewAnswer(
+        a['word'] as String? ?? '', a['knew'] == true, DateTime.parse(a['created_at'] as String),
+      )).toList();
       final summary = buildStudentSummary(
         studentId: uid,
         name: widget.studentName ?? l10n.tr('student'),
@@ -198,6 +204,9 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
         )).toList(),
         dueCount: pending.length,
         overdueCount: pending.where((r) => (r['next_due'] as String).compareTo(today) < 0).length,
+        answers: answers,
+        mastered: srs.where((r) => ((r['stage'] as num?) ?? 0) >= 5).length,
+        learned: srs.length,
       );
       if (mounted) setState(() => _summary = summary);
     } catch (e) {

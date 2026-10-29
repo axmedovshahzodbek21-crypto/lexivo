@@ -67,8 +67,28 @@ class SessionEvidence {
   SessionEvidence(this.date, this.from, this.to);
 }
 
-/// kind: homework | timing | reminders | days | review | weeks | sessions;
-/// items are the matching *Evidence objects.
+/// One class_review_events row.
+class ReviewAnswer {
+  final String word;
+  final bool knew;
+  final DateTime createdAt;
+  const ReviewAnswer(this.word, this.knew, this.createdAt);
+}
+
+class AccuracyEvidence {
+  final String from, to;
+  final int right, total;
+  const AccuracyEvidence(this.from, this.to, this.right, this.total);
+}
+
+class WordEvidence {
+  final String word;
+  final int right, wrong;
+  const WordEvidence(this.word, this.right, this.wrong);
+}
+
+/// kind: homework | timing | reminders | days | review | weeks | sessions |
+/// accuracy | words; items are the matching *Evidence objects.
 class Evidence {
   final String kind;
   final List<Object> items;
@@ -97,10 +117,12 @@ String _fmtLong(String ymd) => ymd.split('-').reversed.join('.');
 String _fill(String s, Map<String, Object> vars) =>
     s.replaceAllMapped(RegExp(r'\{(\w+)\}'), (m) => vars[m[1]]?.toString() ?? m[0]!);
 
-String _names(List<HwEvidence> items, Map<String, String> w) {
+String _names(List<HwEvidence> items, Map<String, String> w) => _joinList(items.map((i) => i.title).toList(), w);
+
+String _joinList(List<String> list, Map<String, String> w) {
   final t = <String>[];
-  for (final i in items) {
-    if (!t.contains(i.title)) t.add(i.title);
+  for (final i in list) {
+    if (!t.contains(i)) t.add(i);
   }
   if (t.length == 1) return t[0];
   if (t.length == 2) return '${t[0]} ${w['and']} ${t[1]}';
@@ -422,6 +444,92 @@ _Pick? _habitPick(List<HistoryEntry> history, String today) {
   return _Pick('tim_varied', const {}, ev((_) => true));
 }
 
+// ── Review quality ───────────────────────────────────────────────────────────
+// From class_review_events (one row per graded card). Accuracy needs 20+
+// answers in the last 30 days; a trend needs 15+ in each of the last two
+// fortnights and a 10-point move. Then the words: still hard (2+ misses in
+// 30 days and the latest answer wrong or more misses than hits), else
+// recovered (2+ misses in 60 days, last two answers right).
+AccuracyEvidence _accuracyItem(List<ReviewAnswer> answers, String from, String to) {
+  final a = answers.where((x) {
+    final d = _localDate(x.createdAt);
+    return d.compareTo(from) >= 0 && d.compareTo(to) <= 0;
+  }).toList();
+  return AccuracyEvidence(from, to, a.where((x) => x.knew).length, a.length);
+}
+
+int _pctOf(AccuracyEvidence a) => (a.right / a.total * 100).round();
+
+List<_Pick> _reviewQualityPicks(List<ReviewAnswer> answers, String today, Map<String, String> w) {
+  final picks = <_Pick>[];
+  final acc30 = _accuracyItem(answers, _addDays(today, -29), today);
+  if (acc30.total >= 20) {
+    final recent = _accuracyItem(answers, _addDays(today, -13), today);
+    final prior = _accuracyItem(answers, _addDays(today, -27), _addDays(today, -14));
+    final diff = recent.total >= 15 && prior.total >= 15 ? _pctOf(recent) - _pctOf(prior) : 0;
+    if (diff >= 10) {
+      picks.add(_Pick('rq_improving', {'from': _pctOf(prior), 'to': _pctOf(recent)}, {'accuracy': [prior, recent]}));
+    } else if (diff <= -10) {
+      picks.add(_Pick('rq_dropping', {'from': _pctOf(prior), 'to': _pctOf(recent)}, {'accuracy': [prior, recent]}));
+    } else {
+      final pct = _pctOf(acc30);
+      final code = pct >= 90 ? 'rq_strong' : pct >= 75 ? 'rq_good' : pct >= 55 ? 'rq_mixed' : 'rq_hard';
+      picks.add(_Pick(code, {'pct': pct, 'total': acc30.total}, {'accuracy': [acc30]}));
+    }
+  }
+  final byWord = <String, List<ReviewAnswer>>{}; // oldest first, last 60 days
+  final sorted = [...answers]..sort((x, y) => x.createdAt.compareTo(y.createdAt));
+  for (final a in sorted) {
+    if (_localDate(a.createdAt).compareTo(_addDays(today, -60)) <= 0) continue;
+    (byWord[a.word] ??= []).add(a);
+  }
+  WordEvidence stat(String word, Iterable<ReviewAnswer> list) =>
+      WordEvidence(word, list.where((a) => a.knew).length, list.where((a) => !a.knew).length);
+  final from30 = _addDays(today, -29);
+  final hard = <WordEvidence>[], recovered = <WordEvidence>[];
+  byWord.forEach((word, list) {
+    final r = stat(word, list.where((a) => _localDate(a.createdAt).compareTo(from30) >= 0));
+    if (r.wrong >= 2 && (!list.last.knew || r.wrong > r.right)) {
+      hard.add(r);
+    } else if (stat(word, list).wrong >= 2 && list.length >= 2 && list.sublist(list.length - 2).every((a) => a.knew)) {
+      recovered.add(stat(word, list));
+    }
+  });
+  hard.sort((a, b) => b.wrong.compareTo(a.wrong));
+  recovered.sort((a, b) => b.wrong.compareTo(a.wrong));
+  if (hard.isNotEmpty) {
+    picks.add(_Pick('rq_hard_words', {'words': _joinList(hard.take(3).map((x) => x.word).toList(), w)}, {'words': hard.take(5).toList()}));
+  } else if (recovered.isNotEmpty) {
+    picks.add(_Pick('rq_recovered', {'words': _joinList(recovered.take(3).map((x) => x.word).toList(), w)}, {'words': recovered.take(5).toList()}));
+  }
+  return picks;
+}
+
+// ── Milestones: one sentence at most ────────────────────────────────────────
+// A run of on-time homework (only when the homework sentence isn't already
+// an "always on time" one), else mastered words (SRS stage 5 — every
+// interval done), else total review answers.
+const _onTimeCodes = ['hw_on_time', 'hw_early', 'hw_last_day', 'hw_same_day', 'hw_few_on_time', 'hw_few_early'];
+
+_Pick? _milestonePick(List<HomeworkRecord> records, List<String> hwCodes, String today, int mastered, int learned, int reviews) {
+  final judged = records.map((r) => _hwEvidence(r, today)).where((e) => e.status != null).toList()
+    ..sort((a, b) => b.dueDate.compareTo(a.dueDate));
+  final run = <HwEvidence>[];
+  for (final e in judged) {
+    if (e.status != 'E' && e.status != 'L') break;
+    run.add(e);
+  }
+  if (run.length >= 5 && !hwCodes.any(_onTimeCodes.contains)) return _Pick('mst_hw_streak', {'n': run.length}, {'timing': run});
+  if (mastered > 100) return _Pick('mst_mastered_big', {'n': mastered, 'learned': learned});
+  if (mastered >= 25) return _Pick('mst_mastered_mid', {'n': mastered, 'learned': learned});
+  if (mastered >= 5) return _Pick('mst_mastered_small', {'n': mastered, 'learned': learned});
+  if (mastered >= 1) return _Pick('mst_mastered_first', {'n': mastered});
+  for (final m in const [2000, 1000, 500, 250, 100]) {
+    if (reviews > m) return _Pick('mst_reviews_total', {'n': m});
+  }
+  return null;
+}
+
 // ── Reminders ────────────────────────────────────────────────────────────────
 // A teacher message counts only if the student hadn't studied in the 24h
 // before it (otherwise they'd have practised anyway). R studied within 24h,
@@ -532,6 +640,9 @@ List<List<Segment>> buildStudentSummary({
   required List<HistoryEntry> history, // class XP history (any order)
   required int dueCount,               // words waiting for review now
   required int overdueCount,
+  required List<ReviewAnswer> answers, // class_review_events
+  required int mastered,               // class_srs_states at stage 5
+  required int learned,                // class_srs_states rows
 }) {
   final w = summaryWords[lang]!;
   final hw = _homeworkPicks(homework, today, w);
@@ -545,7 +656,9 @@ List<List<Segment>> buildStudentSummary({
     streak,
     ...act.picks,
     act.cleared ? null : _reviewPick(history, today, dueCount, overdueCount),
+    ..._reviewQualityPicks(answers, today, w),
     ...hw.picks,
+    _milestonePick(homework, hw.picks.map((p) => p.code).toList(), today, mastered, learned, answers.length),
     _habitPick(history, today),
     _reminderPick(notes, history, now, today, joinDate),
   ].whereType<_Pick>().toList();

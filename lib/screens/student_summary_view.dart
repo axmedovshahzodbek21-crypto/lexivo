@@ -26,6 +26,7 @@ const _strings = <String, Map<String, String>>{
   'not_practised': {'en': 'No practice after it', 'uz': 'Keyin mashq qilmagan', 'ru': 'После этого не занимался'},
   'this_week': {'en': 'This week', 'uz': 'Bu hafta', 'ru': 'Эта неделя'},
   'active_days': {'en': '{n} active days', 'uz': '{n} faol kun', 'ru': '{n} акт. дн.'},
+  'correct_of': {'en': '{r}/{t} correct', 'uz': "{r}/{t} to'g'ri", 'ru': '{r}/{t} верно'},
 };
 
 String _s(String key) => _strings[key]?[l10n.appLangNotifier.value] ?? _strings[key]!['en']!;
@@ -163,6 +164,24 @@ class _StudentSummaryViewState extends State<StudentSummaryView> {
           final from = _fmtTime(s.from), to = _fmtTime(s.to);
           rows.add(_row([
             Text('🕐 ${_fmtYmd(s.date)} · ${from == to ? from : '$from – $to'}', style: plain),
+          ]));
+        }
+      case 'accuracy':
+        for (final a in ev.items.cast<AccuracyEvidence>()) {
+          final pct = a.total == 0 ? 0 : (a.right / a.total * 100).round();
+          rows.add(_row([
+            Text('${_fmtYmd(a.from).substring(0, 5)} – ${_fmtYmd(a.to).substring(0, 5)} · '
+                '${_s('correct_of').replaceFirst('{r}', '${a.right}').replaceFirst('{t}', '${a.total}')} ($pct%)', style: plain),
+          ]));
+        }
+      case 'words':
+        for (final x in ev.items.cast<WordEvidence>()) {
+          rows.add(_row([
+            Text.rich(TextSpan(style: plain, children: [
+              TextSpan(text: x.word, style: strong),
+              TextSpan(text: ' · ✓ ${x.right}', style: const TextStyle(color: Color(0xFF22C55E))),
+              TextSpan(text: ' · ✗ ${x.wrong}', style: TextStyle(color: context.dangerColor)),
+            ])),
           ]));
         }
       case 'review':

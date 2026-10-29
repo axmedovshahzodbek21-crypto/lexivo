@@ -13,9 +13,11 @@ const _strings = <String, Map<String, String>>{
   'done': {'en': 'Done', 'uz': 'Bajarildi', 'ru': 'Выполнено'},
   'not_done': {'en': 'Not done yet', 'uz': 'Hali bajarilmagan', 'ru': 'Ещё не выполнено'},
   'in_progress': {'en': 'In progress', 'uz': 'Jarayonda', 'ru': 'В процессе'},
-  'early': {'en': '{n} day(s) early', 'uz': '{n} kun oldin', 'ru': 'на {n} дн. раньше'},
+  'early': {'en': '{n} days early', 'uz': '{n} kun oldin', 'ru': 'на {n} дн. раньше'},
+  'early1': {'en': '1 day early', 'uz': '1 kun oldin', 'ru': 'на 1 дн. раньше'},
   'on_last_day': {'en': 'on the last day', 'uz': 'oxirgi kuni', 'ru': 'в последний день'},
-  'late_by': {'en': '{n} day(s) late', 'uz': '{n} kun kech', 'ru': 'опоздание {n} дн.'},
+  'late_by': {'en': '{n} days late', 'uz': '{n} kun kech', 'ru': 'опоздание {n} дн.'},
+  'late_by1': {'en': '1 day late', 'uz': '1 kun kech', 'ru': 'опоздание 1 дн.'},
   'left': {'en': '{m} left', 'uz': '{m} qolgan', 'ru': 'осталось: {m}'},
   'sent': {'en': 'Sent', 'uz': 'Yuborildi', 'ru': 'Отправлено'},
   'read': {'en': 'Read', 'uz': "O'qildi", 'ru': 'Прочитано'},
@@ -108,9 +110,9 @@ class _StudentSummaryViewState extends State<StudentSummaryView> {
         }
       case 'timing':
         for (final h in ev.items.cast<HwEvidence>()) {
-          final status = h.status == 'E' ? _s('early').replaceFirst('{n}', '${h.days}')
+          final status = h.status == 'E' ? (h.days == 1 ? _s('early1') : _s('early').replaceFirst('{n}', '${h.days}'))
               : h.status == 'L' ? _s('on_last_day')
-              : h.status == 'K' ? _s('late_by').replaceFirst('{n}', '${h.days}') : null;
+              : h.status == 'K' ? (h.days == 1 ? _s('late_by1') : _s('late_by').replaceFirst('{n}', '${h.days}')) : null;
           rows.add(_row([
             Text(h.title, style: strong),
             Text('${_s('due')}: ${_fmtYmd(h.dueDate)}', style: muted),

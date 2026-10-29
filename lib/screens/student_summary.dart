@@ -134,10 +134,10 @@ HwEvidence _hwEvidence(HomeworkRecord r, String today) {
           ? _Pick('hw_few_open', {'hw': n[0].title, 'left': _modeList(n[0].missingModes, w)}, {'homework': n, 'timing': n})
           : _Pick('hw_few_open_many', {'hw': _names(n, w)}, {'homework': n, 'timing': n});
     } else if (k.isNotEmpty) {
-      final late = k.length == 1 ? _fill(w['daysLate']!, {'n': k[0].days}) : w['aLittleLate']!;
+      final late = k.length != 1 ? w['aLittleLate']! : k[0].days == 1 ? w['daysLate1']! : _fill(w['daysLate']!, {'n': k[0].days});
       p = _Pick('hw_few_late', {'hw': _names(k, w), 'late': late}, {'homework': k, 'timing': k});
     } else if (total == 1 && e.length == 1) {
-      p = _Pick('hw_few_early', {'hw': e[0].title, 'early': _fill(w['daysEarly']!, {'n': e[0].days})}, {'homework': e, 'timing': e});
+      p = _Pick('hw_few_early', {'hw': e[0].title, 'early': e[0].days == 1 ? w['daysEarly1']! : _fill(w['daysEarly']!, {'n': e[0].days})}, {'homework': e, 'timing': e});
     } else {
       p = _Pick('hw_few_on_time', {'hw': _names(all, w)}, {'homework': all, 'timing': all});
     }

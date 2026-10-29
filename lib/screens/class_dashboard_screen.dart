@@ -992,7 +992,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
           if (_students.isNotEmpty)
             MissedHomeworkSection(
               classId: widget.classId,
-              students: _students.map((s) => (id: s.studentId, joinedAt: s.joinedAt)).toList(),
+              studentIds: _students.map((s) => s.studentId).toList(),
               onlyMissing: true,
               nameOf: (id) => _students.where((s) => s.studentId == id).firstOrNull?.name ?? tr('student'),
             ),

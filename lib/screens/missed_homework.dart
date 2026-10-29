@@ -61,11 +61,10 @@ String _modeLabel(String mode) {
 
 const _page = 1000; // PostgREST row cap — a truncated progress list would show done homework as missed
 
-Future<List<HomeworkRecord>> loadHomeworkRecords(
-  String classId,
-  List<({String id, DateTime? joinedAt})> students,
-) async {
-  if (students.isEmpty) return [];
+Future<List<HomeworkRecord>> loadHomeworkRecords(String classId, List<String> studentIds) async {
+  if (studentIds.isEmpty) return [];
+  final membersQuery = supabase.from('class_members').select('student_id, joined_at')
+      .eq('class_id', classId).inFilter('student_id', studentIds);
   final hws = (await supabase
       .from('class_homework')
       .select('id, unit_id, class_unit_id, collection_name, day_number, passage_id, modes, due_date, created_at, student_ids, teacher_units(name), class_word_units(name)')
@@ -74,8 +73,11 @@ Future<List<HomeworkRecord>> loadHomeworkRecords(
       .map((e) => Map<String, dynamic>.from(e as Map))
       .toList();
   if (hws.isEmpty) return [];
+  final joinedAt = <String, DateTime>{
+    for (final m in await membersQuery)
+      if (m['joined_at'] != null) m['student_id'] as String: DateTime.parse(m['joined_at'] as String),
+  };
 
-  final studentIds = students.map((s) => s.id).toList();
   final doneOn = <String, String>{}; // '$hw:$student:$mode' -> local yyyy-mm-dd
   for (var from = 0; ; from += _page) {
     final prog = await supabase
@@ -111,24 +113,26 @@ Future<List<HomeworkRecord>> loadHomeworkRecords(
     } else {
       title = ((h['teacher_units'] as Map?)?['name'] as String?) ?? l10n.tr('unit');
     }
-    final assignedDate = formatStreakDate(DateTime.parse(h['created_at'] as String).toLocal());
+    final createdAt = DateTime.parse(h['created_at'] as String);
+    final assignedDate = formatStreakDate(createdAt.toLocal());
     final assigned = (h['student_ids'] as List?)?.cast<String>();
-    for (final s in students) {
-      if (assigned != null && !assigned.contains(s.id)) continue;
-      // Due on or before the join day — never had a fair chance (same rule as the insights score).
-      final joinDate = s.joinedAt != null ? formatStreakDate(s.joinedAt!) : null;
-      if (joinDate != null && due.compareTo(joinDate) <= 0) continue;
+    for (final sid in studentIds) {
+      if (assigned != null && !assigned.contains(sid)) continue;
+      // Set before the student joined and due by their join day — they never
+      // had a fair chance. Homework set after joining always counts.
+      final joined = joinedAt[sid];
+      if (joined != null && createdAt.isBefore(joined) && due.compareTo(formatStreakDate(joined.toLocal())) <= 0) continue;
       final missing = <String>[];
       var last = '';
       for (final m in modes) {
-        final d = doneOn['${h['id']}:${s.id}:$m'];
+        final d = doneOn['${h['id']}:$sid:$m'];
         if (d == null) {
           missing.add(m);
         } else if (d.compareTo(last) > 0) {
           last = d;
         }
       }
-      out.add(HomeworkRecord(homeworkId: h['id'] as String, studentId: s.id, title: title, dueDate: due,
+      out.add(HomeworkRecord(homeworkId: h['id'] as String, studentId: sid, title: title, dueDate: due,
           assignedDate: assignedDate, finishedDate: missing.isEmpty ? last : null, missingModes: missing));
     }
   }
@@ -161,11 +165,11 @@ Future<List<HomeworkRecord>> loadHomeworkRecords(
 /// the caller passes [records] it already loaded.
 class MissedHomeworkSection extends StatefulWidget {
   final String classId;
-  final List<({String id, DateTime? joinedAt})> students;
+  final List<String> studentIds;
   final Future<List<HomeworkRecord>>? records;
   final bool onlyMissing, alwaysShow;
   final String Function(String studentId)? nameOf;
-  const MissedHomeworkSection({super.key, required this.classId, required this.students, this.records, this.onlyMissing = false, this.alwaysShow = false, this.nameOf});
+  const MissedHomeworkSection({super.key, required this.classId, required this.studentIds, this.records, this.onlyMissing = false, this.alwaysShow = false, this.nameOf});
 
   @override
   State<MissedHomeworkSection> createState() => _MissedHomeworkSectionState();
@@ -187,13 +191,13 @@ class _MissedHomeworkSectionState extends State<MissedHomeworkSection> {
   void didUpdateWidget(MissedHomeworkSection old) {
     super.didUpdateWidget(old);
     // Callers rebuild the students list on every build — compare by ids, not identity.
-    String ids(MissedHomeworkSection w) => w.students.map((s) => s.id).join(',');
+    String ids(MissedHomeworkSection w) => w.studentIds.join(',');
     if (old.classId != widget.classId || ids(old) != ids(widget) || old.records != widget.records) _load();
   }
 
   Future<void> _load() async {
     try {
-      final r = missedFromRecords(await (widget.records ?? loadHomeworkRecords(widget.classId, widget.students)));
+      final r = missedFromRecords(await (widget.records ?? loadHomeworkRecords(widget.classId, widget.studentIds)));
       if (mounted) {
         setState(() {
           _items = widget.onlyMissing ? r.items.where((m) => m.isMissing).toList() : r.items;

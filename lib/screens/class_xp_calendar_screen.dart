@@ -156,7 +156,7 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
         setState(() {
           _entries = (rows as List).map((r) => Map<String, dynamic>.from(r as Map)).toList();
           _joinedAt = joined != null ? DateTime.parse(joined).toLocal() : null;
-          if (widget.studentId != null) _records = loadHomeworkRecords(widget.classId, [(id: uid, joinedAt: _joinedAt)]);
+          if (widget.studentId != null) _records = loadHomeworkRecords(widget.classId, [uid]);
           _loading = false;
         });
         if (_records != null) _loadSummary(uid);
@@ -319,7 +319,7 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
                 if (widget.studentId != null)
                   MissedHomeworkSection(
                     classId: widget.classId,
-                    students: [(id: widget.studentId!, joinedAt: _joinedAt)],
+                    studentIds: [widget.studentId!],
                     records: _records,
                     alwaysShow: true,
                   ),

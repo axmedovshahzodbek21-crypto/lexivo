@@ -344,9 +344,13 @@ int _variantIndex(String seed, int n) {
 
 // Splits [[label|key]] markup before filling placeholders, so a homework
 // title containing "|" or "]]" can't break the parse.
-List<Segment> _render(_Pick p, String lang, String name, String seed) {
+({List<Segment> sentence, bool usesName}) _render(_Pick p, String lang, String name, String seed) {
   final versions = summarySentences[p.code]![lang]!;
   final text = versions[_variantIndex('$seed:${p.code}', versions.length)];
+  return (sentence: _renderText(text, p, name), usesName: text.contains('{name}'));
+}
+
+List<Segment> _renderText(String text, _Pick p, String name) {
   final vars = <String, Object>{'name': name, ...p.vars};
   final out = <Segment>[];
   var at = 0;
@@ -390,5 +394,13 @@ List<List<Segment>> buildStudentSummary({
   ].whereType<_Pick>().toList();
   if (picks.isEmpty) picks.add(const _Pick('not_enough_data'));
   final seed = '$studentId:$today';
-  return picks.map((p) => _render(p, lang, name, seed)).toList();
+  // The paragraph names the student once; in Uzbek later sentences say "u"
+  // (he/she — Uzbek has no gendered pronoun). English keeps the name, since
+  // "they" would need different verb forms ("they have", not "they has").
+  var named = false;
+  return picks.map((p) {
+    final r = _render(p, lang, lang == 'uz' && named ? w['pronoun']! : name, seed);
+    named = named || r.usesName;
+    return r.sentence;
+  }).toList();
 }

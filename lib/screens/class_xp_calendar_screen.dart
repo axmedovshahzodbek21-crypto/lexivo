@@ -6,23 +6,67 @@ import '../services/supabase_service.dart';
 import 'class_models.dart';
 
 const _reasonIcons = <String, String>{
-  'Learn': '📖', 'Cards': '🃏', 'Quiz': '🧠', 'Match': '🎯',
+  'Learn': '📖', 'Cards': '🃏', 'Flashcard': '🃏', 'Quiz': '🧠', 'Quiz (perfect)': '🧠', 'Match': '🎯',
   'SRS Review': '🔄', 'Homework': '📋',
+  'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯', 'read': '📚',
 };
+
+String _reasonIcon(String reason) =>
+    _reasonIcons[reason] ?? (reason.startsWith('Reading: ') ? '📚' : '⚡');
 
 // class_xp_history.reason is a raw English constant stored in the DB (can't
 // rewrite what's stored) — map it to a translated label for display, falling
 // back to the raw string for any value not in this list so nothing crashes.
+// Lowercase reasons are homework completions (record_class_homework_progress).
+// Keep in sync with web's classXpHistory.reasonLabels.
 String _reasonLabel(String reason) {
+  String hw(String label) => '$label (${l10n.tr('homework')})';
   switch (reason) {
     case 'Learn': return l10n.tr('learn');
-    case 'Cards': return l10n.tr('cards');
+    case 'Cards':
+    case 'Flashcard': return l10n.tr('cards');
     case 'Quiz': return l10n.tr('quiz');
+    case 'Quiz (perfect)': return '${l10n.tr('quiz')} ★';
     case 'Match': return l10n.tr('match_plain');
     case 'SRS Review': return l10n.tr('srs_review');
     case 'Homework': return l10n.tr('homework');
+    case 'learn': return hw(l10n.tr('learn'));
+    case 'flashcard': return hw(l10n.tr('cards'));
+    case 'quiz': return hw(l10n.tr('quiz'));
+    case 'match': return hw(l10n.tr('match_plain'));
     default: return reason;
   }
+}
+
+// Review and Learn write one history row per word, so a session showed up as
+// dozens of identical "+0.2 XP" lines. Collapses back-to-back rows with the
+// same reason (less than 30 min apart) into one row per session. Mirrors web's
+// ClassXpHistoryModal day list.
+class _XpGroup {
+  final String reason;
+  int amount;
+  int count = 1;
+  DateTime from; // earliest
+  final DateTime to; // latest
+  _XpGroup(this.reason, this.amount, this.from, this.to);
+}
+
+List<_XpGroup> _groupEntries(List<Map<String, dynamic>> newestFirst) {
+  final groups = <_XpGroup>[];
+  for (final e in newestFirst) {
+    final reason = e['reason'] as String? ?? '';
+    final amount = (e['amount'] as num?)?.toInt() ?? 0;
+    final at = DateTime.parse(e['created_at'] as String).toLocal();
+    final g = groups.isEmpty ? null : groups.last;
+    if (g != null && g.reason == reason && g.from.difference(at).inMinutes < 30) {
+      g.amount += amount;
+      g.count++;
+      g.from = at;
+    } else {
+      groups.add(_XpGroup(reason, amount, at, at));
+    }
+  }
+  return groups;
 }
 
 // A handful of strings this screen needs that aren't in the shared
@@ -354,18 +398,27 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
           Flexible(
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-              child: Column(children: entries.map((e) {
-                final xp = ((e['amount'] as num?)?.toInt() ?? 0);
-                final reason = e['reason'] as String? ?? '';
-                final icon = _reasonIcons[reason] ?? '⚡';
-                final createdAt = DateTime.parse(e['created_at'] as String).toLocal();
+              child: Column(children: _groupEntries(entries).map((g) {
+                final xp = g.amount;
+                final reason = g.reason;
+                final icon = _reasonIcon(reason);
+                final createdAt = g.to;
                 final diff = DateTime.now().difference(createdAt);
                 final ago = diff.inMinutes < 1 ? _ltr('just_now')
                     : diff.inMinutes < 60 ? _ltr('min_ago').replaceFirst('{n}', '${diff.inMinutes}')
                     : diff.inHours < 24 ? _ltr('hours_ago').replaceFirst('{n}', '${diff.inHours}')
                     : _ltr('days_ago').replaceFirst('{n}', '${diff.inDays}');
-                final hour12 = createdAt.hour % 12 == 0 ? 12 : createdAt.hour % 12;
-                final exactTime = '$hour12:${createdAt.minute.toString().padLeft(2, '0')} ${createdAt.hour < 12 ? _ltr('am_short') : _ltr('pm_short')}';
+                String clock(DateTime t) {
+                  final hour12 = t.hour % 12 == 0 ? 12 : t.hour % 12;
+                  return '$hour12:${t.minute.toString().padLeft(2, '0')} ${t.hour < 12 ? _ltr('am_short') : _ltr('pm_short')}';
+                }
+                final fromTime = clock(g.from), toTime = clock(g.to);
+                final time = fromTime == toTime ? fromTime : '$fromTime – $toTime';
+                final perWord = reason == 'SRS Review' || reason == 'Learn';
+                final countText = g.count > 1
+                    ? (perWord ? l10n.tr('words_count').replaceFirst('{n}', '${g.count}') : '×${g.count}')
+                    : '';
+                final exactTime = countText.isEmpty ? time : '$countText · $time';
                 return Container(
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

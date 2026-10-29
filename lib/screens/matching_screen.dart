@@ -108,6 +108,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
   String _phase = 'playing';
   bool _myUnitCompleted = false;
   int _sessionXP = 0;
+  bool _practiceXpDone = false; // class practice XP already earned today
 
   Timer? _wrongTimer;
   Timer? _elapsedTimer;
@@ -199,7 +200,10 @@ class _MatchingScreenState extends State<MatchingScreen> {
             final xp = widget.wordDay.words.length * 4;
             final user = currentUser;
             if (user != null && xp > 0) {
-              recordClassActivity(user.id, widget.classId!, reason: 'Match', xp: xp);
+              // 0 = already earned today (server rule) — show that instead of a fake +N.
+              recordClassActivity(user.id, widget.classId!, reason: 'Match', xp: xp).then((awarded) {
+                if (awarded == 0 && mounted) setState(() { _sessionXP = 0; _practiceXpDone = true; });
+              });
               if (mounted) setState(() => _sessionXP = xp);
             }
           } else if (!widget.noXP) {
@@ -356,6 +360,12 @@ class _MatchingScreenState extends State<MatchingScreen> {
                   ],
                 ),
               ),
+            ],
+            if (_practiceXpDone) ...[
+              const SizedBox(height: 16),
+              Text(tr('practice_xp_done_today'),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: context.textMuted)),
             ],
             const SizedBox(height: 20),
             Row(

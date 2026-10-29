@@ -83,7 +83,11 @@ class HomeClassCard {
 }
 
 /// Records a study day and increments class XP for the given class.
-Future<void> recordClassActivity(
+/// Returns the XP the server actually awarded — 0 when a server rule skipped
+/// it (Words-tab practice pays once per activity per day, Review has a daily
+/// cap; see 20261029000003_class_practice_xp_daily.sql) — or null when
+/// unknown (error, or an older server that returns nothing).
+Future<int?> recordClassActivity(
   String userId,
   String classId, {
   int xp = 0,
@@ -117,6 +121,7 @@ Future<void> recordClassActivity(
       }
     }(),
   ];
+  int? awarded = xp > 0 ? null : 0;
   if (xp > 0) {
     futures.add(() async {
       // record_class_xp does a single atomic UPDATE (class_xp = class_xp + xp)
@@ -124,12 +129,13 @@ Future<void> recordClassActivity(
       // an increment when two XP awards for the same student land close
       // together — replaces separate class_members/class_xp_history calls.
       try {
-        await supabase.rpc('record_class_xp', params: {
+        final res = await supabase.rpc('record_class_xp', params: {
           'p_student_id': userId,
           'p_class_id': classId,
           'p_xp': xp,
           'p_reason': reason.isNotEmpty ? reason : 'Study',
         });
+        if (res is int) awarded = res;
         // ignore: avoid_print
         print('[recordClassActivity] OK xp=$xp classId=$classId');
       } catch (e, st) {
@@ -139,6 +145,7 @@ Future<void> recordClassActivity(
     }());
   }
   await Future.wait(futures);
+  return awarded;
 }
 
 /// Returns class cards for the homescreen (teacher + student classes).

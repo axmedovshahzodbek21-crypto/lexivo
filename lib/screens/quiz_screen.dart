@@ -686,6 +686,7 @@ class QuizFinishScreen extends StatefulWidget {
 class _QuizFinishScreenState extends State<QuizFinishScreen> {
   late ConfettiController _confettiController;
   int _xpEarned = 0;
+  bool _practiceXpDone = false; // class practice XP already earned today
 
   @override
   void initState() {
@@ -720,8 +721,11 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
     final xp = base + (isPerfect ? (base * 0.25).round() : 0);
     final user = currentUser;
     if (user != null && xp > 0) {
+      // 0 = already earned today (server rule) — show that instead of a fake +N.
       recordClassActivity(user.id, widget.classId!,
-          reason: isPerfect ? 'Quiz (perfect)' : 'Quiz', xp: xp);
+          reason: isPerfect ? 'Quiz (perfect)' : 'Quiz', xp: xp).then((awarded) {
+        if (awarded == 0 && mounted) setState(() { _xpEarned = 0; _practiceXpDone = true; });
+      });
     }
     if (mounted) setState(() => _xpEarned = xp);
   }
@@ -883,6 +887,12 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
                     ],
                   ),
                 ),
+              ],
+              if (_practiceXpDone) ...[
+                const SizedBox(height: 16),
+                Text(tr('practice_xp_done_today'),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12, color: context.textMuted)),
               ],
               const SizedBox(height: 28),
 

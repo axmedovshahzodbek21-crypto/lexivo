@@ -64,6 +64,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
   int _knew = 0;
   int _didntKnow = 0;
   int _sessionXP = 0; // !dueOnly flashcards only — shown on the finish screen
+  bool _practiceXpDone = false; // class practice XP already earned today
   bool _done = false;
 
   // MCQ state (dueOnly). _distractorPool = every class translation, drawn on
@@ -330,7 +331,10 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
         // source=class. SRS review XP is server-awarded per card instead.
         if (!widget.dueOnly && user != null) {
           _sessionXP = _cards.length * 3;
-          recordClassActivity(user.id, widget.classId, reason: 'Flashcard', xp: _sessionXP);
+          // 0 = already earned today (server rule) — show that instead of a fake +N.
+          recordClassActivity(user.id, widget.classId, reason: 'Flashcard', xp: _sessionXP).then((awarded) {
+            if (awarded == 0 && mounted) setState(() { _sessionXP = 0; _practiceXpDone = true; });
+          });
         }
         setState(() => _done = true);
         return;
@@ -402,6 +406,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
       _knew = 0;
       _didntKnow = 0;
       _sessionXP = 0;
+      _practiceXpDone = false;
       _done = false;
       _gradeUnlocked = false;
       _cardLocked = false;
@@ -523,6 +528,12 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
               const SizedBox(height: 6),
               Text('+${xpDisplay(_sessionXP)} XP',
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: context.primary)),
+            ],
+            if (_practiceXpDone) ...[
+              const SizedBox(height: 6),
+              Text(tr('practice_xp_done_today'),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: context.textMuted)),
             ],
             if (remaining > 0) ...[
               const SizedBox(height: 6),

@@ -144,8 +144,9 @@ class _ClassShellState extends State<ClassShell> {
   Future<void> _loadDueCount() async {
     final user = currentUser;
     if (user == null) return;
-    final due = await getClassDueWords(userId: user.id, classId: widget.classId);
-    if (mounted) setState(() => _dueCount = due.length);
+    // True due count, not getClassDueWords' per-session-capped size.
+    final all = await getClassSRSAll(userId: user.id, classId: widget.classId);
+    if (mounted) setState(() => _dueCount = countDueClassWords(all));
   }
 
   List<BottomNavigationBarItem> get _navItems => [

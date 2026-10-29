@@ -77,7 +77,7 @@ List<_XpGroup> _groupEntries(List<Map<String, dynamic>> newestFirst) {
 // file, mirroring its {placeholder} style and en/uz/ru shape.
 const _localStrings = <String, Map<String, String>>{
   'total_class_xp': {'en': 'Total class XP', 'uz': 'Jami sinf XP-si', 'ru': 'Всего XP класса'},
-  'summary': {'en': 'Summary', 'uz': 'Xulosa', 'ru': 'Сводка'},
+  'summary': {'en': 'About the student', 'uz': "O'quvchi haqida", 'ru': 'Об ученике'},
   'summary_sub': {'en': 'Activity, reviews, homework and reminders', 'uz': 'Faollik, takrorlash, vazifalar va eslatmalar', 'ru': 'Активность, повторения, задания и напоминания'},
   'student_class_xp': {'en': "{name}'s class XP", 'uz': '{name} sinfdagi XP-si', 'ru': 'XP класса {name}'},
   'just_now': {'en': 'just now', 'uz': 'hozirgina', 'ru': 'только что'},

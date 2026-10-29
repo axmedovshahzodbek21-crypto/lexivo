@@ -805,8 +805,9 @@ List<Segment> _renderText(String text, _Pick p, Map<String, Object> who) {
 }
 
 /// main = the visible paragraph (most important sentences + the closing
-/// suggestion); more = the rest, shown after "Batafsil".
-({List<List<Segment>> main, List<List<Segment>> more}) buildStudentSummary({
+/// suggestion); more = the rest, shown after "Batafsil". headline = the most
+/// important non-context sentence, for one-line places (Insights cards).
+({List<List<Segment>> main, List<List<Segment>> more, List<Segment>? headline, List<Segment>? suggestion}) buildStudentSummary({
   required String studentId,
   required String name,
   required String lang, // 'uz' or 'en'
@@ -869,5 +870,17 @@ List<Segment> _renderText(String text, _Pick p, Map<String, Object> who) {
     return r.sentence;
   }).toList();
   final split = keep.length + (suggestion != null ? 1 : 0);
-  return (main: sentences.sublist(0, split), more: sentences.sublist(split));
+  // Inactive / barely active context does lead; neutral context doesn't.
+  const leadCtx = ['ctx_week_none', 'ctx_never', 'ctx_new_inactive', 'ctx_week_low'];
+  final kept = [for (var i = 0; i < keep.length; i++) (p: ordered[i], i: i)]
+      .where((x) => (!x.p.code.startsWith('ctx_') || leadCtx.contains(x.p.code)) && x.p.code != 'not_enough_data').toList()
+    ..sort((a, b) {
+      final d = _importance(a.p.code) - _importance(b.p.code);
+      return d != 0 ? d : a.i - b.i;
+    });
+  return (
+    main: sentences.sublist(0, split), more: sentences.sublist(split),
+    headline: sentences.isEmpty ? null : sentences[kept.isEmpty ? 0 : kept.first.i],
+    suggestion: suggestion != null ? sentences[keep.length] : null,
+  );
 }

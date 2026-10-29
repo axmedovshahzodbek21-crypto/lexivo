@@ -25,11 +25,11 @@ Future<void> setClassReviewNewCap(int cap) async {
 }
 
 // Grace period (days overdue) a word gets at each stage before it demotes one
-// stage — indexed by stage 0-4. A fresh Stage 0 word is fragile and gets a
-// generous buffer; a Stage 4 word already survived a 30-day gap once, so it
-// gets proportionally less patience if that happens again. Stage 5
-// (graduated) is never scheduled again, so it's exempt entirely.
-const _unlearnGraceDays = [3, 5, 7, 10, 15];
+// stage — indexed by stage 0-4. Rule: a week off never costs a stage, and the
+// long stages get as much patience as their own interval. Stage 5
+// (graduated) is never scheduled again, so it's exempt entirely. Keep in sync
+// with web's UNLEARN_GRACE_DAYS.
+const _unlearnGraceDays = [7, 7, 7, 14, 30];
 
 class ClassSRSEntry {
   final String id;

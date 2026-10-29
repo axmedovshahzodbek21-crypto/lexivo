@@ -24,6 +24,8 @@ const _strings = <String, Map<String, String>>{
   'unread': {'en': 'Not opened', 'uz': 'Ochilmagan', 'ru': 'Не открыто'},
   'practised': {'en': 'Practised {h} h later', 'uz': '{h} soatdan keyin mashq qildi', 'ru': 'Занимался через {h} ч'},
   'not_practised': {'en': 'No practice after it', 'uz': 'Keyin mashq qilmagan', 'ru': 'После этого не занимался'},
+  'this_week': {'en': 'This week', 'uz': 'Bu hafta', 'ru': 'Эта неделя'},
+  'active_days': {'en': '{n} active days', 'uz': '{n} faol kun', 'ru': '{n} акт. дн.'},
 };
 
 String _s(String key) => _strings[key]?[l10n.appLangNotifier.value] ?? _strings[key]!['en']!;
@@ -145,6 +147,22 @@ class _StudentSummaryViewState extends State<StudentSummaryView> {
           rows.add(_row([
             Text('${_fmtYmd(d.date)} · +${xpDisplay(d.xp)} XP', style: strong),
             Text(d.reasons.map(widget.reasonLabel).join(' · '), style: muted),
+          ]));
+        }
+      case 'weeks':
+        final weeks = ev.items.cast<WeekEvidence>();
+        for (var i = 0; i < weeks.length; i++) {
+          final w = weeks[i];
+          final label = i == 0 ? _s('this_week') : '${_fmtYmd(w.from).substring(0, 5)} – ${_fmtYmd(w.to).substring(0, 5)}';
+          rows.add(_row([
+            Text('$label · +${xpDisplay(w.xp)} XP · ${_s('active_days').replaceFirst('{n}', '${w.activeDays}')}', style: plain),
+          ]));
+        }
+      case 'sessions':
+        for (final s in ev.items.cast<SessionEvidence>()) {
+          final from = _fmtTime(s.from), to = _fmtTime(s.to);
+          rows.add(_row([
+            Text('🕐 ${_fmtYmd(s.date)} · ${from == to ? from : '$from – $to'}', style: plain),
           ]));
         }
       case 'review':

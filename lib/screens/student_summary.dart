@@ -54,8 +54,21 @@ class ReviewEvidence {
   ReviewEvidence(this.date, this.words, this.from, this.to);
 }
 
-/// kind: homework | timing | reminders | days | review; items are the
-/// matching *Evidence objects.
+class WeekEvidence {
+  final String from, to; // yyyy-mm-dd; [0] = this week
+  final int xp, activeDays;
+  const WeekEvidence(this.from, this.to, this.xp, this.activeDays);
+}
+
+class SessionEvidence {
+  final String date;
+  DateTime from;
+  final DateTime to;
+  SessionEvidence(this.date, this.from, this.to);
+}
+
+/// kind: homework | timing | reminders | days | review | weeks | sessions;
+/// items are the matching *Evidence objects.
 class Evidence {
   final String kind;
   final List<Object> items;
@@ -279,6 +292,136 @@ _Pick? _reviewPick(List<HistoryEntry> history, String today, int dueCount, int o
   return _Pick('rev_waiting', {'n': dueCount});
 }
 
+// ── This week vs their own usual ────────────────────────────────────────────
+// Weeks are rolling 7-day windows ending today; "usual" = average XP of the
+// 3 weeks before this one. Only weeks that start on/after the join day (or
+// the first activity) count, so a new student isn't compared with empty weeks.
+List<WeekEvidence> _weekItems(List<HistoryEntry> history, String today, String? joinDate) {
+  final dates = history.map((e) => _localDate(e.createdAt)).toList()..sort();
+  final earliest = joinDate ?? (dates.isEmpty ? null : dates.first);
+  if (earliest == null) return [];
+  final out = <WeekEvidence>[];
+  for (var k = 0; k < 26; k++) {
+    final from = _addDays(today, -6 - 7 * k), to = _addDays(today, -7 * k);
+    if (k > 0 && from.compareTo(earliest) < 0) break;
+    final es = history.where((e) {
+      final d = _localDate(e.createdAt);
+      return d.compareTo(from) >= 0 && d.compareTo(to) <= 0;
+    }).toList();
+    out.add(WeekEvidence(from, to, es.fold(0, (s, e) => s + e.amount), es.map((e) => _localDate(e.createdAt)).toSet().length));
+  }
+  return out;
+}
+
+_Pick? _trendPick(List<HistoryEntry> history, String today, String? joinDate) {
+  final weeks = _weekItems(history, today, joinDate);
+  if (weeks.length < 3 || weeks.first.xp == 0) return null;
+  final cur = weeks.first, prev = weeks.sublist(1);
+  final ev = <String, List<Object>>{'weeks': weeks.take(4).toList()};
+  if (prev.first.xp == 0 && prev.skip(1).any((w) => w.xp > 0)) return _Pick('trd_back', const {}, ev);
+  final base = prev.take(3).toList();
+  final usual = base.fold<int>(0, (s, w) => s + w.xp) / base.length;
+  if (usual == 0) return null;
+  final ratio = cur.xp / usual;
+  if (prev.length >= 3 && ratio >= 1.3 && prev.every((w) => cur.xp > w.xp)) return _Pick('trd_record', const {}, ev);
+  if (ratio >= 2) return _Pick('trd_up_strong', {'pct': ((ratio - 1) * 100).round()}, ev);
+  if (ratio >= 1.3) return _Pick('trd_up', {'pct': ((ratio - 1) * 100).round()}, ev);
+  if (ratio > 0.7) return _Pick('trd_steady', const {}, ev);
+  if (ratio > 0.3) return _Pick('trd_down', {'pct': ((1 - ratio) * 100).round()}, ev);
+  return _Pick('trd_down_strong', {'pct': ((1 - ratio) * 100).round()}, ev);
+}
+
+// ── Streaks ──────────────────────────────────────────────────────────────────
+// Skipped in the first week — "every day since joining" already says it.
+_Pick? _streakPick(List<HistoryEntry> history, String today, String? joinDate) {
+  if (joinDate != null && _dayDiff(joinDate, today) < 7) return null;
+  final set = history.map((e) => _localDate(e.createdAt)).toSet();
+  final dates = set.toList()..sort();
+  if (dates.isEmpty) return null;
+  // Longest run (oldest → newest).
+  var longest = <String>[], run = <String>[];
+  for (final d in dates) {
+    run = run.isNotEmpty && _addDays(run.last, 1) == d ? [...run, d] : [d];
+    if (run.length > longest.length) longest = run;
+  }
+  // Current run ends today or yesterday.
+  final current = <String>[];
+  for (var d = set.contains(today) ? today : _addDays(today, -1); set.contains(d); d = _addDays(d, -1)) {
+    current.add(d);
+  }
+  final n = current.length;
+  if (n >= 5 && n == longest.length && dates.length > n) return _Pick('str_record', {'streak': n}, {'days': _dayItems(history, current)});
+  if (n >= 7) return _Pick('str_long', {'streak': n}, {'days': _dayItems(history, current)});
+  if (n >= 3) return _Pick('str_mid', {'streak': n}, {'days': _dayItems(history, current)});
+  if (n == 0 && longest.length >= 5) {
+    final since = _dayDiff(dates.last, today);
+    if (since >= 2 && since <= 7) {
+      return _Pick('str_broken', {'longest': longest.length, 'days': since}, {'days': _dayItems(history, longest.reversed.toList())});
+    }
+  }
+  return null;
+}
+
+// ── Study habits (last 30 days) ─────────────────────────────────────────────
+// Any class activity rows less than 30 min apart are one session. Newest first.
+List<SessionEvidence> _sessionItems(List<HistoryEntry> history) {
+  final rows = [...history]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  final out = <SessionEvidence>[];
+  for (final e in rows) {
+    final s = out.isEmpty ? null : out.last;
+    if (s != null && s.from.difference(e.createdAt).inMinutes < 30) {
+      s.from = e.createdAt;
+    } else {
+      out.add(SessionEvidence(_localDate(e.createdAt), e.createdAt, e.createdAt));
+    }
+  }
+  return out;
+}
+
+String _period(int h) => h >= 5 && h < 12 ? 'morning' : h >= 12 && h < 17 ? 'afternoon' : h >= 17 && h < 22 ? 'evening' : 'night';
+
+// One habit sentence at most: a fixed hour, else a time of day, else
+// weekends, else several sessions a day, else "varied".
+_Pick? _habitPick(List<HistoryEntry> history, String today) {
+  final sessions = _sessionItems(history).where((s) => s.date.compareTo(_addDays(today, -30)) > 0).toList();
+  if (sessions.length < 8) return null;
+  int hourOf(SessionEvidence s) => s.from.toLocal().hour;
+  final hours = sessions.map(hourOf).toList();
+  // Busiest ±1h window; ties go to the hour that itself has the most starts.
+  var bestH = 0, best = 0, bestExact = 0;
+  for (var h = 0; h < 24; h++) {
+    final c = hours.where((x) => x == h || x == (h + 1) % 24 || x == (h + 23) % 24).length;
+    final exact = hours.where((x) => x == h).length;
+    if (c > best || (c == best && exact > bestExact)) {
+      best = c;
+      bestH = h;
+      bestExact = exact;
+    }
+  }
+  Map<String, List<Object>> ev(bool Function(SessionEvidence) keep) => {'sessions': sessions.where(keep).take(10).toList()};
+  if (best / sessions.length >= 0.6) {
+    bool near(SessionEvidence s) {
+      final d = (hourOf(s) - bestH).abs();
+      return (d < 24 - d ? d : 24 - d) <= 1;
+    }
+    return _Pick('tim_same_hour', {'hour': '${bestH.toString().padLeft(2, '0')}:00'}, ev(near));
+  }
+  for (final p in const ['morning', 'afternoon', 'evening', 'night']) {
+    if (hours.where((h) => _period(h) == p).length / sessions.length >= 0.6) {
+      return _Pick('tim_$p', const {}, ev((s) => _period(hourOf(s)) == p));
+    }
+  }
+  final days = <String>[];
+  for (final s in sessions) {
+    if (!days.contains(s.date)) days.add(s.date);
+  }
+  final weekend = days.where((d) => DateTime.parse(d).weekday >= 6).toList();
+  if (days.length >= 6 && weekend.length / days.length >= 0.6) return _Pick('wk_weekend', const {}, {'days': _dayItems(history, weekend)});
+  final perDay = sessions.length / days.length;
+  if (days.length >= 5 && perDay >= 2) return _Pick('ses_multi', {'x': perDay.round()}, ev((_) => true));
+  return _Pick('tim_varied', const {}, ev((_) => true));
+}
+
 // ── Reminders ────────────────────────────────────────────────────────────────
 // A teacher message counts only if the student hadn't studied in the 24h
 // before it (otherwise they'd have practised anyway). R studied within 24h,
@@ -393,11 +536,17 @@ List<List<Segment>> buildStudentSummary({
   final w = summaryWords[lang]!;
   final hw = _homeworkPicks(homework, today, w);
   final act = _activityPicks(history, homework, hw.named, today, dueCount, w);
+  final streak = _streakPick(history, today, joinDate);
+  final trend = _trendPick(history, today, joinDate);
   final picks = [
     _contextPick(history, today, joinDate, w),
+    // "Steady" only adds something when no streak sentence is there.
+    trend?.code == 'trd_steady' && streak != null ? null : trend,
+    streak,
     ...act.picks,
     act.cleared ? null : _reviewPick(history, today, dueCount, overdueCount),
     ...hw.picks,
+    _habitPick(history, today),
     _reminderPick(notes, history, now, today, joinDate),
   ].whereType<_Pick>().toList();
   if (picks.isEmpty) picks.add(const _Pick('not_enough_data'));

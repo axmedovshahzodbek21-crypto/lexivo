@@ -77,6 +77,7 @@ List<_XpGroup> _groupEntries(List<Map<String, dynamic>> newestFirst) {
 const _localStrings = <String, Map<String, String>>{
   'total_class_xp': {'en': 'Total class XP', 'uz': 'Jami sinf XP-si', 'ru': 'Всего XP класса'},
   'summary': {'en': 'Summary', 'uz': 'Xulosa', 'ru': 'Сводка'},
+  'summary_sub': {'en': 'Homework and reminders, in a few sentences', 'uz': 'Vazifalar va eslatmalar — bir necha jumlada', 'ru': 'Задания и напоминания — в нескольких предложениях'},
   'student_class_xp': {'en': "{name}'s class XP", 'uz': '{name} sinfdagi XP-si', 'ru': 'XP класса {name}'},
   'just_now': {'en': 'just now', 'uz': 'hozirgina', 'ru': 'только что'},
   'min_ago': {'en': '{n}m ago', 'uz': '{n} daq. oldin', 'ru': '{n} мин назад'},
@@ -117,6 +118,7 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
   DateTime? _joinedAt; // teacher view only — for the missed-deadlines list
   Future<List<HomeworkRecord>>? _records; // teacher view only, shared by the summary and the deadline card
   List<String> _summary = [];
+  bool _summaryOpen = false; // collapsed under a "Xulosa" row until tapped
   late DateTime _month;
   @override
   void initState() {
@@ -281,20 +283,38 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
                 // Only opened with a studentId from the teacher's ranks list; a
                 // student can't read a classmate's homework progress anyway.
                 if (_summary.isNotEmpty)
-                  Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: context.primary.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: context.primary.withValues(alpha: 0.3)),
+                  GestureDetector(
+                    onTap: () => setState(() => _summaryOpen = !_summaryOpen),
+                    child: Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: context.primary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: context.primary.withValues(alpha: 0.3)),
+                      ),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Row(children: [
+                          const Text('✨', style: TextStyle(fontSize: 14)),
+                          const SizedBox(width: 8),
+                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(_ltr('summary'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: context.primary)),
+                            if (!_summaryOpen)
+                              Text(_ltr('summary_sub'), style: TextStyle(fontSize: 11, color: context.textMuted)),
+                          ])),
+                          Icon(_summaryOpen ? Icons.expand_less : Icons.chevron_right, color: context.primary, size: 20),
+                        ]),
+                        if (_summaryOpen) ...[
+                          const SizedBox(height: 8),
+                          for (final s in _summary)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Text(s, style: TextStyle(fontSize: 13, height: 1.35, color: context.appText)),
+                            ),
+                        ],
+                      ]),
                     ),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('✨ ${_ltr('summary')}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: context.primary)),
-                      const SizedBox(height: 6),
-                      Text(_summary.join(' '), style: TextStyle(fontSize: 13, height: 1.35, color: context.appText)),
-                    ]),
                   ),
                 if (widget.studentId != null)
                   MissedHomeworkSection(

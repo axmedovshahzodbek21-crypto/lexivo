@@ -54,9 +54,13 @@ class _StudentSummaryViewState extends State<StudentSummaryView> {
   Widget build(BuildContext context) {
     final accent = context.primary;
     final base = TextStyle(fontSize: 13, height: 1.45, color: context.appText);
+    final open = _open;
+    final ev = open != null ? widget.sentences[open.s][open.g].evidence : null;
+    // One paragraph; the evidence card opens under it.
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      for (var s = 0; s < widget.sentences.length; s++) ...[
-        Text.rich(TextSpan(style: base, children: [
+      Text.rich(TextSpan(style: base, children: [
+        for (var s = 0; s < widget.sentences.length; s++) ...[
+          if (s > 0) const TextSpan(text: ' '),
           for (var g = 0; g < widget.sentences[s].length; g++)
             if (widget.sentences[s][g].evidence == null)
               TextSpan(text: widget.sentences[s][g].text)
@@ -65,17 +69,19 @@ class _StudentSummaryViewState extends State<StudentSummaryView> {
                 alignment: PlaceholderAlignment.baseline,
                 baseline: TextBaseline.alphabetic,
                 child: GestureDetector(
-                  onTap: () => setState(() => _open = _open?.s == s && _open?.g == g ? null : (s: s, g: g)),
+                  onTap: () => setState(() => _open = open?.s == s && open?.g == g ? null : (s: s, g: g)),
                   child: Text(widget.sentences[s][g].text, style: base.copyWith(
                     color: accent, fontWeight: FontWeight.w700,
+                    backgroundColor: open?.s == s && open?.g == g ? accent.withValues(alpha: 0.15) : null,
                     decoration: TextDecoration.underline, decorationStyle: TextDecorationStyle.dotted, decorationColor: accent,
                   )),
                 ),
               ),
-        ])),
-        if (_open?.s == s && widget.sentences[s][_open!.g].evidence != null)
-          _evidenceCard(context, widget.sentences[s][_open!.g].evidence!),
-        const SizedBox(height: 8),
+        ],
+      ])),
+      if (ev != null) ...[
+        const SizedBox(height: 4),
+        _evidenceCard(context, ev),
       ],
     ]);
   }

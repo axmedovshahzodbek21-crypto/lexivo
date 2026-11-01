@@ -18,6 +18,7 @@ import 'package:lexivo/screens/quiz_screen.dart';
 import '../data/storage_service.dart';
 import '../services/supabase_service.dart';
 import '../services/class_srs_service.dart';
+import '../services/class_offline.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import '../explain_prompt.dart';
@@ -91,6 +92,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
   // round-trip; tracked here so _showFinishDialog can await any still
   // in-flight ones before it reads _sessionXP for the summary dialog.
   final List<Future<void>> _pendingClassRewards = [];
+  bool _offlineNoticeShown = false;
 
   final Set<int> _learnedIndices = {};
   final Set<int> _skippedIndices = {};
@@ -500,9 +502,20 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
                 xp: requestedXp,
               ),
               // Study-day presence only — XP was already awarded atomically above.
-              recordClassActivity(user.id, classId, reason: 'Learn'),
+              recordClassActivity(user.id, classId, reason: 'Learn')
+                  .timeout(ClassOfflineQueue.timeout, onTimeout: () => null),
             ]);
-            final isNew = results[0] as bool;
+            final isNew = results[0] as bool?;
+            if (isNew == null) {
+              // Offline — queued, synced (and XP credited) on reconnect.
+              if (!_offlineNoticeShown && mounted) {
+                _offlineNoticeShown = true;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(tr('offline_saved_will_sync'))),
+                );
+              }
+              return;
+            }
             final xp = isNew ? requestedXp : 0;
             if (xp > 0) {
               // Class XP is scoped to the class leaderboard only (already

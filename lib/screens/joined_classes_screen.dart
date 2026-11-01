@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/supabase_service.dart';
 import '../services/widget_service.dart';
 import '../app_theme.dart';
@@ -53,6 +55,49 @@ void _cachePut(String key, _Snapshot value) {
   }
 }
 
+// Also persisted, so the class list opens on a cold start with no internet
+// (the metro) instead of an error — ClassShell and the class tabs below it
+// already persist their own data.
+const _prefsPrefix = 'joined_classes_v1_';
+
+Map<String, List<Map<String, dynamic>>> _groupedToJson<T>(Map<String, List<T>> m, Map<String, dynamic> Function(T) f) =>
+    m.map((k, v) => MapEntry(k, v.map(f).toList()));
+
+Map<String, List<T>> _groupedFromJson<T>(dynamic m, T Function(Map<String, dynamic>) f) =>
+    (m as Map).map((k, v) => MapEntry(k as String,
+        (v as List).map((e) => f(Map<String, dynamic>.from(e as Map))).toList()));
+
+Future<void> _saveSnapshot(String uid, _Snapshot s) async {
+  try {
+    await (await SharedPreferences.getInstance()).setString('$_prefsPrefix$uid', jsonEncode({
+      'joinedClasses': s.joinedClasses.map((c) => c.toJson()).toList(),
+      'teacherNames': s.teacherNames,
+      'classNotes': _groupedToJson(s.classNotes, (ClassNote n) => n.toJson()),
+      'classTargets': _groupedToJson(s.classTargets, (ClassTarget t) => t.toJson()),
+      'classAnnouncements': _groupedToJson(s.classAnnouncements, (ClassAnnouncement a) => a.toJson()),
+      'membershipStatus': s.membershipStatus,
+    }));
+  } catch (_) {}
+}
+
+Future<_Snapshot?> _loadSnapshot(String uid) async {
+  try {
+    final raw = (await SharedPreferences.getInstance()).getString('$_prefsPrefix$uid');
+    if (raw == null) return null;
+    final m = jsonDecode(raw) as Map<String, dynamic>;
+    return (
+      joinedClasses: (m['joinedClasses'] as List).map((e) => ClassRow.fromMap(Map<String, dynamic>.from(e as Map))).toList(),
+      teacherNames: Map<String, String>.from(m['teacherNames'] as Map),
+      classNotes: _groupedFromJson(m['classNotes'], ClassNote.fromMap),
+      classTargets: _groupedFromJson(m['classTargets'], ClassTarget.fromMap),
+      classAnnouncements: _groupedFromJson(m['classAnnouncements'], ClassAnnouncement.fromMap),
+      membershipStatus: Map<String, String>.from(m['membershipStatus'] as Map),
+    );
+  } catch (_) {
+    return null;
+  }
+}
+
 class JoinedClassesScreen extends StatefulWidget {
   const JoinedClassesScreen({super.key});
 
@@ -93,9 +138,13 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
     final user = currentUser;
     if (user == null) { if (mounted) setState(() => _loading = false); return; }
 
-    final cached = _cache[user.id];
+    var cached = _cache[user.id];
+    if (cached == null) {
+      cached = await _loadSnapshot(user.id);
+      if (cached != null) _cachePut(user.id, cached);
+    }
     if (cached != null) {
-      if (mounted) setState(() => _applySnapshot(cached));
+      if (mounted) setState(() => _applySnapshot(cached!));
     } else {
       if (mounted) setState(() => _loading = true);
     }
@@ -175,6 +224,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
         membershipStatus: membershipStatus,
       );
       _cachePut(user.id, snapshot);
+      _saveSnapshot(user.id, snapshot);
       if (mounted) setState(() { _applySnapshot(snapshot); _loadError = false; });
       WidgetService.pushClasses(joinedClasses, {});
     } catch (e) {
@@ -202,6 +252,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
     if (ok != true) return;
     await supabase.from('class_members').delete().eq('class_id', classId).eq('student_id', user.id);
     _cache.remove(user.id);
+    await (await SharedPreferences.getInstance()).remove('$_prefsPrefix${user.id}');
     await _load();
   }
 

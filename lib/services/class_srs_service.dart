@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/supabase_service.dart';
+import 'class_offline.dart';
 
 const _intervals = [1, 3, 7, 14, 30]; // days, same as personal SRS
 
@@ -105,15 +106,17 @@ int countDueClassWords(List<ClassSRSEntry> all) {
 // and awards XP atomically server-side (record_class_word_learned) so a
 // modified client can't split "was this new" from "award XP" into two
 // separate requests and replay just the XP one. Returns true if the word
-// was newly learned (not already in class_srs_states).
-Future<bool> recordClassWordLearned({
+// was newly learned (not already in class_srs_states), or null when offline —
+// the call is then queued in ClassOfflineQueue with p_next_due fixed to the
+// day the word was actually learned, so a late sync doesn't shift the +1 day.
+Future<bool?> recordClassWordLearned({
   required String userId,
   required String classId,
   required String word,
   required String translation,
   required int xp,
 }) async {
-  final isNew = await supabase.rpc('record_class_word_learned', params: {
+  final params = {
     'p_student_id': userId,
     'p_class_id': classId,
     'p_word': word,
@@ -121,8 +124,15 @@ Future<bool> recordClassWordLearned({
     'p_next_due': _addDays(_intervals[0]),
     'p_xp': xp,
     'p_reason': 'Learn',
-  });
-  return isNew as bool;
+  };
+  try {
+    final isNew = await supabase.rpc('record_class_word_learned', params: params).timeout(ClassOfflineQueue.timeout);
+    return isNew as bool;
+  } catch (e) {
+    if (!ClassOfflineQueue.isOfflineError(e)) rethrow;
+    await ClassOfflineQueue.enqueueRpc('record_class_word_learned', params);
+    return null;
+  }
 }
 
 // Cascades every overdue, non-graduated word for this student down through
@@ -338,11 +348,17 @@ Future<void> addClassHardWord({
   required String classId,
   required String word,
 }) async {
-  await supabase.from('class_hard_words').upsert(
-    {'user_id': userId, 'class_id': classId, 'word': word},
-    onConflict: 'user_id,class_id,word',
-    ignoreDuplicates: true,
-  );
+  final row = {'user_id': userId, 'class_id': classId, 'word': word};
+  try {
+    await supabase.from('class_hard_words').upsert(
+      row,
+      onConflict: 'user_id,class_id,word',
+      ignoreDuplicates: true,
+    ).timeout(ClassOfflineQueue.timeout);
+  } catch (e) {
+    if (!ClassOfflineQueue.isOfflineError(e)) rethrow;
+    await ClassOfflineQueue.enqueueUpsert('class_hard_words', row, 'user_id,class_id,word');
+  }
 }
 
 // A student taking a word off their class Hard list once it's no longer hard

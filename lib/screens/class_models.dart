@@ -56,6 +56,9 @@ class ClassRow {
     joinCode: m['join_code'] as String? ?? '', teacherId: m['teacher_id'] as String? ?? '',
     memberCount: m['member_count'] as int? ?? 0,
   );
+  Map<String, dynamic> toJson() => {
+    'id': id, 'name': name, 'join_code': joinCode, 'teacher_id': teacherId, 'member_count': memberCount,
+  };
 }
 
 class ClassWord {
@@ -81,6 +84,9 @@ class ClassNote {
     message: m['message'] as String? ?? '', createdAt: m['created_at'] as String? ?? '',
     readAt: m['read_at'] as String?,
   );
+  Map<String, dynamic> toJson() => {
+    'id': id, 'class_id': classId, 'message': message, 'created_at': createdAt, 'read_at': readAt,
+  };
 }
 
 class ClassTarget {

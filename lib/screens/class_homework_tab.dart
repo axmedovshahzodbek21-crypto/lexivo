@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/supabase_service.dart';
+import '../services/class_offline.dart';
 import '../date_utils.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
@@ -186,12 +187,85 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   @override
   void initState() {
     super.initState();
+    ClassOfflineQueue.flushed.addListener(_onQueueFlushed);
     final mem = _cacheKey == null ? null : _memCache[_cacheKey];
     if (mem != null) {
       _applyCache(mem);
+      _mergePending();
       _load(background: true);
     } else {
       _initFromPrefs();
+    }
+  }
+
+  @override
+  void dispose() {
+    ClassOfflineQueue.flushed.removeListener(_onQueueFlushed);
+    super.dispose();
+  }
+
+  void _onQueueFlushed() { if (mounted) _load(background: true); }
+
+  // Homework finished offline (still waiting in ClassOfflineQueue) counts as
+  // done here too, so the card turns green on the metro, not at the next sync.
+  Future<void> _mergePending() async {
+    final pending = await ClassOfflineQueue.pendingHomeworkModes();
+    if (pending.isEmpty || !mounted) return;
+    setState(() {
+      pending.forEach((hw, modes) => _completedModes.putIfAbsent(hw, () => {}).addAll(modes));
+      final (assigned, done) = _countTotals(_folders, _cwUnits, _collHwItems, _passageItems, _completedModes);
+      _totalAssigned = assigned;
+      _totalDone = done;
+    });
+  }
+
+  static (int, int) _countTotals(List<_AssignedFolder> folders, List<HomeworkUnit> cwUnits,
+      List<_CollHW> collHwItems, List<_PassageHW> passageItems, Map<String, Set<String>> completedModes) {
+    int assigned = 0, done = 0;
+    void count(String hwId, List<String> modes) {
+      assigned++;
+      if (isHomeworkFullyDone(modes, completedModes[hwId] ?? {})) done++;
+    }
+    for (final f in folders) {
+      for (final u in f.units) {
+        if (u.hasHomework) count(u.homeworkId!, u.hwModes ?? []);
+      }
+    }
+    for (final u in cwUnits) {
+      if (u.hasHomework) count(u.homeworkId!, u.hwModes ?? []);
+    }
+    for (final h in collHwItems) { count(h.homeworkId, h.hwModes); }
+    for (final h in passageItems) { count(h.homeworkId, h.hwModes); }
+    return (assigned, done);
+  }
+
+  // Downloads every unfinished homework unit's words in the background while
+  // online, so LibraryUnitStudyScreen can open it later with no connection.
+  // Units already downloaded are skipped — the study screen refreshes its
+  // own copy whenever it's opened online.
+  Future<void> _prefetchForOffline(List<_AssignedFolder> folders, List<HomeworkUnit> cwUnits,
+      List<_CollHW> collHwItems, List<_PassageHW> passageItems, Map<String, Set<String>> serverDone) async {
+    for (final h in collHwItems) { await HomeworkCache.save(h.homeworkId, done: serverDone[h.homeworkId] ?? {}); }
+    for (final h in passageItems) { await HomeworkCache.save(h.homeworkId, done: serverDone[h.homeworkId] ?? {}); }
+    final units = [
+      for (final f in folders) for (final u in f.units) if (u.hasHomework) (u, false),
+      for (final u in cwUnits) if (u.hasHomework) (u, true),
+    ];
+    for (final (u, isClassWords) in units) {
+      final hwId = u.homeworkId!;
+      final done = serverDone[hwId] ?? <String>{};
+      final cached = await HomeworkCache.load(hwId);
+      if (cached?.rows != null || isHomeworkFullyDone(u.hwModes ?? [], done)) {
+        await HomeworkCache.save(hwId, done: done);
+        continue;
+      }
+      try {
+        final rows = await HomeworkCache.fetchRows(unitId: u.id, isClassWords: isClassWords)
+            .timeout(ClassOfflineQueue.timeout);
+        await HomeworkCache.save(hwId, rows: rows, done: done);
+      } catch (_) {
+        return; // connection dropped — try again on the next load
+      }
     }
   }
 
@@ -230,6 +304,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
         );
         _cachePut(key, cache);
         if (mounted) setState(() => _applyCache(cache));
+        await _mergePending();
         _load(background: true);
         return;
       }
@@ -325,12 +400,15 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
       final progRaw = phase2[1];
 
       // ── Build progress map ──────────────────────────────────────────────
-      final completedModes = <String, Set<String>>{};
+      final serverDone = <String, Set<String>>{};
       for (final p in progRaw) {
         final hwId = (p as Map)['homework_id'] as String;
         final mode = p['mode'] as String;
-        completedModes.putIfAbsent(hwId, () => {}).add(mode);
+        serverDone.putIfAbsent(hwId, () => {}).add(mode);
       }
+      final completedModes = serverDone.map((k, v) => MapEntry(k, Set<String>.from(v)));
+      (await ClassOfflineQueue.pendingHomeworkModes())
+          .forEach((hw, modes) => completedModes.putIfAbsent(hw, () => {}).addAll(modes));
 
       // ── 6. Build lookup maps ────────────────────────────────────────────
       final hwByLibUnit = <String, Map>{};
@@ -449,33 +527,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
       }
 
       // ── 10. Totals ──────────────────────────────────────────────────────
-      int assigned = 0, done = 0;
-      for (final f in folders) {
-        for (final u in f.units) {
-          if (u.hasHomework) {
-            assigned++;
-            final completed = completedModes[u.homeworkId!] ?? {};
-            if (isHomeworkFullyDone(u.hwModes ?? [], completed)) done++;
-          }
-        }
-      }
-      for (final u in cwUnits) {
-        if (u.hasHomework) {
-          assigned++;
-          final completed = completedModes[u.homeworkId!] ?? {};
-          if (isHomeworkFullyDone(u.hwModes ?? [], completed)) done++;
-        }
-      }
-      for (final h in collHwItems) {
-        assigned++;
-        final completed = completedModes[h.homeworkId] ?? {};
-        if (isHomeworkFullyDone(h.hwModes, completed)) done++;
-      }
-      for (final h in passageItems) {
-        assigned++;
-        final completed = completedModes[h.homeworkId] ?? {};
-        if (isHomeworkFullyDone(h.hwModes, completed)) done++;
-      }
+      final (assigned, done) = _countTotals(folders, cwUnits, collHwItems, passageItems, completedModes);
 
       // Carry over each folder's "Show all" expansion state by id — folders
       // is a fresh list of _AssignedFolder objects built from this load, so
@@ -504,6 +556,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
       );
       if (_cacheKey != null) _cachePut(_cacheKey!, cache);
       _saveToPrefs(cache);
+      if (!widget.isTeacher) _prefetchForOffline(folders, cwUnits, collHwItems, passageItems, serverDone);
     } catch (e) {
       // _folders/_cwUnits/etc. are only ever reassigned above on a full
       // success, so on error they still hold whatever was showing before
@@ -514,6 +567,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
       // to fall back on (a background refresh failure over stale-but-valid
       // data stays silent, matching the comment above).
       debugPrint('[ClassHomeworkTab] load failed: $e');
+      await _mergePending();
       if (mounted) {
         setState(() {
           _loading = false;

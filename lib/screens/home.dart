@@ -25,6 +25,7 @@ import 'phrases_levels_screen.dart';
 import '../data/storage_service.dart';
 import '../services/sync_service.dart';
 import '../services/supabase_service.dart';
+import '../services/class_offline.dart';
 import 'class_models.dart';
 import 'class_shell.dart';
 import 'xp_level_sheet.dart';
@@ -171,6 +172,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      ClassOfflineQueue.flush();
       final now = DateTime.now();
       if (_lastResumeSync != null && now.difference(_lastResumeSync!) < _resumeSyncCooldown) {
         return;

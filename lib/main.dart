@@ -13,6 +13,7 @@ import 'services/deep_link_service.dart';
 import 'data/storage_service.dart';
 import 'app_observers.dart';
 import 'l10n.dart';
+import 'services/class_offline.dart';
 import 'screens/break_screen.dart';
 
 final ValueNotifier<double> textScaleNotifier = ValueNotifier(1.0);
@@ -242,6 +243,8 @@ class _SplashRouterState extends State<SplashRouter> {
       // Awaited so no user action can push a stale pre-merge value (XP, learned
       // words, etc.) over newer cloud data before the initial pull lands.
       await SyncService.pullAll();
+      // Sends class homework done offline (and keeps retrying every minute).
+      ClassOfflineQueue.start();
       if (!mounted) return;
       // Both write to the home-screen widget's saved data and both end
       // with HomeWidget.updateWidget() (which re-renders from whatever is

@@ -3,6 +3,7 @@ import '../l10n.dart';
 import '../services/supabase_service.dart';
 import '../services/widget_service.dart';
 import '../services/class_learn_progress.dart';
+import '../services/class_offline.dart';
 import '../data/storage_service.dart';
 import '../app_theme.dart';
 import '../data/word_data.dart';
@@ -48,6 +49,8 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
   WordDay? _wordDay;
   ReadingPassage? _passage;
   bool _markingRead = false;
+  bool _autoLaunched = false;
+  bool _offlineNoCache = false;
   Set<String> _completedModes = {};
 
   static const _modeIcon  = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯'};
@@ -89,32 +92,63 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
     _load();
   }
 
+  // Cache-first so the unit opens on the metro: the last-seen words and
+  // progress (HomeworkCache, also prefetched by ClassHomeworkTab) show
+  // immediately, then the server copy replaces them when there's a
+  // connection. Modes finished offline (still in ClassOfflineQueue) count as
+  // done either way.
   Future<void> _load() async {
     final user = currentUser;
     if (user == null) {
       if (mounted) setState(() => _loading = false);
       return;
     }
+    ClassOfflineQueue.flush();
+    final needsRows = widget.passageId == null && widget.collectionName == null;
+    final pending = (await ClassOfflineQueue.pendingHomeworkModes())[widget.homeworkId] ?? <String>{};
+    final cached = await HomeworkCache.load(widget.homeworkId);
+    if (cached != null && (!needsRows || cached.rows != null)) {
+      _apply(cached.done.union(pending), cached.rows ?? const []);
+    }
 
-    final progRaw = await supabase
-        .from('class_homework_progress')
-        .select('mode')
-        .eq('homework_id', widget.homeworkId)
-        .eq('student_id', user.id);
-    final completed = (progRaw as List).map((e) => (e as Map)['mode'] as String).toSet();
+    try {
+      final results = await Future.wait<dynamic>([
+        supabase
+            .from('class_homework_progress')
+            .select('mode')
+            .eq('homework_id', widget.homeworkId)
+            .eq('student_id', user.id),
+        if (needsRows) HomeworkCache.fetchRows(unitId: widget.unitId, isClassWords: widget.isClassWords),
+      ]).timeout(ClassOfflineQueue.timeout);
+      final done = (results[0] as List).map((e) => (e as Map)['mode'] as String).toSet();
+      final rows = needsRows ? results[1] as List : null;
+      HomeworkCache.save(widget.homeworkId, rows: rows, done: done);
+      _apply(done.union(pending), rows ?? const []);
+    } catch (e) {
+      debugPrint('[LibraryUnitStudyScreen] load failed: $e');
+      if (!_loading || !mounted) return;
+      if (needsRows) {
+        // Offline and this unit was never downloaded.
+        setState(() { _loading = false; _offlineNoCache = true; });
+      } else {
+        // Collection / passage content ships in the app — only progress is remote.
+        _apply(pending, const []);
+      }
+    }
+  }
 
+  void _apply(Set<String> completed, List<dynamic> rows) {
+    if (!mounted) return;
     if (widget.passageId != null) {
       ReadingPassage? found;
       for (final p in readingPassages) {
         if (p.id == widget.passageId) { found = p; break; }
       }
-      if (mounted) {
-        setState(() {
-          _passage = found;
-          _completedModes = completed;
-          _loading = false;
-        });
-      }
+      setState(() {
+        _passage = found;
+        _completedModes = completed;
+        _loading = false;
+      });
       return;
     }
 
@@ -128,11 +162,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
       );
       wordItems = day?.words ?? [];
     } else {
-      final wordsRaw = await (widget.isClassWords
-          ? supabase.from('class_words').select('word, translation, definition, examples').eq('unit_id', widget.unitId).order('created_at')
-          : supabase.from('teacher_unit_words').select('word, translation, definition, part_of_speech, pronunciation, definition_uz, examples').eq('unit_id', widget.unitId).order('created_at'));
-
-      wordItems = (wordsRaw as List).map((e) {
+      wordItems = rows.map((e) {
         final m = e as Map<String, dynamic>;
         final exs = (m['examples'] as List?)
             ?.map((ex) => Map<String, String>.from(
@@ -161,36 +191,49 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
       }).toList();
     }
 
-    if (mounted) {
-      setState(() {
-        _wordDay = WordDay(dayNumber: widget.dayNumber ?? 0, topic: widget.unitName, words: wordItems);
-        _completedModes = completed;
-        _loading = false;
-      });
+    setState(() {
+      _wordDay = WordDay(dayNumber: widget.dayNumber ?? 0, topic: widget.unitName, words: wordItems);
+      _completedModes = completed;
+      _loading = false;
+    });
 
-      // First time: go straight to Learn without showing the selection screen
-      if (completed.isEmpty && widget.modes.contains('learn') && wordItems.isNotEmpty) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => _studyMode('learn'));
-      }
+    // First time: go straight to Learn without showing the selection screen.
+    // _apply runs twice (cache, then server) — only auto-open once.
+    if (!_autoLaunched && completed.isEmpty && widget.modes.contains('learn') && wordItems.isNotEmpty) {
+      _autoLaunched = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _studyMode('learn'));
     }
   }
 
   // Progress + XP are recorded server-side via record_class_homework_progress,
   // which re-derives eligibility and word counts and is the only writer
   // class_homework_progress accepts now — a direct client insert/select here
-  // would let a crafted call mark any mode done and fabricate XP.
+  // would let a crafted call mark any mode done and fabricate XP. Offline, the
+  // same call waits in ClassOfflineQueue (the RPC is idempotent, so a replay
+  // can't double-pay) and the mode shows as done right away.
   Future<void> _recordProgress(String mode) async {
     final user = currentUser;
     if (user == null) return;
+    final params = {
+      'p_homework_id': widget.homeworkId,
+      'p_mode': mode,
+      'p_client_word_count': mode == 'read' ? null : _wordDay?.words.length,
+    };
     try {
-      await supabase.rpc('record_class_homework_progress', params: {
-        'p_homework_id': widget.homeworkId,
-        'p_mode': mode,
-        'p_client_word_count': _wordDay?.words.length,
-      });
+      await supabase.rpc('record_class_homework_progress', params: params).timeout(ClassOfflineQueue.timeout);
       if (mounted) setState(() => _completedModes.add(mode));
       WidgetService.refreshFromSupabase();
     } catch (e) {
+      if (ClassOfflineQueue.isOfflineError(e)) {
+        await ClassOfflineQueue.enqueueRpc('record_class_homework_progress', params);
+        if (mounted) {
+          setState(() => _completedModes.add(mode));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(tr('offline_saved_will_sync'))),
+          );
+        }
+        return;
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${tr('could_not_save_progress')}: $e')),
@@ -204,18 +247,7 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
     if (user == null || _markingRead || _completedModes.contains('read')) return;
     setState(() => _markingRead = true);
     try {
-      await supabase.rpc('record_class_homework_progress', params: {
-        'p_homework_id': widget.homeworkId,
-        'p_mode': 'read',
-      });
-      if (mounted) setState(() => _completedModes.add('read'));
-      WidgetService.refreshFromSupabase();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${tr('could_not_save_progress')}: $e')),
-        );
-      }
+      await _recordProgress('read');
     } finally {
       if (mounted) setState(() => _markingRead = false);
     }
@@ -338,8 +370,12 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
         appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0,
           leading: IconButton(icon: Icon(Icons.arrow_back_rounded, color: context.primary),
             onPressed: () => Navigator.pop(context))),
-        body: Center(child: Text(tr('no_words_in_unit_yet'),
-          style: TextStyle(color: context.textMuted, fontSize: 14))),
+        body: Center(child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Text(tr(_offlineNoCache ? 'offline_unit_not_downloaded' : 'no_words_in_unit_yet'),
+            textAlign: TextAlign.center,
+            style: TextStyle(color: context.textMuted, fontSize: 14)),
+        )),
       );
     }
 

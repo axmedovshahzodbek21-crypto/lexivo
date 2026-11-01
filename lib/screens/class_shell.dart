@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import '../services/supabase_service.dart';
@@ -59,6 +60,8 @@ class _ClassShellState extends State<ClassShell> {
   // student or an unauthenticated attacker. RLS is the real backstop on
   // each mutating call, but the UI itself should never be gated on
   // unverified client state either.
+  String _roleKey(String uid) => 'class_role_v1_${uid}_${widget.classId}';
+
   Future<void> _verifyRole() async {
     final user = currentUser;
     if (user == null) {
@@ -81,9 +84,24 @@ class _ClassShellState extends State<ClassShell> {
         authorized = membership != null && status == 'approved';
         pendingApproval = membership != null && status == 'pending';
       }
+      // Remember the server's answer so the class still opens offline (e.g.
+      // homework on the metro). Only ever written from a verified response
+      // above — never from widget.isTeacher — so it can't be forged by a link.
+      final prefs = await SharedPreferences.getInstance();
+      if (authorized) {
+        await prefs.setString(_roleKey(user.id), isTeacher ? 'teacher' : 'student');
+      } else {
+        await prefs.remove(_roleKey(user.id));
+      }
     } catch (_) {
-      authorized = false;
-      verificationError = true;
+      final cachedRole = (await SharedPreferences.getInstance()).getString(_roleKey(user.id));
+      if (cachedRole != null) {
+        isTeacher = cachedRole == 'teacher';
+        authorized = true;
+      } else {
+        authorized = false;
+        verificationError = true;
+      }
     }
     if (!mounted) return;
     setState(() {
@@ -145,8 +163,10 @@ class _ClassShellState extends State<ClassShell> {
     final user = currentUser;
     if (user == null) return;
     // True due count, not getClassDueWords' per-session-capped size.
-    final all = await getClassSRSAll(userId: user.id, classId: widget.classId);
-    if (mounted) setState(() => _dueCount = countDueClassWords(all));
+    try {
+      final all = await getClassSRSAll(userId: user.id, classId: widget.classId);
+      if (mounted) setState(() => _dueCount = countDueClassWords(all));
+    } catch (_) {/* offline — badge just stays hidden */}
   }
 
   List<BottomNavigationBarItem> get _navItems => [

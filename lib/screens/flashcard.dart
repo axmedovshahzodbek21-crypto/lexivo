@@ -624,7 +624,9 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
     }
     if (!widget.noXP) await StorageService.recordStudySession();
     if (!widget.noXP) await StorageService.recordFlashcardSession();
-    await StorageService.markFlashcardCompleted();
+    // Personal achievement flag — "first flashcard" achievement pays personal
+    // XP when the Achievements screen next loads, so class homework must not set it.
+    if (!widget.noXP) await StorageService.markFlashcardCompleted();
     // XP is for finishing the session, not for a clean pass — Quiz and
     // Learn both award XP unconditionally on completion regardless of
     // wrong answers, but this used to forfeit the *entire* session's XP

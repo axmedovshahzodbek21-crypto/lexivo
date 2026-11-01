@@ -4,6 +4,7 @@ import '../app_theme.dart';
 import '../l10n.dart';
 import '../services/supabase_service.dart';
 import '../services/class_srs_service.dart';
+import '../services/class_offline.dart';
 import 'class_home_screen.dart';
 import 'class_words_screen.dart';
 import 'class_review_screen.dart';
@@ -60,7 +61,7 @@ class _ClassShellState extends State<ClassShell> {
   // student or an unauthenticated attacker. RLS is the real backstop on
   // each mutating call, but the UI itself should never be gated on
   // unverified client state either.
-  String _roleKey(String uid) => 'class_role_v1_${uid}_${widget.classId}';
+  String _roleKey(String uid) => classRoleKey(uid, widget.classId);
 
   Future<void> _verifyRole() async {
     final user = currentUser;

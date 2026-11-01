@@ -139,6 +139,10 @@ class ClassOfflineQueue {
   }
 }
 
+/// SharedPreferences key for the role ClassShell last verified with the
+/// server ('teacher' / 'student'), used to open the class offline.
+String classRoleKey(String uid, String classId) => 'class_role_v1_${uid}_$classId';
+
 /// Last-seen word rows (raw Supabase rows) and completed modes for one
 /// homework, so the study screen can open with no connection.
 class HomeworkCache {

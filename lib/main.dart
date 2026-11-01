@@ -14,6 +14,7 @@ import 'data/storage_service.dart';
 import 'app_observers.dart';
 import 'l10n.dart';
 import 'services/class_offline.dart';
+import 'screens/joined_classes_screen.dart';
 import 'screens/break_screen.dart';
 
 final ValueNotifier<double> textScaleNotifier = ValueNotifier(1.0);
@@ -245,6 +246,9 @@ class _SplashRouterState extends State<SplashRouter> {
       await SyncService.pullAll();
       // Sends class homework done offline (and keeps retrying every minute).
       ClassOfflineQueue.start();
+      // Downloads every class + its homework in the background so it all
+      // opens later with no internet, without the student visiting it first.
+      prefetchClassesForOffline();
       if (!mounted) return;
       // Both write to the home-screen widget's saved data and both end
       // with HomeWidget.updateWidget() (which re-renders from whatever is

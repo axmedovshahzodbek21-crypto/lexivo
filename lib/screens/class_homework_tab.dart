@@ -140,6 +140,286 @@ class _HwCache {
   const _HwCache({required this.folders, required this.cwUnits, required this.collHwItems, required this.passageItems, required this.completedModes, required this.totalAssigned, required this.totalDone});
 }
 
+// The homework list for one class as this student sees it — shared by the
+// tab and the app-start offline download (prefetchClassHomework).
+// serverDone is what the server has recorded; the returned cache's
+// completedModes also counts modes finished offline that haven't synced.
+Future<(_HwCache, Map<String, Set<String>>)> _fetchHomework(String classId, String? userId) async {
+  // ── Phase 1: fire independent queries in parallel ───────────────────
+  final phase1 = await Future.wait([
+    supabase
+        .from('class_library_assignments')
+        .select('id, folder_id, teacher_folders(id, name)')
+        .eq('class_id', classId),
+    supabase
+        .from('class_word_units')
+        .select('id, name, class_words(count)')
+        .eq('class_id', classId)
+        .order('created_at'),
+    supabase
+        .from('class_homework')
+        .select('id, unit_id, class_unit_id, collection_name, day_number, passage_id, modes, due_date, student_ids')
+        .eq('class_id', classId),
+  ]);
+
+  final cwUnitsRaw = phase1[1] as List;
+  final hwRaw = phase1[2] as List;
+
+  // teacher_folders is a joined row that can come back null (e.g. the
+  // referenced folder was deleted but this assignment row wasn't cleaned
+  // up) — skip that one malformed row instead of crashing the whole
+  // batch and blanking the tab for every other valid assignment.
+  final assignsRaw = (phase1[0] as List)
+      .where((a) => (a as Map)['teacher_folders'] is Map)
+      .toList();
+
+  final folderIds = assignsRaw
+      .map((a) => ((a as Map)['teacher_folders'] as Map)['id'] as String)
+      .toList();
+
+  final applicableHw = hwRaw.where((h) {
+    final sids = (h as Map)['student_ids'] as List?;
+    return sids == null || (userId != null && sids.contains(userId));
+  }).toList();
+
+  // ── Phase 2: fire dependent queries in parallel ─────────────────────
+  final hwIds = applicableHw.map((h) => (h as Map)['id'] as String).toList();
+  final phase2 = await Future.wait([
+    folderIds.isNotEmpty
+        ? supabase
+            .from('teacher_units')
+            .select('id, folder_id, name, teacher_unit_words(count)')
+            .inFilter('folder_id', folderIds)
+            .order('created_at')
+        : Future.value(<dynamic>[]),
+    applicableHw.isNotEmpty && userId != null
+        ? supabase
+            .from('class_homework_progress')
+            .select('homework_id, mode')
+            .eq('student_id', userId)
+            .inFilter('homework_id', hwIds)
+        : Future.value(<dynamic>[]),
+  ]);
+
+  final unitsRaw = phase2[0];
+  final progRaw = phase2[1];
+
+  // ── Build progress map ──────────────────────────────────────────────
+  final serverDone = <String, Set<String>>{};
+  for (final p in progRaw) {
+    final hwId = (p as Map)['homework_id'] as String;
+    final mode = p['mode'] as String;
+    serverDone.putIfAbsent(hwId, () => {}).add(mode);
+  }
+  final completedModes = serverDone.map((k, v) => MapEntry(k, Set<String>.from(v)));
+  (await ClassOfflineQueue.pendingHomeworkModes())
+      .forEach((hw, modes) => completedModes.putIfAbsent(hw, () => {}).addAll(modes));
+
+  // ── 6. Build lookup maps ────────────────────────────────────────────
+  final hwByLibUnit = <String, Map>{};
+  final hwByCWUnit = <String, Map>{};
+  final collHwRows = <Map>[];
+  final passageHwRows = <Map>[];
+  for (final h in applicableHw) {
+    final uid = (h as Map)['unit_id'] as String?;
+    final cwid = h['class_unit_id'] as String?;
+    final collName = h['collection_name'] as String?;
+    final passageId = h['passage_id'] as int?;
+    if (uid != null) { hwByLibUnit[uid] = h; }
+    else if (cwid != null) { hwByCWUnit[cwid] = h; }
+    else if (collName != null) { collHwRows.add(h); }
+    else if (passageId != null) { passageHwRows.add(h); }
+    else {
+      // None of the four "kind" columns is set — this row can't be
+      // classified into any bucket below and previously just vanished
+      // from the UI with no trace, making a genuinely corrupt/orphaned
+      // class_homework row indistinguishable from "everything's fine."
+      debugPrint('[ClassHomeworkTab] homework row ${h['id']} has no unit_id/class_unit_id/collection_name/passage_id — skipping');
+    }
+  }
+
+  // ── 7. Build library folder list ────────────────────────────────────
+  final folders = <_AssignedFolder>[];
+  for (final a in assignsRaw) {
+    final folder = ((a as Map)['teacher_folders']) as Map;
+    final folderId = folder['id'] as String;
+    final units = unitsRaw
+        .where((u) => (u as Map)['folder_id'] == folderId)
+        .map((u) {
+          final um = u as Map;
+          final uid = um['id'] as String;
+          final hw = hwByLibUnit[uid];
+          final countList = um['teacher_unit_words'] as List?;
+          return HomeworkUnit(
+            id: uid, name: um['name'] as String,
+            wordCount: countList?.isNotEmpty == true ? (countList![0] as Map)['count'] as int? ?? 0 : 0,
+            homeworkId: hw?['id'] as String?,
+            hwModes: hw != null ? (hw['modes'] as List?)?.map((x) => x as String).toList() ?? ['learn', 'flashcard', 'quiz'] : null,
+            hwDue: hw?['due_date'] as String?,
+          );
+        }).toList();
+    folders.add(_AssignedFolder(id: folderId, assignmentId: a['id'] as String, name: folder['name'] as String, units: units));
+  }
+
+  // ── 8. Build class word unit list ───────────────────────────────────
+  final cwUnits = cwUnitsRaw.map((u) {
+    final um = u as Map;
+    final uid = um['id'] as String;
+    final hw = hwByCWUnit[uid];
+    final countList = um['class_words'] as List?;
+    return HomeworkUnit(
+      id: uid, name: um['name'] as String,
+      wordCount: countList?.isNotEmpty == true ? (countList![0] as Map)['count'] as int? ?? 0 : 0,
+      homeworkId: hw?['id'] as String?,
+      hwModes: hw != null ? (hw['modes'] as List?)?.map((x) => x as String).toList() ?? ['learn', 'flashcard', 'quiz'] : null,
+      hwDue: hw?['due_date'] as String?,
+    );
+  }).toList();
+
+  // ── 9. Build collection HW items ────────────────────────────────────
+  // Each row wrapped in its own try/catch — an unguarded hard cast
+  // (e.g. a malformed day_number) previously threw straight out of this
+  // loop into the outer catch, silently aborting the *entire* load
+  // (every folder, unit, and homework item) over one bad row, which is
+  // inconsistent with the defensive teacher_folders filtering just
+  // above (phase 1) that skips one bad row instead of failing the batch.
+  final collHwItems = <_CollHW>[];
+  for (final h in collHwRows) {
+    try {
+      final name = h['collection_name'] as String;
+      final dayNum = (h['day_number'] as num).toInt();
+      final col = collectionByName(name);
+      // An unrecognized/renamed collection name silently fell back to a
+      // placeholder "Day N" topic with 0 words with no trace — logging
+      // it at least makes a stale/renamed collection reference visible
+      // instead of just quietly showing a blank-looking homework card.
+      if (col == null) {
+        debugPrint('[ClassHomeworkTab] homework ${h['id']} references unknown collection "$name"');
+      }
+      final day = col?.days.firstWhere((d) => d.dayNumber == dayNum, orElse: () => WordDay(dayNumber: dayNum, topic: '${_ltr('day_cap')} $dayNum', words: []));
+      collHwItems.add(_CollHW(
+        homeworkId: h['id'] as String,
+        collectionName: name,
+        dayNumber: dayNum,
+        topic: day?.topic ?? '${_ltr('day_cap')} $dayNum',
+        wordCount: day?.words.length ?? 0,
+        hwModes: List<String>.from(h['modes'] as List? ?? []),
+        hwDue: h['due_date'] as String?,
+      ));
+    } catch (e) {
+      debugPrint('[ClassHomeworkTab] failed to build collection homework item ${h['id']}: $e');
+    }
+  }
+
+  // ── 9b. Build reading passage HW items ──────────────────────────────
+  final passageItems = <_PassageHW>[];
+  for (final h in passageHwRows) {
+    try {
+      final passageId = h['passage_id'] as int;
+      ReadingPassage? found;
+      for (final p in readingPassages) { if (p.id == passageId) { found = p; break; } }
+      passageItems.add(_PassageHW(
+        homeworkId: h['id'] as String,
+        passageId: passageId,
+        title: found?.title ?? tr('reading_passage_fallback'),
+        topic: found?.topic ?? '',
+        hwModes: List<String>.from(h['modes'] as List? ?? ['read']),
+        hwDue: h['due_date'] as String?,
+      ));
+    } catch (e) {
+      debugPrint('[ClassHomeworkTab] failed to build passage homework item ${h['id']}: $e');
+    }
+  }
+
+  // ── 10. Totals ──────────────────────────────────────────────────────
+  final (assigned, done) = _countTotals(folders, cwUnits, collHwItems, passageItems, completedModes);
+
+  return (
+    _HwCache(
+      folders: folders, cwUnits: cwUnits, collHwItems: collHwItems, passageItems: passageItems,
+      completedModes: completedModes, totalAssigned: assigned, totalDone: done,
+    ),
+    serverDone,
+  );
+}
+
+const _hwPrefsPrefix = 'class_hw_v1_';
+
+(int, int) _countTotals(List<_AssignedFolder> folders, List<HomeworkUnit> cwUnits,
+    List<_CollHW> collHwItems, List<_PassageHW> passageItems, Map<String, Set<String>> completedModes) {
+  int assigned = 0, done = 0;
+  void count(String hwId, List<String> modes) {
+    assigned++;
+    if (isHomeworkFullyDone(modes, completedModes[hwId] ?? {})) done++;
+  }
+  for (final f in folders) {
+    for (final u in f.units) {
+      if (u.hasHomework) count(u.homeworkId!, u.hwModes ?? []);
+    }
+  }
+  for (final u in cwUnits) {
+    if (u.hasHomework) count(u.homeworkId!, u.hwModes ?? []);
+  }
+  for (final h in collHwItems) { count(h.homeworkId, h.hwModes); }
+  for (final h in passageItems) { count(h.homeworkId, h.hwModes); }
+  return (assigned, done);
+}
+
+Future<void> _saveHwPrefs(String key, _HwCache c) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('$_hwPrefsPrefix$key', jsonEncode({
+      'folders': c.folders.map((f) => f.toJson()).toList(),
+      'cwUnits': c.cwUnits.map((u) => u.toJson()).toList(),
+      'collHwItems': c.collHwItems.map((h) => h.toJson()).toList(),
+      'passageItems': c.passageItems.map((h) => h.toJson()).toList(),
+      'completedModes': c.completedModes.map((k, v) => MapEntry(k, v.toList())),
+      'totalAssigned': c.totalAssigned,
+      'totalDone': c.totalDone,
+    }));
+  } catch (_) {}
+}
+
+// Downloads every unfinished homework unit's words in the background while
+// online, so LibraryUnitStudyScreen can open it later with no connection.
+// Units already downloaded are skipped — the study screen refreshes its
+// own copy whenever it's opened online.
+Future<void> _prefetchUnitWords(_HwCache c, Map<String, Set<String>> serverDone) async {
+  for (final h in c.collHwItems) { await HomeworkCache.save(h.homeworkId, done: serverDone[h.homeworkId] ?? {}); }
+  for (final h in c.passageItems) { await HomeworkCache.save(h.homeworkId, done: serverDone[h.homeworkId] ?? {}); }
+  final units = [
+    for (final f in c.folders) for (final u in f.units) if (u.hasHomework) (u, false),
+    for (final u in c.cwUnits) if (u.hasHomework) (u, true),
+  ];
+  for (final (u, isClassWords) in units) {
+    final hwId = u.homeworkId!;
+    final done = serverDone[hwId] ?? <String>{};
+    final cached = await HomeworkCache.load(hwId);
+    if (cached?.rows != null || isHomeworkFullyDone(u.hwModes ?? [], done)) {
+      await HomeworkCache.save(hwId, done: done);
+      continue;
+    }
+    try {
+      final rows = await HomeworkCache.fetchRows(unitId: u.id, isClassWords: isClassWords)
+          .timeout(ClassOfflineQueue.timeout);
+      await HomeworkCache.save(hwId, rows: rows, done: done);
+    } catch (_) {
+      return; // connection dropped — try again on the next load
+    }
+  }
+}
+
+/// App-start offline download for one class (see prefetchClassesForOffline):
+/// saves the homework list where ClassHomeworkTab reads it on a cold start,
+/// then the unfinished units' words for LibraryUnitStudyScreen.
+Future<void> prefetchClassHomework(String classId) async {
+  final uid = currentUser?.id;
+  if (uid == null) return;
+  final (cache, serverDone) = await _fetchHomework(classId, uid).timeout(const Duration(seconds: 20));
+  await _saveHwPrefs('${uid}_$classId', cache);
+  await _prefetchUnitWords(cache, serverDone);
+}
+
 // ── Widget ─────────────────────────────────────────────────────────────────
 
 class ClassHomeworkTab extends StatefulWidget {
@@ -154,7 +434,6 @@ class ClassHomeworkTab extends StatefulWidget {
 
 class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   static final _memCache = <String, _HwCache>{};
-  static const _prefsPrefix = 'class_hw_v1_';
   // Unbounded otherwise — one entry per (user, class) ever visited, for the
   // app's entire lifetime. Evict the oldest (Map preserves insertion order)
   // once over the cap instead of growing forever.
@@ -219,56 +498,6 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
     });
   }
 
-  static (int, int) _countTotals(List<_AssignedFolder> folders, List<HomeworkUnit> cwUnits,
-      List<_CollHW> collHwItems, List<_PassageHW> passageItems, Map<String, Set<String>> completedModes) {
-    int assigned = 0, done = 0;
-    void count(String hwId, List<String> modes) {
-      assigned++;
-      if (isHomeworkFullyDone(modes, completedModes[hwId] ?? {})) done++;
-    }
-    for (final f in folders) {
-      for (final u in f.units) {
-        if (u.hasHomework) count(u.homeworkId!, u.hwModes ?? []);
-      }
-    }
-    for (final u in cwUnits) {
-      if (u.hasHomework) count(u.homeworkId!, u.hwModes ?? []);
-    }
-    for (final h in collHwItems) { count(h.homeworkId, h.hwModes); }
-    for (final h in passageItems) { count(h.homeworkId, h.hwModes); }
-    return (assigned, done);
-  }
-
-  // Downloads every unfinished homework unit's words in the background while
-  // online, so LibraryUnitStudyScreen can open it later with no connection.
-  // Units already downloaded are skipped — the study screen refreshes its
-  // own copy whenever it's opened online.
-  Future<void> _prefetchForOffline(List<_AssignedFolder> folders, List<HomeworkUnit> cwUnits,
-      List<_CollHW> collHwItems, List<_PassageHW> passageItems, Map<String, Set<String>> serverDone) async {
-    for (final h in collHwItems) { await HomeworkCache.save(h.homeworkId, done: serverDone[h.homeworkId] ?? {}); }
-    for (final h in passageItems) { await HomeworkCache.save(h.homeworkId, done: serverDone[h.homeworkId] ?? {}); }
-    final units = [
-      for (final f in folders) for (final u in f.units) if (u.hasHomework) (u, false),
-      for (final u in cwUnits) if (u.hasHomework) (u, true),
-    ];
-    for (final (u, isClassWords) in units) {
-      final hwId = u.homeworkId!;
-      final done = serverDone[hwId] ?? <String>{};
-      final cached = await HomeworkCache.load(hwId);
-      if (cached?.rows != null || isHomeworkFullyDone(u.hwModes ?? [], done)) {
-        await HomeworkCache.save(hwId, done: done);
-        continue;
-      }
-      try {
-        final rows = await HomeworkCache.fetchRows(unitId: u.id, isClassWords: isClassWords)
-            .timeout(ClassOfflineQueue.timeout);
-        await HomeworkCache.save(hwId, rows: rows, done: done);
-      } catch (_) {
-        return; // connection dropped — try again on the next load
-      }
-    }
-  }
-
   void _applyCache(_HwCache c) {
     // showAll isn't part of the constructor (or the JSON shape below) — it
     // has to be carried over explicitly, or every remount that hydrates
@@ -290,7 +519,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
     if (key == null) { _load(); return; }
     try {
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString('$_prefsPrefix$key');
+      final raw = prefs.getString('$_hwPrefsPrefix$key');
       if (raw != null) {
         final m = jsonDecode(raw) as Map<String, dynamic>;
         final cache = _HwCache(
@@ -312,23 +541,6 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
     _load();
   }
 
-  Future<void> _saveToPrefs(_HwCache c) async {
-    final key = _cacheKey;
-    if (key == null) return;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('$_prefsPrefix$key', jsonEncode({
-        'folders': c.folders.map((f) => f.toJson()).toList(),
-        'cwUnits': c.cwUnits.map((u) => u.toJson()).toList(),
-        'collHwItems': c.collHwItems.map((h) => h.toJson()).toList(),
-        'passageItems': c.passageItems.map((h) => h.toJson()).toList(),
-        'completedModes': c.completedModes.map((k, v) => MapEntry(k, v.toList())),
-        'totalAssigned': c.totalAssigned,
-        'totalDone': c.totalDone,
-      }));
-    } catch (_) {}
-  }
-
   Future<void> _load({bool background = false}) async {
     // Omitting _passageItems here meant a class with only reading-passage
     // homework (the other three lists legitimately always empty for it)
@@ -338,196 +550,8 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
     final isFirstLoad = _folders.isEmpty && _cwUnits.isEmpty && _collHwItems.isEmpty && _passageItems.isEmpty;
     if (!background && isFirstLoad && mounted) setState(() => _loading = true);
     try {
-      final userId = currentUser?.id;
-
-      // ── Phase 1: fire independent queries in parallel ───────────────────
-      final phase1 = await Future.wait([
-        supabase
-            .from('class_library_assignments')
-            .select('id, folder_id, teacher_folders(id, name)')
-            .eq('class_id', widget.classId),
-        supabase
-            .from('class_word_units')
-            .select('id, name, class_words(count)')
-            .eq('class_id', widget.classId)
-            .order('created_at'),
-        supabase
-            .from('class_homework')
-            .select('id, unit_id, class_unit_id, collection_name, day_number, passage_id, modes, due_date, student_ids')
-            .eq('class_id', widget.classId),
-      ]);
-
-      final cwUnitsRaw = phase1[1] as List;
-      final hwRaw = phase1[2] as List;
-
-      // teacher_folders is a joined row that can come back null (e.g. the
-      // referenced folder was deleted but this assignment row wasn't cleaned
-      // up) — skip that one malformed row instead of crashing the whole
-      // batch and blanking the tab for every other valid assignment.
-      final assignsRaw = (phase1[0] as List)
-          .where((a) => (a as Map)['teacher_folders'] is Map)
-          .toList();
-
-      final folderIds = assignsRaw
-          .map((a) => ((a as Map)['teacher_folders'] as Map)['id'] as String)
-          .toList();
-
-      final applicableHw = hwRaw.where((h) {
-        final sids = (h as Map)['student_ids'] as List?;
-        return sids == null || (userId != null && sids.contains(userId));
-      }).toList();
-
-      // ── Phase 2: fire dependent queries in parallel ─────────────────────
-      final hwIds = applicableHw.map((h) => (h as Map)['id'] as String).toList();
-      final phase2 = await Future.wait([
-        folderIds.isNotEmpty
-            ? supabase
-                .from('teacher_units')
-                .select('id, folder_id, name, teacher_unit_words(count)')
-                .inFilter('folder_id', folderIds)
-                .order('created_at')
-            : Future.value(<dynamic>[]),
-        applicableHw.isNotEmpty && userId != null
-            ? supabase
-                .from('class_homework_progress')
-                .select('homework_id, mode')
-                .eq('student_id', userId)
-                .inFilter('homework_id', hwIds)
-            : Future.value(<dynamic>[]),
-      ]);
-
-      final unitsRaw = phase2[0];
-      final progRaw = phase2[1];
-
-      // ── Build progress map ──────────────────────────────────────────────
-      final serverDone = <String, Set<String>>{};
-      for (final p in progRaw) {
-        final hwId = (p as Map)['homework_id'] as String;
-        final mode = p['mode'] as String;
-        serverDone.putIfAbsent(hwId, () => {}).add(mode);
-      }
-      final completedModes = serverDone.map((k, v) => MapEntry(k, Set<String>.from(v)));
-      (await ClassOfflineQueue.pendingHomeworkModes())
-          .forEach((hw, modes) => completedModes.putIfAbsent(hw, () => {}).addAll(modes));
-
-      // ── 6. Build lookup maps ────────────────────────────────────────────
-      final hwByLibUnit = <String, Map>{};
-      final hwByCWUnit = <String, Map>{};
-      final collHwRows = <Map>[];
-      final passageHwRows = <Map>[];
-      for (final h in applicableHw) {
-        final uid = (h as Map)['unit_id'] as String?;
-        final cwid = h['class_unit_id'] as String?;
-        final collName = h['collection_name'] as String?;
-        final passageId = h['passage_id'] as int?;
-        if (uid != null) { hwByLibUnit[uid] = h; }
-        else if (cwid != null) { hwByCWUnit[cwid] = h; }
-        else if (collName != null) { collHwRows.add(h); }
-        else if (passageId != null) { passageHwRows.add(h); }
-        else {
-          // None of the four "kind" columns is set — this row can't be
-          // classified into any bucket below and previously just vanished
-          // from the UI with no trace, making a genuinely corrupt/orphaned
-          // class_homework row indistinguishable from "everything's fine."
-          debugPrint('[ClassHomeworkTab] homework row ${h['id']} has no unit_id/class_unit_id/collection_name/passage_id — skipping');
-        }
-      }
-
-      // ── 7. Build library folder list ────────────────────────────────────
-      final folders = <_AssignedFolder>[];
-      for (final a in assignsRaw) {
-        final folder = ((a as Map)['teacher_folders']) as Map;
-        final folderId = folder['id'] as String;
-        final units = unitsRaw
-            .where((u) => (u as Map)['folder_id'] == folderId)
-            .map((u) {
-              final um = u as Map;
-              final uid = um['id'] as String;
-              final hw = hwByLibUnit[uid];
-              final countList = um['teacher_unit_words'] as List?;
-              return HomeworkUnit(
-                id: uid, name: um['name'] as String,
-                wordCount: countList?.isNotEmpty == true ? (countList![0] as Map)['count'] as int? ?? 0 : 0,
-                homeworkId: hw?['id'] as String?,
-                hwModes: hw != null ? (hw['modes'] as List?)?.map((x) => x as String).toList() ?? ['learn', 'flashcard', 'quiz'] : null,
-                hwDue: hw?['due_date'] as String?,
-              );
-            }).toList();
-        folders.add(_AssignedFolder(id: folderId, assignmentId: a['id'] as String, name: folder['name'] as String, units: units));
-      }
-
-      // ── 8. Build class word unit list ───────────────────────────────────
-      final cwUnits = cwUnitsRaw.map((u) {
-        final um = u as Map;
-        final uid = um['id'] as String;
-        final hw = hwByCWUnit[uid];
-        final countList = um['class_words'] as List?;
-        return HomeworkUnit(
-          id: uid, name: um['name'] as String,
-          wordCount: countList?.isNotEmpty == true ? (countList![0] as Map)['count'] as int? ?? 0 : 0,
-          homeworkId: hw?['id'] as String?,
-          hwModes: hw != null ? (hw['modes'] as List?)?.map((x) => x as String).toList() ?? ['learn', 'flashcard', 'quiz'] : null,
-          hwDue: hw?['due_date'] as String?,
-        );
-      }).toList();
-
-      // ── 9. Build collection HW items ────────────────────────────────────
-      // Each row wrapped in its own try/catch — an unguarded hard cast
-      // (e.g. a malformed day_number) previously threw straight out of this
-      // loop into the outer catch, silently aborting the *entire* load
-      // (every folder, unit, and homework item) over one bad row, which is
-      // inconsistent with the defensive teacher_folders filtering just
-      // above (phase 1) that skips one bad row instead of failing the batch.
-      final collHwItems = <_CollHW>[];
-      for (final h in collHwRows) {
-        try {
-          final name = h['collection_name'] as String;
-          final dayNum = (h['day_number'] as num).toInt();
-          final col = collectionByName(name);
-          // An unrecognized/renamed collection name silently fell back to a
-          // placeholder "Day N" topic with 0 words with no trace — logging
-          // it at least makes a stale/renamed collection reference visible
-          // instead of just quietly showing a blank-looking homework card.
-          if (col == null) {
-            debugPrint('[ClassHomeworkTab] homework ${h['id']} references unknown collection "$name"');
-          }
-          final day = col?.days.firstWhere((d) => d.dayNumber == dayNum, orElse: () => WordDay(dayNumber: dayNum, topic: '${_ltr('day_cap')} $dayNum', words: []));
-          collHwItems.add(_CollHW(
-            homeworkId: h['id'] as String,
-            collectionName: name,
-            dayNumber: dayNum,
-            topic: day?.topic ?? '${_ltr('day_cap')} $dayNum',
-            wordCount: day?.words.length ?? 0,
-            hwModes: List<String>.from(h['modes'] as List? ?? []),
-            hwDue: h['due_date'] as String?,
-          ));
-        } catch (e) {
-          debugPrint('[ClassHomeworkTab] failed to build collection homework item ${h['id']}: $e');
-        }
-      }
-
-      // ── 9b. Build reading passage HW items ──────────────────────────────
-      final passageItems = <_PassageHW>[];
-      for (final h in passageHwRows) {
-        try {
-          final passageId = h['passage_id'] as int;
-          ReadingPassage? found;
-          for (final p in readingPassages) { if (p.id == passageId) { found = p; break; } }
-          passageItems.add(_PassageHW(
-            homeworkId: h['id'] as String,
-            passageId: passageId,
-            title: found?.title ?? tr('reading_passage_fallback'),
-            topic: found?.topic ?? '',
-            hwModes: List<String>.from(h['modes'] as List? ?? ['read']),
-            hwDue: h['due_date'] as String?,
-          ));
-        } catch (e) {
-          debugPrint('[ClassHomeworkTab] failed to build passage homework item ${h['id']}: $e');
-        }
-      }
-
-      // ── 10. Totals ──────────────────────────────────────────────────────
-      final (assigned, done) = _countTotals(folders, cwUnits, collHwItems, passageItems, completedModes);
+      final (fetched, serverDone) = await _fetchHomework(widget.classId, currentUser?.id);
+      final folders = fetched.folders;
 
       // Carry over each folder's "Show all" expansion state by id — folders
       // is a fresh list of _AssignedFolder objects built from this load, so
@@ -540,23 +564,21 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
 
       if (mounted) { setState(() {
         _folders = folders;
-        _cwUnits = cwUnits;
-        _collHwItems = collHwItems;
-        _passageItems = passageItems;
-        _completedModes = completedModes;
-        _totalAssigned = assigned;
-        _totalDone = done;
+        _cwUnits = fetched.cwUnits;
+        _collHwItems = fetched.collHwItems;
+        _passageItems = fetched.passageItems;
+        _completedModes = fetched.completedModes;
+        _totalAssigned = fetched.totalAssigned;
+        _totalDone = fetched.totalDone;
         _loading = false;
         _loadError = false;
       }); }
 
-      final cache = _HwCache(
-        folders: folders, cwUnits: cwUnits, collHwItems: collHwItems, passageItems: passageItems,
-        completedModes: completedModes, totalAssigned: assigned, totalDone: done,
-      );
-      if (_cacheKey != null) _cachePut(_cacheKey!, cache);
-      _saveToPrefs(cache);
-      if (!widget.isTeacher) _prefetchForOffline(folders, cwUnits, collHwItems, passageItems, serverDone);
+      if (_cacheKey != null) {
+        _cachePut(_cacheKey!, fetched);
+        _saveHwPrefs(_cacheKey!, fetched);
+      }
+      if (!widget.isTeacher) _prefetchUnitWords(fetched, serverDone);
     } catch (e) {
       // _folders/_cwUnits/etc. are only ever reassigned above on a full
       // success, so on error they still hold whatever was showing before

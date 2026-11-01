@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/supabase_service.dart';
 import '../services/widget_service.dart';
+import '../services/class_offline.dart';
+import 'class_homework_tab.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import 'class_models.dart';
@@ -80,6 +82,88 @@ Future<void> _saveSnapshot(String uid, _Snapshot s) async {
   } catch (_) {}
 }
 
+Future<_Snapshot> _fetchSnapshot(String uid) async {
+  final memberships = await supabase.from('class_members').select('class_id, status').eq('student_id', uid);
+  List<ClassRow> joinedClasses = [];
+  final teacherNames = <String, String>{};
+  final notes = <String, List<ClassNote>>{};
+  final targets = <String, List<ClassTarget>>{};
+  final announcements = <String, List<ClassAnnouncement>>{};
+  final membershipStatus = <String, String>{
+    for (final m in (memberships as List))
+      (m as Map)['class_id'] as String: (m['status'] as String?) ?? 'approved',
+  };
+  if (memberships.isNotEmpty) {
+    final classIds = memberships.map((m) => (m as Map)['class_id'] as String).toList();
+    final classData = await supabase.from('classes').select('*').inFilter('id', classIds);
+    joinedClasses = (classData as List)
+        .map((c) => ClassRow.fromMap(Map<String, dynamic>.from(c as Map)))
+        .where((c) => c.teacherId != uid)
+        .toList();
+
+    if (joinedClasses.isNotEmpty) {
+      final joinedIds = joinedClasses.map((c) => c.id).toList();
+      final teacherIds = joinedClasses.map((c) => c.teacherId).toSet().toList();
+
+      final parallel = await Future.wait([
+        supabase.from('profiles').select('id, name').inFilter('id', teacherIds),
+        supabase.from('class_notes').select('id, class_id, message, created_at, read_at').eq('student_id', uid).order('created_at', ascending: false),
+        supabase.from('class_targets').select('id, class_id, title, due_date, completed_at, created_at').eq('student_id', uid).order('created_at', ascending: false),
+        supabase.from('class_announcements').select('id, class_id, message, created_at').inFilter('class_id', joinedIds).order('created_at', ascending: false),
+      ]);
+
+      for (final p in parallel[0] as List) {
+        final pm = Map<String, dynamic>.from(p as Map);
+        teacherNames[pm['id'] as String] = pm['name'] as String? ?? tr('teacher');
+      }
+      for (final n in parallel[1] as List) {
+        final note = ClassNote.fromMap(Map<String, dynamic>.from(n as Map));
+        notes[note.classId] = [...(notes[note.classId] ?? []), note];
+      }
+      for (final t in parallel[2] as List) {
+        final target = ClassTarget.fromMap(Map<String, dynamic>.from(t as Map));
+        targets[target.classId] = [...(targets[target.classId] ?? []), target];
+      }
+      for (final a in parallel[3] as List) {
+        final ann = ClassAnnouncement.fromMap(Map<String, dynamic>.from(a as Map));
+        announcements[ann.classId] = [...(announcements[ann.classId] ?? []), ann];
+      }
+    }
+  }
+  return (
+    joinedClasses: joinedClasses, teacherNames: teacherNames,
+    classNotes: notes, classTargets: targets,
+    classAnnouncements: announcements,
+    membershipStatus: membershipStatus,
+  );
+}
+
+/// Run once per app start (main.dart): downloads everything a student needs
+/// to open their classes and do homework later with no internet — the class
+/// list, each approved class's role (so ClassShell opens offline), and each
+/// class's homework list + unfinished units' words. Silent on any failure;
+/// whatever was saved before stays.
+Future<void> prefetchClassesForOffline() async {
+  final uid = currentUser?.id;
+  if (uid == null) return;
+  try {
+    final snapshot = await _fetchSnapshot(uid).timeout(const Duration(seconds: 20));
+    _cachePut(uid, snapshot);
+    await _saveSnapshot(uid, snapshot);
+    final prefs = await SharedPreferences.getInstance();
+    for (final c in snapshot.joinedClasses) {
+      if (snapshot.membershipStatus[c.id] != 'approved') {
+        await prefs.remove(classRoleKey(uid, c.id));
+        continue;
+      }
+      await prefs.setString(classRoleKey(uid, c.id), 'student');
+      await prefetchClassHomework(c.id);
+    }
+  } catch (e) {
+    debugPrint('[prefetchClassesForOffline] stopped: $e');
+  }
+}
+
 Future<_Snapshot?> _loadSnapshot(String uid) async {
   try {
     final raw = (await SharedPreferences.getInstance()).getString('$_prefsPrefix$uid');
@@ -150,83 +234,36 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
     }
 
     try {
-      final memberships = await supabase.from('class_members').select('class_id, status').eq('student_id', user.id);
-      List<ClassRow> joinedClasses = [];
-      var teacherNames = <String, String>{};
-      var notes = <String, List<ClassNote>>{};
-      var targets = <String, List<ClassTarget>>{};
-      var announcements = <String, List<ClassAnnouncement>>{};
-      var membershipStatus = <String, String>{
-        for (final m in (memberships as List))
-          (m as Map)['class_id'] as String: (m['status'] as String?) ?? 'approved',
-      };
-      if (memberships.isNotEmpty) {
-        final classIds = memberships.map((m) => (m as Map)['class_id'] as String).toList();
-        final classData = await supabase.from('classes').select('*').inFilter('id', classIds);
-        joinedClasses = (classData as List)
-            .map((c) => ClassRow.fromMap(Map<String, dynamic>.from(c as Map)))
-            .where((c) => c.teacherId != user.id)
-            .toList();
+      final snapshot = await _fetchSnapshot(user.id);
 
-        if (joinedClasses.isNotEmpty) {
-          final joinedIds = joinedClasses.map((c) => c.id).toList();
-          final teacherIds = joinedClasses.map((c) => c.teacherId).toSet().toList();
-
-          final parallel = await Future.wait([
-            supabase.from('profiles').select('id, name').inFilter('id', teacherIds),
-            supabase.from('class_notes').select('id, class_id, message, created_at, read_at').eq('student_id', user.id).order('created_at', ascending: false),
-            supabase.from('class_targets').select('id, class_id, title, due_date, completed_at, created_at').eq('student_id', user.id).order('created_at', ascending: false),
-            supabase.from('class_announcements').select('id, class_id, message, created_at').inFilter('class_id', joinedIds).order('created_at', ascending: false),
-          ]);
-
-          for (final p in parallel[0] as List) {
-            final pm = Map<String, dynamic>.from(p as Map);
-            teacherNames[pm['id'] as String] = pm['name'] as String? ?? tr('teacher');
-          }
-
-          final unreadByClass = <String, List<String>>{};
-          for (final n in parallel[1] as List) {
-            final note = ClassNote.fromMap(Map<String, dynamic>.from(n as Map));
-            notes[note.classId] = [...(notes[note.classId] ?? []), note];
-            if (note.readAt == null) (unreadByClass[note.classId] ??= []).add(note.id);
-          }
-          // Mark read per class via the RPC (a plain student UPDATE is
-          // refused — see migration 20261019000002); the old update is the
-          // fallback.
-          for (final entry in unreadByClass.entries) {
-            supabase.rpc('mark_class_notes_read', params: {'p_class_id': entry.key})
-                .then((_) {})
-                .catchError((e) {
-                  debugPrint('[JoinedClassesScreen] mark_class_notes_read failed: $e');
-                  return supabase.from('class_notes')
-                      .update({'read_at': DateTime.now().toUtc().toIso8601String()})
-                      .inFilter('id', entry.value)
-                      .then((_) {})
-                      .catchError((e) { debugPrint('[JoinedClassesScreen] mark-notes-read failed: $e'); });
-                });
-          }
-
-          for (final t in parallel[2] as List) {
-            final target = ClassTarget.fromMap(Map<String, dynamic>.from(t as Map));
-            targets[target.classId] = [...(targets[target.classId] ?? []), target];
-          }
-          for (final a in parallel[3] as List) {
-            final ann = ClassAnnouncement.fromMap(Map<String, dynamic>.from(a as Map));
-            announcements[ann.classId] = [...(announcements[ann.classId] ?? []), ann];
-          }
+      // Opening this screen counts as reading the teacher's notes. Mark read
+      // per class via the RPC (a plain student UPDATE is refused — see
+      // migration 20261019000002); the old update is the fallback. Done here,
+      // not in _fetchSnapshot, so the app-start offline download
+      // (prefetchClassesForOffline) never marks a note the student hasn't seen.
+      final unreadByClass = <String, List<String>>{};
+      for (final list in snapshot.classNotes.values) {
+        for (final note in list) {
+          if (note.readAt == null) (unreadByClass[note.classId] ??= []).add(note.id);
         }
       }
+      for (final entry in unreadByClass.entries) {
+        supabase.rpc('mark_class_notes_read', params: {'p_class_id': entry.key})
+            .then((_) {})
+            .catchError((e) {
+              debugPrint('[JoinedClassesScreen] mark_class_notes_read failed: $e');
+              return supabase.from('class_notes')
+                  .update({'read_at': DateTime.now().toUtc().toIso8601String()})
+                  .inFilter('id', entry.value)
+                  .then((_) {})
+                  .catchError((e) { debugPrint('[JoinedClassesScreen] mark-notes-read failed: $e'); });
+            });
+      }
 
-      final snapshot = (
-        joinedClasses: joinedClasses, teacherNames: teacherNames,
-        classNotes: notes, classTargets: targets,
-        classAnnouncements: announcements,
-        membershipStatus: membershipStatus,
-      );
       _cachePut(user.id, snapshot);
       _saveSnapshot(user.id, snapshot);
       if (mounted) setState(() { _applySnapshot(snapshot); _loadError = false; });
-      WidgetService.pushClasses(joinedClasses, {});
+      WidgetService.pushClasses(snapshot.joinedClasses, {});
     } catch (e) {
       // Only surface an error state when there's nothing cached to fall
       // back on — a failed background refresh keeps showing stale-but-

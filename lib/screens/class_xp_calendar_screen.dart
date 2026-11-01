@@ -140,14 +140,19 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
       // list (it uses widget.totalXpRaw directly), so a cap only affects
       // how far back day-by-day detail is visible — same tradeoff already
       // accepted for the personal calendar.
+      // RLS only lets a user read their own class_xp_history rows, so a
+      // teacher viewing a student goes through the same RPC the web uses.
+      final isSelf = uid == currentUser?.id;
       final results = await Future.wait([
-        supabase
-            .from('class_xp_history')
-            .select('id, amount, reason, created_at')
-            .eq('user_id', uid)
-            .eq('class_id', widget.classId)
-            .order('created_at', ascending: false)
-            .limit(500),
+        isSelf
+            ? supabase
+                .from('class_xp_history')
+                .select('id, amount, reason, created_at')
+                .eq('user_id', uid)
+                .eq('class_id', widget.classId)
+                .order('created_at', ascending: false)
+                .limit(500)
+            : supabase.rpc('get_student_xp_history', params: {'p_class_id': widget.classId, 'p_student_id': uid}),
         if (widget.studentId != null)
           supabase.from('class_members').select('joined_at').eq('class_id', widget.classId).eq('student_id', uid).maybeSingle(),
       ]);

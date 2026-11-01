@@ -238,7 +238,7 @@ class _ClassWordsScreenState extends State<ClassWordsScreen> with SingleTickerPr
       final starred  = await starredF;
       if (mounted) {
         setState(() {
-          // True due count, not getClassDueWords' per-session-capped size —
+          // True due count, not loadClassReview's per-session-capped list —
           // this badge should reflect everything actually waiting, not just
           // what the next review round will show.
           _dueCount     = countDueClassWords(all);

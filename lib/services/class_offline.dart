@@ -75,6 +75,29 @@ class ClassOfflineQueue {
   static Future<void> enqueueUpsert(String table, Map<String, dynamic> row, String onConflict) =>
       _enqueue({'table': table, 'row': row, 'onConflict': onConflict});
 
+  /// An absolute-value update of one row by id (class Review's offline
+  /// demotion step). Safe to resend: it writes the same values, and queue
+  /// order keeps it ahead of the review answers that depend on it.
+  static Future<void> enqueueUpdate(String table, String id, Map<String, dynamic> values, {required String classId}) =>
+      _enqueue({'table': table, 'updateId': id, 'values': values, 'classId': classId});
+
+  /// True while this class still has unsent writes that change the student's
+  /// class SRS rows — the server copy is behind the phone's until they land.
+  static Future<bool> hasPendingSrs(String classId) async {
+    final uid = currentUser?.id;
+    if (uid == null) return false;
+    for (final op in _read(await SharedPreferences.getInstance())) {
+      if (op['uid'] != uid) continue;
+      if (op['classId'] == classId) return true;
+      final rpc = op['rpc'];
+      if ((rpc == 'record_class_review_once' || rpc == 'record_class_word_learned') &&
+          (op['params'] as Map)['p_class_id'] == classId) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /// Homework modes finished offline that haven't synced yet, by homework id.
   static Future<Map<String, Set<String>>> pendingHomeworkModes() async {
     final uid = currentUser?.id;
@@ -96,6 +119,12 @@ class ClassOfflineQueue {
     if (op['rpc'] != null) {
       await supabase
           .rpc(op['rpc'] as String, params: Map<String, dynamic>.from(op['params'] as Map))
+          .timeout(timeout);
+    } else if (op['updateId'] != null) {
+      await supabase
+          .from(op['table'] as String)
+          .update(Map<String, dynamic>.from(op['values'] as Map))
+          .eq('id', op['updateId'] as String)
           .timeout(timeout);
     } else {
       await supabase
@@ -136,6 +165,44 @@ class ClassOfflineQueue {
       await prefs.setString(_key, jsonEncode(current));
     });
     flushed.value++;
+  }
+}
+
+/// The student's class_srs_states rows for one class (raw Supabase rows), so
+/// class Review can run offline. Replaced by every online fetch; offline,
+/// class_srs_service applies demotions and answers to it locally with the
+/// same rules the server uses, so a reopened Review never shows an
+/// already-answered word as due again.
+class ClassSrsCache {
+  static String _key(String uid, String classId) => 'class_srs_v1_${uid}_$classId';
+
+  static Future<void> _lock = Future.value();
+
+  /// Serialises read-modify-write updates — answers fire unawaited, back to back.
+  static Future<T> locked<T>(Future<T> Function() fn) {
+    final next = _lock.then((_) => fn());
+    _lock = next.then((_) {}, onError: (_) {});
+    return next;
+  }
+
+  static Future<List<Map<String, dynamic>>?> load(String classId) async {
+    final uid = currentUser?.id;
+    if (uid == null) return null;
+    try {
+      final raw = (await SharedPreferences.getInstance()).getString(_key(uid, classId));
+      if (raw == null) return null;
+      return (jsonDecode(raw) as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> save(String classId, List<dynamic> rows) async {
+    final uid = currentUser?.id;
+    if (uid == null) return;
+    try {
+      await (await SharedPreferences.getInstance()).setString(_key(uid, classId), jsonEncode(rows));
+    } catch (_) {}
   }
 }
 

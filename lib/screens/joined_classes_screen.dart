@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/supabase_service.dart';
 import '../services/widget_service.dart';
 import '../services/class_offline.dart';
+import '../services/class_srs_service.dart';
 import 'class_homework_tab.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
@@ -158,6 +159,7 @@ Future<void> prefetchClassesForOffline() async {
       }
       await prefs.setString(classRoleKey(uid, c.id), 'student');
       await prefetchClassHomework(c.id);
+      await refreshClassSrsCache(userId: uid, classId: c.id);
     }
   } catch (e) {
     debugPrint('[prefetchClassesForOffline] stopped: $e');

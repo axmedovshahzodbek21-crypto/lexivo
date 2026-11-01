@@ -163,11 +163,17 @@ class _ClassShellState extends State<ClassShell> {
   Future<void> _loadDueCount() async {
     final user = currentUser;
     if (user == null) return;
-    // True due count, not getClassDueWords' per-session-capped size.
-    try {
-      final all = await getClassSRSAll(userId: user.id, classId: widget.classId);
-      if (mounted) setState(() => _dueCount = countDueClassWords(all));
-    } catch (_) {/* offline — badge just stays hidden */}
+    // True due count, not loadClassReview's per-session-capped list.
+    // While offline answers are unsent (or with no internet) the phone's
+    // saved copy is the up-to-date one.
+    List<ClassSRSEntry>? all;
+    if (!await ClassOfflineQueue.hasPendingSrs(widget.classId)) {
+      try {
+        all = await getClassSRSAll(userId: user.id, classId: widget.classId).timeout(ClassOfflineQueue.timeout);
+      } catch (_) {}
+    }
+    all ??= (await ClassSrsCache.load(widget.classId))?.map(ClassSRSEntry.fromMap).toList();
+    if (all != null && mounted) setState(() => _dueCount = countDueClassWords(all!));
   }
 
   List<BottomNavigationBarItem> get _navItems => [

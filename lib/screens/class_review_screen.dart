@@ -52,7 +52,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
   bool _loadError = false;
   List<_ReviewCard> _cards = [];
   // True count of everything due right now (dueOnly mode only) — always
-  // >= _cards.length, since getClassDueWords caps never-reviewed words per
+  // >= _cards.length, since loadClassReview caps never-reviewed words per
   // session. Lets the UI tell the student more is waiting instead of the
   // session's own size quietly looking like the whole picture.
   int _totalDue = 0;
@@ -176,12 +176,8 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
     try {
       if (widget.dueOnly) {
         final newCap = await getClassReviewNewCap();
-        final fetched = await Future.wait([
-          getClassDueWords(userId: user.id, classId: widget.classId, newCap: newCap),
-          getClassSRSAll(userId: user.id, classId: widget.classId),
-        ]);
-        final due = fetched[0];
-        final all = fetched[1];
+        // Works offline too — see loadClassReview.
+        final (:due, :all) = await loadClassReview(userId: user.id, classId: widget.classId, newCap: newCap);
         if (mounted) {
           setState(() {
             _cards = due.map((e) => _ReviewCard(
@@ -358,17 +354,17 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
     }
   }
 
-  // Class XP for a correct review is awarded server-side by advanceClassSRSWord
+  // Class XP for a correct review is awarded server-side by recordClassReview
   // (via record_class_xp), only on a genuine stage advance — see migration
   // 20260827_class_review_xp_server_awarded.sql. This path just advances the
   // SRS row, records the class study day, and flags misses as hard words. Class
   // XP is scoped to the class leaderboard (class_xp_history) and never lands in
   // the personal StorageService pool the Main Lexivo homescreen/level reads from.
+  // recordClassReview also logs the class_review_events row and the class
+  // study day, server-side in one idempotent call, and queues it offline.
   void _recordAnswer({required String userId, required String word, required bool knew, int? responseMs}) {
     final futures = <Future<void>>[
-      advanceClassSRSWord(userId: userId, classId: widget.classId, word: word, knew: knew),
-      recordClassActivity(userId, widget.classId, reason: 'SRS Review'), // xp:0 default -> study-day only
-      recordClassReviewEvent(
+      recordClassReview(
         userId: userId, classId: widget.classId, word: word, knew: knew, responseMs: responseMs),
     ];
     if (!knew) {
@@ -392,7 +388,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
 
   // Resets session state and re-fetches due words in place — always (not
   // just embedded), for the "more words waiting" continue action on the
-  // finish screen. getClassDueWords caps never-reviewed words per session,
+  // finish screen. loadClassReview caps never-reviewed words per session,
   // so this is how a student gets to the next batch the same day instead of
   // waiting for a future day's session, without leaving the screen.
   void _resetAndReload() {

@@ -1,4 +1,6 @@
+import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../date_utils.dart';
 import '../services/supabase_service.dart';
 import 'class_offline.dart';
 
@@ -91,7 +93,7 @@ int _daysBetween(String fromDateStr, String toDateStr) {
   return b.difference(a).inDays;
 }
 
-// True count of words due right now, ignoring getClassDueWords' per-session
+// True count of words due right now, ignoring _pickDue's per-session
 // cap on never-reviewed words. That cap paces one review session so a big
 // learn-day doesn't dump as one wall — it's not meant to hide from the
 // student (or a due-count badge) how many words are actually waiting, or a
@@ -131,6 +133,20 @@ Future<bool?> recordClassWordLearned({
   } catch (e) {
     if (!ClassOfflineQueue.isOfflineError(e)) rethrow;
     await ClassOfflineQueue.enqueueRpc('record_class_word_learned', params);
+    // Add it to the saved Review copy too, so it shows as due tomorrow even
+    // if the phone is still offline then. The 'local-' id is replaced by the
+    // real row on the next online fetch.
+    await ClassSrsCache.locked(() async {
+      final rows = await ClassSrsCache.load(classId);
+      if (rows == null || rows.any((r) => r['word'] == word)) return;
+      rows.add({
+        'id': 'local-${DateTime.now().microsecondsSinceEpoch}',
+        'user_id': userId, 'class_id': classId, 'word': word, 'translation': translation,
+        'stage': 0, 'next_due': params['p_next_due'], 'last_reviewed': null,
+        'created_at': DateTime.now().toUtc().toIso8601String(), 'fail_streak': 0,
+      });
+      await ClassSrsCache.save(classId, rows);
+    });
     return null;
   }
 }
@@ -151,14 +167,23 @@ Future<void> checkAndDemoteClassSRS({
       .eq('user_id', userId)
       .eq('class_id', classId)
       .lt('stage', 5);
-  final rows = (data as List).cast<Map<String, dynamic>>();
-  if (rows.isEmpty) return;
+  final toUpdate = _computeDemotions((data as List).cast<Map<String, dynamic>>(), _todayStr());
+  if (toUpdate.isEmpty) return;
 
-  final today = _todayStr();
+  await Future.wait([
+    for (final u in toUpdate)
+      supabase.from('class_srs_states').update({'stage': u.$2, 'next_due': u.$3, 'fail_streak': 0}).eq('id', u.$1),
+  ]);
+}
+
+// (id, new stage, new next_due) for every row checkAndDemoteClassSRS would
+// change — pure, so offline Review applies the exact same demotions to its
+// saved copy.
+List<(String, int, String)> _computeDemotions(List<Map<String, dynamic>> rows, String today) {
   final toUpdate = <(String, int, String)>[];
-
   for (final row in rows) {
     var stage = (row['stage'] as num).toInt();
+    if (stage >= 5) continue;
     var nextDue = row['next_due'] as String;
     var changed = false;
 
@@ -174,35 +199,143 @@ Future<void> checkAndDemoteClassSRS({
     }
     if (changed) toUpdate.add((row['id'] as String, stage, nextDue));
   }
-
-  await Future.wait([
-    for (final u in toUpdate)
-      supabase.from('class_srs_states').update({'stage': u.$2, 'next_due': u.$3, 'fail_streak': 0}).eq('id', u.$1),
-  ]);
+  return toUpdate;
 }
 
-// Returns the words to review now: every due spaced repetition, plus at most
-// newCap never-reviewed words (oldest first; 0 = no cap) so a big fresh batch
-// is paced instead of dumped all at once.
-Future<List<ClassSRSEntry>> getClassDueWords({
+// Every due spaced repetition, plus at most newCap never-reviewed words
+// (oldest first — [all] is in created_at order; 0 = no cap).
+List<ClassSRSEntry> _pickDue(List<ClassSRSEntry> all, int newCap) {
+  final today = _todayStr();
+  final due = all.where((e) => e.stage < 5 && e.nextDue.compareTo(today) <= 0);
+  final review = due.where((e) => e.lastReviewed != null).toList();
+  final fresh = due.where((e) => e.lastReviewed == null).toList();
+  return [...review, ...(newCap > 0 ? fresh.take(newCap) : fresh)];
+}
+
+// ── Offline Review ───────────────────────────────────────────────────────────
+//
+// Review works with no internet: the due list comes from ClassSrsCache, and
+// each answer goes through record_class_review_once, queued in
+// ClassOfflineQueue when offline. That RPC is keyed by a client event id, so
+// a replay after a lost reply can't advance a card twice (migration
+// 20261101000001_class_review_once.sql in lexivo-web).
+
+/// Loads the class Review tab: due words + all rows (for the due count and
+/// distractors). Online when possible; offline — or while this class still
+/// has unsent answers, so the server copy is behind — from ClassSrsCache.
+Future<({List<ClassSRSEntry> due, List<ClassSRSEntry> all})> loadClassReview({
   required String userId,
   required String classId,
-  int newCap = newWordsPerSession,
+  required int newCap,
 }) async {
-  await checkAndDemoteClassSRS(userId: userId, classId: classId);
-  final today = _todayStr();
-  final data = await supabase
+  await ClassOfflineQueue.flush();
+  if (!await ClassOfflineQueue.hasPendingSrs(classId)) {
+    try {
+      await checkAndDemoteClassSRS(userId: userId, classId: classId).timeout(ClassOfflineQueue.timeout);
+      final rows = await supabase
+          .from('class_srs_states')
+          .select()
+          .eq('user_id', userId)
+          .eq('class_id', classId)
+          .order('created_at')
+          .timeout(ClassOfflineQueue.timeout);
+      await ClassSrsCache.save(classId, rows);
+      final all = (rows as List).map((e) => ClassSRSEntry.fromMap(e as Map<String, dynamic>)).toList();
+      return (due: _pickDue(all, newCap), all: all);
+    } catch (e) {
+      if (!ClassOfflineQueue.isOfflineError(e)) rethrow;
+    }
+  }
+  return ClassSrsCache.locked(() async {
+    final rows = await ClassSrsCache.load(classId);
+    if (rows == null) throw StateError('offline and no saved class review');
+    // Same demotions the online load would make, applied locally and queued
+    // ahead of today's answers so the server ends up in the same state.
+    for (final (id, stage, nextDue) in _computeDemotions(rows, _todayStr())) {
+      final row = rows.firstWhere((r) => r['id'] == id);
+      row['stage'] = stage;
+      row['next_due'] = nextDue;
+      row['fail_streak'] = 0;
+      if (!id.startsWith('local-')) {
+        await ClassOfflineQueue.enqueueUpdate('class_srs_states', id,
+            {'stage': stage, 'next_due': nextDue, 'fail_streak': 0}, classId: classId);
+      }
+    }
+    await ClassSrsCache.save(classId, rows);
+    final all = rows.map(ClassSRSEntry.fromMap).toList();
+    return (due: _pickDue(all, newCap), all: all);
+  });
+}
+
+/// Saves the latest class SRS rows for offline Review (app-start download).
+/// Skipped while answers are unsent — the saved copy is newer than the server's.
+Future<void> refreshClassSrsCache({required String userId, required String classId}) async {
+  if (await ClassOfflineQueue.hasPendingSrs(classId)) return;
+  final rows = await supabase
       .from('class_srs_states')
       .select()
       .eq('user_id', userId)
       .eq('class_id', classId)
-      .lte('next_due', today)
-      .lt('stage', 5)
-      .order('created_at', ascending: true);
-  final all = (data as List).map((e) => ClassSRSEntry.fromMap(e as Map<String, dynamic>)).toList();
-  final review = all.where((e) => e.lastReviewed != null).toList();
-  final fresh = all.where((e) => e.lastReviewed == null).toList();
-  return [...review, ...(newCap > 0 ? fresh.take(newCap) : fresh)];
+      .order('created_at')
+      .timeout(ClassOfflineQueue.timeout);
+  await ClassSrsCache.save(classId, rows);
+}
+
+String _newEventId() {
+  final r = Random.secure();
+  final b = List<int>.generate(16, (_) => r.nextInt(256));
+  b[6] = (b[6] & 0x0f) | 0x40; // version 4
+  b[8] = (b[8] & 0x3f) | 0x80; // variant
+  final h = b.map((x) => x.toRadixString(16).padLeft(2, '0')).join();
+  return '${h.substring(0, 8)}-${h.substring(8, 12)}-${h.substring(12, 16)}-${h.substring(16, 20)}-${h.substring(20)}';
+}
+
+/// Grades one class Review card, online or offline. Also applies the answer
+/// to ClassSrsCache with the server's rules, so the saved copy stays right
+/// for the next offline session.
+Future<void> recordClassReview({
+  required String userId,
+  required String classId,
+  required String word,
+  required bool knew,
+  int? responseMs,
+}) async {
+  final params = {
+    'p_event_id': _newEventId(),
+    'p_user_id': userId,
+    'p_class_id': classId,
+    'p_word': word,
+    'p_knew': knew,
+    'p_today': _todayStr(), // schedule next_due on the device's local date, matching _pickDue
+    'p_reviewed_at': DateTime.now().toUtc().toIso8601String(),
+    'p_study_day': todayForStreaks(),
+    'p_response_ms': responseMs,
+  };
+  await ClassSrsCache.locked(() async {
+    final rows = await ClassSrsCache.load(classId);
+    final row = rows?.where((r) => r['word'] == word).firstOrNull;
+    if (rows == null || row == null) return;
+    // Mirror of record_class_review_once's stage/fail_streak/next_due rules.
+    final stage = (row['stage'] as num).toInt();
+    final streak = (row['fail_streak'] as num?)?.toInt() ?? 0;
+    final next = knew ? min(stage + 1, 5) : max(stage - 1, 0);
+    row['stage'] = next;
+    row['next_due'] = _addDays(next >= 5 ? 36500 : _intervals[next]);
+    row['fail_streak'] = knew ? 0 : (next == 0 ? min(streak + 1, 9) : 0);
+    row['last_reviewed'] = params['p_reviewed_at'];
+    await ClassSrsCache.save(classId, rows);
+  });
+  try {
+    await supabase.rpc('record_class_review_once', params: params).timeout(ClassOfflineQueue.timeout);
+  } catch (e, st) {
+    if (ClassOfflineQueue.isOfflineError(e)) {
+      await ClassOfflineQueue.enqueueRpc('record_class_review_once', params);
+      return;
+    }
+    // ignore: avoid_print
+    print('[recordClassReview] failed word="$word" knew=$knew: $e\n$st');
+    rethrow;
+  }
 }
 
 // Returns all SRS entries for the student in this class (all stages).
@@ -217,61 +350,6 @@ Future<List<ClassSRSEntry>> getClassSRSAll({
       .eq('class_id', classId)
       .order('created_at');
   return (data as List).map((e) => ClassSRSEntry.fromMap(e as Map<String, dynamic>)).toList();
-}
-
-// Called after the student answers a review card.
-// knew=true → advance stage; knew=false → drop stage (min 0).
-// Atomic server-side read-modify-write (advance_class_srs_word RPC) — a
-// client-side select-then-update let two near-simultaneous calls (a
-// double-tap) both read the same starting stage and silently lose one
-// advance. See supabase/migrations/20260820_advance_class_srs_word.sql.
-Future<void> advanceClassSRSWord({
-  required String userId,
-  required String classId,
-  required String word,
-  required bool knew,
-}) async {
-  // Log-then-rethrow: the only caller (class_review_screen.dart) fires this
-  // without awaiting and drops the rejection on the floor, so a broken RPC
-  // is otherwise completely invisible — which is exactly how a text/date
-  // type mismatch in the function body (fixed 20260827) went unnoticed in
-  // production on both platforms.
-  try {
-    await supabase.rpc('advance_class_srs_word', params: {
-      'p_user_id': userId,
-      'p_class_id': classId,
-      'p_word': word,
-      'p_knew': knew,
-      'p_today': _todayStr(), // schedule next_due on the device's local date, matching getClassDueWords
-    });
-  } catch (e, st) {
-    // ignore: avoid_print
-    print('[advanceClassSRSWord] failed word="$word" knew=$knew: $e\n$st');
-    rethrow;
-  }
-}
-
-// One row per graded review card — reveal->grade time for pacing analytics.
-// Fire-and-forget; a failed insert must never disrupt the review session.
-Future<void> recordClassReviewEvent({
-  required String userId,
-  required String classId,
-  required String word,
-  required bool knew,
-  int? responseMs,
-}) async {
-  try {
-    await supabase.from('class_review_events').insert({
-      'user_id': userId,
-      'class_id': classId,
-      'word': word,
-      'knew': knew,
-      'response_ms': responseMs,
-    });
-  } catch (e) {
-    // ignore: avoid_print
-    print('[recordClassReviewEvent] failed: $e');
-  }
 }
 
 // Teacher view: all students' SRS states for a class.

@@ -134,7 +134,9 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
     if (_folders.isEmpty && _classUnits.isEmpty && _homework.isEmpty && mounted) setState(() => _loading = true);
     try {
       if (_students.isEmpty) {
-        final raw = await supabase.rpc('get_class_member_ids', params: {'p_class_id': widget.classId});
+        // get_class_dashboard, not get_class_member_ids — the latter returns no
+        // name, which left the homework sheet's per-student rows blank.
+        final raw = await supabase.rpc('get_class_dashboard', params: {'p_class_id': widget.classId});
         _students = (raw as List).map((m) {
           final mp = m as Map;
           return (studentId: mp['student_id'] as String, name: mp['name'] as String? ?? '');

@@ -856,7 +856,20 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
           ],
         ),
         actionsAlignment: MainAxisAlignment.center,
-        actions: [
+        // Class sessions go back to the homework / class screen, which opens
+        // the next activity with class wiring. The buttons below start
+        // personal sessions: personal XP, and the homework never gets marked.
+        actions: widget.classId != null ? [
+          ElevatedButton(
+            onPressed: () { nav.pop(); nav.pop(); },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6C63FF),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text(tr('done')),
+          ),
+        ] : [
           TextButton(
             onPressed: () { nav.pop(); nav.pop(); },
             child: Text(tr('maybe_later'), style: const TextStyle(color: Colors.grey)),

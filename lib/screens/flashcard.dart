@@ -1657,7 +1657,10 @@ class FlashcardFinishScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
               ],
-              SizedBox(
+              // Homework: onHomeworkCompleted records 'flashcard', so a quiz
+              // chained from here would re-mark flashcards, never the quiz.
+              // The student starts Quiz from the homework screen instead.
+              if (!noXP) SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {

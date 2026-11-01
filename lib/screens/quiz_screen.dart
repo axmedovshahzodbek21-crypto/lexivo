@@ -916,7 +916,9 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
               ],
               const SizedBox(height: 28),
 
-              SizedBox(
+              // Homework: a chained Match has no homework callback, so it would
+              // never be marked. The student starts Match from the homework screen.
+              if (!widget.noXP) SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {

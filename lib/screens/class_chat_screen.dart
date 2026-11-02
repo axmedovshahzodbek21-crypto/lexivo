@@ -273,14 +273,49 @@ class _ChatThreadState extends State<ChatThread> {
 
 /// Student: the conversation with this class's teacher. Teacher notes are
 /// part of it; writing back needs the teacher to have chat on for the class.
-class ClassChatScreen extends StatelessWidget {
+/// [chatEnabled] is class Home's last-known value, shown at once; the screen
+/// rechecks it on open and on every poll, so the teacher turning chat on
+/// shows up without leaving the class.
+class ClassChatScreen extends StatefulWidget {
   final String classId, teacherName;
   final bool chatEnabled;
   const ClassChatScreen({super.key, required this.classId, required this.teacherName, required this.chatEnabled});
 
   @override
+  State<ClassChatScreen> createState() => _ClassChatScreenState();
+}
+
+class _ClassChatScreenState extends State<ClassChatScreen> {
+  late bool _chatEnabled = widget.chatEnabled;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _check();
+    _timer = Timer.periodic(_pollEvery, (_) {
+      if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) _check();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _check() async {
+    try {
+      final row = await supabase.from('classes').select('chat_enabled').eq('id', widget.classId).maybeSingle();
+      final on = row?['chat_enabled'] == true;
+      if (mounted && on != _chatEnabled) setState(() => _chatEnabled = on);
+    } catch (_) {}
+  }
+
+  @override
   Widget build(BuildContext context) {
     final me = currentUser;
+    final classId = widget.classId, teacherName = widget.teacherName, chatEnabled = _chatEnabled;
     return Scaffold(
       backgroundColor: context.bg,
       appBar: AppBar(

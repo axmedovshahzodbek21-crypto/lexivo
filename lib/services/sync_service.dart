@@ -199,8 +199,8 @@ class SyncService {
         'p_clear_avatar': clearAvatar,
       });
       // Learning prefs that sync_profile_settings doesn't carry. Flutter now
-      // has pulse on/off + speed and auto_play_on_reveal; session_size /
-      // study_order / default_accent / font_size are still web-only concepts
+      // has pulse on/off + speed, auto_play_on_reveal and default_accent;
+      // session_size / study_order / font_size are still web-only concepts
       // here, so pass null — the RPC coalesces null onto the existing column,
       // leaving whatever the web set untouched. Reuses the same `ts` so
       // pullAll's single settings_updated_at gate covers this field set too.
@@ -209,7 +209,7 @@ class SyncService {
         'p_user_id': uid,
         'p_session_size': null,
         'p_study_order': null,
-        'p_default_accent': null,
+        'p_default_accent': prefs.getString('default_accent'),
         'p_pulse_enabled': prefs.getBool('pulse_enabled') ?? true,
         'p_pulse_speed': prefs.getString('pulse_speed') ?? 'normal',
         'p_font_size': null,
@@ -584,6 +584,9 @@ class SyncService {
         }
         if (row['auto_play_on_reveal'] != null) {
           await prefs.setBool('auto_play_on_reveal', row['auto_play_on_reveal'] as bool);
+        }
+        if (row['default_accent'] != null) {
+          await prefs.setString('default_accent', row['default_accent'] as String);
         }
         await prefs.setString('sync_settings_ts', cloudSettingsTs);
       }

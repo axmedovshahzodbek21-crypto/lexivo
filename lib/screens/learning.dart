@@ -119,6 +119,8 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
   // Mirrors web's autoPlayOnReveal setting (synced via user_data). Loaded in
   // initState; when true, revealing a card speaks the word aloud.
   bool _autoPlayOnReveal = true;
+  // Web's defaultAccent setting (synced): which accent auto-play uses.
+  bool _ukAccent = false;
 
   bool _inQuizGate = false;
   List<String> _gateOptions = [];
@@ -158,6 +160,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
     SharedPreferences.getInstance().then((prefs) {
       final v = prefs.getBool('auto_play_on_reveal') ?? true;
       if (mounted && v != _autoPlayOnReveal) setState(() => _autoPlayOnReveal = v);
+      _ukAccent = prefs.getString('default_accent') == 'uk';
     });
   }
 
@@ -634,6 +637,8 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
       final lang = _currentWord.language;
       if (lang != null && lang.isNotEmpty) {
         _speakInLanguage(_currentWord.word, lang);
+      } else if (_ukAccent) {
+        _speakBritish(_currentWord.word);
       } else {
         _speakAmerican(_currentWord.word);
       }

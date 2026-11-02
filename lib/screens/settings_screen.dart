@@ -52,6 +52,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _tipsEnabled = true;
   bool _tipsReset = false;
   bool _autoPlayOnReveal = true;
+  String _defaultAccent = 'us';          // 'us' | 'uk', synced with web
+  String _quizDirection = 'word-to-uz';  // 'word-to-uz' | 'uz-to-word', synced with web
   bool _loading = true;
   Map<String, bool> _pushPrefs = {
     'class_activity': true,
@@ -102,6 +104,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _reduceMotion = prefs.getBool('reduce_motion') ?? false;
       _showBattleReady = prefs.getBool('show_battle_ready') ?? false;
       _autoPlayOnReveal = prefs.getBool('auto_play_on_reveal') ?? true;
+      _defaultAccent = prefs.getString('default_accent') ?? 'us';
+      _quizDirection = prefs.getString('quiz_direction') ?? 'word-to-uz';
       _nameController.text = _userName;
       _loading = false;
     });
@@ -486,6 +490,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
     SyncService.pushSettings();
   }
 
+  // default_accent / quiz_direction: same prefs keys sync_service sends and pulls.
+  Future<void> _setStudyChoice(String key, String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(key, value);
+    if (mounted) setState(() { if (key == 'default_accent') { _defaultAccent = value; } else { _quizDirection = value; } });
+    SyncService.pushSettings();
+  }
+
+  Widget _choiceRow(String title, String sub, String key, String current, List<(String, String)> options) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: context.appText)),
+      Text(sub, style: TextStyle(fontSize: 12, color: context.textMuted)),
+      const SizedBox(height: 8),
+      Row(children: [
+        for (final (value, label) in options) ...[
+          if (value != options.first.$1) const SizedBox(width: 8),
+          Expanded(child: GestureDetector(
+            onTap: () => _setStudyChoice(key, value),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: current == value ? context.primaryBg : context.surface2,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: current == value ? context.primary : context.border, width: 2),
+              ),
+              child: Text(label, textAlign: TextAlign.center, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                  color: current == value ? context.primary : context.textMuted)),
+            ),
+          )),
+        ],
+      ]),
+    ]),
+  );
+
   Future<void> _setThemeMode(String mode) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('theme_mode', mode);
@@ -799,6 +839,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         activeThumbColor: context.primary,
                         onChanged: _setAutoPlayOnReveal,
                       ),
+                      const Divider(height: 8),
+                      _choiceRow(tr('default_accent_title'), tr('default_accent_sub'), 'default_accent', _defaultAccent,
+                          [('us', tr('accent_us')), ('uk', tr('accent_uk'))]),
+                      const Divider(height: 8),
+                      _choiceRow(tr('quiz_direction_title'), tr('quiz_direction_sub'), 'quiz_direction', _quizDirection,
+                          [('word-to-uz', tr('quiz_dir_eng_uz')), ('uz-to-word', tr('quiz_dir_uz_eng'))]),
                       const Divider(height: 8),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,

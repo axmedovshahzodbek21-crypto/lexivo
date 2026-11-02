@@ -1857,6 +1857,15 @@ const Map<String, Map<String, String>> _t = {
     'spk_done_finished': 'Done, I\'m finished',
     'spk_nice_work': '🎉 Nice work!',
     'spk_next_cue_card': 'Next cue card',
+    // ── Study settings synced with web ──
+    'default_accent_title': 'Default Accent',
+    'default_accent_sub': 'Used for auto-play in Learn',
+    'accent_us': '🇺🇸 American',
+    'accent_uk': '🇬🇧 British',
+    'quiz_direction_title': 'Default Quiz Direction',
+    'quiz_direction_sub': 'First question type shown in quizzes',
+    'quiz_dir_eng_uz': 'English → Uzbek',
+    'quiz_dir_uz_eng': 'Uzbek → English',
   },
 
   'uz': {
@@ -3603,6 +3612,15 @@ const Map<String, Map<String, String>> _t = {
     'spk_done_finished': 'Tayyor, men tugatdim',
     'spk_nice_work': '🎉 Zo\'r ish!',
     'spk_next_cue_card': 'Keyingi vazifa kartasi',
+    // ── Study settings synced with web ──
+    'default_accent_title': 'Standart lahja',
+    'default_accent_sub': 'O\'rganishda avtomatik ijro uchun',
+    'accent_us': '🇺🇸 Amerika',
+    'accent_uk': '🇬🇧 Britaniya',
+    'quiz_direction_title': 'Standart test yo\'nalishi',
+    'quiz_direction_sub': 'Testlarda birinchi savol turi',
+    'quiz_dir_eng_uz': 'Inglizcha → O\'zbekcha',
+    'quiz_dir_uz_eng': 'O\'zbekcha → Inglizcha',
   },
   'ru': {
     // ── Навигация ──────────────────────────────────────────────────────────────
@@ -5357,5 +5375,14 @@ const Map<String, Map<String, String>> _t = {
     'spk_done_finished': 'Готово, я закончил',
     'spk_nice_work': '🎉 Отличная работа!',
     'spk_next_cue_card': 'Следующая карточка',
+    // ── Study settings synced with web ──
+    'default_accent_title': 'Акцент по умолчанию',
+    'default_accent_sub': 'Для автовоспроизведения в обучении',
+    'accent_us': '🇺🇸 Американский',
+    'accent_uk': '🇬🇧 Британский',
+    'quiz_direction_title': 'Направление викторины по умолчанию',
+    'quiz_direction_sub': 'Тип первого вопроса, показываемого в викторинах',
+    'quiz_dir_eng_uz': 'Английский → Узбекский',
+    'quiz_dir_uz_eng': 'Узбекский → Английский',
   },
 };

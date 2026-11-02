@@ -3,6 +3,7 @@ import '../data/storage_service.dart';
 import '../services/supabase_service.dart';
 import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math';
 import '../data/word_data.dart';
 import '../app_theme.dart';
@@ -57,6 +58,12 @@ class _QuizSettingsScreenState extends State<QuizSettingsScreen> {
   void initState() {
     super.initState();
     appLangNotifier.addListener(_onLangChange);
+    // Preselect from the "Default quiz direction" setting (synced with web).
+    SharedPreferences.getInstance().then((prefs) {
+      if (mounted && prefs.getString('quiz_direction') == 'uz-to-word') {
+        setState(() => _quizType = QuizType.translationToWord);
+      }
+    });
   }
 
   @override

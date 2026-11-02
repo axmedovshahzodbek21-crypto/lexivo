@@ -8,6 +8,7 @@ import '../app_theme.dart';
 import '../l10n.dart';
 import '../widgets/member_avatar.dart';
 import 'class_chat_screen.dart';
+import 'class_hard_words_screen.dart';
 import 'class_models.dart';
 import 'class_streak_screen.dart';
 import 'class_xp_calendar_screen.dart';
@@ -854,6 +855,9 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
               const SizedBox(width: 10),
               _statCard(context, '✅', '$_activeToday', tr('active_today_stat_label'), onTap: _showStudentsSheet),
             ]),
+            const SizedBox(height: 10),
+            _linkRow('😓', tr('chw_page_title'), () => Navigator.push(context, MaterialPageRoute(
+              builder: (_) => ClassHardWordsScreen(classId: widget.classId, className: widget.className)))),
             const SizedBox(height: 20),
           ],
 
@@ -1123,6 +1127,25 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
       ]),
     );
   }
+
+  Widget _linkRow(String emoji, String label, VoidCallback onTap) => InkWell(
+    borderRadius: BorderRadius.circular(12),
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+      decoration: BoxDecoration(
+        color: context.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.border),
+      ),
+      child: Row(children: [
+        Text(emoji, style: const TextStyle(fontSize: 16)),
+        const SizedBox(width: 10),
+        Expanded(child: Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.appText))),
+        Text('›', style: TextStyle(fontSize: 12, color: context.textMuted)),
+      ]),
+    ),
+  );
 
   Widget _buildAllNotesButton() => InkWell(
     borderRadius: BorderRadius.circular(12),

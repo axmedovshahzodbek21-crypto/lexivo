@@ -341,15 +341,10 @@ class _ClassMessagesScreenState extends State<ClassMessagesScreen> {
     try {
       final res = await Future.wait<dynamic>([
         supabase.from('classes').select('chat_enabled').eq('id', widget.classId).maybeSingle(),
-        supabase.rpc('get_class_dashboard', params: {'p_class_id': widget.classId}),
-        supabase.from('class_members').select('student_id').eq('class_id', widget.classId).eq('status', 'approved'),
+        loadApprovedStudentNames(widget.classId),
       ]);
-      final approved = {for (final m in res[2] as List) (m as Map)['student_id'] as String};
       _enabled = (res[0] as Map?)?['chat_enabled'] == true;
-      _names = {
-        for (final m in res[1] as List)
-          if (approved.contains((m as Map)['student_id'])) m['student_id'] as String: (m['name'] as String?) ?? '',
-      };
+      _names = res[1] as Map<String, String>;
       await _loadInbox();
     } catch (_) {}
     if (mounted) setState(() => _loading = false);

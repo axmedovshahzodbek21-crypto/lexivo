@@ -14,6 +14,22 @@ SupabaseClient get supabase => Supabase.instance.client;
 
 User? get currentUser => supabase.auth.currentUser;
 
+/// Teacher: approved students of a class → name ('' when unknown).
+/// get_class_dashboard has the names (profiles RLS is own-row-only), but
+/// whether it drops pending members can't be verified, so cross-check
+/// class_members.status like the dashboard does.
+Future<Map<String, String>> loadApprovedStudentNames(String classId) async {
+  final res = await Future.wait<dynamic>([
+    supabase.rpc('get_class_dashboard', params: {'p_class_id': classId}),
+    supabase.from('class_members').select('student_id').eq('class_id', classId).eq('status', 'approved'),
+  ]);
+  final approved = {for (final m in res[1] as List) (m as Map)['student_id'] as String};
+  return {
+    for (final m in res[0] as List)
+      if (approved.contains((m as Map)['student_id'])) m['student_id'] as String: (m['name'] as String?) ?? '',
+  };
+}
+
 // ── Class creation ────────────────────────────────────────────────────────
 // Single source of truth for join-code generation and class-row creation —
 // previously copy-pasted independently in classes_screen.dart and

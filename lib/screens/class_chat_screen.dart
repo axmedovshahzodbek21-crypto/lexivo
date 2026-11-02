@@ -4,7 +4,10 @@
 // see migration 20261020000001_class_chat.sql. No Realtime: an open chat
 // polls for rows newer than the last one it has, which keeps this free.
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
@@ -12,21 +15,34 @@ import '../l10n.dart';
 const _pollEvery = Duration(seconds: 10);
 const _studentMax = 500;
 const _teacherMax = 1000;
+// Photos (migration 20261102000002): private bucket, deleted after 30 days.
+const _photoBucket = 'chat-photos';
+const _photoMaxAge = Duration(days: 30);
 
 class ChatMessage {
   final String id;
   final bool fromTeacher;
   final String message;
+  final String? imagePath;
   final String createdAt; // ISO, compared as a string like the web
   String? readAt;
-  ChatMessage(this.id, this.fromTeacher, this.message, this.createdAt, this.readAt);
+  ChatMessage(this.id, this.fromTeacher, this.message, this.imagePath, this.createdAt, this.readAt);
+
+  bool get photoExpired => DateTime.now().difference(DateTime.parse(createdAt)) > _photoMaxAge;
+  // Inbox / note preview: a photo-only message has no text.
+  String get preview => message.isNotEmpty ? message : '📷 ${tr('chat_photo')}';
 }
+
+// Private bucket → short-lived signed links, cached while the app runs.
+final _signedUrls = <String, Future<String?>>{};
+Future<String?> _photoUrl(String path) => _signedUrls.putIfAbsent(path, () =>
+    supabase.storage.from(_photoBucket).createSignedUrl(path, 3600).then<String?>((u) => u).catchError((_) => null));
 
 // The conversation, oldest first — or only what's newer than [since].
 Future<List<ChatMessage>> _loadThread(String classId, String studentId, [String? since]) async {
-  var notes = supabase.from('class_notes').select('id, message, created_at, read_at')
+  var notes = supabase.from('class_notes').select('id, message, image_path, created_at, read_at')
       .eq('class_id', classId).eq('student_id', studentId);
-  var replies = supabase.from('class_replies').select('id, message, created_at, read_at')
+  var replies = supabase.from('class_replies').select('id, message, image_path, created_at, read_at')
       .eq('class_id', classId).eq('student_id', studentId);
   if (since != null) {
     notes = notes.gt('created_at', since);
@@ -36,8 +52,8 @@ Future<List<ChatMessage>> _loadThread(String classId, String studentId, [String?
     notes.order('created_at', ascending: false).limit(200),
     replies.order('created_at', ascending: false).limit(200),
   ]);
-  ChatMessage row(Map r, bool fromTeacher) => ChatMessage(
-      r['id'] as String, fromTeacher, r['message'] as String? ?? '', r['created_at'] as String, r['read_at'] as String?);
+  ChatMessage row(Map r, bool fromTeacher) => ChatMessage(r['id'] as String, fromTeacher,
+      r['message'] as String? ?? '', r['image_path'] as String?, r['created_at'] as String, r['read_at'] as String?);
   return [
     ...res[0].map((r) => row(r, true)),
     ...res[1].map((r) => row(r, false)),
@@ -85,7 +101,7 @@ class ChatThread extends StatefulWidget {
 class _ChatThreadState extends State<ChatThread> {
   List<ChatMessage>? _messages;
   String? _last;
-  String _state = 'idle'; // idle | sending | limit | failed
+  String _state = 'idle'; // idle | sending | limit | photo_limit | failed
   final _ctrl = TextEditingController();
   final _scroll = ScrollController();
   Timer? _timer;
@@ -174,6 +190,56 @@ class _ChatThreadState extends State<ChatThread> {
     try { _merge(await _loadThread(widget.classId, widget.studentId, _last)); } catch (_) {}
   }
 
+  // Camera or gallery → shrunk to a ≤1280px JPEG by image_picker → uploaded
+  // into the conversation's folder → message row with image_path.
+  Future<void> _sendPhoto() async {
+    final me = currentUser;
+    if (me == null || _state == 'sending') return;
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: context.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        ListTile(leading: const Icon(Icons.photo_camera_rounded), title: Text(tr('chat_photo_camera')),
+            onTap: () => Navigator.pop(ctx, ImageSource.camera)),
+        ListTile(leading: const Icon(Icons.photo_library_rounded), title: Text(tr('chat_photo_gallery')),
+            onTap: () => Navigator.pop(ctx, ImageSource.gallery)),
+      ])),
+    );
+    if (source == null) return;
+    final picked = await ImagePicker().pickImage(source: source, maxWidth: 1280, maxHeight: 1280, imageQuality: 75);
+    if (picked == null || !mounted) return;
+    setState(() => _state = 'sending');
+    final rand = Random();
+    final name = '${DateTime.now().millisecondsSinceEpoch}-${rand.nextInt(1 << 32).toRadixString(16)}.jpg';
+    final path = '${widget.classId}/${widget.studentId}/$name';
+    try {
+      await supabase.storage.from(_photoBucket).uploadBinary(path, await picked.readAsBytes(),
+          fileOptions: const FileOptions(contentType: 'image/jpeg'));
+    } catch (_) {
+      // The upload policy refuses a student's 11th photo of the day.
+      if (mounted) setState(() => _state = widget.asTeacher ? 'failed' : 'photo_limit');
+      return;
+    }
+    try {
+      if (widget.asTeacher) {
+        await supabase.from('class_notes').insert({
+          'class_id': widget.classId, 'student_id': widget.studentId, 'teacher_id': me.id, 'message': '', 'image_path': path,
+        });
+      } else {
+        await supabase.from('class_replies').insert({
+          'class_id': widget.classId, 'student_id': widget.studentId, 'message': '', 'image_path': path,
+        });
+      }
+    } catch (e) {
+      final s = e.toString();
+      if (mounted) setState(() => _state = s.contains('daily_photo_limit') ? 'photo_limit' : s.contains('daily_message_limit') ? 'limit' : 'failed');
+      return;
+    }
+    if (mounted) setState(() => _state = 'idle');
+    try { _merge(await _loadThread(widget.classId, widget.studentId, _last)); } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
     final messages = _messages;
@@ -213,7 +279,9 @@ class _ChatThreadState extends State<ChatThread> {
           if (!mine)
             Padding(padding: const EdgeInsets.only(bottom: 2),
               child: Text(widget.otherName, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: context.textMuted))),
-          Text(m.message, style: TextStyle(fontSize: 14, color: mine ? Colors.white : context.appText)),
+          if (m.imagePath != null) _ChatPhoto(m, mine),
+          if (m.message.isNotEmpty)
+            Text(m.message, style: TextStyle(fontSize: 14, color: mine ? Colors.white : context.appText)),
           const SizedBox(height: 2),
           Align(alignment: Alignment.centerRight, child: Text(
             '${_timeLabel(m.createdAt)}${mine && m.readAt != null ? ' · ${tr('chat_seen')}' : ''}',
@@ -225,8 +293,10 @@ class _ChatThreadState extends State<ChatThread> {
   }
 
   Widget _composer() {
-    final hint = _state == 'limit' ? tr('chat_limit_reached') : _state == 'failed' ? tr('chat_send_failed') : tr('chat_updates_hint');
-    final hintColor = _state == 'limit' || _state == 'failed' ? const Color(0xFFEF4444) : context.textMuted;
+    final hint = _state == 'limit' ? tr('chat_limit_reached')
+        : _state == 'photo_limit' ? tr('chat_photo_limit')
+        : _state == 'failed' ? tr('chat_send_failed') : tr('chat_updates_hint');
+    final hintColor = _state == 'limit' || _state == 'photo_limit' || _state == 'failed' ? const Color(0xFFEF4444) : context.textMuted;
     return SafeArea(
       top: false,
       child: Container(
@@ -234,6 +304,11 @@ class _ChatThreadState extends State<ChatThread> {
         decoration: BoxDecoration(border: Border(top: BorderSide(color: context.border))),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            IconButton(
+              tooltip: tr('chat_send_photo'),
+              onPressed: _state == 'sending' ? null : _sendPhoto,
+              icon: Icon(Icons.photo_camera_outlined, color: context.primary),
+            ),
             Expanded(child: TextField(
               controller: _ctrl,
               minLines: 1, maxLines: 5, maxLength: _max,
@@ -267,6 +342,47 @@ class _ChatThreadState extends State<ChatThread> {
           ]),
         ]),
       ),
+    );
+  }
+}
+
+/// A chat photo from the private bucket; tap opens it full screen with zoom.
+class _ChatPhoto extends StatelessWidget {
+  final ChatMessage m;
+  final bool mine;
+  const _ChatPhoto(this.m, this.mine);
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = mine ? Colors.white70 : context.textMuted;
+    if (m.photoExpired) {
+      return Text('📷 ${tr('chat_photo_expired')}', style: TextStyle(fontSize: 13, fontStyle: FontStyle.italic, color: muted));
+    }
+    final placeholder = Container(width: 200, height: 140,
+        decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(12)));
+    return FutureBuilder<String?>(
+      future: _photoUrl(m.imagePath!),
+      builder: (context, snap) {
+        final url = snap.data;
+        if (url == null) return placeholder;
+        return GestureDetector(
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(
+            backgroundColor: Colors.black,
+            appBar: AppBar(backgroundColor: Colors.black, iconTheme: const IconThemeData(color: Colors.white)),
+            body: Center(child: InteractiveViewer(maxScale: 5, child: Image.network(url))),
+          ))),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 280),
+              child: Image.network(url, fit: BoxFit.contain,
+                  loadingBuilder: (_, child, progress) => progress == null ? child : placeholder,
+                  errorBuilder: (_, _, _) => Text('📷 ${tr('chat_photo_expired')}',
+                      style: TextStyle(fontSize: 13, fontStyle: FontStyle.italic, color: muted))),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -389,9 +505,9 @@ class _ClassMessagesScreenState extends State<ClassMessagesScreen> {
   Future<void> _loadInbox() async {
     try {
       final res = await Future.wait([
-        supabase.from('class_notes').select('id, student_id, message, created_at, read_at')
+        supabase.from('class_notes').select('id, student_id, message, image_path, created_at, read_at')
             .eq('class_id', widget.classId).order('created_at', ascending: false).limit(300),
-        supabase.from('class_replies').select('id, student_id, message, created_at, read_at')
+        supabase.from('class_replies').select('id, student_id, message, image_path, created_at, read_at')
             .eq('class_id', widget.classId).order('created_at', ascending: false).limit(300),
       ]);
       final out = <String, _InboxEntry>{};
@@ -399,7 +515,8 @@ class _ClassMessagesScreenState extends State<ClassMessagesScreen> {
         final e = out.putIfAbsent(r['student_id'] as String, _InboxEntry.new);
         final created = r['created_at'] as String;
         if (e.last == null || created.compareTo(e.last!.createdAt) > 0) {
-          e.last = ChatMessage(r['id'] as String, fromTeacher, r['message'] as String? ?? '', created, r['read_at'] as String?);
+          e.last = ChatMessage(r['id'] as String, fromTeacher, r['message'] as String? ?? '', r['image_path'] as String?,
+              created, r['read_at'] as String?);
         }
         if (!fromTeacher && r['read_at'] == null) e.unread++;
       }
@@ -511,7 +628,7 @@ class _ClassMessagesScreenState extends State<ClassMessagesScreen> {
             Text(_nameOf(sid), overflow: TextOverflow.ellipsis,
                 style: TextStyle(fontSize: 14, fontWeight: unread > 0 ? FontWeight.w900 : FontWeight.bold, color: context.appText)),
             if (e?.last != null)
-              Text('${e!.last!.fromTeacher ? '${tr('you_badge')}: ' : ''}${e.last!.message}',
+              Text('${e!.last!.fromTeacher ? '${tr('you_badge')}: ' : ''}${e.last!.preview}',
                   maxLines: 1, overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontSize: 12, color: context.textMuted)),
           ])),

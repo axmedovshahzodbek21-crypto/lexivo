@@ -1114,7 +1114,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
         const Text('✉️', style: TextStyle(fontSize: 16)),
         const SizedBox(width: 10),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(n.message, style: TextStyle(fontSize: 13, color: context.appText)),
+          Text(n.message.isNotEmpty ? n.message : '📷 ${tr('chat_photo')}', style: TextStyle(fontSize: 13, color: context.appText)),
           const SizedBox(height: 2),
           Text(timeAgo(n.createdAt), style: TextStyle(fontSize: 11, color: context.textMuted)),
         ])),

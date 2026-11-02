@@ -7,6 +7,7 @@ import '../date_utils.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import '../widgets/member_avatar.dart';
+import 'class_chat_screen.dart';
 import 'class_models.dart';
 import 'class_streak_screen.dart';
 import 'class_xp_calendar_screen.dart';
@@ -87,6 +88,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
   bool _loading = true;
   List<ClassAnnouncement> _announcements = [];
   List<ClassNote> _notes = [];
+  bool _chatEnabled = false; // like _notes, not cached — fresh each load
   List<ClassTarget> _targets = [];
   int _memberCount = 0;
   int _pendingHwCount = 0;
@@ -389,6 +391,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
       // ── Group 2: parallel dependent fetches ───────────────────────────────
       List<ClassTarget> targets = [];
       List<ClassNote> notes = [];
+      bool chatEnabled = false;
       String teacherName = '';
       String fetchedTeacherId = '';
       String teacherBio = '';
@@ -486,11 +489,12 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
           try {
             final classRaw = await supabase
                 .from('classes')
-                .select('teacher_id')
+                .select('teacher_id, chat_enabled')
                 .eq('id', widget.classId)
                 .maybeSingle();
             if (classRaw != null) {
               fetchedTeacherId = (classRaw as Map)['teacher_id'] as String;
+              chatEnabled = classRaw['chat_enabled'] == true;
               final profileRaw = await supabase
                   .from('profiles')
                   .select('name, bio')
@@ -551,6 +555,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
         setState(() {
           _announcements = anns;
           _notes = notes;
+          _chatEnabled = chatEnabled;
           _targets = targets;
           _memberCount = memberCount;
           _teacherName = teacherName;
@@ -853,8 +858,9 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
           ],
 
           // ── Notes from the teacher (student only) ──────────────────────────
-          // Only new notes show here, once; all of them are behind the button.
-          if (!widget.isTeacher && _notes.isNotEmpty) ...[
+          // Only new notes show here, once; the button opens the class chat
+          // (notes are the teacher's side of it), same as the web.
+          if (!widget.isTeacher && (_notes.isNotEmpty || _chatEnabled)) ...[
             if (_notes.any((n) => n.readAt == null)) ...[
               _sectionLabel('✉️ ${tr('notes_from_teacher')}'),
               const SizedBox(height: 8),
@@ -1120,7 +1126,11 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
 
   Widget _buildAllNotesButton() => InkWell(
     borderRadius: BorderRadius.circular(12),
-    onTap: _showAllNotesSheet,
+    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClassChatScreen(
+      classId: widget.classId,
+      teacherName: _teacherName.isNotEmpty ? _teacherName : tr('teacher'),
+      chatEnabled: _chatEnabled,
+    ))),
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
       decoration: BoxDecoration(
@@ -1129,37 +1139,14 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
         border: Border.all(color: context.border),
       ),
       child: Row(children: [
-        const Text('✉️', style: TextStyle(fontSize: 16)),
+        Text(_chatEnabled ? '💬' : '✉️', style: const TextStyle(fontSize: 16)),
         const SizedBox(width: 10),
-        Expanded(child: Text(tr('notes_from_teacher'),
+        Expanded(child: Text(_chatEnabled ? tr('chat_with_teacher') : tr('notes_from_teacher'),
           style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.appText))),
-        Text('${_notes.length} ›', style: TextStyle(fontSize: 12, color: context.textMuted)),
+        Text('${_notes.isNotEmpty ? '${_notes.length} ' : ''}›', style: TextStyle(fontSize: 12, color: context.textMuted)),
       ]),
     ),
   );
-
-  void _showAllNotesSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: context.surface,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (sheetContext) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: MediaQuery.of(sheetContext).size.height * 0.7),
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: context.border, borderRadius: BorderRadius.circular(2)))),
-            const SizedBox(height: 16),
-            Text('✉️ ${tr('notes_from_teacher')}',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
-            const SizedBox(height: 12),
-            Flexible(child: ListView(shrinkWrap: true, children: _notes.map(_buildNoteRow).toList())),
-          ]),
-        ),
-      ),
-    );
-  }
 
   Widget _emptyHint(String label) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 20),

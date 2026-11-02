@@ -13,6 +13,7 @@ import 'class_homework_tab.dart';
 import 'class_curriculum_tab.dart';
 import 'class_dashboard_screen.dart';
 import 'class_progress_screen.dart';
+import 'class_chat_screen.dart';
 
 class ClassShell extends StatefulWidget {
   final String classId;
@@ -35,6 +36,7 @@ class ClassShell extends StatefulWidget {
 class _ClassShellState extends State<ClassShell> {
   int _tab = 0;
   int _dueCount = 0;
+  int _unreadMessages = 0; // teacher: unread student chat messages
   List<Widget>? _screens;
   bool _verifying = true;
   bool _authorized = false;
@@ -114,6 +116,14 @@ class _ClassShellState extends State<ClassShell> {
       if (authorized) _buildScreens();
     });
     if (authorized && !isTeacher) _loadDueCount();
+    if (authorized && isTeacher) _loadUnreadMessages();
+  }
+
+  Future<void> _loadUnreadMessages() async {
+    try {
+      final n = await loadTeacherUnreadCount(widget.classId);
+      if (mounted) setState(() => _unreadMessages = n);
+    } catch (_) {}
   }
 
   void _buildScreens() {
@@ -325,6 +335,20 @@ class _ClassShellState extends State<ClassShell> {
           ],
         ),
         actions: [
+          if (_isTeacher)
+            IconButton(
+              tooltip: tr('chat_title'),
+              icon: Badge(
+                isLabelVisible: _unreadMessages > 0,
+                label: Text('$_unreadMessages'),
+                backgroundColor: Colors.red,
+                child: Icon(Icons.chat_bubble_outline_rounded, color: context.primary),
+              ),
+              onPressed: () async {
+                await Navigator.push(context, MaterialPageRoute(builder: (_) => ClassMessagesScreen(classId: widget.classId)));
+                _loadUnreadMessages();
+              },
+            ),
           Container(
             margin: const EdgeInsets.only(right: 12),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

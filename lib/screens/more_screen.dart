@@ -18,6 +18,7 @@ import 'free_time_screen.dart';
 import 'stats_screen.dart';
 import 'achievements.dart';
 import 'battle_ready_hub_screen.dart';
+import 'speaking_screen.dart';
 
 /// Grouped hub for everything that isn't one of the three priority areas
 /// (core study / word organization / classes). Mirrors the web `/more` page.
@@ -58,11 +59,13 @@ class MoreScreen extends StatelessWidget {
             _MoreItem(tr('more_structures'), Icons.extension_rounded, const Color(0xFFC026D3),
                 (_) => const StructuresHubScreen()),
           ]),
-          if (showBattleReady)
-            _MoreGroup(tr('more_group_speaking'), [
+          _MoreGroup(tr('more_group_speaking'), [
+            _MoreItem(tr('spk_title'), Icons.mic_rounded, const Color(0xFFBE185D),
+                (_) => const SpeakingScreen()),
+            if (showBattleReady)
               _MoreItem(tr('more_battle_ready'), Icons.shield_rounded, const Color(0xFFEF4444),
                   (_) => const BattleReadyHubScreen()),
-            ]),
+          ]),
           _MoreGroup(tr('more_group_focus'), [
             _MoreItem(tr('more_free_time'), Icons.beach_access_rounded, const Color(0xFF0284C7),
                 (_) => FreeTimeScreen(wordOfDay: null, userProfile: userProfile)),

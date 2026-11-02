@@ -123,7 +123,7 @@ class WidgetService {
         await HomeWidget.saveWidgetData<String>(
             'lexivo_class_stats', jsonEncode(classStatsPayload));
         await HomeWidget.updateWidget(
-          androidName: 'com.lexivo.app.StatsWidgetProvider',
+          qualifiedAndroidName: 'com.lexivo.app.StatsWidgetProvider',
           iOSName: 'StatsWidget',
         );
       }
@@ -141,7 +141,7 @@ class WidgetService {
       await HomeWidget.saveWidgetData<int>('lexivo_widget_streak', streak);
       await HomeWidget.saveWidgetData<int>('lexivo_widget_xp', xp);
       await HomeWidget.updateWidget(
-        androidName: 'com.lexivo.app.StatsWidgetProvider',
+        qualifiedAndroidName: 'com.lexivo.app.StatsWidgetProvider',
         iOSName: 'StatsWidget',
       );
     } catch (_) {}
@@ -160,7 +160,7 @@ class WidgetService {
 
     await HomeWidget.saveWidgetData<String>(_dataKey, jsonEncode(payload));
     await HomeWidget.updateWidget(
-      androidName: _androidProvider,
+      qualifiedAndroidName: _androidProvider,
       iOSName: 'ClassWidget',
     );
   }

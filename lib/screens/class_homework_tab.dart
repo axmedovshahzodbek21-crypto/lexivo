@@ -829,6 +829,34 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
     ),
   );
 
+  // Deadline line shown on unfinished homework cards so students see it
+  // before it passes (previously only a ⚠️ appeared after the fact).
+  List<Widget> _dueLine(String? due, bool allDone) {
+    if (due == null || allDone) return const [];
+    final today = formatStreakDate(DateTime.now());
+    final tomorrow = formatStreakDate(DateTime.now().add(const Duration(days: 1)));
+    final String label;
+    final Color color;
+    if (due.compareTo(today) < 0) {
+      label = tr('overdue_on').replaceFirst('{date}', due);
+      color = Colors.red;
+    } else if (due == today) {
+      label = tr('due_today');
+      color = Colors.red;
+    } else if (due == tomorrow) {
+      label = tr('due_tomorrow');
+      color = Colors.orange;
+    } else {
+      label = tr('due_on').replaceFirst('{date}', due);
+      color = context.textMuted;
+    }
+    return [
+      const SizedBox(height: 4),
+      Text(label, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: color),
+          maxLines: 1, overflow: TextOverflow.ellipsis),
+    ];
+  }
+
   Widget _buildGridUnitCard({
     required String id, required String name,
     required String homeworkId, required List<String> hwModes,
@@ -836,12 +864,6 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   }) {
     final completed = _completedModes[homeworkId] ?? {};
     final allDone = isHomeworkFullyDone(hwModes, completed);
-    // isHomeworkOverdue(), not string-matching homeworkDueLabel()'s display
-    // text — see the same fix in class_home_screen.dart's _buildTargetRow.
-    // The label itself isn't rendered on this card (only a ⚠️ icon below),
-    // so unlike the other two call sites in this file, there's no separate
-    // `due` variable to keep around here.
-    final isOverdue = isHomeworkOverdue(hwDue);
     const modeIcons = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯'};
     final accent = allDone
         ? const LinearGradient(colors: [Color(0xFF22c55e), Color(0xFF4ade80)])
@@ -888,14 +910,14 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
                         style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900)),
                     ),
                     const Spacer(),
-                    if (allDone) const Icon(Icons.check_circle_rounded, color: Colors.green, size: 14)
-                    else if (isOverdue) const Text('⚠️', style: TextStyle(fontSize: 10)),
+                    if (allDone) const Icon(Icons.check_circle_rounded, color: Colors.green, size: 14),
                   ]),
                   const SizedBox(height: 5),
                   Expanded(child: Text(name,
                     style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold,
                       color: allDone ? Colors.green.shade700 : context.appText, height: 1.3),
                     maxLines: 3, overflow: TextOverflow.ellipsis)),
+                  ..._dueLine(hwDue, allDone),
                   const SizedBox(height: 6),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(3),
@@ -964,9 +986,6 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   Widget _buildCollectionCard(_CollHW h) {
     final completed = _completedModes[h.homeworkId] ?? {};
     final allDone = isHomeworkFullyDone(h.hwModes, completed);
-    // isHomeworkOverdue(), not string-matching homeworkDueLabel()'s display
-    // text — see the same fix in class_home_screen.dart's _buildTargetRow.
-    final isOverdue = isHomeworkOverdue(h.hwDue);
     const modeIcons = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯'};
     const collColor = Color(0xFF16A34A);
     final accent = allDone
@@ -998,8 +1017,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
               style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900)),
           ),
           const Spacer(),
-          if (allDone) const Icon(Icons.check_circle_rounded, color: Colors.green, size: 14)
-          else if (isOverdue) const Text('⚠️', style: TextStyle(fontSize: 10)),
+          if (allDone) const Icon(Icons.check_circle_rounded, color: Colors.green, size: 14),
         ]),
         const SizedBox(height: 5),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1012,6 +1030,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
               color: allDone ? Colors.green.shade700 : context.appText, height: 1.3),
             maxLines: 2, overflow: TextOverflow.ellipsis)),
         ])),
+        ..._dueLine(h.hwDue, allDone),
         const SizedBox(height: 6),
         ClipRRect(
           borderRadius: BorderRadius.circular(3),
@@ -1035,9 +1054,6 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   Widget _buildPassageCard(_PassageHW h) {
     final completed = _completedModes[h.homeworkId] ?? {};
     final allDone = isHomeworkFullyDone(h.hwModes, completed);
-    // isHomeworkOverdue(), not string-matching homeworkDueLabel()'s display
-    // text — see the same fix in class_home_screen.dart's _buildTargetRow.
-    final isOverdue = isHomeworkOverdue(h.hwDue);
     const passageColor = Color(0xFFF59E0B);
     final accent = allDone
         ? const LinearGradient(colors: [Color(0xFF22c55e), Color(0xFF4ade80)])
@@ -1059,8 +1075,6 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
         Row(children: [
           if (allDone) const Icon(Icons.check_circle_rounded, color: Colors.green, size: 14)
           else const Text('📚', style: TextStyle(fontSize: 12)),
-          const Spacer(),
-          if (isOverdue && !allDone) const Text('⚠️', style: TextStyle(fontSize: 10)),
         ]),
         const SizedBox(height: 5),
         Expanded(child: Text(h.title,
@@ -1069,6 +1083,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
           maxLines: 3, overflow: TextOverflow.ellipsis)),
         const SizedBox(height: 4),
         Text(h.topic, style: TextStyle(fontSize: 9, color: context.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+        ..._dueLine(h.hwDue, allDone),
         const SizedBox(height: 5),
         Text(allDone ? tr('read_done_check') : tr('tap_to_read'),
           style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700,

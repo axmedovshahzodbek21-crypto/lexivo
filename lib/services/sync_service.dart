@@ -945,7 +945,12 @@ class SyncService {
         debugPrint('[SyncService._mergeListsFromCloudRow] my_unit_progress merge failed: $e');
       }
 
-      // review_log (object: wordKey → [intervals]), union merge
+      // review_log (object: wordKey → [intervals]). The side that reviewed
+      // the word more recently (last_review) wins outright — a "Not yet"
+      // removes an interval, and a plain union would put it straight back.
+      // Same date (or no dates) → union, as before. Must run before the
+      // last_review merge below so localLR still holds this device's dates.
+      // Keep in sync with web's mergeListsFromCloudRow.
       try {
         final cloudReviewLog = (row['review_log'] as Map<String, dynamic>?) ?? {};
         if (cloudReviewLog.isNotEmpty) {
@@ -953,12 +958,25 @@ class SyncService {
           final localLog = localRaw != null
               ? (jsonDecode(localRaw) as Map<String, dynamic>)
               : <String, dynamic>{};
+          final cloudLR = (row['last_review'] as Map<String, dynamic>?) ?? {};
+          final localLRRaw = prefs.getString('srs_last_review');
+          final localLR = localLRRaw != null
+              ? (jsonDecode(localLRRaw) as Map<String, dynamic>)
+              : <String, dynamic>{};
           bool changed = false;
           for (final entry in cloudReviewLog.entries) {
             final cloudIntervals = (entry.value as List).cast<int>().toSet();
             final localIntervals = ((localLog[entry.key] as List?)?.cast<int>() ?? []).toSet();
-            final merged = {...localIntervals, ...cloudIntervals}.toList();
-            if (merged.length > localIntervals.length) {
+            final cloudDate = cloudLR[entry.key] is String ? cloudLR[entry.key] as String : '';
+            final localDate = localLR[entry.key] is String ? localLR[entry.key] as String : '';
+            final cmp = cloudDate.compareTo(localDate);
+            if (cmp < 0) continue; // this device reviewed it more recently
+            final merged = cmp > 0
+                ? cloudIntervals.toList()
+                : {...localIntervals, ...cloudIntervals}.toList();
+            final same = merged.length == localIntervals.length &&
+                merged.every(localIntervals.contains);
+            if (!same) {
               localLog[entry.key] = merged;
               changed = true;
             }
@@ -1017,7 +1035,8 @@ class SyncService {
           final remaining = <Map<String, dynamic>>[];
           final toGraduate = <Map<String, dynamic>>[];
           for (final w in srsList) {
-            final key = '${w['word']}::${w['collectionName']}';
+            // Same key order as the review log (collectionName::word).
+            final key = '${w['collectionName']}::${w['word']}';
             final completed = ((log[key] as List?) ?? []).cast<int>().toSet();
             if (w['deletedAt'] == null && allIntervals.every(completed.contains)) {
               toGraduate.add(w);

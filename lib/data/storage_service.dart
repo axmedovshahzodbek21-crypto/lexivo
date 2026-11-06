@@ -1805,11 +1805,26 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     return addXP(reviewXP(interval), reason: 'SRS Review');
   }
 
-  static Future<void> failSRSWord(SRSWord word) async {
-    // No-op: the interval stays uncompleted in the review log, so the word
-    // is due again next session — matches the DueSRSWord behavior above,
-    // now unconditionally (reviewStage/dropStage are no longer consulted).
-  }
+  // "Not yet": the word counts as reviewed today and drops one stage — its
+  // last completed interval comes off the log, and that interval is spaced
+  // from today (a stage-0 word just comes back tomorrow). Stamping the review
+  // date also restarts the unlearn countdown, so only words never opened
+  // drift toward unlearning. Mirrors class Review (stage - 1, min 0) and
+  // web's markIntervalFailed.
+  static Future<void> failSRSWord(SRSWord word) => _srsMutex.run(() async {
+    final wordKey = '${word.collectionName}::${word.word}';
+    final log = await getReviewLog();
+    final completed = List<int>.from(log[wordKey] ?? []);
+    if (completed.isNotEmpty) {
+      completed.remove(completed.reduce((a, b) => a > b ? a : b));
+      log[wordKey] = completed;
+      await saveReviewLog(log);
+    }
+    final lastReview = await getSRSLastReview();
+    lastReview[wordKey] = SRSWord._todayStr();
+    await saveSRSLastReview(lastReview);
+    SyncService.pushLists();
+  });
 
   static Future<void> hardSRSWord(SRSWord word) async {
     // Same as reviewSRSWord: the log has no "hard" weighting, so a hard
@@ -2990,7 +3005,13 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
           unitWords.where((w) => stageFromLog(w, log) >= 4).length;
       final stage5Count = masteredUnitWords.length;
 
-      final story1 = stage4Count >= threshold;
+      // Story 1 stays open once earned: a "Not yet" can drop words back
+      // below stage 4, and a story the learner already read shouldn't lock.
+      final story1Key = 'story1_unlock_${collectionName}_${day.dayNumber}';
+      final story1 = stage4Count >= threshold || prefs.getString(story1Key) != null;
+      if (story1 && prefs.getString(story1Key) == null) {
+        await prefs.setString(story1Key, today);
+      }
       final story2 = stage5Count >= threshold;
 
       bool story3 = false;

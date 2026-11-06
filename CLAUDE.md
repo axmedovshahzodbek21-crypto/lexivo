@@ -36,9 +36,14 @@ These intervals are deliberate. Changing them silently breaks every learner's sc
 
 - Review intervals: **+1, +3, +7, +14, +30 days**.
 - A missed day propagates forward — it does not reset the card to zero.
-- **3 consecutive missed reviews → the word is unlearned** and re-enters the queue.
-- "Vaziyat cards" (situation-based comprehension cards) unlock at the **4th successful
-  review**. That is the mastery gate; don't move it.
+- "Know it" → next interval done. **"Not yet" → drops one stage** (last completed
+  interval removed, that interval spaced from today; stage 0 → due tomorrow). Both
+  count as reviewed — same model as class Review.
+- **A word 3+ days overdue (never opened) is unlearned** and re-enters the queue.
+  A "Not yet" restarts that countdown; it is not a missed review.
+- Unit **Story 1** unlocks when 80% of the unit's words pass the **4th review** (the
+  mastery gate; don't move it) and stays unlocked once earned. Story 2 = 80% mastered,
+  Story 3 = 30 days after Story 2. (There are no "Vaziyat cards" in the code.)
 
 If a change touches scheduling, walk me through one card across all five intervals
 before and after, in plain text, before you write any code.

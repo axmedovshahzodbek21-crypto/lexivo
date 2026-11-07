@@ -158,7 +158,7 @@ Future<(_HwCache, Map<String, Set<String>>)> _fetchHomework(String classId, Stri
         .order('created_at'),
     supabase
         .from('class_homework')
-        .select('id, unit_id, class_unit_id, collection_name, day_number, passage_id, modes, due_date, student_ids')
+        .select('id, unit_id, class_unit_id, collection_name, day_number, passage_id, modes, due_date, student_ids, is_review')
         .eq('class_id', classId),
   ]);
 
@@ -220,12 +220,16 @@ Future<(_HwCache, Map<String, Set<String>>)> _fetchHomework(String classId, Stri
   final hwByCWUnit = <String, Map>{};
   final collHwRows = <Map>[];
   final passageHwRows = <Map>[];
+  // Auto-homework review days add a quiz-only second row for a unit that
+  // already has one — kept apart so it doesn't replace the unit's main row.
+  final reviewLibRows = <Map>[];
   for (final h in applicableHw) {
     final uid = (h as Map)['unit_id'] as String?;
     final cwid = h['class_unit_id'] as String?;
     final collName = h['collection_name'] as String?;
     final passageId = h['passage_id'] as int?;
-    if (uid != null) { hwByLibUnit[uid] = h; }
+    if (uid != null && h['is_review'] == true) { reviewLibRows.add(h); }
+    else if (uid != null) { hwByLibUnit[uid] = h; }
     else if (cwid != null) { hwByCWUnit[cwid] = h; }
     else if (collName != null) { collHwRows.add(h); }
     else if (passageId != null) { passageHwRows.add(h); }
@@ -258,6 +262,16 @@ Future<(_HwCache, Map<String, Set<String>>)> _fetchHomework(String classId, Stri
             hwDue: hw?['due_date'] as String?,
           );
         }).toList();
+    for (final r in reviewLibRows) {
+      final base = units.where((u) => u.id == r['unit_id']).firstOrNull;
+      if (base == null) continue;
+      units.add(HomeworkUnit(
+        id: base.id, name: '${base.name} · ${tr('review_label')}', wordCount: base.wordCount,
+        homeworkId: r['id'] as String,
+        hwModes: (r['modes'] as List?)?.map((x) => x as String).toList() ?? ['quiz'],
+        hwDue: r['due_date'] as String?,
+      ));
+    }
     folders.add(_AssignedFolder(id: folderId, assignmentId: a['id'] as String, name: folder['name'] as String, units: units));
   }
 
@@ -301,7 +315,7 @@ Future<(_HwCache, Map<String, Set<String>>)> _fetchHomework(String classId, Stri
         homeworkId: h['id'] as String,
         collectionName: name,
         dayNumber: dayNum,
-        topic: day?.topic ?? '${_ltr('day_cap')} $dayNum',
+        topic: (day?.topic ?? '${_ltr('day_cap')} $dayNum') + (h['is_review'] == true ? ' · ${tr('review_label')}' : ''),
         wordCount: day?.words.length ?? 0,
         hwModes: List<String>.from(h['modes'] as List? ?? []),
         hwDue: h['due_date'] as String?,

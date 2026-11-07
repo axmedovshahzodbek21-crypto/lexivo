@@ -69,7 +69,7 @@ Future<List<HomeworkRecord>> loadHomeworkRecords(String classId, List<String> st
       .eq('class_id', classId).inFilter('student_id', studentIds);
   final hws = (await supabase
       .from('class_homework')
-      .select('id, unit_id, class_unit_id, collection_name, day_number, passage_id, modes, due_date, created_at, student_ids, teacher_units(name), class_word_units(name)')
+      .select('id, unit_id, class_unit_id, collection_name, day_number, passage_id, modes, due_date, created_at, student_ids, is_review, teacher_units(name), class_word_units(name)')
       .eq('class_id', classId)
       .not('due_date', 'is', null) as List)
       .map((e) => Map<String, dynamic>.from(e as Map))
@@ -115,6 +115,7 @@ Future<List<HomeworkRecord>> loadHomeworkRecords(String classId, List<String> st
     } else {
       title = ((h['teacher_units'] as Map?)?['name'] as String?) ?? l10n.tr('unit');
     }
+    if (h['is_review'] == true) title = '$title · 🔁';
     final createdAt = DateTime.parse(h['created_at'] as String);
     final assignedDate = formatStreakDate(createdAt.toLocal());
     final assigned = (h['student_ids'] as List?)?.cast<String>();

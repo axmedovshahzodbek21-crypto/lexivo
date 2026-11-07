@@ -11,6 +11,7 @@ import '../data/a1_collection.dart';
 import '../data/a2_collection.dart';
 import '../data/b1_collection.dart';
 import 'class_home_screen.dart';
+import 'auto_homework_sheet.dart';
 
 const _localStrings = <String, Map<String, String>>{
   'day_cap': {'en': 'Day', 'uz': 'Kun', 'ru': 'День'},
@@ -62,7 +63,9 @@ class _Homework {
   final List<String> studentIds;
   final int totalStudents;
   final Map<String, int> completionCounts;
+  final bool isReview;            // auto-homework review day (quiz-only copy)
   const _Homework({
+    this.isReview = false,
     required this.id, this.unitId, this.classUnitId,
     this.collectionName, this.dayNumber, this.passageId,
     required this.unitName, required this.source, this.topic,
@@ -119,6 +122,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
   List<_AssignedFolder> _folders = [];
   List<_ClassWordUnit> _classUnits = [];
   List<_Homework> _homework = [];
+  List<AutoSchedule> _autos = [];
   List<({String studentId, String name})> _students = [];
   bool _loading = true;
   final Set<String> _expandedFolders = {};
@@ -150,13 +154,15 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
             .select('id, name, class_words(count)')
             .eq('class_id', widget.classId).order('created_at'),
         supabase.from('class_homework')
-            .select('id, unit_id, class_unit_id, collection_name, day_number, passage_id, modes, due_date, student_ids, teacher_units(name), class_word_units(name)')
+            .select('id, unit_id, class_unit_id, collection_name, day_number, passage_id, modes, due_date, student_ids, is_review, teacher_units(name), class_word_units(name)')
             .eq('class_id', widget.classId).order('created_at', ascending: false),
+        loadAutoSchedules(widget.classId),
       ]);
 
       final folderRows  = results[0] as List;
       final cwUnitRows  = results[1] as List;
       final hwRows      = results[2] as List;
+      final autos       = results[3] as List<AutoSchedule>;
 
       // Folders
       final folders = folderRows.map((e) {
@@ -248,7 +254,13 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
         final rawModes = (m['modes'] as List?)?.map((x) => x as String).toList() ?? ['learn', 'flashcard', 'quiz'];
         final rawStudentIds = (m['student_ids'] as List?)?.map((x) => x as String).toList() ?? [];
         final totalStudents = rawStudentIds.isEmpty ? _students.length : rawStudentIds.length;
+        final isReview = m['is_review'] == true;
+        if (isReview) {
+          unitName = '$unitName · ${tr('review_label')}';
+          if (topic != null) topic = '$topic · ${tr('review_label')}';
+        }
         return _Homework(
+          isReview: isReview,
           id: m['id'] as String, unitId: unitId, classUnitId: classUnitId,
           collectionName: collName, dayNumber: dayNum, passageId: passageId,
           unitName: unitName, source: source, topic: topic,
@@ -258,7 +270,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
         );
       }).toList();
 
-      if (mounted) setState(() { _folders = folders; _classUnits = classUnits; _homework = homework; _loading = false; });
+      if (mounted) setState(() { _folders = folders; _classUnits = classUnits; _homework = homework; _autos = autos; _loading = false; });
       // Opened from an "Open homework" link (student summary): show that sheet once.
       final openId = widget.openHomeworkId;
       if (openId != null && !_openedHomework && mounted) {
@@ -269,6 +281,32 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
       debugPrint('_load error: $e\n$st');
       if (mounted) { setState(() => _loading = false); }
     }
+  }
+
+  // ── Auto homework ──────────────────────────────────────────────────────────
+
+  bool _wholeClassAssigned({String? collName, int? dayNumber, String? unitId}) => _homework.any((h) =>
+      !h.isReview && h.assignedTo == 'class' &&
+      (unitId != null ? h.unitId == unitId : h.collectionName == collName && h.dayNumber == dayNumber));
+
+  Future<void> _openAutoForCollection(String collName) async {
+    final col = collectionByName(collName);
+    if (col == null) return;
+    final days = col.days.where((d) => d.words.isNotEmpty).map((d) => d.dayNumber).toList();
+    final changed = await showAutoHomeworkSheet(context,
+        classId: widget.classId, sourceTitle: collName,
+        collectionName: collName, dayNumbers: days,
+        remaining: days.where((d) => !_wholeClassAssigned(collName: collName, dayNumber: d)).map((d) => 'U$d').toList(),
+        existing: _autos.where((a) => a.collectionName == collName).firstOrNull);
+    if (changed) { ClassHomeScreen.invalidate(widget.classId); _load(); }
+  }
+
+  Future<void> _openAutoForFolder(_AssignedFolder folder) async {
+    final changed = await showAutoHomeworkSheet(context,
+        classId: widget.classId, sourceTitle: folder.folderName, folderId: folder.folderId,
+        remaining: folder.units.where((u) => !_wholeClassAssigned(unitId: u.unitId)).map((u) => u.unitName).toList(),
+        existing: _autos.where((a) => a.folderId == folder.folderId).firstOrNull);
+    if (changed) { ClassHomeScreen.invalidate(widget.classId); _load(); }
   }
 
   // ── Library folder actions ─────────────────────────────────────────────────
@@ -582,6 +620,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
       (dayCoverage[h.dayNumber!] ??= {}).addAll(covered);
     }
 
+    var openAuto = false;
     final pickedDay = await showModalBottomSheet<WordDay>(
       context: context, isScrollControlled: true,
       backgroundColor: context.surface,
@@ -594,6 +633,11 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
             const SizedBox(width: 8),
             Expanded(child: Text(pickedMeta.name,
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: context.appText))),
+            TextButton.icon(
+              onPressed: () { openAuto = true; Navigator.pop(ctx); },
+              icon: const Text('⚡'),
+              label: Text(tr('auto_assign'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+            ),
           ])),
           Divider(height: 1, color: context.border),
           Expanded(child: ListView.builder(
@@ -632,6 +676,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
         ]),
       ),
     );
+    if (openAuto && mounted) { await _openAutoForCollection(pickedMeta.name); return; }
     if (pickedDay == null || !mounted) return;
 
     // Show homework assignment modal with collection info
@@ -1160,7 +1205,12 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                         Text(folder.folderName, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: context.appText)),
                         Text(tr('n_units_word').replaceFirst('{n}', '${folder.units.length}'),
                             style: TextStyle(fontSize: 11, color: context.textMuted)),
+                        if (_autos.where((a) => a.folderId == folder.folderId).firstOrNull case final auto?)
+                          Text(auto.statusLine(), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.primary)),
                       ])),
+                      GestureDetector(onTap: () => _openAutoForFolder(folder),
+                          child: const Padding(padding: EdgeInsets.symmetric(horizontal: 6), child: Text('⚡', style: TextStyle(fontSize: 16)))),
+                      const SizedBox(width: 4),
                       GestureDetector(onTap: () => _unassignFolder(folder), child: Icon(Icons.close, size: 18, color: context.textMuted)),
                       const SizedBox(width: 8),
                       Icon(expanded ? Icons.expand_less : Icons.expand_more, color: context.textMuted, size: 20),
@@ -1301,7 +1351,8 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
           const SizedBox(height: 10),
           Builder(builder: (_) {
             final collHw = _homework.where((h) => h.source == 'collection').toList();
-            if (collHw.isEmpty) {
+            final collAutos = _autos.where((a) => a.collectionName != null).toList();
+            if (collHw.isEmpty && collAutos.isEmpty) {
               return Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16)),
@@ -1324,6 +1375,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
               );
             }
             final groups = <String, List<_Homework>>{};
+            for (final a in collAutos) { groups[a.collectionName!] ??= []; }
             for (final h in collHw) { final n = h.collectionName!; (groups[n] ??= []).add(h); }
             return Column(children: groups.entries.map((entry) {
               final name = entry.key;
@@ -1345,9 +1397,13 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                         const SizedBox(width: 10),
                         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Text(name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: Colors.white)),
-                          Text(tr('n_days_assigned').replaceFirst('{n}', '${days.length}'),
+                          Text(tr('n_days_assigned').replaceFirst('{n}', '${days.where((d) => !d.isReview).length}'),
                               style: const TextStyle(fontSize: 11, color: Color(0xB3FFFFFF))),
+                          if (_autos.where((a) => a.collectionName == name).firstOrNull case final auto?)
+                            Text(auto.statusLine(), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
                         ])),
+                        GestureDetector(onTap: () => _openAutoForCollection(name),
+                            child: const Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Text('⚡', style: TextStyle(fontSize: 16)))),
                         Icon(expanded ? Icons.expand_less : Icons.expand_more, color: Colors.white70, size: 20),
                       ]),
                     ),

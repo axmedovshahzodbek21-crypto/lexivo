@@ -18,6 +18,10 @@ const _s = <String, Map<String, String>>{
   'review':       {'en': 'REVIEW DAY (QUIZ ON RECENT UNITS)', 'uz': 'TAKRORLASH KUNI (OXIRGI UNITLARDAN TEST)', 'ru': 'ДЕНЬ ПОВТОРЕНИЯ (ТЕСТ ПО НЕДАВНИМ)'},
   'off':          {'en': 'Off', 'uz': 'Yo\'q', 'ru': 'Нет'},
   'every_n':      {'en': 'Every {n}th', 'uz': 'Har {n}-kun', 'ru': 'Каждый {n}-й'},
+  'order':        {'en': 'ORDER', 'uz': 'TARTIB', 'ru': 'ПОРЯДОК'},
+  'in_order':     {'en': 'In order', 'uz': 'Ketma-ket', 'ru': 'По порядку'},
+  'random':       {'en': 'Random', 'uz': 'Tasodifiy', 'ru': 'Случайно'},
+  'random_n':     {'en': '{n} random unit(s)', 'uz': '{n} ta tasodifiy unit', 'ru': 'Случайных юнитов: {n}'},
   'start':        {'en': 'START', 'uz': 'BOSHLASH', 'ru': 'НАЧАЛО'},
   'today':        {'en': 'Today', 'uz': 'Bugundan', 'ru': 'Сегодня'},
   'tomorrow':     {'en': 'Tomorrow', 'uz': 'Ertadan', 'ru': 'Завтра'},
@@ -69,7 +73,7 @@ class AutoSchedule {
   final List<int> weekdays;
   final List<String> modes;
   final int? dueDays, reviewEvery;
-  final bool paused;
+  final bool paused, randomOrder;
   final String startDate;
   final String? lastRunOn, lastStatus;
   final int lastCount, daysSinceReview;
@@ -84,6 +88,7 @@ class AutoSchedule {
         dueDays = (m['due_days'] as num?)?.toInt(),
         reviewEvery = (m['review_every'] as num?)?.toInt(),
         paused = m['paused'] as bool? ?? false,
+        randomOrder = m['random_order'] as bool? ?? false,
         startDate = m['start_date'] as String,
         lastRunOn = m['last_run_on'] as String?,
         lastStatus = m['last_status'] as String?,
@@ -91,7 +96,7 @@ class AutoSchedule {
         daysSinceReview = (m['days_since_review'] as num?)?.toInt() ?? 0;
 
   static const selectCols =
-      'id, collection_name, folder_id, units_per_day, weekdays, modes, due_days, review_every, paused, start_date, last_run_on, last_status, last_count, days_since_review';
+      'id, collection_name, folder_id, units_per_day, weekdays, modes, due_days, review_every, random_order, paused, start_date, last_run_on, last_status, last_count, days_since_review';
 
   /// One line for the teacher's card, e.g. "⚡ kuniga 2 ta · Bugun: 2 ta unit berildi".
   String statusLine() {
@@ -141,6 +146,7 @@ Future<bool> showAutoHomeworkSheet(
   var match = existing?.modes.contains('match') ?? false;
   int? dueDays = existing == null ? 1 : existing.dueDays;
   int? reviewEvery = existing == null ? 5 : existing.reviewEvery;
+  var randomOrder = existing?.randomOrder ?? false;
   var startToday = true;
   var busy = false;
   var changed = false;
@@ -187,7 +193,8 @@ Future<bool> showAutoHomeworkSheet(
           releasedSinceReview = false;
         } else {
           final batch = remaining.sublist(idx, (idx + perDay).clamp(0, remaining.length));
-          if (lines.length < 6) lines.add('${wd[day.weekday - 1]} ${_short(day)}: ${batch.join(', ')}');
+          final what = randomOrder ? _t('random_n').replaceFirst('{n}', '${batch.length}') : batch.join(', ');
+          if (lines.length < 6) lines.add('${wd[day.weekday - 1]} ${_short(day)}: $what');
           idx += batch.length;
           sinceReview++;
           releasedSinceReview = true;
@@ -232,6 +239,7 @@ Future<bool> showAutoHomeworkSheet(
         'modes': ['learn', 'flashcard', 'quiz', if (match) 'match'],
         'due_days': dueDays,
         'review_every': reviewEvery,
+        'random_order': randomOrder,
         if (collectionName != null) 'day_numbers': dayNumbers,
       };
 
@@ -262,6 +270,13 @@ Future<bool> showAutoHomeworkSheet(
             IconButton(onPressed: perDay > 1 ? () => setSheet(() => perDay--) : null, icon: const Icon(Icons.remove_circle_outline)),
             Text('$perDay', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: ctx.appText)),
             IconButton(onPressed: perDay < 10 ? () => setSheet(() => perDay++) : null, icon: const Icon(Icons.add_circle_outline)),
+          ]),
+
+          label(ctx, 'order'),
+          Row(children: [
+            chip(ctx, _t('in_order'), !randomOrder, () => setSheet(() => randomOrder = false)),
+            const SizedBox(width: 6),
+            chip(ctx, '🎲 ${_t('random')}', randomOrder, () => setSheet(() => randomOrder = true)),
           ]),
 
           label(ctx, 'days'),

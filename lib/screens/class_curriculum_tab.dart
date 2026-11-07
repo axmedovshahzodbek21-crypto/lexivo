@@ -148,7 +148,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
       }
       final results = await Future.wait<dynamic>([
         supabase.from('class_library_assignments')
-            .select('id, folder_id, teacher_folders(name, teacher_units(id, name, teacher_unit_words(count)))')
+            .select('id, folder_id, teacher_folders(name, teacher_units(id, name, position, created_at, teacher_unit_words(count)))')
             .eq('class_id', widget.classId),
         supabase.from('class_word_units')
             .select('id, name, class_words(count)')
@@ -176,7 +176,13 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
         } else {
           tf = Map<String, dynamic>.from(tfRaw as Map);
         }
-        final units = ((tf['teacher_units'] as List?) ?? []).map((u) {
+        // The teacher's folder order (same as auto homework releases).
+        final unitRows = ((tf['teacher_units'] as List?) ?? []).map((u) => Map<String, dynamic>.from(u as Map)).toList()
+          ..sort((a, b) {
+            final p = ((a['position'] as num?) ?? 0).compareTo((b['position'] as num?) ?? 0);
+            return p != 0 ? p : ((a['created_at'] as String?) ?? '').compareTo((b['created_at'] as String?) ?? '');
+          });
+        final units = unitRows.map((u) {
           final um = Map<String, dynamic>.from(u as Map);
           final words = um['teacher_unit_words'] as List?;
           return _LibraryUnit(

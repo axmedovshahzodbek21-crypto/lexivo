@@ -79,8 +79,10 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
           // exists yet for units within a folder), so this always falls
           // through to the created_at tiebreaker below — kept as the
           // primary sort key for when manual reordering is built.
-          .order('position')
-          .order('created_at');
+          // Dart's order() defaults to descending — explicit ascending so the
+          // app matches web and the order auto homework releases units in.
+          .order('position', ascending: true)
+          .order('created_at', ascending: true);
       final units = (data as List).map((e) {
         final m = Map<String, dynamic>.from(e as Map);
         final words = m['teacher_unit_words'] as List?;

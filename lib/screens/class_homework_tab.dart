@@ -190,7 +190,10 @@ Future<(_HwCache, Map<String, Set<String>>)> _fetchHomework(String classId, Stri
             .from('teacher_units')
             .select('id, folder_id, name, teacher_unit_words(count)')
             .inFilter('folder_id', folderIds)
-            .order('created_at')
+            // The teacher's folder order (same as auto homework releases).
+            // Dart's order() defaults to descending, so both are explicit.
+            .order('position', ascending: true)
+            .order('created_at', ascending: true)
         : Future.value(<dynamic>[]),
     applicableHw.isNotEmpty && userId != null
         ? supabase

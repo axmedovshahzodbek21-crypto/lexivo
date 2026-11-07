@@ -15,8 +15,8 @@
 --     (is_review = true).
 --   * Release at 00:02 Tashkent; one push per schedule at 08:01.
 --   * Units already assigned to the whole class are skipped.
---   * Order: the source's own order (collection unit number / the teacher's
---     folder order), or random when random_order is on.
+--   * Order: collections always go by unit number. Library folders go
+--     oldest unit first, or at random when the teacher turns random_order on.
 --
 -- Turn the jobs off:
 --   select cron.unschedule('auto-homework-daily');
@@ -37,7 +37,8 @@ create table if not exists public.class_auto_homework (
                     check (cardinality(modes) > 0 and modes <@ '{learn,flashcard,quiz,match}'::text[]),
   due_days          int check (due_days between 0 and 14),   -- null = no deadline
   review_every      int check (review_every between 2 and 14), -- null = no review days
-  random_order      boolean not null default false, -- pick the day's units at random
+  random_order      boolean not null default false  -- library folders only: pick the day's units at random
+                    check (not random_order or folder_id is not null),
   paused            boolean not null default false,
   start_date        date not null default (now() at time zone 'Asia/Tashkent')::date,
   last_run_on       date,
@@ -169,7 +170,7 @@ begin
        select 1 from class_homework h
         where h.class_id = s.class_id and h.collection_name = s.collection_name
           and h.day_number = x.d and h.student_ids is null and not h.is_review)
-     order by case when s.random_order then random() end, x.ord
+     order by x.ord
      limit s.units_per_day;
   else
     insert into class_homework (class_id, unit_id, modes,

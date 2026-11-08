@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../l10n.dart';
@@ -94,12 +95,32 @@ class PomodoroService extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   bool _oneMinuteWarningSent = false;
+  List<int> _breakTips = const [];
 
   void _beginPhase(PomodoroState newState, int seconds) {
     _state = newState;
     _secondsRemaining = seconds;
     _phaseEndTime = DateTime.now().add(Duration(seconds: seconds));
     _oneMinuteWarningSent = false;
+    if (newState == PomodoroState.onBreak) _pickBreakTips();
+  }
+
+  // A break shows 2 tips (3 if longer than 10 minutes), each for an equal share
+  // of it, so there is time to actually do what a tip says. The first is
+  // always something physical. Keep in sync with web's PomodoroWidget.tsx.
+  void _pickBreakTips() {
+    const physicalTips = [1, 2, 3, 4, 5, 6];
+    const tipCount = 12;
+    final first = physicalTips[Random().nextInt(physicalTips.length)];
+    final rest = [for (var n = 1; n <= tipCount; n++) if (n != first) n]..shuffle();
+    _breakTips = [first, ...rest.take((_breakMinutes > 10 ? 3 : 2) - 1)];
+  }
+
+  String get breakTip {
+    final total = _breakMinutes * 60;
+    if (_breakTips.isEmpty || total <= 0) return '';
+    final i = ((total - _secondsRemaining) * _breakTips.length ~/ total).clamp(0, _breakTips.length - 1);
+    return tr('break_tip_${_breakTips[i]}');
   }
 
   void start(int workMinutes, int breakMinutes) {

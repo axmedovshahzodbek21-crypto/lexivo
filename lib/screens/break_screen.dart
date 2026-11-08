@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
 import 'dart:ui';
 import 'pomodoro_service.dart';
 import '../app_theme.dart';
@@ -16,29 +15,15 @@ class _BreakOverlayState extends State<BreakOverlay>
     with SingleTickerProviderStateMixin {
   late AnimationController _breatheController;
   late Animation<double> _breatheAnim;
-  int _tipIndex = 0;
-  Timer? _tipTimer;
-  // Tracks whether the breathing animation/tip timer are currently running,
-  // so _syncWithBreakState only starts/stops them on an actual on-break
+  // Tracks whether the breathing animation is currently running, so
+  // _syncWithBreakState only starts/stops it on an actual on-break
   // transition instead of on every one of PomodoroService's per-second
   // notifyListeners() calls.
   bool _running = false;
 
-  late final List<String> _tips;
-
   @override
   void initState() {
     super.initState();
-    _tips = [
-      tr('break_tip_1'),
-      tr('break_tip_2'),
-      tr('break_tip_3'),
-      tr('break_tip_4'),
-      tr('break_tip_5'),
-      tr('break_tip_6'),
-      tr('break_tip_7'),
-      tr('break_tip_8'),
-    ];
     _breatheController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 4),
@@ -47,10 +32,10 @@ class _BreakOverlayState extends State<BreakOverlay>
       CurvedAnimation(parent: _breatheController, curve: Curves.easeInOut),
     );
     // This overlay is mounted at the app root for the whole session (see
-    // main.dart), so unconditionally starting the animation/timer here (as
-    // this used to) ran a 4s repeating animation and a 6s periodic rebuild
-    // for the app's entire lifetime, not just while a break is actually
-    // showing. Start/stop them only on real on-break transitions instead.
+    // main.dart), so unconditionally starting the animation here (as this
+    // used to) ran a 4s repeating animation for the app's entire lifetime,
+    // not just while a break is actually showing. Start/stop it only on
+    // real on-break transitions instead.
     PomodoroService().addListener(_syncWithBreakState);
     _syncWithBreakState();
   }
@@ -61,13 +46,8 @@ class _BreakOverlayState extends State<BreakOverlay>
     _running = onBreak;
     if (onBreak) {
       _breatheController.repeat(reverse: true);
-      _tipTimer = Timer.periodic(const Duration(seconds: 6), (_) {
-        if (mounted) setState(() => _tipIndex = (_tipIndex + 1) % _tips.length);
-      });
     } else {
       _breatheController.stop();
-      _tipTimer?.cancel();
-      _tipTimer = null;
     }
   }
 
@@ -75,7 +55,6 @@ class _BreakOverlayState extends State<BreakOverlay>
   void dispose() {
     PomodoroService().removeListener(_syncWithBreakState);
     _breatheController.dispose();
-    _tipTimer?.cancel();
     super.dispose();
   }
 
@@ -91,7 +70,7 @@ class _BreakOverlayState extends State<BreakOverlay>
     // to pick up the per-second changes.
     return ListenableBuilder(
       listenable: service,
-      child: _BreakContent(breatheAnim: _breatheAnim, tips: _tips, tipIndex: _tipIndex),
+      child: _BreakContent(breatheAnim: _breatheAnim),
       builder: (context, child) {
         if (!service.isOnBreak) return const SizedBox.shrink();
         return child!;
@@ -102,10 +81,8 @@ class _BreakOverlayState extends State<BreakOverlay>
 
 class _BreakContent extends StatelessWidget {
   final Animation<double> breatheAnim;
-  final List<String> tips;
-  final int tipIndex;
 
-  const _BreakContent({required this.breatheAnim, required this.tips, required this.tipIndex});
+  const _BreakContent({required this.breatheAnim});
 
   @override
   Widget build(BuildContext context) {
@@ -180,29 +157,35 @@ class _BreakContent extends StatelessWidget {
               const SizedBox(height: 40),
 
               // Tip card
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 500),
-                child: Container(
-                  key: ValueKey(tipIndex),
-                  margin: const EdgeInsets.symmetric(horizontal: 32),
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.2),
+              ListenableBuilder(
+                listenable: PomodoroService(),
+                builder: (context, _) {
+                  final tip = PomodoroService().breakTip;
+                  return AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 500),
+                    child: Container(
+                      key: ValueKey(tip),
+                      margin: const EdgeInsets.symmetric(horizontal: 32),
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Text(
+                        tip,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: Colors.white,
+                          height: 1.6,
+                        ),
+                      ),
                     ),
-                  ),
-                  child: Text(
-                    tips[tipIndex],
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      color: Colors.white,
-                      height: 1.6,
-                    ),
-                  ),
-                ),
+                  );
+                },
               ),
               const SizedBox(height: 40),
 

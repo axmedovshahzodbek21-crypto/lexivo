@@ -219,7 +219,7 @@ Future<bool> showAutoHomeworkSheet(
         'weekdays': (weekdays.toList()..sort()),
         'modes': ['learn', 'flashcard', 'quiz', if (match) 'match'],
         'due_days': dueDays,
-        'random_order': folderId != null && randomOrder,
+        'random_order': randomOrder,
         if (collectionName != null) 'day_numbers': dayNumbers,
       };
 
@@ -252,14 +252,12 @@ Future<bool> showAutoHomeworkSheet(
             IconButton(onPressed: perDay < 10 ? () => setSheet(() => perDay++) : null, icon: const Icon(Icons.add_circle_outline)),
           ]),
 
-          if (folderId != null) ...[ // random order is for the teacher's own folders only
-            label(ctx, 'order'),
-            Row(children: [
-              chip(ctx, _t('in_order'), !randomOrder, () => setSheet(() => randomOrder = false)),
-              const SizedBox(width: 6),
-              chip(ctx, '🎲 ${_t('random')}', randomOrder, () => setSheet(() => randomOrder = true)),
-            ]),
-          ],
+          label(ctx, 'order'),
+          Row(children: [
+            chip(ctx, _t('in_order'), !randomOrder, () => setSheet(() => randomOrder = false)),
+            const SizedBox(width: 6),
+            chip(ctx, '🎲 ${_t('random')}', randomOrder, () => setSheet(() => randomOrder = true)),
+          ]),
 
           label(ctx, 'days'),
           Wrap(spacing: 6, runSpacing: 6, children: List.generate(7, (i) {

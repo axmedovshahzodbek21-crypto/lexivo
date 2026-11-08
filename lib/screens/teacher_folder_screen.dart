@@ -4,6 +4,7 @@ import '../services/supabase_service.dart';
 import '../app_theme.dart';
 import 'teacher_unit_screen.dart';
 import '../widgets/copy_word_list.dart';
+import 'bulk_import_sheet.dart';
 import '../main.dart';
 
 class _Unit {
@@ -325,6 +326,12 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
                 return [for (final u in units) byUnit[u.id] ?? const []];
               },
             ),
+          IconButton(
+            icon: Icon(Icons.playlist_add, color: context.primary, size: 26),
+            onPressed: () async {
+              if (await showBulkImportSheet(context, widget.folderId)) _load();
+            },
+          ),
           IconButton(
             icon: Icon(Icons.add, color: context.primary, size: 26),
             onPressed: _createUnit,

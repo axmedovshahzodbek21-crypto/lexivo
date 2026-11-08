@@ -8,6 +8,7 @@ import '../data/storage_service.dart';
 import '../app_theme.dart';
 import '../data/word_data.dart';
 import '../data/reading_data.dart';
+import '../widgets/unit_mode_hub.dart';
 import 'class_models.dart';
 import 'learning.dart';
 import 'flashcard.dart';
@@ -53,32 +54,13 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
   bool _offlineNoCache = false;
   Set<String> _completedModes = {};
 
-  static const _modeIcon  = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯'};
-  static Map<String, String> get _modeLabel => {'learn': tr('learn'), 'flashcard': tr('flashcards'), 'quiz': tr('quiz'), 'match': tr('match_plain')};
-  static const _modeColor = {
-    'learn':     Color(0xFF6C63FF),
-    'flashcard': Color(0xFFA855F7),
-    'quiz':      Color(0xFFEA580C),
-    'match':     Color(0xFFEC4899),
-  };
+  static const _modeIcon = unitModeIcon;
+  static Map<String, String> get _modeLabel => unitModeLabel;
+  static const _modeColor = unitModeColor;
 
-  String? get _nextMode {
-    for (final m in widget.modes) {
-      if (!_completedModes.contains(m)) return m;
-    }
-    return null;
-  }
+  String? get _nextMode => unitNextMode(widget.modes, _completedModes);
 
-  String? get _skipMode {
-    final next = _nextMode;
-    if (next == null) return null;
-    final idx = widget.modes.indexOf(next);
-    for (int i = idx + 1; i < widget.modes.length; i++) {
-      final m = widget.modes[i];
-      if (!_completedModes.contains(m) && !_gatedByLearn(m)) return m;
-    }
-    return null;
-  }
+  String? get _skipMode => unitSkipMode(widget.modes, _completedModes, _gatedByLearn);
 
   // Matches the web app's gating rule (homework/[hwId]/page.tsx's
   // gatedByLearn) so the same homework behaves the same on both platforms:
@@ -404,8 +386,24 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
             overflow: TextOverflow.ellipsis),
         ]),
       ),
-      body: allDone ? _buildDoneScreen() : _buildContinueScreen(next!, skip),
-      bottomNavigationBar: allDone ? null : _buildBottomBar(),
+      body: allDone
+          ? _buildDoneScreen()
+          : UnitModeHub(
+              modes: widget.modes,
+              completed: _completedModes,
+              nextMode: next,
+              skipMode: skip,
+              wordCount: _wordDay!.words.length,
+              onStart: _studyMode,
+            ),
+      bottomNavigationBar: allDone
+          ? null
+          : UnitModeBar(
+              modes: widget.modes,
+              completed: _completedModes,
+              isLocked: _gatedByLearn,
+              onStart: _studyMode,
+            ),
     );
   }
 
@@ -549,171 +547,6 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
             ),
           ),
         ]),
-      ),
-    );
-  }
-
-  // ── Continue screen ───────────────────────────────────────────────────────────
-
-  Widget _buildContinueScreen(String nextMode, String? skipMode) {
-    final nextColor = _modeColor[nextMode] ?? context.primary;
-
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
-      children: [
-        // Progress row
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Row(
-            children: widget.modes.map((m) {
-              final done = _completedModes.contains(m);
-              final isCurrent = m == nextMode;
-              final color = _modeColor[m] ?? context.primary;
-              return Expanded(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  decoration: BoxDecoration(
-                    color: done
-                        ? color.withValues(alpha: 0.15)
-                        : isCurrent
-                            ? color.withValues(alpha: 0.1)
-                            : context.surface,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: done ? color : isCurrent ? color.withValues(alpha: 0.5) : context.border,
-                      width: isCurrent ? 1.5 : 1,
-                    ),
-                  ),
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Text(_modeIcon[m] ?? '📖', style: const TextStyle(fontSize: 16)),
-                    const SizedBox(height: 3),
-                    Text(_modeLabel[m] ?? m,
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                        color: done ? color : isCurrent ? color : context.textMuted,
-                      )),
-                    if (done)
-                      Icon(Icons.check_circle_rounded, color: color, size: 12)
-                    else if (isCurrent)
-                      Container(width: 8, height: 8,
-                        decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-                  ]),
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-
-        // Recommended next step card
-        GestureDetector(
-          onTap: () => _studyMode(nextMode),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: nextColor.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: nextColor.withValues(alpha: 0.4), width: 1.5),
-            ),
-            child: Row(children: [
-              Text(_modeIcon[nextMode] ?? '📖', style: const TextStyle(fontSize: 28)),
-              const SizedBox(width: 16),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(tr('do_mode').replaceFirst('{mode}', _modeLabel[nextMode] ?? nextMode),
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: nextColor)),
-                const SizedBox(height: 2),
-                Text(tr('recommended_next'),
-                  style: TextStyle(fontSize: 12, color: context.textMuted)),
-              ])),
-              Icon(Icons.arrow_forward_ios_rounded, color: nextColor, size: 16),
-            ]),
-          ),
-        ),
-
-        if (skipMode != null) ...[
-          const SizedBox(height: 12),
-          // Skip option card
-          GestureDetector(
-            onTap: () => _studyMode(skipMode),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: context.surface,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: context.border),
-              ),
-              child: Row(children: [
-                Text(_modeIcon[skipMode] ?? '📖', style: const TextStyle(fontSize: 24)),
-                const SizedBox(width: 14),
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(tr('skip_to_mode').replaceFirst('{mode}', _modeLabel[skipMode] ?? skipMode),
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: context.appText)),
-                  const SizedBox(height: 2),
-                  Text(tr('mode_wont_mark').replaceFirst('{mode}', '${_modeLabel[nextMode]}'),
-                    style: TextStyle(fontSize: 11, color: context.textMuted)),
-                ])),
-                Icon(Icons.arrow_forward_ios_rounded, color: context.textMuted, size: 14),
-              ]),
-            ),
-          ),
-        ],
-
-        const SizedBox(height: 24),
-        Divider(color: context.border),
-        const SizedBox(height: 16),
-
-        // Word count info
-        Row(children: [
-          Text('📚', style: const TextStyle(fontSize: 16)),
-          const SizedBox(width: 8),
-          Text(tr('n_words_modes_done').replaceFirst('{words}', '${_wordDay!.words.length}').replaceFirst('{done}', '${_completedModes.where(widget.modes.contains).length}').replaceFirst('{total}', '${widget.modes.length}'),
-            style: TextStyle(fontSize: 13, color: context.textMuted)),
-        ]),
-      ],
-    );
-  }
-
-  // ── Bottom action bar ─────────────────────────────────────────────────────────
-
-  Widget _buildBottomBar() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
-      decoration: BoxDecoration(
-        color: context.surface,
-        border: Border(top: BorderSide(color: context.border)),
-      ),
-      child: Row(
-        children: widget.modes.map((m) {
-          final done = _completedModes.contains(m);
-          final locked = _gatedByLearn(m);
-          final color = _modeColor[m] ?? context.primary;
-          return Expanded(
-            child: GestureDetector(
-              onTap: locked ? null : () => _studyMode(m),
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 3),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: locked ? context.surface2 : done ? color.withValues(alpha: 0.15) : color,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Text(locked ? '🔒' : (_modeIcon[m] ?? '📖'), style: const TextStyle(fontSize: 16)),
-                  const SizedBox(height: 3),
-                  Text(_modeLabel[m] ?? m,
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      color: locked ? context.textMuted : done ? color : Colors.white,
-                    )),
-                  if (done)
-                    Icon(Icons.check_rounded, color: color, size: 10),
-                ]),
-              ),
-            ),
-          );
-        }).toList(),
       ),
     );
   }

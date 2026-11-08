@@ -2,11 +2,13 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import '../data/word_data.dart' show WordDay, WordItem;
 import '../services/supabase_service.dart';
 import '../services/class_srs_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import 'class_models.dart' show xpDisplay;
+import 'flashcard.dart' show CardMode, FlashcardSettingsScreen;
 
 // Kahoot-style answer tiles for SRS review — ported from the web review page
 // (app/classes/[id]/review/page.tsx). Keep the palette in sync.
@@ -61,6 +63,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
   int _newCap = newWordsPerSession;
   int _index = 0;
   bool _flipped = false; // !dueOnly flip-card only
+  CardMode _cardMode = CardMode.wordToTranslation; // !dueOnly flip-card only
   int _knew = 0;
   int _didntKnow = 0;
   int _sessionXP = 0; // !dueOnly flashcards only — shown on the finish screen
@@ -243,6 +246,41 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
       _ctrl.reverse();
     }
     setState(() => _flipped = willFlip);
+  }
+
+  Future<void> _openCardSettings() async {
+    final mode = await Navigator.push<CardMode>(context, MaterialPageRoute(
+      builder: (_) => FlashcardSettingsScreen(
+        // Only feeds the "N words • topic" subtitle — opened with
+        // currentCardMode, this screen never starts a session from it.
+        wordDay: WordDay(
+          dayNumber: 0,
+          topic: widget.className,
+          words: _cards.map((c) => WordItem(
+            word: c.word, partOfSpeech: '', pronunciation: '',
+            translation: c.translation, definition: c.definition ?? '',
+            example1: '', example2: '', example3: '',
+          )).toList(),
+        ),
+        userProfile: '',
+        collectionName: widget.className,
+        currentCardMode: _cardMode,
+      ),
+    ));
+    if (mode == null || mode == _cardMode || !mounted) return;
+    _ctrl.reset();
+    setState(() {
+      _cardMode = mode;
+      _flipped = false;
+    });
+  }
+
+  // Cards already answered stay where they are, so the progress count holds.
+  void _shuffleRemaining() {
+    final rest = _cards.sublist(_index)..shuffle();
+    _cards.setRange(_index, _cards.length, rest);
+    _ctrl.reset();
+    setState(() => _flipped = false);
   }
 
   // Fallback (no-tiles) path only: reveal the translation, then unlock the
@@ -857,7 +895,35 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
       Text(widget.className, style: TextStyle(fontSize: 11, color: context.textMuted)),
     ]),
+    actions: [
+      if (!widget.dueOnly && !_loading && !_done && _cards.isNotEmpty) ...[
+        IconButton(
+          icon: Icon(Icons.shuffle, color: context.primary),
+          tooltip: tr('shuffle'),
+          onPressed: _shuffleRemaining,
+        ),
+        IconButton(
+          icon: Icon(Icons.settings, color: context.primary),
+          onPressed: _openCardSettings,
+        ),
+      ],
+    ],
   );
+
+  bool get _definitionMode => _cardMode == CardMode.wordToDefinition;
+
+  // Class words can lack a translation or definition, so each side falls back
+  // to text the card does have rather than showing a blank.
+  String _frontText(_ReviewCard card) =>
+      _cardMode == CardMode.translationToWord && card.translation.isNotEmpty
+          ? card.translation
+          : card.word;
+
+  String _backText(_ReviewCard card) {
+    if (_cardMode == CardMode.translationToWord) return card.word;
+    if (_definitionMode && (card.definition?.isNotEmpty ?? false)) return card.definition!;
+    return card.translation;
+  }
 
   Widget _buildFront(_ReviewCard card) => Container(
     width: double.infinity,
@@ -867,7 +933,7 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
       boxShadow: context.cardShadow,
     ),
     child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-      Text(card.word,
+      Text(_frontText(card),
           style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: context.appText),
           textAlign: TextAlign.center),
       const SizedBox(height: 10),
@@ -884,10 +950,10 @@ class _ClassReviewScreenState extends State<ClassReviewScreen>
       border: Border.all(color: context.primary.withValues(alpha: 0.3), width: 1.5),
     ),
     child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-      Text(card.translation,
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: context.primary),
+      Text(_backText(card),
+          style: TextStyle(fontSize: _definitionMode ? 20 : 28, fontWeight: FontWeight.w900, color: context.primary),
           textAlign: TextAlign.center),
-      if (card.definition != null && card.definition!.isNotEmpty) ...[
+      if (!_definitionMode && card.definition != null && card.definition!.isNotEmpty) ...[
         const SizedBox(height: 12),
         Text(card.definition!,
             style: TextStyle(fontSize: 13, color: context.appText), textAlign: TextAlign.center),

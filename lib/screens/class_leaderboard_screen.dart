@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
+import '../services/class_colors.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import '../widgets/member_avatar.dart';
@@ -320,7 +321,7 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
               builder: (_) => ClassStreakScreen(
                 classId: widget.classId,
                 className: widget.className,
-                classColor: colorForId(widget.classId),
+                classColor: ClassColors.colorOf(widget.classId),
                 viewUserId: row.studentId,
                 viewUserName: row.name,
               ),

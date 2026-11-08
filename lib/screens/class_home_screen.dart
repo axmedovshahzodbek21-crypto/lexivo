@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/supabase_service.dart';
+import '../services/class_colors.dart';
 import '../services/fetch_in_chunks.dart';
 import '../date_utils.dart';
 import '../app_theme.dart';
@@ -143,6 +144,43 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
       _initWithPersistedCache();
     }
     if (widget.isTeacher) _loadPendingMembers();
+    ClassColors.load().then((_) { if (mounted) setState(() {}); });
+  }
+
+  Future<void> _showColorSheet() async {
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: context.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (sheetContext) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text(tr('class_color'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+          const SizedBox(height: 16),
+          Wrap(spacing: 14, runSpacing: 14, alignment: WrapAlignment.center, children: [
+            for (final e in kClassColors.entries)
+              GestureDetector(
+                onTap: () => Navigator.pop(sheetContext, e.key),
+                child: CircleAvatar(
+                  radius: 24,
+                  backgroundColor: e.value,
+                  child: e.key == ClassColors.keyOf(widget.classId)
+                      ? const Icon(Icons.check, color: Colors.white)
+                      : null,
+                ),
+              ),
+          ]),
+        ]),
+      ),
+    );
+    if (picked == null) return;
+    final ok = await ClassColors.save(widget.classId, picked);
+    if (!mounted) return;
+    if (ok) {
+      setState(() {});
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr('save_failed'))));
+    }
   }
 
   Future<void> _loadPendingMembers() async {
@@ -707,7 +745,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
       );
     }
 
-    final color = colorForId(widget.classId);
+    final color = ClassColors.colorOf(widget.classId);
     final pending = _targets.where((t) => t.completedAt == null).toList();
 
     return RefreshIndicator(
@@ -761,6 +799,11 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
                       )
                     : Text(_teacherName, style: const TextStyle(color: Colors.white70, fontSize: 13)),
                 ])),
+                IconButton(
+                  onPressed: _showColorSheet,
+                  tooltip: tr('class_color'),
+                  icon: const Icon(Icons.palette_outlined, color: Colors.white),
+                ),
               ]),
               const SizedBox(height: 16),
               Wrap(spacing: 8, runSpacing: 6, children: [

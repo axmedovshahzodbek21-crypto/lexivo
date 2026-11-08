@@ -3,6 +3,7 @@ import '../app_theme.dart';
 import '../date_utils.dart';
 import '../l10n.dart' as l10n;
 import '../services/supabase_service.dart';
+import '../services/class_colors.dart';
 import 'class_models.dart';
 import 'missed_homework.dart';
 import 'student_summary.dart';
@@ -272,7 +273,7 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final color = colorForId(widget.classId);
+    final color = ClassColors.colorOf(widget.classId);
     final now = DateTime.now();
     // Same streak-day boundary as class_streak_screen.dart/class_progress_
     // screen.dart, so this calendar's "today" highlight agrees with theirs.

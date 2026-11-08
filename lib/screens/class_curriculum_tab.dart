@@ -63,9 +63,7 @@ class _Homework {
   final List<String> studentIds;
   final int totalStudents;
   final Map<String, int> completionCounts;
-  final bool isReview;            // auto-homework review day (quiz-only copy)
   const _Homework({
-    this.isReview = false,
     required this.id, this.unitId, this.classUnitId,
     this.collectionName, this.dayNumber, this.passageId,
     required this.unitName, required this.source, this.topic,
@@ -154,7 +152,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
             .select('id, name, class_words(count)')
             .eq('class_id', widget.classId).order('created_at'),
         supabase.from('class_homework')
-            .select('id, unit_id, class_unit_id, collection_name, day_number, passage_id, modes, due_date, student_ids, is_review, teacher_units(name), class_word_units(name)')
+            .select('id, unit_id, class_unit_id, collection_name, day_number, passage_id, modes, due_date, student_ids, teacher_units(name), class_word_units(name)')
             .eq('class_id', widget.classId).order('created_at', ascending: false),
         loadAutoSchedules(widget.classId),
       ]);
@@ -260,13 +258,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
         final rawModes = (m['modes'] as List?)?.map((x) => x as String).toList() ?? ['learn', 'flashcard', 'quiz'];
         final rawStudentIds = (m['student_ids'] as List?)?.map((x) => x as String).toList() ?? [];
         final totalStudents = rawStudentIds.isEmpty ? _students.length : rawStudentIds.length;
-        final isReview = m['is_review'] == true;
-        if (isReview) {
-          unitName = '$unitName · ${tr('review_label')}';
-          if (topic != null) topic = '$topic · ${tr('review_label')}';
-        }
         return _Homework(
-          isReview: isReview,
           id: m['id'] as String, unitId: unitId, classUnitId: classUnitId,
           collectionName: collName, dayNumber: dayNum, passageId: passageId,
           unitName: unitName, source: source, topic: topic,
@@ -292,7 +284,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
   // ── Auto homework ──────────────────────────────────────────────────────────
 
   bool _wholeClassAssigned({String? collName, int? dayNumber, String? unitId}) => _homework.any((h) =>
-      !h.isReview && h.assignedTo == 'class' &&
+      h.assignedTo == 'class' &&
       (unitId != null ? h.unitId == unitId : h.collectionName == collName && h.dayNumber == dayNumber));
 
   Future<void> _openAutoForCollection(String collName) async {
@@ -1403,7 +1395,7 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
                         const SizedBox(width: 10),
                         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Text(name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: Colors.white)),
-                          Text(tr('n_days_assigned').replaceFirst('{n}', '${days.where((d) => !d.isReview).length}'),
+                          Text(tr('n_days_assigned').replaceFirst('{n}', '${days.length}'),
                               style: const TextStyle(fontSize: 11, color: Color(0xB3FFFFFF))),
                           if (_autos.where((a) => a.collectionName == name).firstOrNull case final auto?)
                             Text(auto.statusLine(), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),

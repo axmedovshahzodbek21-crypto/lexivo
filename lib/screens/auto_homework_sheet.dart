@@ -15,9 +15,6 @@ const _s = <String, Map<String, String>>{
   'deadline':     {'en': 'DEADLINE', 'uz': 'MUDDAT', 'ru': 'СРОК'},
   'no_deadline':  {'en': 'None', 'uz': 'Yo\'q', 'ru': 'Нет'},
   'n_days':       {'en': '{n} d', 'uz': '{n} kun', 'ru': '{n} дн'},
-  'review':       {'en': 'REVIEW DAY (QUIZ ON RECENT UNITS)', 'uz': 'TAKRORLASH KUNI (OXIRGI UNITLARDAN TEST)', 'ru': 'ДЕНЬ ПОВТОРЕНИЯ (ТЕСТ ПО НЕДАВНИМ)'},
-  'off':          {'en': 'Off', 'uz': 'Yo\'q', 'ru': 'Нет'},
-  'every_n':      {'en': 'Every {n}th', 'uz': 'Har {n}-kun', 'ru': 'Каждый {n}-й'},
   'order':        {'en': 'ORDER', 'uz': 'TARTIB', 'ru': 'ПОРЯДОК'},
   'in_order':     {'en': 'In order', 'uz': 'Ketma-ket', 'ru': 'По порядку'},
   'random':       {'en': 'Random', 'uz': 'Tasodifiy', 'ru': 'Случайно'},
@@ -26,7 +23,6 @@ const _s = <String, Map<String, String>>{
   'today':        {'en': 'Today', 'uz': 'Bugundan', 'ru': 'Сегодня'},
   'tomorrow':     {'en': 'Tomorrow', 'uz': 'Ertadan', 'ru': 'Завтра'},
   'plan':         {'en': 'PLAN', 'uz': 'REJA', 'ru': 'ПЛАН'},
-  'review_day':   {'en': 'Review day', 'uz': 'Takrorlash kuni', 'ru': 'День повторения'},
   'last_unit':    {'en': 'Last unit: {d}', 'uz': 'Oxirgi unit: {d}', 'ru': 'Последний юнит: {d}'},
   'nothing_left': {'en': 'Every unit is already assigned.', 'uz': 'Hamma unitlar allaqachon berilgan.', 'ru': 'Все юниты уже назначены.'},
   'hold_note':    {'en': 'If fewer than half the class finished the previous units, that day is skipped.', 'uz': 'Agar sinfning yarmidan kami oldingi unitlarni tugatmagan bo\'lsa, o\'sha kun yangi unit berilmaydi.', 'ru': 'Если меньше половины класса закончили прошлые юниты, день пропускается.'},
@@ -39,7 +35,6 @@ const _s = <String, Map<String, String>>{
   'st_paused':    {'en': 'Paused', 'uz': 'Pauzada', 'ru': 'На паузе'},
   'st_starts':    {'en': 'Starts {d}', 'uz': '{d} dan boshlanadi', 'ru': 'Начнётся {d}'},
   'st_released':  {'en': '{n} unit(s) assigned', 'uz': '{n} ta unit berildi', 'ru': 'Назначено юнитов: {n}'},
-  'st_review':    {'en': 'review day', 'uz': 'takrorlash kuni', 'ru': 'день повторения'},
   'st_held':      {'en': 'held — under half the class finished', 'uz': 'to\'xtatildi — sinfning yarmidan kami tugatgan', 'ru': 'пауза — закончили меньше половины'},
   'st_done':      {'en': 'All units assigned', 'uz': 'Hamma unitlar berildi', 'ru': 'Все юниты назначены'},
   'st_today':     {'en': 'Today', 'uz': 'Bugun', 'ru': 'Сегодня'},
@@ -72,11 +67,11 @@ class AutoSchedule {
   final int unitsPerDay;
   final List<int> weekdays;
   final List<String> modes;
-  final int? dueDays, reviewEvery;
+  final int? dueDays;
   final bool paused, randomOrder;
   final String startDate;
   final String? lastRunOn, lastStatus;
-  final int lastCount, daysSinceReview;
+  final int lastCount;
 
   AutoSchedule.fromRow(Map<String, dynamic> m)
       : id = m['id'] as String,
@@ -86,17 +81,15 @@ class AutoSchedule {
         weekdays = ((m['weekdays'] as List?) ?? const []).map((e) => (e as num).toInt()).toList(),
         modes = ((m['modes'] as List?) ?? const []).map((e) => e as String).toList(),
         dueDays = (m['due_days'] as num?)?.toInt(),
-        reviewEvery = (m['review_every'] as num?)?.toInt(),
         paused = m['paused'] as bool? ?? false,
         randomOrder = m['random_order'] as bool? ?? false,
         startDate = m['start_date'] as String,
         lastRunOn = m['last_run_on'] as String?,
         lastStatus = m['last_status'] as String?,
-        lastCount = (m['last_count'] as num?)?.toInt() ?? 0,
-        daysSinceReview = (m['days_since_review'] as num?)?.toInt() ?? 0;
+        lastCount = (m['last_count'] as num?)?.toInt() ?? 0;
 
   static const selectCols =
-      'id, collection_name, folder_id, units_per_day, weekdays, modes, due_days, review_every, random_order, paused, start_date, last_run_on, last_status, last_count, days_since_review';
+      'id, collection_name, folder_id, units_per_day, weekdays, modes, due_days, random_order, paused, start_date, last_run_on, last_status, last_count';
 
   /// One line for the teacher's card, e.g. "⚡ kuniga 2 ta · Bugun: 2 ta unit berildi".
   String statusLine() {
@@ -112,7 +105,6 @@ class AutoSchedule {
     final when = lastRunOn == today ? _t('st_today') : _short(DateTime.parse(lastRunOn!));
     final what = switch (lastStatus) {
       'released' => _t('st_released').replaceFirst('{n}', '$lastCount'),
-      'review' => _t('st_review'),
       'held' => _t('st_held'),
       _ => '',
     };
@@ -145,7 +137,6 @@ Future<bool> showAutoHomeworkSheet(
   final weekdays = <int>{...(existing?.weekdays ?? const [1, 2, 3, 4, 5, 6])};
   var match = existing?.modes.contains('match') ?? false;
   int? dueDays = existing == null ? 1 : existing.dueDays;
-  int? reviewEvery = existing == null ? 5 : existing.reviewEvery;
   var randomOrder = existing?.randomOrder ?? false;
   var startToday = true;
   var busy = false;
@@ -181,25 +172,15 @@ Future<bool> showAutoHomeworkSheet(
       if (existing.lastRunOn == _iso(t)) day = day.add(const Duration(days: 1));
     }
     var idx = 0;
-    var sinceReview = existing?.daysSinceReview ?? 0;
-    var releasedSinceReview = sinceReview > 0;
     DateTime? last;
     var guard = 0;
     while (idx < remaining.length && guard++ < 2000) {
       if (weekdays.contains(day.weekday)) {
-        if (reviewEvery != null && sinceReview >= reviewEvery! - 1 && releasedSinceReview) {
-          if (lines.length < 6) lines.add('${wd[day.weekday - 1]} ${_short(day)}: 🔁 ${_t('review_day')}');
-          sinceReview = 0;
-          releasedSinceReview = false;
-        } else {
-          final batch = remaining.sublist(idx, (idx + perDay).clamp(0, remaining.length));
-          final what = randomOrder ? _t('random_n').replaceFirst('{n}', '${batch.length}') : batch.join(', ');
-          if (lines.length < 6) lines.add('${wd[day.weekday - 1]} ${_short(day)}: $what');
-          idx += batch.length;
-          sinceReview++;
-          releasedSinceReview = true;
-          last = day;
-        }
+        final batch = remaining.sublist(idx, (idx + perDay).clamp(0, remaining.length));
+        final what = randomOrder ? _t('random_n').replaceFirst('{n}', '${batch.length}') : batch.join(', ');
+        if (lines.length < 6) lines.add('${wd[day.weekday - 1]} ${_short(day)}: $what');
+        idx += batch.length;
+        last = day;
       }
       day = day.add(const Duration(days: 1));
     }
@@ -238,7 +219,6 @@ Future<bool> showAutoHomeworkSheet(
         'weekdays': (weekdays.toList()..sort()),
         'modes': ['learn', 'flashcard', 'quiz', if (match) 'match'],
         'due_days': dueDays,
-        'review_every': reviewEvery,
         'random_order': folderId != null && randomOrder,
         if (collectionName != null) 'day_numbers': dayNumbers,
       };
@@ -297,11 +277,6 @@ Future<bool> showAutoHomeworkSheet(
           Wrap(spacing: 6, runSpacing: 6, children: [null, 1, 2, 3, 7].map((n) => chip(ctx,
               n == null ? _t('no_deadline') : _t('n_days').replaceFirst('{n}', '$n'),
               dueDays == n, () => setSheet(() => dueDays = n))).toList()),
-
-          label(ctx, 'review'),
-          Wrap(spacing: 6, runSpacing: 6, children: [null, 3, 5, 7].map((n) => chip(ctx,
-              n == null ? _t('off') : _t('every_n').replaceFirst('{n}', '$n'),
-              reviewEvery == n, () => setSheet(() => reviewEvery = n))).toList()),
 
           Padding(
             padding: const EdgeInsets.only(top: 16),

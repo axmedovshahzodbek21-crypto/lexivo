@@ -31,12 +31,17 @@ class FlashcardSettingsScreen extends StatefulWidget {
   final Future<bool> Function()? onQuizComplete;
   // Forwarded two levels down, into Quiz's own "Play Match" button.
   final Future<bool> Function()? onMatchComplete;
+  // Set when opened from the gear inside a running session: the screen then
+  // pops back to that session with the chosen CardMode instead of starting a
+  // new one, so the learner keeps their place.
+  final CardMode? currentCardMode;
 
   const FlashcardSettingsScreen({
     super.key,
     required this.wordDay,
     required this.userProfile,
     required this.collectionName,
+    this.currentCardMode,
     this.noXP = false,
     this.onHomeworkCompleted,
     this.onSessionComplete,
@@ -50,8 +55,10 @@ class FlashcardSettingsScreen extends StatefulWidget {
 }
 
 class _FlashcardSettingsScreenState extends State<FlashcardSettingsScreen> {
-  CardMode _cardMode = CardMode.wordToTranslation;
+  late CardMode _cardMode = widget.currentCardMode ?? CardMode.wordToTranslation;
   bool _shuffle = false;
+
+  bool get _inSession => widget.currentCardMode != null;
 
   @override
   void initState() {
@@ -105,7 +112,7 @@ class _FlashcardSettingsScreenState extends State<FlashcardSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false,
+      canPop: _inSession,
       onPopInvokedWithResult: (didPop, _) { if (!didPop) _confirmExit(); },
       child: Scaffold(
       backgroundColor: context.bg,
@@ -114,7 +121,7 @@ class _FlashcardSettingsScreenState extends State<FlashcardSettingsScreen> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.close, color: context.primary),
-          onPressed: _confirmExit,
+          onPressed: _inSession ? () => Navigator.pop(context) : _confirmExit,
         ),
         title: Text(
           tr('fc_settings_title'),
@@ -134,23 +141,25 @@ class _FlashcardSettingsScreenState extends State<FlashcardSettingsScreen> {
           MediaQuery.of(context).padding.bottom + 16,
         ),
         child: ElevatedButton(
-          onPressed: () => Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => FlashcardSessionScreen(
-                wordDay: widget.wordDay,
-                userProfile: widget.userProfile,
-                collectionName: widget.collectionName,
-                cardMode: _cardMode,
-                shuffle: _shuffle,
-                noXP: widget.noXP,
-                onHomeworkCompleted: widget.onHomeworkCompleted,
-                onSessionComplete: widget.onSessionComplete,
-                onQuizComplete: widget.onQuizComplete,
-                onMatchComplete: widget.onMatchComplete,
-              ),
-            ),
-          ),
+          onPressed: _inSession
+              ? () => Navigator.pop(context, _cardMode)
+              : () => Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => FlashcardSessionScreen(
+                        wordDay: widget.wordDay,
+                        userProfile: widget.userProfile,
+                        collectionName: widget.collectionName,
+                        cardMode: _cardMode,
+                        shuffle: _shuffle,
+                        noXP: widget.noXP,
+                        onHomeworkCompleted: widget.onHomeworkCompleted,
+                        onSessionComplete: widget.onSessionComplete,
+                        onQuizComplete: widget.onQuizComplete,
+                        onMatchComplete: widget.onMatchComplete,
+                      ),
+                    ),
+                  ),
           style: ElevatedButton.styleFrom(
             backgroundColor: context.primary,
             foregroundColor: Colors.white,
@@ -160,7 +169,7 @@ class _FlashcardSettingsScreenState extends State<FlashcardSettingsScreen> {
             ),
           ),
           child: Text(
-            tr('start_session'),
+            _inSession ? tr('continue_label') : tr('start_session'),
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ),
@@ -223,35 +232,38 @@ class _FlashcardSettingsScreenState extends State<FlashcardSettingsScreen> {
               onTap: () =>
                   setState(() => _cardMode = CardMode.translationToWord),
             ),
-            const SizedBox(height: 28),
-            Text(
-              tr('order'),
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                color: context.appText,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              decoration: BoxDecoration(
-                color: context.surface,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [...context.cardShadow],
-              ),
-              child: SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(
-                  '🔀 ${tr('shuffle_cards')}',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+            // The running session has its own Shuffle button.
+            if (!_inSession) ...[
+              const SizedBox(height: 28),
+              Text(
+                tr('order'),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: context.appText,
                 ),
-                subtitle: Text(tr('randomize_order')),
-                value: _shuffle,
-                activeThumbColor: context.primary,
-                onChanged: (val) => setState(() => _shuffle = val),
               ),
-            ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                decoration: BoxDecoration(
+                  color: context.surface,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [...context.cardShadow],
+                ),
+                child: SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    '🔀 ${tr('shuffle_cards')}',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(tr('randomize_order')),
+                  value: _shuffle,
+                  activeThumbColor: context.primary,
+                  onChanged: (val) => setState(() => _shuffle = val),
+                ),
+              ),
+            ],
             const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.all(14),
@@ -417,6 +429,7 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
   // silently accumulating orphaned files in temp storage every time a word
   // with cloud TTS audio was played.
   File? _lastTtsTempFile;
+  late CardMode _cardMode = widget.cardMode;
   late List<WordItem> _sessionWords;
   late List<WordItem> _hardWords;
   late List<WordItem> _easyWords;
@@ -699,7 +712,7 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
           collectionName: widget.collectionName,
           easyCount: _easyCount,
           hardWords: _hardWords,
-          cardMode: widget.cardMode,
+          cardMode: _cardMode,
           shuffle: widget.shuffle,
           myUnitCompleted: myUnitCompleted,
           xpEarned: xpEarned,
@@ -778,6 +791,26 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
         ],
       ),
     );
+  }
+
+  Future<void> _openSettings() async {
+    final mode = await Navigator.push<CardMode>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FlashcardSettingsScreen(
+          wordDay: widget.wordDay,
+          userProfile: widget.userProfile,
+          collectionName: widget.collectionName,
+          currentCardMode: _cardMode,
+        ),
+      ),
+    );
+    if (mode == null || mode == _cardMode || !mounted) return;
+    _flipController.reset();
+    setState(() {
+      _cardMode = mode;
+      _isFlipped = false;
+    });
   }
 
   // FIX 6: toggleStar now resets flip state if card was flipped
@@ -996,25 +1029,7 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
           const PomodoroTimerPill(),
           IconButton(
             icon: Icon(Icons.settings, color: context.primary),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => FlashcardSettingsScreen(
-                  wordDay: widget.wordDay,
-                  userProfile: widget.userProfile,
-                  collectionName: widget.collectionName,
-                  // Without these, tapping Settings mid-session and starting a
-                  // new one from there silently dropped the homework/noXP
-                  // context — the new session earned real Main XP instead of
-                  // class XP, and never reported back to the homework screen.
-                  noXP: widget.noXP,
-                  onHomeworkCompleted: widget.onHomeworkCompleted,
-                  onSessionComplete: widget.onSessionComplete,
-                  onQuizComplete: widget.onQuizComplete,
-                  onMatchComplete: widget.onMatchComplete,
-                ),
-              ),
-            ),
+            onPressed: _openSettings,
           ),
         ],
       ),
@@ -1158,7 +1173,7 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
   }
 
   Widget _buildFront() {
-    final isTranslationMode = widget.cardMode == CardMode.translationToWord;
+    final isTranslationMode = _cardMode == CardMode.translationToWord;
     final displayText = isTranslationMode ? _currentWord.translation : _currentWord.word;
     return Container(
       width: double.infinity,
@@ -1226,7 +1241,7 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
   }
 
   Widget _buildBack(BuildContext context) {
-    final isTranslationMode = widget.cardMode == CardMode.translationToWord;
+    final isTranslationMode = _cardMode == CardMode.translationToWord;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(28),
@@ -1274,7 +1289,7 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
                   height: 1.5,
                 ),
               ),
-            ] else if (widget.cardMode == CardMode.wordToTranslation) ...[
+            ] else if (_cardMode == CardMode.wordToTranslation) ...[
               Text(
                 tr('translation_label'),
                 style: TextStyle(

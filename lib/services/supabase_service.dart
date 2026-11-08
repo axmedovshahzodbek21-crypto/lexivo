@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'fetch_in_chunks.dart';
 
 import '../date_utils.dart';
 
@@ -231,7 +232,7 @@ Future<List<HomeClassCard>> getHomeClassCards(String userId) async {
             .order('study_date', ascending: false)
             .limit(60),
         supabase.from('class_homework').select('id, class_id').inFilter('class_id', studentClassIds),
-        supabase.from('class_homework_progress').select('homework_id').eq('student_id', userId),
+        fetchAllPages(() => supabase.from('class_homework_progress').select('homework_id').eq('student_id', userId).order('id', ascending: true)),
       ]);
 
       final daysByClass = <String, List<String>>{};

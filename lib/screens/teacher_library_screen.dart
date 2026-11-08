@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../l10n.dart';
 import '../services/supabase_service.dart';
+import '../services/fetch_in_chunks.dart';
 import '../app_theme.dart';
 import 'teacher_folder_screen.dart';
 import '../main.dart';
@@ -262,7 +263,8 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
       final units = await supabase.from('teacher_units').select('id').eq('folder_id', folder.id);
       final unitIds = (units as List).map((u) => (u as Map)['id'] as String).toList();
       if (unitIds.isNotEmpty) {
-        assignedHw = await supabase.from('class_homework').select('id').inFilter('unit_id', unitIds);
+        assignedHw = await selectInChunks(unitIds, (chunk) =>
+            supabase.from('class_homework').select('id').inFilter('unit_id', chunk).order('id', ascending: true));
       }
       assignedClasses = await supabase.from('class_library_assignments').select('id').eq('folder_id', folder.id);
     } catch (e) {

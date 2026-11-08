@@ -5,6 +5,7 @@ import '../app_theme.dart';
 import 'teacher_unit_screen.dart';
 import '../widgets/copy_word_list.dart';
 import 'bulk_import_sheet.dart';
+import '../services/fetch_in_chunks.dart';
 import '../main.dart';
 
 class _Unit {
@@ -313,14 +314,16 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
               units: [for (final u in _units) (name: u.name, count: u.wordCount)],
               loadWords: () async {
                 final units = _units;
-                final data = await supabase
+                final data = await selectInChunks(units.map((u) => u.id).toList(), (chunk) => supabase
                     .from('teacher_unit_words')
                     .select('unit_id, word')
-                    .inFilter('unit_id', units.map((u) => u.id).toList())
-                    .order('position')
-                    .order('created_at');
+                    .inFilter('unit_id', chunk)
+                    .order('unit_id', ascending: true)
+                    .order('position', ascending: true)
+                    .order('created_at', ascending: true)
+                    .order('id', ascending: true));
                 final byUnit = <String, List<String>>{};
-                for (final row in data as List) {
+                for (final row in data) {
                   byUnit.putIfAbsent(row['unit_id'] as String, () => []).add(row['word'] as String);
                 }
                 return [for (final u in units) byUnit[u.id] ?? const []];

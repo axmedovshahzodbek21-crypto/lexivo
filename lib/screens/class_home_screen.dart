@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/supabase_service.dart';
+import '../services/fetch_in_chunks.dart';
 import '../date_utils.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
@@ -663,13 +664,14 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
         return;
       }
       final hwIds = myHw.map((h) => (h as Map)['id'] as String).toList();
-      final progRaw = await supabase
+      final progRaw = await selectInChunks(hwIds, (chunk) => supabase
           .from('class_homework_progress')
           .select('homework_id, mode')
           .eq('student_id', userId)
-          .inFilter('homework_id', hwIds);
+          .inFilter('homework_id', chunk)
+          .order('id', ascending: true));
       final doneMap = <String, Set<String>>{};
-      for (final p in progRaw as List) {
+      for (final p in progRaw) {
         final m = p as Map;
         final hwId = m['homework_id'] as String;
         doneMap.putIfAbsent(hwId, () => {}).add(m['mode'] as String);

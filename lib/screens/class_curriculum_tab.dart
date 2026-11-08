@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
+import '../services/fetch_in_chunks.dart';
 import '../date_utils.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
@@ -206,8 +207,8 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
       final hwIds = hwRows.map((e) => (e as Map)['id'] as String).toList();
       List<Map<String, dynamic>> progressRows = [];
       if (hwIds.isNotEmpty) {
-        final p = await supabase.from('class_homework_progress').select('homework_id, mode').inFilter('homework_id', hwIds);
-        progressRows = (p as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        progressRows = await selectInChunks(hwIds, (chunk) => supabase.from('class_homework_progress')
+            .select('homework_id, mode').inFilter('homework_id', chunk).order('id', ascending: true));
       }
 
       final completionMap = <String, Map<String, int>>{};

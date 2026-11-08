@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../date_utils.dart';
 import '../screens/class_models.dart';
 import 'supabase_service.dart';
+import 'fetch_in_chunks.dart';
 
 class WidgetService {
   static const _appGroupId = 'group.lexivo';
@@ -62,10 +63,11 @@ class WidgetService {
                 .from('class_homework')
                 .select('id, class_id, modes, student_ids')
                 .inFilter('class_id', joinedIds),
-            supabase
+            fetchAllPages(() => supabase
                 .from('class_homework_progress')
                 .select('homework_id, mode')
-                .eq('student_id', user.id),
+                .eq('student_id', user.id)
+                .order('id', ascending: true)),
             supabase
                 .from('class_study_days')
                 .select('class_id, study_date')

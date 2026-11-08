@@ -3,6 +3,7 @@ import '../app_theme.dart';
 import '../date_utils.dart';
 import '../l10n.dart' as l10n;
 import '../services/supabase_service.dart';
+import '../services/fetch_in_chunks.dart';
 import '../data/reading_data.dart';
 
 // One (homework × assigned student) with a due date: when it was set, when
@@ -61,7 +62,6 @@ String homeworkModeLabel(String mode) {
   }
 }
 
-const _page = 1000; // PostgREST row cap — a truncated progress list would show done homework as missed
 
 Future<List<HomeworkRecord>> loadHomeworkRecords(String classId, List<String> studentIds) async {
   if (studentIds.isEmpty) return [];
@@ -81,19 +81,15 @@ Future<List<HomeworkRecord>> loadHomeworkRecords(String classId, List<String> st
   };
 
   final doneOn = <String, String>{}; // '$hw:$student:$mode' -> local yyyy-mm-dd
-  for (var from = 0; ; from += _page) {
-    final prog = await supabase
-        .from('class_homework_progress')
-        .select('homework_id, student_id, mode, completed_at')
-        .inFilter('homework_id', hws.map((h) => h['id'] as String).toList())
-        .inFilter('student_id', studentIds)
-        .order('id')
-        .range(from, from + _page - 1) as List;
-    for (final p in prog) {
-      doneOn['${p['homework_id']}:${p['student_id']}:${p['mode']}'] =
-          formatStreakDate(DateTime.parse(p['completed_at'] as String).toLocal());
-    }
-    if (prog.length < _page) break;
+  final prog = await selectInChunks(hws.map((h) => h['id'] as String).toList(), (chunk) => supabase
+      .from('class_homework_progress')
+      .select('homework_id, student_id, mode, completed_at')
+      .inFilter('homework_id', chunk)
+      .inFilter('student_id', studentIds)
+      .order('id', ascending: true));
+  for (final p in prog) {
+    doneOn['${p['homework_id']}:${p['student_id']}:${p['mode']}'] =
+        formatStreakDate(DateTime.parse(p['completed_at'] as String).toLocal());
   }
 
   final out = <HomeworkRecord>[];

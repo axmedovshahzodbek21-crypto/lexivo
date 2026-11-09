@@ -25,7 +25,7 @@ const _s = <String, Map<String, String>>{
   'plan':         {'en': 'PLAN', 'uz': 'REJA', 'ru': 'ПЛАН'},
   'last_unit':    {'en': 'Last unit: {d}', 'uz': 'Oxirgi unit: {d}', 'ru': 'Последний юнит: {d}'},
   'nothing_left': {'en': 'Every unit is already assigned.', 'uz': 'Hamma unitlar allaqachon berilgan.', 'ru': 'Все юниты уже назначены.'},
-  'hold_note':    {'en': 'If fewer than half the class finished the previous units, that day is skipped.', 'uz': 'Agar sinfning yarmidan kami oldingi unitlarni tugatmagan bo\'lsa, o\'sha kun yangi unit berilmaydi.', 'ru': 'Если меньше половины класса закончили прошлые юниты, день пропускается.'},
+  'hold_note':    {'en': 'In classes of more than 5 students, if fewer than half finished the previous units, that day is skipped.', 'uz': '5 tadan ko\'p o\'quvchili sinflarda, agar yarmidan kami oldingi unitlarni tugatgan bo\'lsa, o\'sha kun yangi unit berilmaydi.', 'ru': 'В классах больше 5 учеников: если меньше половины закончили прошлые юниты, день пропускается.'},
   'save':         {'en': 'Save', 'uz': 'Saqlash', 'ru': 'Сохранить'},
   'pause':        {'en': 'Pause', 'uz': 'Pauza', 'ru': 'Пауза'},
   'resume':       {'en': 'Resume', 'uz': 'Davom ettirish', 'ru': 'Продолжить'},

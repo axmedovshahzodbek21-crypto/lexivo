@@ -2266,7 +2266,7 @@ class _HomeScreenState extends State<HomeScreen>
                     _buildDrawerTile(context, icon: '🚀', label: tr('other_projects'),
                         iconBg: const Color(0xFF10b981), onTap: () {
                       Navigator.pop(context);
-                      launchUrl(Uri.parse('https://lexivo-projects.vercel.app'),
+                      launchUrl(Uri.parse('https://lexivo-builds.vercel.app'),
                           mode: LaunchMode.externalApplication);
                     }),
                     // ── Today's goal card ──

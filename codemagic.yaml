@@ -1,0 +1,18 @@
+workflows:
+  ios-check:
+    name: iOS build check (no signing)
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+    environment:
+      flutter: 3.44.0
+      xcode: latest
+      cocoapods: default
+    # No automatic trigger: start builds by hand in Codemagic so frequent
+    # pushes to main don't burn the free 500 build minutes.
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Build iOS without code signing
+        script: flutter build ios --release --no-codesign
+    artifacts:
+      - build/ios/iphoneos/*.app

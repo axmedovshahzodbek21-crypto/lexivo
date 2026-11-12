@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Lexivo profil rasmini olish va sinf chatiga rasm yuborish uchun kameradan foydalanadi.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Lexivo profil rasmi va sinf chatiga yuboriladigan rasmni galereyadan tanlash uchun foydalanadi.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

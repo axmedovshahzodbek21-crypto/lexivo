@@ -631,7 +631,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(entry.name, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText)),
+                    Flexible(child: Text(entry.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.appText))),
                     if (!isMe) ...[
                       const SizedBox(width: 8),
                       GestureDetector(

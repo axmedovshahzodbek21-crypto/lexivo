@@ -1094,12 +1094,12 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               const _PulsingDot(),
               const SizedBox(width: 7),
-              Text(s['student_name'] as String? ?? tr('student'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: context.appText)),
+              Flexible(child: Text(s['student_name'] as String? ?? tr('student'), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: context.appText))),
               const SizedBox(width: 5),
               Text(_activityIcon[activity] ?? '📖', style: const TextStyle(fontSize: 11)),
               if (collection != null) ...[
                 const SizedBox(width: 5),
-                Text('$collection${day != null ? ' U$day' : ''}', style: TextStyle(fontSize: 9, color: context.textMuted)),
+                Flexible(child: Text('$collection${day != null ? ' U$day' : ''}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 9, color: context.textMuted))),
               ],
             ]),
           );

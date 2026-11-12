@@ -2286,9 +2286,13 @@ class _HomeScreenState extends State<HomeScreen>
                               children: [
                                 const Text('🎯', style: TextStyle(fontSize: 14)),
                                 const SizedBox(width: 6),
-                                Text(tr('home_todays_goal_title'),
-                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: context.appText)),
-                                const Spacer(),
+                                Expanded(
+                                  child: Text(tr('home_todays_goal_title'),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: context.appText)),
+                                ),
+                                const SizedBox(width: 8),
                                 Text('$_todayLearned / $_dailyGoal',
                                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF6C63FF))),
                               ],

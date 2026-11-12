@@ -506,9 +506,14 @@ class _MatchingScreenState extends State<MatchingScreen> {
                 if (_mistakes > 0)
                   Text('✗ $_mistakes',
                       style: TextStyle(fontSize: 13, color: context.dangerColor, fontWeight: FontWeight.bold)),
-                const Spacer(),
-                Text('${_matched.length}/${_roundWords.length} ${_ltr('matched_word')}',
-                    style: TextStyle(fontSize: 12, color: context.textMuted)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('${_matched.length}/${_roundWords.length} ${_ltr('matched_word')}',
+                      textAlign: TextAlign.right,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 12, color: context.textMuted)),
+                ),
               ],
             ),
           ),

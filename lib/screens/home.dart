@@ -2263,6 +2263,8 @@ class _HomeScreenState extends State<HomeScreen>
                       Navigator.push(context,
                           MaterialPageRoute(builder: (context) => MoreScreen(userProfile: widget.userProfile)));
                     }),
+                    // Hidden on iOS: the builds site lists Android APKs (App Store guideline 2.3.10).
+                    if (defaultTargetPlatform != TargetPlatform.iOS)
                     _buildDrawerTile(context, icon: '🚀', label: tr('other_projects'),
                         iconBg: const Color(0xFF10b981), onTap: () {
                       Navigator.pop(context);

@@ -1341,6 +1341,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ],
                         ),
                       ),
+                      // Apple rejects iOS apps that point to other-platform
+                      // downloads (App Store guideline 2.3.10).
+                      if (!Platform.isIOS) ...[
                       Divider(height: 16, color: context.border),
                       GestureDetector(
                         onTap: () => launchUrl(
@@ -1358,6 +1361,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ],
                         ),
                       ),
+                      ],
                       Divider(height: 16, color: context.border),
                       _buildAboutRow(context, '📚', tr('collections'), tr('collections_count').replaceFirst('{n}', '3')),
                       Divider(height: 16, color: context.border),

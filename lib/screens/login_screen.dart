@@ -1,5 +1,10 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:math';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../app_theme.dart';
@@ -29,6 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordCtrl = TextEditingController();
   bool _loading = false;
   bool _googleLoading = false;
+  bool _appleLoading = false;
   String? _error;
   bool _resetLoading = false;
 
@@ -108,6 +114,51 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _error = tr('google_error').replaceAll('{error}', '$e'));
     } finally {
       if (mounted) setState(() => _googleLoading = false);
+    }
+  }
+
+  // iOS only. Apple requires it next to Google login (App Store guideline 4.8).
+  // The raw nonce goes to Supabase, its SHA-256 to Apple, so Supabase can
+  // verify the Apple token was issued for this sign-in attempt.
+  Future<void> _signInWithApple() async {
+    setState(() { _appleLoading = true; _error = null; });
+    try {
+      final random = Random.secure();
+      final rawNonce = base64Url.encode(List<int>.generate(32, (_) => random.nextInt(256)));
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [AppleIDAuthorizationScopes.email, AppleIDAuthorizationScopes.fullName],
+        nonce: sha256.convert(utf8.encode(rawNonce)).toString(),
+      );
+      final idToken = credential.identityToken;
+      if (idToken == null) {
+        if (mounted) setState(() => _error = tr('apple_error').replaceAll('{error}', 'no token'));
+        return;
+      }
+      await Supabase.instance.client.auth.signInWithIdToken(
+        provider: OAuthProvider.apple,
+        idToken: idToken,
+        nonce: rawNonce,
+      );
+      // Apple sends the name only on the very first sign-in — keep it.
+      final name = [credential.givenName, credential.familyName]
+          .where((p) => p != null && p.trim().isNotEmpty).join(' ');
+      if (name.isNotEmpty) {
+        try {
+          await Supabase.instance.client.auth.updateUser(UserAttributes(data: {'full_name': name}));
+        } catch (_) {}
+      }
+      if (!mounted) return;
+      _goToApp();
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code != AuthorizationErrorCode.canceled && mounted) {
+        setState(() => _error = tr('apple_error').replaceAll('{error}', e.message));
+      }
+    } on AuthException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (e) {
+      if (mounted) setState(() => _error = tr('apple_error').replaceAll('{error}', '$e'));
+    } finally {
+      if (mounted) setState(() => _appleLoading = false);
     }
   }
 
@@ -247,7 +298,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed: (_loading || _googleLoading) ? null : _signInWithGoogle,
+                    onPressed: (_loading || _googleLoading || _appleLoading) ? null : _signInWithGoogle,
                     icon: _googleLoading
                         ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                         : _googleLogo(),
@@ -262,6 +313,18 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
+                if (Platform.isIOS) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 50,
+                    child: SignInWithAppleButton(
+                      onPressed: (_loading || _googleLoading || _appleLoading) ? () {} : _signInWithApple,
+                      text: _appleLoading ? tr('signing_in') : tr('continue_with_apple'),
+                      style: context.isDark ? SignInWithAppleButtonStyle.white : SignInWithAppleButtonStyle.black,
+                      borderRadius: const BorderRadius.all(Radius.circular(16)),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 20),
 
                 // Divider

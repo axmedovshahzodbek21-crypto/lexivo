@@ -734,6 +734,8 @@ const Map<String, Map<String, String>> _t = {
     // ── Login / Signup ───────────────────────────────────────────────────────────
     'sign_in_to_continue': 'Sign in to continue',
     'continue_with_google': 'Continue with Google',
+    'continue_with_apple': 'Continue with Apple',
+    'apple_error': 'Apple error: {error}',
     'signing_in': 'Signing in…',
     'or': 'or',
     'email': 'Email',
@@ -2554,6 +2556,8 @@ const Map<String, Map<String, String>> _t = {
     // ── Login / Signup ───────────────────────────────────────────────────────────
     'sign_in_to_continue': 'Davom etish uchun kiring',
     'continue_with_google': 'Google bilan davom etish',
+    'continue_with_apple': 'Apple bilan davom etish',
+    'apple_error': 'Apple xatosi: {error}',
     'signing_in': 'Kirilmoqda…',
     'or': 'yoki',
     'email': 'Elektron pochta',
@@ -4329,6 +4333,8 @@ const Map<String, Map<String, String>> _t = {
     // ── Вход / Регистрация ───────────────────────────────────────────────────────
     'sign_in_to_continue': 'Войдите, чтобы продолжить',
     'continue_with_google': 'Продолжить с Google',
+    'continue_with_apple': 'Продолжить с Apple',
+    'apple_error': 'Ошибка Apple: {error}',
     'signing_in': 'Вход…',
     'or': 'или',
     'email': 'Email',

@@ -16,3 +16,21 @@ workflows:
         script: flutter build ios --release --no-codesign
     artifacts:
       - build/ios/iphoneos/*.app
+
+  ios-simulator:
+    name: iOS Simulator build (for browser preview)
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+    environment:
+      flutter: 3.44.0
+      xcode: latest
+      cocoapods: default
+    # Manual only, same reason as ios-check. Output is a Simulator .app for
+    # Codemagic App Preview or Appetize; it cannot run on a real iPhone.
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Build iOS for Simulator
+        script: flutter build ios --simulator --debug
+    artifacts:
+      - build/ios/iphonesimulator/Runner.app

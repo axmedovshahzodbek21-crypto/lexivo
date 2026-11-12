@@ -22,7 +22,10 @@ class NotificationService {
       appUserModelId: 'com.lexivo.app',
       guid: 'a8b9c0d1-e2f3-4a5b-6c7d-8e9f0a1b2c3d',
     );
-    const settings = InitializationSettings(android: android, windows: windows);
+    // iOS settings are required on iOS — without them initialize() throws.
+    // Defaults ask for alert/badge/sound permission here, like Android does.
+    const iOS = DarwinInitializationSettings();
+    const settings = InitializationSettings(android: android, iOS: iOS, windows: windows);
 
     await _plugin.initialize(settings: settings);
     await _requestPermissions();
@@ -107,6 +110,7 @@ class NotificationService {
         importance: Importance.high,
         priority: Priority.high,
       ),
+      iOS: const DarwinNotificationDetails(),
       windows: const WindowsNotificationDetails(),
     );
   }

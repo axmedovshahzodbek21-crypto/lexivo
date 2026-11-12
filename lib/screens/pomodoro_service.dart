@@ -52,8 +52,16 @@ class PomodoroService extends ChangeNotifier with WidgetsBindingObserver {
       appUserModelId: 'com.lexivo.app',
       guid: 'a8b9c0d1-e2f3-4a5b-6c7d-8e9f0a1b2c3d',
     );
+    // Required on iOS (initialize() throws without it). Permission is
+    // already requested by NotificationService at startup.
+    const iOSSettings = DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
+    );
     const initSettings = InitializationSettings(
       android: androidSettings,
+      iOS: iOSSettings,
       windows: windowsSettings,
     );
     await _notifications.initialize(
@@ -223,6 +231,7 @@ class PomodoroService extends ChangeNotifier with WidgetsBindingObserver {
     );
     const details = NotificationDetails(
       android: androidDetails,
+      iOS: DarwinNotificationDetails(),
       windows: WindowsNotificationDetails(),
     );
     try {

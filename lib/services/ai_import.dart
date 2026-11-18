@@ -141,7 +141,8 @@ List<AiParsedWord> parseAiImportOutput(String text) {
       // "example1:" / "partOfSpeech:" key styles both parse.
       var key = line.substring(0, colonIdx).trim().toLowerCase().replaceAll(RegExp(r'[*_`#\s]'), '');
       if (key == 'uzbekdefinition') key = 'definitionuz';
-      final val = line.substring(colonIdx + 1).trim().replaceAll(RegExp(r'[*_`]'), '');
+      // Trim after stripping: "**word:** enormous" leaves "** enormous" → " enormous".
+      final val = line.substring(colonIdx + 1).replaceAll(RegExp(r'[*_`]'), '').trim();
       if (key == 'word' && fields.containsKey('word')) {
         entries.add(fields);
         fields = {};

@@ -23,6 +23,7 @@ const _s = <String, Map<String, String>>{
   'ai_answer':  {'en': 'Paste the AI\'s answer', 'uz': 'AI javobini joylang', 'ru': 'Вставьте ответ AI'},
   'unit_size':  {'en': 'Words per unit (5-100)', 'uz': 'Har unitda so\'z (5-100)', 'ru': 'Слов в юните (5-100)'},
   'preview':    {'en': '{w} words → about {u} units. Words already in this folder are skipped.', 'uz': '{w} ta so\'z → taxminan {u} ta unit. Papkada bor so\'zlar o\'tkazib yuboriladi.', 'ru': '{w} слов → примерно {u} юнитов. Слова, уже есть в папке, пропускаются.'},
+  'bad_lines':  {'en': '{n} lines could not be read and will be skipped.', 'uz': '{n} ta qatorni o\'qib bo\'lmadi, ular o\'tkazib yuboriladi.', 'ru': 'Строк не удалось прочитать: {n}, они будут пропущены.'},
   'import':     {'en': 'Import', 'uz': 'Qo\'shish', 'ru': 'Импортировать'},
   'done':       {'en': 'Added {a} words in {u} new units. Skipped: {s}.', 'uz': '{a} ta so\'z qo\'shildi, {u} ta yangi unit. O\'tkazib yuborildi: {s}.', 'ru': 'Добавлено слов: {a}, новых юнитов: {u}. Пропущено: {s}.'},
   'failed':     {'en': 'Could not import', 'uz': 'Qo\'shib bo\'lmadi', 'ru': 'Не удалось импортировать'},
@@ -37,20 +38,30 @@ final _tab = RegExp(r'^(.+?)\t+(.+)$');
 final _dash = RegExp(r'^(.+?)\s+[-–—]\s+(.+)$');
 final _bareDash = RegExp(r'^([^-]+)-([^-]+)$');
 final _numberPrefix = RegExp(r'^\d+[.)]\s*');
+final _dashSep = RegExp(r'\s[-–—]\s');
+final _tabSep = RegExp(r'\t+');
 
 /// "word - translation" per line; also tab-separated (Excel) and "1. word - translation".
-List<Map<String, String>> _parsePlainList(String text) {
+/// Unreadable lines are counted in `bad`, not imported.
+({List<Map<String, String>> words, int bad}) _parsePlainList(String text) {
   final out = <Map<String, String>>[];
+  var bad = 0;
   for (final raw in text.split('\n')) {
     final line = raw.trim().replaceFirst(_numberPrefix, '');
     if (line.isEmpty) continue;
+    // Two+ separators = several pairs flattened onto one line (paste lost
+    // its line breaks). Would otherwise import as one garbage word.
+    if (_dashSep.allMatches(line).length > 1 || _tabSep.allMatches(line).length > 1) { bad++; continue; }
     final m = _tab.firstMatch(line) ?? _dash.firstMatch(line) ?? _bareDash.firstMatch(line);
-    if (m == null) continue;
-    final word = m.group(1)!.trim();
-    final translation = m.group(2)!.trim();
-    if (word.isNotEmpty && translation.isNotEmpty) out.add({'word': word, 'translation': translation});
+    final word = m?.group(1)!.trim() ?? '';
+    final translation = m?.group(2)!.trim() ?? '';
+    if (word.isNotEmpty && translation.isNotEmpty) {
+      out.add({'word': word, 'translation': translation});
+    } else {
+      bad++;
+    }
   }
-  return out;
+  return (words: out, bad: bad);
 }
 
 /// Returns true when words were imported.
@@ -82,6 +93,7 @@ class _BulkImportSheetState extends State<_BulkImportSheet> {
   bool _copied = false;
   bool _busy = false;
   List<Map<String, String>> _plain = [];
+  int _plainBad = 0;
   List<AiParsedWord> _ai = [];
   Timer? _debounce;
 
@@ -101,7 +113,9 @@ class _BulkImportSheetState extends State<_BulkImportSheet> {
     _debounce = Timer(const Duration(milliseconds: 400), () {
       if (!mounted) return;
       setState(() {
-        _plain = _parsePlainList(_plainCtrl.text);
+        final p = _parsePlainList(_plainCtrl.text);
+        _plain = p.words;
+        _plainBad = p.bad;
         _ai = _aiCtrl.text.trim().isEmpty ? [] : parseAiImportOutput(_aiCtrl.text);
       });
     });
@@ -129,7 +143,7 @@ class _BulkImportSheetState extends State<_BulkImportSheet> {
     if (size == null || _count == 0) return;
     // Parse now, not from the debounced copy: the teacher may tap Import
     // right after pasting.
-    final plain = _parsePlainList(_plainCtrl.text);
+    final plain = _parsePlainList(_plainCtrl.text).words;
     final ai = _aiCtrl.text.trim().isEmpty ? <AiParsedWord>[] : parseAiImportOutput(_aiCtrl.text);
     final payload = _aiMode
         ? ai.map((w) => <String, dynamic>{
@@ -210,6 +224,11 @@ class _BulkImportSheetState extends State<_BulkImportSheet> {
             controller: _plainCtrl, maxLines: 8, minLines: 8, onChanged: (_) => _reparse(),
             style: TextStyle(fontSize: 13, color: context.appText), decoration: _deco(hint: 'apple - olma\nbook - kitob'),
           ),
+          if (_plainBad > 0) ...[
+            const SizedBox(height: 6),
+            Text(_t('bad_lines').replaceFirst('{n}', '$_plainBad'),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.dangerColor)),
+          ],
         ] else ...[
           _hint(_t('ai_hint')),
           const SizedBox(height: 10),

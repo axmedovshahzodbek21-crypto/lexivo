@@ -123,6 +123,14 @@ $words''';
 /// matching.
 List<AiParsedWord> parseAiImportOutput(String text) {
   if (text.trim().isEmpty) return [];
+  // Some phone copy/paste flows drop the AI reply's line breaks, leaving
+  // "word: x translation: y example1: ..." on one line — which parsed as 0
+  // words. Put each known field back on its own line. (?<!\d) keeps the old
+  // "Example 1 Translation:" key style in one piece. Mirrors web ai-import.ts.
+  text = text.replaceAll(
+    RegExp(r'(?<!\d)[ \t]+(?=[*_`]*(?:word|part\s*of\s*speech|partofspeech|pronunciation|translation|definitionuz|uzbek\s*definition|definition|example\s*\d+(?:\s*translation)?)[*_`]*\s*:)', caseSensitive: false),
+    '\n',
+  );
   final blocks = text.split(RegExp(r'---+')).map((b) => b.trim()).where((b) => b.isNotEmpty).toList();
   final result = <AiParsedWord>[];
   for (final block in blocks) {

@@ -37,7 +37,8 @@ class NotificationService {
           AndroidFlutterLocalNotificationsPlugin
         >();
     await androidImpl?.requestNotificationsPermission();
-    await androidImpl?.requestExactAlarmsPermission();
+    // No exact-alarm permission: Google Play only allows it for alarm/calendar
+    // apps. Inexact reminders may arrive a few minutes late, which is fine.
   }
 
   static Future<String> getSavedTime() async {
@@ -66,7 +67,7 @@ class NotificationService {
       body: 'Start your day with a few words. A small session now builds big vocabulary later.',
       scheduledDate: _nextInstanceOfTime(8, 0),
       notificationDetails: _details('morning', 'Morning Motivation', 'Daily morning study nudge'),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
     );
 
@@ -80,7 +81,7 @@ class NotificationService {
       body: 'You haven\'t studied yet today. 5 minutes is all it takes.',
       scheduledDate: _nextInstanceOfTime(21, 0),
       notificationDetails: _details('streak_risk', 'Streak at Risk', 'Evening streak warning'),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
     );
 
@@ -95,7 +96,7 @@ class NotificationService {
       body: 'Your daily Lexivo session is waiting. A few minutes = a few new words.',
       scheduledDate: _nextInstanceOfTime(hour, minute),
       notificationDetails: _details('custom_reminder', 'Daily Reminder', 'Custom daily study reminder'),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }

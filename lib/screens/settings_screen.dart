@@ -26,8 +26,7 @@ import 'teacher_unit_screen.dart';
 // as bare string literals through the widget tree below.
 const _kWebsiteUrl = 'https://lexivo-web-nu.vercel.app';
 const _kSupportUrl = 'https://t.me/lexivo_support_bot';
-const _kAndroidApkDownloadUrl =
-    'https://github.com/axmedovshahzodbek21-crypto/lexivo-web/releases/latest/download/app-release.apk';
+const _kPrivacyUrl = '$_kWebsiteUrl/privacy';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -1341,27 +1340,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ],
                         ),
                       ),
-                      // Apple rejects iOS apps that point to other-platform
-                      // downloads (App Store guideline 2.3.10).
-                      if (!Platform.isIOS) ...[
+                      // No APK download link here: the App Store (2.3.10) and
+                      // Google Play (no updates from outside Play) both reject it.
                       Divider(height: 16, color: context.border),
                       GestureDetector(
-                        onTap: () => launchUrl(
-                          Uri.parse(_kAndroidApkDownloadUrl),
-                          mode: LaunchMode.externalApplication,
-                        ),
+                        onTap: () => launchUrl(Uri.parse(_kPrivacyUrl), mode: LaunchMode.externalApplication),
                         child: Row(
                           children: [
-                            const Text('🤖', style: TextStyle(fontSize: 18)),
+                            const Text('🔒', style: TextStyle(fontSize: 18)),
                             const SizedBox(width: 12),
-                            Expanded(child: Text(tr('download_android'), style: TextStyle(fontWeight: FontWeight.w500, color: context.appText))),
-                            Text(tr('latest_apk'), style: TextStyle(color: const Color(0xFF3DDC84), fontSize: 13, fontWeight: FontWeight.bold)),
-                            const SizedBox(width: 4),
-                            const Icon(Icons.download, size: 14, color: Color(0xFF3DDC84)),
+                            Expanded(child: Text(tr('privacy_policy'), style: TextStyle(fontWeight: FontWeight.w500, color: context.appText))),
+                            Icon(Icons.open_in_new, size: 14, color: context.primary),
                           ],
                         ),
                       ),
-                      ],
                       Divider(height: 16, color: context.border),
                       _buildAboutRow(context, '📚', tr('collections'), tr('collections_count').replaceFirst('{n}', '3')),
                       Divider(height: 16, color: context.border),

@@ -215,6 +215,18 @@ class StructuresStorageService {
           {required String source}) =>
       StorageService.addXP(amount, reason: 'Structure', source: source);
 
+  /// Detective and Flashcards pay XP once per day each (replaying them used
+  /// to pay every time). True — and today recorded — only for the first
+  /// claim of the day. Same rule as web's claimStructurePracticeXP.
+  static Future<bool> claimPracticeXP(String activity) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'structures_xp_day_$activity';
+    final today = _today();
+    if (prefs.getString(key) == today) return false;
+    await prefs.setString(key, today);
+    return true;
+  }
+
   // ── Daily new-item cap ───────────────────────────────────────────────────
 
   static Future<int> getStructuresNewToday() async {

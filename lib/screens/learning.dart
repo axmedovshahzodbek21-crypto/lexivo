@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'break_screen.dart';
 import 'package:flutter/material.dart';
+import 'achievements.dart' show awardEarnedAchievements;
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -559,6 +560,7 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
         await StorageService.addXP(xp, reason: 'Learn', source: 'Unit ${widget.wordDay.dayNumber} · ${widget.collectionName}');
         _sessionXP += xp;
         _flashXp(xp);
+        unawaited(awardEarnedAchievements());
       }
     }
   }

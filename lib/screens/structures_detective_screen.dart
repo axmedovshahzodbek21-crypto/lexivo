@@ -74,7 +74,7 @@ class _StructuresDetectiveScreenState extends State<StructuresDetectiveScreen> {
     await Future.delayed(const Duration(milliseconds: 900));
     if (!mounted) return;
     if (_index + 1 >= _deck.length) {
-      if (newCorrect > 0) {
+      if (newCorrect > 0 && await StructuresStorageService.claimPracticeXP('detective')) {
         final xp = newCorrect * 3;
         await StructuresStorageService.awardStructureXP(xp, source: 'Detective');
         setState(() => _sessionXP = xp);

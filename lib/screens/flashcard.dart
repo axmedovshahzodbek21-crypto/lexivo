@@ -2,6 +2,7 @@ import 'quiz_screen.dart';
 import 'break_screen.dart';
 import '../config.dart';
 import 'package:flutter/material.dart';
+import 'achievements.dart' show awardEarnedAchievements;
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -678,6 +679,7 @@ class _FlashcardSessionScreenState extends State<FlashcardSessionScreen>
         _hardWords.map((w) => w.word).toList(),
       );
     }
+    if (!widget.noXP) await awardEarnedAchievements();
     return xpEarned;
   }
 

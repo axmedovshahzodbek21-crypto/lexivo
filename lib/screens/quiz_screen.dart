@@ -2,6 +2,7 @@ import 'break_screen.dart';
 import '../data/storage_service.dart';
 import '../services/supabase_service.dart';
 import 'package:flutter/material.dart';
+import 'achievements.dart' show awardEarnedAchievements;
 import 'package:confetti/confetti.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math';
@@ -800,6 +801,7 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
     if (mounted && progress.isComplete) {
       _confettiController.play();
     }
+    await awardEarnedAchievements();
   }
 
   @override

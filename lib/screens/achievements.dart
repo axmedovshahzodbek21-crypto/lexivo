@@ -216,6 +216,63 @@ bool _isUnlocked(_AchDef d, _Stats s) {
   }
 }
 
+// ── Awarding ──────────────────────────────────────────────────────────────────
+
+Future<_Stats> _loadStats() async {
+  final words       = await StorageService.getLearnedWords();
+  final streak      = await StorageService.getStreak();
+  final totalDays   = await StorageService.getTotalStudyDays();
+  final xp          = await StorageService.getXP();
+  final mastered    = await StorageService.getMasteredSRSCount();
+  final flashDays   = await StorageService.getFlashcardTotalDays();
+  final flashStreak = await StorageService.getFlashcardStreak();
+  final quizDays    = await StorageService.getQuizTotalDays();
+  final quizStreak  = await StorageService.getQuizStreak();
+  final srsFirst    = await StorageService.hasCompletedSRS();
+  final quizFirst   = await StorageService.hasCompletedQuiz();
+  final quizPerfect = await StorageService.hasPerfectQuiz();
+  final flashFirst  = await StorageService.hasCompletedFlashcard();
+  return _Stats(
+    words: words.length, streak: streak, totalDays: totalDays,
+    xp: xp, mastered: mastered,
+    flashDays: flashDays, flashStreak: flashStreak,
+    quizDays: quizDays, quizStreak: quizStreak,
+    srsFirst: srsFirst, quizFirst: quizFirst,
+    quizPerfect: quizPerfect, flashFirst: flashFirst,
+  );
+}
+
+// Unlock dates are batch-read first; only a genuinely new unlock goes through
+// the mutex-protected award-XP-and-record call (normally 0 or 1 per run).
+// Returns true if anything new was unlocked.
+Future<bool> _awardUnlocked(_Stats stats) async {
+  final unlockedDefs = _allAchs.where((d) => _isUnlocked(d, stats)).toList();
+  final dates = await StorageService.getAchievementDatesBatch(unlockedDefs.map((d) => d.id).toList());
+  var any = false;
+  for (final d in unlockedDefs) {
+    if (dates[d.id] == null) {
+      await StorageService.checkAndUnlockAchievement(d.id, d.xp * 10, _achTitle(d));
+      any = true;
+    }
+  }
+  return any;
+}
+
+/// Credits achievement XP the moment it's earned, like web's
+/// checkAchievements() — call after a personal study activity finishes.
+/// Before, XP only landed when the Achievements screen was next opened.
+/// Repeats while unlocks keep happening, since achievement XP can itself
+/// cross an XP-milestone achievement.
+Future<void> awardEarnedAchievements() async {
+  try {
+    for (var i = 0; i < 5; i++) {
+      if (!await _awardUnlocked(await _loadStats())) break;
+    }
+  } catch (e) {
+    debugPrint('[awardEarnedAchievements] $e');
+  }
+}
+
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 class AchievementsScreen extends StatefulWidget {
@@ -249,50 +306,6 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     // activity), but still catches anything earned before that existed.
     await _awardUnlocked(stats);
     final dates = await StorageService.getAchievementDatesBatch(_allAchs.map((d) => d.id).toList());
-    if (mounted) setState(() { _stats = stats; _dates = dates; });
-  }
-
-  void _showDetail(_AchDef def) {
-    final streak      = await StorageService.getStreak();
-    final totalDays   = await StorageService.getTotalStudyDays();
-    final xp          = await StorageService.getXP();
-    final mastered    = await StorageService.getMasteredSRSCount();
-    final flashDays   = await StorageService.getFlashcardTotalDays();
-    final flashStreak = await StorageService.getFlashcardStreak();
-    final quizDays    = await StorageService.getQuizTotalDays();
-    final quizStreak  = await StorageService.getQuizStreak();
-    final srsFirst    = await StorageService.hasCompletedSRS();
-    final quizFirst   = await StorageService.hasCompletedQuiz();
-    final quizPerfect = await StorageService.hasPerfectQuiz();
-    final flashFirst  = await StorageService.hasCompletedFlashcard();
-
-    final stats = _Stats(
-      words: words.length, streak: streak, totalDays: totalDays,
-      xp: xp, mastered: mastered,
-      flashDays: flashDays, flashStreak: flashStreak,
-      quizDays: quizDays, quizStreak: quizStreak,
-      srsFirst: srsFirst, quizFirst: quizFirst,
-      quizPerfect: quizPerfect, flashFirst: flashFirst,
-    );
-
-    // Batch-read every definition's unlock date in one SharedPreferences
-    // fetch first — with ~190 definitions and most already unlocked from a
-    // prior session, calling the mutex-protected checkAndUnlockAchievement
-    // for every single one of them on every _load() meant up to ~190
-    // sequential mutex round-trips before this screen's first frame, even
-    // though nearly all of those calls just immediately found an existing
-    // date and returned. Only a genuinely new unlock (no existing date for
-    // an id whose criteria are now met) still needs the mutex-protected
-    // award-XP-and-record call — normally 0 or 1 of them per _load().
-    final unlockedDefs = _allAchs.where((d) => _isUnlocked(d, stats)).toList();
-    final allDates = await StorageService.getAchievementDatesBatch(_allAchs.map((d) => d.id).toList());
-    final Map<String, String?> dates = Map.of(allDates);
-    for (final d in unlockedDefs) {
-      if (allDates[d.id] == null) {
-        dates[d.id] = await StorageService.checkAndUnlockAchievement(d.id, d.xp * 10, _achTitle(d));
-      }
-    }
-
     if (mounted) setState(() { _stats = stats; _dates = dates; });
   }
 

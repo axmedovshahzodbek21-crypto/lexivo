@@ -62,7 +62,7 @@ class _StructuresFlashcardsScreenState extends State<StructuresFlashcardsScreen>
       }
     });
     if (_index + 1 >= _deck.length) {
-      if (finalKnown == _deck.length) {
+      if (finalKnown == _deck.length && await StructuresStorageService.claimPracticeXP('flashcards')) {
         final xp = _deck.length * 3;
         await StructuresStorageService.awardStructureXP(xp, source: 'Flashcards');
         setState(() => _sessionXP = xp);

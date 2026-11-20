@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'achievements.dart' show awardEarnedAchievements;
 import '../app_theme.dart';
 import '../data/storage_service.dart';
 import '../services/supabase_service.dart';
@@ -217,6 +218,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
                 );
                 StorageService.markMatchXPAwarded(widget.collectionName, widget.wordDay.dayNumber);
                 if (mounted) setState(() => _sessionXP = xp);
+                unawaited(awardEarnedAchievements());
               }
             });
           }

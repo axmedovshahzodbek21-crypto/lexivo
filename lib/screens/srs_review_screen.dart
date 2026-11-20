@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'achievements.dart' show awardEarnedAchievements;
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../data/storage_service.dart';
@@ -288,6 +289,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
       await StorageService.recordStudySession();
       final remaining = await StorageService.getDueWords();
       if (remaining.isEmpty) await StorageService.recordReviewDay();
+      await awardEarnedAchievements();
     }
   }
 

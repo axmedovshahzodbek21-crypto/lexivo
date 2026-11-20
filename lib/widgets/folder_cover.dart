@@ -12,8 +12,9 @@ import '../services/supabase_service.dart';
 //   e:🦊|3     emoji on gradient #3
 //   img:<url>  uploaded picture in the public folder-covers bucket
 //   null / ''  default look
-// Keep the gradient and emoji lists in the same order as web — the index is
-// what's stored.
+// Keep the gradient list in the same order as web — its index is what's
+// stored. The emoji itself is stored, so icon groups can be reordered freely,
+// but keep them (and their search words) identical to web.
 
 const coverGradients = <List<Color>>[
   [Color(0xFF6C63FF), Color(0xFF9B8FFF)],
@@ -26,29 +27,220 @@ const coverGradients = <List<Color>>[
   [Color(0xFF334155), Color(0xFF64748B)],
 ];
 
-const coverEmojis = <String>[
-  '📚', '✈️', '🍎', '💼', '🏠', '🎓', '🌍', '🎨',
-  '⚽', '🎵', '🍳', '🏥', '💻', '🔬', '🐾', '🌿',
-  '🚗', '🛒', '💬', '❤️', '⭐', '🔥', '🧠', '🎯',
-  // Learning
-  '✏️', '📖', '📝', '🗣️', '🔤', '💡', '🏆', '🧩',
-  // Travel & places
-  '🏖️', '🏔️', '🗺️', '🧳', '🚆', '🚌', '🚲', '🏙️', '🕌', '🏛️',
-  // Food
-  '🍕', '🍔', '🍰', '☕', '🍉', '🥗', '🍞', '🧃',
-  // Nature & weather
-  '🌸', '🌳', '🌊', '☀️', '🌧️', '❄️', '🌙', '🌈',
-  // Animals
-  '🐶', '🐱', '🦁', '🐘', '🦊', '🐦', '🐟', '🦋',
-  // Sports & hobbies
-  '🏀', '🎾', '🏊', '🚴', '🎮', '🎬', '📷', '🎸',
-  // Work, money & tech
-  '💰', '📈', '🏦', '🛠️', '⚖️', '👔', '📱', '🤖',
-  // People, body & feelings
-  '👨‍👩‍👧', '👶', '😊', '😢', '🤝', '💪', '👕', '💊',
-  // Other
-  '🎉', '🎁', '⏰', '📅', '🔑', '🚀', '💎', '🌟',
+class CoverIconGroup {
+  final Map<String, String> label; // en / uz / ru
+  final List<(String, String)> icons; // (emoji, search words: Uzbek + English)
+  const CoverIconGroup(this.label, this.icons);
+}
+
+const coverIconGroups = <CoverIconGroup>[
+  CoverIconGroup({'en': 'Learning', 'uz': "O'qish", 'ru': 'Учёба'}, [
+    ('📚', "kitob kitoblar kutubxona book books library"),
+    ('📖', "kitob o'qish read reading book"),
+    ('✏️', "qalam yozish pencil write"),
+    ('📝', "yozish eslatma note notes writing"),
+    ('🗣️', "gapirish nutq speaking speak talk"),
+    ('💬', "suhbat xabar chat conversation message"),
+    ('🔤', "alifbo harf alphabet letters abc"),
+    ('💡', "g'oya fikr idea"),
+    ('🧠', "miya aql fikrlash brain mind think"),
+    ('🎓', "universitet bitiruv talaba university graduation student"),
+    ('🏆', "g'alaba mukofot trophy win prize"),
+    ('🎯', "maqsad nishon goal target"),
+    ('🧩', "jumboq boshqotirma puzzle"),
+  ]),
+  CoverIconGroup({'en': 'Travel', 'uz': 'Sayohat', 'ru': 'Путешествия'}, [
+    ('✈️', "samolyot aeroport uchish plane flight airport"),
+    ('🌍', "dunyo yer world earth globe"),
+    ('🏖️', "plyaj dengiz dam olish beach sea holiday"),
+    ('🏔️', "tog' mountain"),
+    ('🗺️', "xarita map"),
+    ('🧳', "chamadon yuk suitcase luggage"),
+    ('🏙️', "shahar city"),
+    ('🕌', "masjid mosque"),
+  ]),
+  CoverIconGroup({'en': 'Transport', 'uz': 'Transport', 'ru': 'Транспорт'}, [
+    ('🚗', "mashina avtomobil car"),
+    ('🚆', "poyezd train"),
+    ('🚌', "avtobus bus"),
+    ('🚲', "velosiped bicycle bike"),
+    ('🚢', "kema ship boat"),
+    ('🛵', "skuter moped scooter"),
+    ('🚁', "vertolyot helicopter"),
+    ('🚇', "metro subway underground"),
+    ('⛽', "yoqilg'i benzin fuel petrol gas"),
+  ]),
+  CoverIconGroup({'en': 'Food', 'uz': 'Ovqat', 'ru': 'Еда'}, [
+    ('🍎', "olma meva apple fruit"),
+    ('🍳', "ovqat pishirish oshxona tuxum cooking kitchen egg"),
+    ('🍕', "pitsa pizza"),
+    ('🍔', "burger fast food"),
+    ('🍰', "tort shirinlik cake dessert"),
+    ('☕', "kofe choy ichimlik coffee tea drink"),
+    ('🍉', "tarvuz meva watermelon fruit"),
+    ('🥗', "salat sabzavot salad vegetables"),
+    ('🍞', "non bread bakery"),
+    ('🧃', "sharbat ichimlik juice drink"),
+  ]),
+  CoverIconGroup({'en': 'Nature', 'uz': 'Tabiat', 'ru': 'Природа'}, [
+    ('🌿', "tabiat o'simlik barg nature plant leaf"),
+    ('🌸', "gul bahor flower spring"),
+    ('🌳', "daraxt o'rmon tree forest"),
+    ('🌊', "dengiz to'lqin okean sea wave ocean"),
+    ('☀️', "quyosh yoz ob-havo sun summer weather"),
+    ('🌧️', "yomg'ir ob-havo rain weather"),
+    ('❄️', "qor qish snow winter"),
+    ('🌙', "oy tun moon night"),
+    ('🌈', "kamalak rainbow"),
+    ('♻️', "qayta ishlash ekologiya atrof-muhit recycle ecology environment"),
+    ('🌱', "nihol o'sish atrof-muhit sprout grow environment"),
+    ('🌋', "vulqon volcano"),
+    ('🌪️', "bo'ron tornado storm"),
+    ('🌡️', "harorat iqlim temperature climate"),
+  ]),
+  CoverIconGroup({'en': 'Animals', 'uz': 'Hayvonlar', 'ru': 'Животные'}, [
+    ('🐾', "hayvon iz uy hayvoni animal paw pet"),
+    ('🐶', "it kuchuk dog puppy"),
+    ('🐱', "mushuk cat"),
+    ('🦁', "sher lion"),
+    ('🐘', "fil elephant"),
+    ('🦊', "tulki fox"),
+    ('🐦', "qush bird"),
+    ('🐟', "baliq fish"),
+    ('🦋', "kapalak butterfly"),
+  ]),
+  CoverIconGroup({'en': 'Hobbies', 'uz': 'Sport va hobbi', 'ru': 'Спорт и хобби'}, [
+    ('⚽', "futbol to'p sport football soccer ball"),
+    ('🏀', "basketbol sport basketball"),
+    ('🎾', "tennis sport"),
+    ('🏊', "suzish sport swimming swim"),
+    ('🚴', "velosport sport cycling"),
+    ('🏃', "yugurish sport running run"),
+    ('🧘', "yoga meditatsiya meditation"),
+    ('🎮', "o'yin video game gaming"),
+    ('🎬', "kino film movie cinema"),
+    ('📷', "surat foto camera photo"),
+    ('🎨', "rasm san'at art painting"),
+    ('🎵', "musiqa qo'shiq music song"),
+    ('🎸', "gitara musiqa guitar music"),
+    ('🎻', "skripka musiqa violin music"),
+    ('🥁', "baraban musiqa drum music"),
+    ('🎤', "mikrofon qo'shiq singing microphone"),
+    ('🎭', "teatr theatre drama"),
+    ('🖼️', "rasm muzey picture gallery museum"),
+  ]),
+  CoverIconGroup({'en': 'Work', 'uz': 'Ish va pul', 'ru': 'Работа и деньги'}, [
+    ('💼', "ish biznes work business job"),
+    ('💰', "pul money"),
+    ('💳', "karta to'lov card payment"),
+    ('📈', "o'sish grafik iqtisod growth chart economy"),
+    ('🏦', "bank"),
+    ('🛠️', "asbob ta'mir tools repair"),
+    ('👔', "ofis kiyim office formal"),
+    ('👨‍💼', "ofis xodim menejer office worker manager"),
+    ('👨‍⚕️', "shifokor doktor kasb doctor job"),
+    ('👩‍🏫', "o'qituvchi ustoz kasb teacher job"),
+    ('👮', "politsiya kasb police job"),
+    ('👨‍🍳', "oshpaz kasb chef cook job"),
+    ('👷', "quruvchi qurilish kasb builder construction job"),
+    ('👨‍🌾', "dehqon fermer kasb farmer farm job"),
+  ]),
+  CoverIconGroup({'en': 'Tech & science', 'uz': 'Texnika va fan', 'ru': 'Техника и наука'}, [
+    ('💻', "kompyuter computer laptop"),
+    ('📱', "telefon mobile phone smartphone"),
+    ('🤖', "robot sun'iy intellekt ai"),
+    ('🌐', "internet veb web"),
+    ('🔒', "xavfsizlik qulf security lock"),
+    ('🎧', "quloqchin tinglash headphones listening"),
+    ('💾', "ma'lumot saqlash data save"),
+    ('✉️', "xat pochta letter mail email"),
+    ('📞', "qo'ng'iroq telefon call phone"),
+    ('🔬', "fan mikroskop science microscope"),
+    ('🔭', "teleskop astronomiya telescope astronomy"),
+    ('🪐', "koinot sayyora space planet"),
+    ('🚀', "raketa koinot rocket space"),
+    ('🧪', "kimyo tajriba chemistry experiment"),
+    ('🧬', "biologiya dnk biology dna"),
+    ('⚛️', "fizika atom physics"),
+    ('🧮', "matematika hisob math maths"),
+    ('🔢', "raqam son numbers"),
+  ]),
+  CoverIconGroup({'en': 'Home & shopping', 'uz': 'Uy va xarid', 'ru': 'Дом и покупки'}, [
+    ('🏠', "uy home house"),
+    ('🛋️', "mebel divan mehmonxona furniture sofa living room"),
+    ('🛏️', "yotoqxona karavot bedroom bed"),
+    ('🚿', "hammom dush bathroom shower"),
+    ('🧹', "tozalash supurgi cleaning"),
+    ('🪴', "gul tuvak o'simlik houseplant"),
+    ('🛒', "xarid do'kon bozor shopping store market"),
+    ('🛍️', "xarid sumka shopping bags"),
+    ('👕', "kiyim futbolka clothes shirt"),
+    ('👗', "ko'ylak kiyim dress clothes"),
+    ('👟', "poyabzal krossovka shoes"),
+    ('👜', "sumka bag"),
+    ('🕶️', "ko'zoynak glasses sunglasses"),
+  ]),
+  CoverIconGroup({'en': 'People & health', 'uz': 'Odamlar va salomatlik', 'ru': 'Люди и здоровье'}, [
+    ('👨‍👩‍👧', "oila family"),
+    ('👶', "bola chaqaloq baby child"),
+    ('😊', "baxt quvonch his-tuyg'u happy emotions feelings"),
+    ('😢', "qayg'u yig'i his-tuyg'u sad cry emotions"),
+    ('🤝', "do'stlik kelishuv friendship agreement"),
+    ('❤️', "sevgi yurak love heart"),
+    ('💪', "kuch sport strong fitness"),
+    ('🏥', "kasalxona shifoxona salomatlik hospital health"),
+    ('💊', "dori salomatlik medicine pill health"),
+    ('🩺', "tibbiyot shifokor medical doctor health"),
+    ('🦷', "tish stomatolog tooth dentist"),
+    ('👁️', "ko'z eye"),
+    ('🫀', "yurak tana heart body"),
+    ('🦠', "virus mikrob kasallik germ disease"),
+  ]),
+  CoverIconGroup({'en': 'Society', 'uz': 'Jamiyat', 'ru': 'Общество'}, [
+    ('🏛️', "hukumat muzey tarix government museum history"),
+    ('🗳️', "saylov ovoz berish election vote"),
+    ('📰', "yangiliklar gazeta media news newspaper"),
+    ('⚖️', "qonun adolat sud law justice court"),
+    ('🚔', "jinoyat politsiya crime police"),
+    ('🕊️', "tinchlik peace"),
+  ]),
+  CoverIconGroup({'en': 'Time & events', 'uz': 'Vaqt va bayram', 'ru': 'Время и праздники'}, [
+    ('⏰', "vaqt soat budilnik time clock alarm"),
+    ('⌛', "vaqt qum soat time hourglass"),
+    ('📅', "kalendar sana jadval calendar date schedule"),
+    ('🌅', "tong ertalab morning sunrise"),
+    ('🌃', "kecha tun night"),
+    ('🎉', "bayram ziyofat party celebration"),
+    ('🎁', "sovg'a gift present"),
+    ('🎂', "tug'ilgan kun tort birthday cake"),
+    ('💍', "to'y uzuk wedding ring"),
+    ('🎄', "yangi yil archa new year christmas"),
+    ('🎆', "mushak salyut fireworks"),
+    ('🔥', "olov issiq fire hot"),
+    ('⭐', "yulduz star"),
+    ('🌟', "yulduz porlash star shine"),
+    ('💎', "olmos qimmatbaho diamond"),
+    ('🔑', "kalit key"),
+  ]),
 ];
+
+// Typed apostrophes vary (o' / oʻ / o’); fold them all to ' before matching.
+String _foldSearch(String s) => s.toLowerCase().replaceAll(RegExp('[ʻʼ‘’`]'), "'").trim();
+
+/// Icons whose topic name or search words contain every word of the query.
+List<String> searchCoverIcons(String query) {
+  final words = _foldSearch(query).split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+  if (words.isEmpty) return const [];
+  final out = <String>[];
+  for (final g in coverIconGroups) {
+    final topic = _foldSearch(g.label.values.join(' '));
+    for (final (emoji, kw) in g.icons) {
+      final hay = '$topic ${_foldSearch(kw)}';
+      if (words.every(hay.contains) && !out.contains(emoji)) out.add(emoji);
+    }
+  }
+  return out;
+}
 
 const _bucket = 'folder-covers';
 const _publicPrefix = 'https://jzozrqbzhagezlwncktf.supabase.co/storage/v1/object/public/$_bucket/';
@@ -198,6 +390,8 @@ const _strings = <String, Map<String, String>>{
   'uploading': {'en': 'Uploading…', 'uz': 'Yuklanmoqda…', 'ru': 'Загрузка…'},
   'upload_failed': {'en': "Couldn't upload the picture", 'uz': "Rasmni yuklab bo'lmadi", 'ru': 'Не удалось загрузить фото'},
   'save_failed': {'en': "Couldn't save the cover", 'uz': "Muqovani saqlab bo'lmadi", 'ru': 'Не удалось сохранить обложку'},
+  'search': {'en': 'Search icons (food, doctor…)', 'uz': 'Belgi qidirish (ovqat, shifokor…)', 'ru': 'Поиск значка (еда, врач…)'},
+  'no_results': {'en': 'Nothing found', 'uz': 'Hech narsa topilmadi', 'ru': 'Ничего не найдено'},
 };
 
 String coverTr(String key) => _strings[key]?[appLangNotifier.value] ?? _strings[key]!['en']!;
@@ -210,6 +404,10 @@ Future<String?> showCoverPicker(BuildContext context, {String? current, bool isU
   var gradient = start?.gradient ?? 0;
   String? emoji = start?.emoji;
   var uploading = false;
+  final searchCtrl = TextEditingController();
+  // Open on the tab holding the current icon, else the first.
+  var group = coverIconGroups.indexWhere((g) => g.icons.any((i) => i.$1 == emoji));
+  if (group < 0) group = 0;
 
   return showModalBottomSheet<String>(
     context: context,
@@ -239,13 +437,17 @@ Future<String?> showCoverPicker(BuildContext context, {String? current, bool isU
       }
 
       final preview = CoverSpec(gradient: gradient, emoji: emoji);
+      final searching = searchCtrl.text.trim().isNotEmpty;
+      final shown = searching
+          ? searchCoverIcons(searchCtrl.text)
+          : [for (final (e, _) in coverIconGroups[group].icons) e];
       Widget label(String k) => Padding(
         padding: const EdgeInsets.only(top: 14, bottom: 8),
         child: Text(coverTr(k), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: ctx.textMuted, letterSpacing: 0.5)),
       );
 
       return SafeArea(child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+        padding: EdgeInsets.fromLTRB(20, 12, 20, 16 + MediaQuery.of(ctx).viewInsets.bottom),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
           Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: ctx.surface2, borderRadius: BorderRadius.circular(2)))),
           const SizedBox(height: 12),
@@ -282,8 +484,52 @@ Future<String?> showCoverPicker(BuildContext context, {String? current, bool isU
               ),
           ]),
           label('icon'),
+          TextField(
+            controller: searchCtrl,
+            onChanged: (_) => setSheet(() {}),
+            style: TextStyle(color: ctx.appText, fontSize: 14),
+            decoration: InputDecoration(
+              hintText: coverTr('search'),
+              hintStyle: TextStyle(color: ctx.textMuted, fontSize: 14),
+              prefixIcon: Icon(Icons.search, color: ctx.textMuted, size: 20),
+              isDense: true,
+              filled: true,
+              fillColor: ctx.surface2,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (!searching)
+            SizedBox(
+              height: 34,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: coverIconGroups.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 6),
+                itemBuilder: (_, i) {
+                  final g = coverIconGroups[i];
+                  final on = group == i;
+                  return GestureDetector(
+                    onTap: () => setSheet(() => group = i),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(color: on ? ctx.primary : ctx.surface2, borderRadius: BorderRadius.circular(20)),
+                      child: Text('${g.icons.first.$1} ${g.label[appLangNotifier.value] ?? g.label['en']}',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: on ? Colors.white : ctx.textMuted)),
+                    ),
+                  );
+                },
+              ),
+            ),
+          const SizedBox(height: 10),
+          if (shown.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Center(child: Text(coverTr('no_results'), style: TextStyle(color: ctx.textMuted, fontSize: 12))),
+            ),
           Wrap(spacing: 6, runSpacing: 6, children: [
-            for (final e in coverEmojis)
+            for (final e in shown)
               GestureDetector(
                 onTap: () => setSheet(() => emoji = emoji == e ? null : e),
                 child: Container(
@@ -317,7 +563,7 @@ Future<String?> showCoverPicker(BuildContext context, {String? current, bool isU
         ]),
       ));
     }),
-  );
+  ).whenComplete(searchCtrl.dispose);
 }
 
 /// Best-effort: delete an uploaded picture that's no longer used. Only our

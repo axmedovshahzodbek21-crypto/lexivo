@@ -244,7 +244,15 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
   void _onLangChange() { if (mounted) setState(() {}); }
 
   Future<void> _load() async {
-    final words       = await StorageService.getLearnedWords();
+    final stats = await _loadStats();
+    // Normally a no-op by now (awardEarnedAchievements runs after each study
+    // activity), but still catches anything earned before that existed.
+    await _awardUnlocked(stats);
+    final dates = await StorageService.getAchievementDatesBatch(_allAchs.map((d) => d.id).toList());
+    if (mounted) setState(() { _stats = stats; _dates = dates; });
+  }
+
+  void _showDetail(_AchDef def) {
     final streak      = await StorageService.getStreak();
     final totalDays   = await StorageService.getTotalStudyDays();
     final xp          = await StorageService.getXP();

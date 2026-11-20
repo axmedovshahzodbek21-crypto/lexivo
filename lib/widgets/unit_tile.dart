@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../l10n.dart';
+import 'folder_cover.dart';
 
 // The gradient unit tile shared by pre-built collections (collections.dart)
 // and My Words folders (my_words_folder_screen.dart): UNIT NN badge, topic,
@@ -17,8 +18,12 @@ class UnitTile extends StatelessWidget {
   // Shown before the copy icon when not complete (e.g. 📚 unlocked stories).
   final Widget? badge;
   final VoidCallback onCopy;
+  // My Words: the unit's (or its folder's) cover replaces the gradient,
+  // complete or not — the ✓ icon still marks a finished unit.
+  final String? cover;
 
   const UnitTile({
+    this.cover,
     super.key,
     required this.number,
     required this.title,
@@ -47,11 +52,14 @@ class UnitTile extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           );
-    final shadowColor = isComplete ? const Color(0xFF14532D) : colorDark;
+    final spec = CoverSpec.parse(cover);
+    final shadowColor = spec != null
+        ? Color.lerp(spec.color, Colors.black, 0.35)!
+        : isComplete ? const Color(0xFF14532D) : colorDark;
 
     return Container(
       decoration: BoxDecoration(
-        gradient: gradient,
+        gradient: spec != null ? null : gradient,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(color: shadowColor.withValues(alpha: 0.9), offset: const Offset(0, 4), blurRadius: 0),
@@ -61,6 +69,8 @@ class UnitTile extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.hardEdge,
         children: [
+          if (spec != null)
+            Positioned.fill(child: ClipRRect(borderRadius: BorderRadius.circular(16), child: CoverFill(cover: spec, emojiSize: 28))),
           Positioned(
             right: -2,
             bottom: -8,

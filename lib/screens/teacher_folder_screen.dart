@@ -7,11 +7,13 @@ import '../widgets/copy_word_list.dart';
 import 'bulk_import_sheet.dart';
 import '../services/fetch_in_chunks.dart';
 import '../main.dart';
+import '../widgets/folder_cover.dart';
 
 class _Unit {
   final String id, name;
   final int wordCount;
-  const _Unit({required this.id, required this.name, required this.wordCount});
+  final String? cover;
+  const _Unit({required this.id, required this.name, required this.wordCount, this.cover});
 }
 
 class TeacherFolderScreen extends StatefulWidget {
@@ -51,6 +53,9 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
   String get _cacheKey => '${currentUser?.id}_${widget.folderId}';
 
   List<_Unit> _units = [];
+  // Units without their own cover show the folder's.
+  static final Map<String, String?> _folderCovers = {};
+  String? get _folderCover => _folderCovers[_cacheKey];
   bool _loading = true;
   bool _hasError = false;
 
@@ -73,9 +78,10 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
   Future<void> _load() async {
     if (_units.isEmpty && mounted) setState(() { _loading = true; _hasError = false; });
     try {
-      final data = await supabase
+      final res = await Future.wait<dynamic>([
+        supabase
           .from('teacher_units')
-          .select('id, name, teacher_unit_words(count)')
+          .select('id, name, cover, teacher_unit_words(count)')
           .eq('folder_id', widget.folderId)
           // `position` is never written anywhere (no drag-to-reorder UI
           // exists yet for units within a folder), so this always falls
@@ -84,7 +90,11 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
           // Dart's order() defaults to descending — explicit ascending so the
           // app matches web and the order auto homework releases units in.
           .order('position', ascending: true)
-          .order('created_at', ascending: true);
+          .order('created_at', ascending: true),
+        supabase.from('teacher_folders').select('cover').eq('id', widget.folderId).maybeSingle(),
+      ]);
+      final data = res[0];
+      _folderCovers[_cacheKey] = (res[1] as Map?)?['cover'] as String?;
       final units = (data as List).map((e) {
         final m = Map<String, dynamic>.from(e as Map);
         final words = m['teacher_unit_words'] as List?;
@@ -92,6 +102,7 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
           id: m['id'] as String,
           name: m['name'] as String,
           wordCount: words?.isNotEmpty == true ? (words![0]['count'] as num?)?.toInt() ?? 0 : 0,
+          cover: m['cover'] as String?,
         );
       }).toList();
       _cachePut(_cacheKey, units);
@@ -255,6 +266,7 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
     if (user == null) return;
     try {
       await supabase.from('teacher_units').delete().eq('id', unit.id).eq('teacher_id', user.id);
+      deleteCoverImage(unit.cover);
       if (mounted) _load();
     } catch (e) {
       if (mounted) {
@@ -262,6 +274,24 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
           SnackBar(content: Text('${tr('failed_to_delete')}: $e'), duration: const Duration(seconds: 3)));
       }
     }
+  }
+
+  // '' = no own cover, so the unit shows the folder's again.
+  Future<void> _setCover(_Unit unit) async {
+    final next = await showCoverPicker(context, current: unit.cover, isUnit: true);
+    if (next == null || next == (unit.cover ?? '')) return;
+    final user = currentUser;
+    if (user == null) return;
+    try {
+      await supabase.from('teacher_units')
+          .update({'cover': next.isEmpty ? null : next})
+          .eq('id', unit.id).eq('teacher_id', user.id);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${coverTr('save_failed')}: $e')));
+      return;
+    }
+    deleteCoverImage(unit.cover);
+    _load();
   }
 
   void _showUnitOptions(_Unit unit) {
@@ -277,6 +307,11 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
             leading: Icon(Icons.edit_outlined, color: context.primary),
             title: Text(tr('rename'), style: TextStyle(color: context.appText)),
             onTap: () { Navigator.pop(context); _renameUnit(unit); },
+          ),
+          ListTile(
+            leading: Icon(Icons.image_outlined, color: context.primary),
+            title: Text(coverTr('cover'), style: TextStyle(color: context.appText)),
+            onTap: () { Navigator.pop(context); _setCover(unit); },
           ),
           ListTile(
             leading: const Icon(Icons.delete_outline, color: Color(0xFFEF4444)),
@@ -409,6 +444,7 @@ class _TeacherFolderScreenState extends State<TeacherFolderScreen> {
       final color = _cardColors[i % _cardColors.length];
       return _UnitCard(
         unit: unit,
+        cover: unit.cover ?? _folderCover,
         color: color,
         onTap: () async {
           await Navigator.push(context, MaterialPageRoute(
@@ -458,10 +494,11 @@ class _AddTile extends StatelessWidget {
 
 class _UnitCard extends StatefulWidget {
   final _Unit unit;
+  final String? cover;
   final Color color;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
-  const _UnitCard({required this.unit, required this.color, required this.onTap, required this.onLongPress});
+  const _UnitCard({required this.unit, required this.cover, required this.color, required this.onTap, required this.onLongPress});
 
   @override
   State<_UnitCard> createState() => _UnitCardState();
@@ -501,46 +538,17 @@ class _UnitCardState extends State<_UnitCard> with SingleTickerProviderStateMixi
 
   @override
   Widget build(BuildContext context) {
-    final color = widget.color;
-    final lighter = Color.lerp(color, Colors.white, 0.25)!;
-    final darker = Color.lerp(color, Colors.black, 0.25)!;
-
     return ScaleTransition(
       scale: _scale,
       child: GestureDetector(
         onTap: widget.onTap,
         onLongPress: widget.onLongPress,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [lighter, color, darker],
-            ),
-            boxShadow: [
-              BoxShadow(color: color.withValues(alpha: 0.55), offset: const Offset(0, 8), blurRadius: 16),
-              BoxShadow(color: Colors.black.withValues(alpha: 0.3), offset: const Offset(0, 12), blurRadius: 24),
-            ],
-          ),
-          foregroundDecoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: Border(
-              bottom: BorderSide(color: darker, width: 4),
-              right: BorderSide(color: darker, width: 2),
-            ),
-          ),
-          padding: const EdgeInsets.all(12),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('📖', style: TextStyle(fontSize: 26)),
-            const Spacer(),
-            Text(widget.unit.name,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                maxLines: 2, overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 2),
-            Text(tr('n_words_plain').replaceFirst('{n}', '${widget.unit.wordCount}'),
-                style: const TextStyle(color: Colors.white70, fontSize: 11)),
-          ]),
+        child: CoverCard(
+          cover: widget.cover,
+          fallbackColor: widget.color,
+          icon: '📖',
+          title: widget.unit.name,
+          subtitle: tr('n_words_plain').replaceFirst('{n}', '${widget.unit.wordCount}'),
         ),
       ),
     );

@@ -2896,6 +2896,10 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     if (removedNew || removedLegacy) {
       await prefs.setString(_myUnitProgressKey, jsonEncode(allProgress.map((k, v) => MapEntry(k, v.toJson()))));
     }
+    if (folderName != null) {
+      final key = myCoverKey(folderName, collectionName);
+      await _clearMyCovers((k) => k == key);
+    }
     SyncService.pushLists();
   }));
 
@@ -2920,6 +2924,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     }
     // A new folder reusing this name later shouldn't inherit the lock.
     if (await isMyFolderLocked(folderName)) await setMyFolderLocked(folderName, false);
+    await _clearMyCovers((k) => k == folderName || k.startsWith('$folderName\n'));
     SyncService.pushLists();
   }));
 
@@ -2947,6 +2952,46 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     final all = await getMyFolderLocks();
     all[folderName] = {'locked': locked, 'at': DateTime.now().millisecondsSinceEpoch};
     await prefs.setString(_myFolderLocksKey, jsonEncode(all));
+  }
+
+  // ── My Words folder / unit covers ────────────────────────────────────────
+  // { key: { cover, at } }, key = folder, or folder + "\n" + unit. cover is a
+  // widgets/folder_cover.dart string, '' = removed (kept as a tombstone so
+  // the removal syncs). Per-key last-write-wins in SyncService, same shape
+  // as web lib/storage.ts.
+  static const _myFolderCoversKey = 'my_folder_covers';
+
+  static String myCoverKey(String folder, [String? unit]) => unit == null ? folder : '$folder\n$unit';
+
+  static Future<Map<String, dynamic>> getMyFolderCovers() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_myFolderCoversKey);
+    if (raw == null) return {};
+    try { return jsonDecode(raw) as Map<String, dynamic>; } catch (_) { return {}; }
+  }
+
+  static String? coverIn(Map<String, dynamic> all, String key) {
+    final c = (all[key] as Map?)?['cover'] as String?;
+    return c == null || c.isEmpty ? null : c;
+  }
+
+  static Future<void> setMyCover(String key, String cover) => setMyCovers({key: cover});
+
+  static Future<void> setMyCovers(Map<String, String> covers) async {
+    final prefs = await SharedPreferences.getInstance();
+    final all = await getMyFolderCovers();
+    final now = DateTime.now().millisecondsSinceEpoch;
+    for (final e in covers.entries) {
+      all[e.key] = {'cover': e.value, 'at': now};
+    }
+    await prefs.setString(_myFolderCoversKey, jsonEncode(all));
+  }
+
+  // A new folder/unit reusing a deleted one's name shouldn't inherit its cover.
+  static Future<void> _clearMyCovers(bool Function(String key) match) async {
+    final all = await getMyFolderCovers();
+    final keys = [for (final k in all.keys) if (match(k) && coverIn(all, k) != null) k];
+    if (keys.isNotEmpty) await setMyCovers({for (final k in keys) k: ''});
   }
 
   static Future<void> markLevelCompletedViaTest(String levelId) async {

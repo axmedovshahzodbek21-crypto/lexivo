@@ -5,6 +5,7 @@ import '../data/storage_service.dart';
 import '../services/sync_service.dart';
 import '../widgets/copy_word_list.dart';
 import '../widgets/unit_tile.dart';
+import '../widgets/folder_cover.dart';
 import 'import_collection_detail_screen.dart';
 
 // Same purple as the "30 Days of Powerful Words" hero/tiles (collections.dart).
@@ -48,7 +49,11 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
   List<ImportedCollection> _collections = [];
   Map<String, MyUnitProgress> _progress = {};
   bool _locked = false;
+  Map<String, dynamic> _covers = {};
   bool _loading = true;
+
+  String? get _folderCover => StorageService.coverIn(_covers, StorageService.myCoverKey(widget.folderName));
+  String? _unitOwnCover(String unit) => StorageService.coverIn(_covers, StorageService.myCoverKey(widget.folderName, unit));
 
   @override
   void initState() {
@@ -70,8 +75,10 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
     final progresses = await Future.wait(
         cols.map((col) => StorageService.getMyUnitProgress(widget.folderName, col.name)));
     final locked = await StorageService.isMyFolderLocked(widget.folderName);
+    final covers = await StorageService.getMyFolderCovers();
     if (mounted) {
       setState(() {
+        _covers = covers;
         _collections = cols;
         _cachePut(widget.folderName, cols);
         _progress = {for (var i = 0; i < cols.length; i++) cols[i].name: progresses[i]};
@@ -92,6 +99,18 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(tr(next ? 'order_locked_toast' : 'order_free_toast'))));
+  }
+
+  // unit == null → the folder's cover; a unit without its own shows the folder's.
+  Future<void> _setCover({String? unit}) async {
+    final key = StorageService.myCoverKey(widget.folderName, unit);
+    final old = StorageService.coverIn(_covers, key);
+    final next = await showCoverPicker(context, current: old, isUnit: unit != null);
+    if (next == null || next == (old ?? '')) return;
+    await StorageService.setMyCover(key, next);
+    SyncService.pushLists();
+    deleteCoverImage(old);
+    _load();
   }
 
   Future<void> _openUnit(String name) async {
@@ -204,22 +223,30 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
     final totalWords = _collections.fold<int>(0, (s, c) => s + c.count);
     final completedUnits = _collections.where((c) => _progress[c.name] != null && _isComplete(_progress[c.name]!)).length;
     final progressPct = _collections.isEmpty ? 0.0 : completedUnits / _collections.length;
+    final cover = CoverSpec.parse(_folderCover);
+    final glow = cover?.color ?? _color;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
       margin: const EdgeInsets.only(bottom: 20),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [_color, _colorLight], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        gradient: cover != null ? null : const LinearGradient(colors: [_color, _colorLight], begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: _color.withValues(alpha: 0.45), offset: const Offset(0, 8), blurRadius: 24)],
+        boxShadow: [BoxShadow(color: glow.withValues(alpha: 0.45), offset: const Offset(0, 8), blurRadius: 24)],
       ),
+      child: Stack(children: [
+        if (cover != null) Positioned.fill(child: CoverFill(cover: cover, emojiSize: 64)),
+        Padding(
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Text('📁', style: TextStyle(fontSize: 32)),
-              const SizedBox(width: 12),
+              if (cover == null || (cover.emoji == null && cover.imageUrl == null)) ...[
+                const Text('📁', style: TextStyle(fontSize: 32)),
+                const SizedBox(width: 12),
+              ],
               Expanded(
                 child: Text(widget.folderName,
                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white,
@@ -274,10 +301,21 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                 ),
               ),
+              GestureDetector(
+                onTap: () => _setCover(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(12)),
+                  child: Text('🖼 ${coverTr('cover')}',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                ),
+              ),
             ],
           ),
         ],
       ),
+        ),
+      ]),
     );
   }
 
@@ -317,7 +355,9 @@ class _MyWordsFolderScreenState extends State<MyWordsFolderScreen> {
         final p = _progress[col.name] ?? const MyUnitProgress();
         return GestureDetector(
           onTap: () => _openUnit(col.name),
+          onLongPress: () => _setCover(unit: col.name),
           child: UnitTile(
+            cover: _unitOwnCover(col.name) ?? _folderCover,
             number: i + 1,
             title: col.name,
             wordCount: col.count,

@@ -6,6 +6,7 @@ import '../app_theme.dart';
 import 'teacher_folder_screen.dart';
 import '../main.dart';
 import '../widgets/page_tip_button.dart';
+import '../widgets/folder_cover.dart';
 
 const _localStrings = <String, Map<String, String>>{
   'folder_caps': {'en': 'FOLDER', 'uz': 'PAPKA', 'ru': 'ПАПКА'},
@@ -21,7 +22,8 @@ String _ltr(String key) {
 class _Folder {
   final String id, name;
   final int unitCount;
-  const _Folder({required this.id, required this.name, required this.unitCount});
+  final String? cover;
+  const _Folder({required this.id, required this.name, required this.unitCount, this.cover});
 }
 
 // One-time real example (folder → unit → word) so a first-time teacher sees
@@ -117,7 +119,7 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
     try {
       final data = await supabase
           .from('teacher_folders')
-          .select('id, name, teacher_units(count)')
+          .select('id, name, cover, teacher_units(count)')
           .eq('teacher_id', user.id)
           // `position` is never written anywhere (no drag-to-reorder UI
           // exists yet for folders in the library), so this always falls
@@ -132,6 +134,7 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
           id: m['id'] as String,
           name: m['name'] as String,
           unitCount: units?.isNotEmpty == true ? (units![0]['count'] as num?)?.toInt() ?? 0 : 0,
+          cover: m['cover'] as String?,
         );
       }).toList();
       if (folders.isEmpty && await _seedExampleFolder(user.id)) {
@@ -315,6 +318,7 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
     if (user == null) return;
     try {
       await supabase.from('teacher_folders').delete().eq('id', folder.id).eq('teacher_id', user.id);
+      deleteCoverImage(folder.cover);
       if (mounted) _load();
     } catch (e) {
       if (mounted) {
@@ -322,6 +326,24 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
           SnackBar(content: Text('${tr('failed_to_delete')}: $e'), duration: const Duration(seconds: 3)));
       }
     }
+  }
+
+  // Students in classes this folder is assigned to see the same cover.
+  Future<void> _setCover(_Folder folder) async {
+    final next = await showCoverPicker(context, current: folder.cover);
+    if (next == null || next == (folder.cover ?? '')) return;
+    final user = currentUser;
+    if (user == null) return;
+    try {
+      await supabase.from('teacher_folders')
+          .update({'cover': next.isEmpty ? null : next})
+          .eq('id', folder.id).eq('teacher_id', user.id);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${coverTr('save_failed')}: $e')));
+      return;
+    }
+    deleteCoverImage(folder.cover);
+    _load();
   }
 
   void _showFolderOptions(_Folder folder) {
@@ -336,6 +358,11 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> {
             leading: Icon(Icons.edit_outlined, color: context.primary),
             title: Text(tr('rename'), style: TextStyle(color: context.appText)),
             onTap: () { Navigator.pop(context); _renameFolder(folder); },
+          ),
+          ListTile(
+            leading: Icon(Icons.image_outlined, color: context.primary),
+            title: Text(coverTr('cover'), style: TextStyle(color: context.appText)),
+            onTap: () { Navigator.pop(context); _setCover(folder); },
           ),
           ListTile(
             leading: const Icon(Icons.delete_outline, color: Color(0xFFEF4444)),
@@ -567,46 +594,17 @@ class _FolderCardState extends State<_FolderCard> with SingleTickerProviderState
 
   @override
   Widget build(BuildContext context) {
-    final color = widget.color;
-    final lighter = Color.lerp(color, Colors.white, 0.25)!;
-    final darker = Color.lerp(color, Colors.black, 0.25)!;
-
     return ScaleTransition(
       scale: _scale,
       child: GestureDetector(
         onTap: widget.onTap,
         onLongPress: widget.onLongPress,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [lighter, color, darker],
-            ),
-            boxShadow: [
-              BoxShadow(color: color.withValues(alpha: 0.55), offset: const Offset(0, 8), blurRadius: 16),
-              BoxShadow(color: Colors.black.withValues(alpha: 0.3), offset: const Offset(0, 12), blurRadius: 24),
-            ],
-          ),
-          foregroundDecoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: Border(
-              bottom: BorderSide(color: darker, width: 4),
-              right: BorderSide(color: darker, width: 2),
-            ),
-          ),
-          padding: const EdgeInsets.all(12),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('📁', style: TextStyle(fontSize: 26)),
-            const Spacer(),
-            Text(widget.folder.name,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                maxLines: 2, overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 2),
-            Text(tr('n_units_word').replaceFirst('{n}', '${widget.folder.unitCount}'),
-                style: const TextStyle(color: Colors.white70, fontSize: 11)),
-          ]),
+        child: CoverCard(
+          cover: widget.folder.cover,
+          fallbackColor: widget.color,
+          icon: '📁',
+          title: widget.folder.name,
+          subtitle: tr('n_units_word').replaceFirst('{n}', '${widget.folder.unitCount}'),
         ),
       ),
     );

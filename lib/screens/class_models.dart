@@ -154,14 +154,17 @@ class HomeworkUnit {
   final String? homeworkId;
   final List<String>? hwModes;
   final String? hwDue;
-  const HomeworkUnit({required this.id, required this.name, required this.wordCount, this.homeworkId, this.hwModes, this.hwDue});
+  // Library units: the unit's own cover, else its folder's (widgets/folder_cover.dart).
+  final String? cover;
+  const HomeworkUnit({required this.id, required this.name, required this.wordCount, this.homeworkId, this.hwModes, this.hwDue, this.cover});
   bool get hasHomework => homeworkId != null;
-  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'wordCount': wordCount, 'homeworkId': homeworkId, 'hwModes': hwModes, 'hwDue': hwDue};
+  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'wordCount': wordCount, 'homeworkId': homeworkId, 'hwModes': hwModes, 'hwDue': hwDue, 'cover': cover};
   static HomeworkUnit fromJson(Map<String, dynamic> m) => HomeworkUnit(
     id: m['id'] as String, name: m['name'] as String, wordCount: m['wordCount'] as int? ?? 0,
     homeworkId: m['homeworkId'] as String?,
     hwModes: m['hwModes'] != null ? List<String>.from(m['hwModes'] as List) : null,
     hwDue: m['hwDue'] as String?,
+    cover: m['cover'] as String?,
   );
 }
 

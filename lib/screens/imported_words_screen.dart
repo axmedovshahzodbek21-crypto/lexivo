@@ -7,6 +7,7 @@ import '../services/sync_service.dart';
 import '../widgets/my_words_shared.dart';
 import 'my_words_folder_screen.dart';
 import '../widgets/page_tip_button.dart';
+import '../widgets/folder_cover.dart';
 
 const _exampleSeededKey = 'mywords_example_seeded';
 
@@ -51,6 +52,7 @@ class ImportedWordsScreen extends StatefulWidget {
 class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
   List<ImportedFolder> _folders = [];
   final Map<String, int> _completedCounts = {};
+  Map<String, dynamic> _covers = {};
   bool _loading = true;
 
   @override
@@ -85,9 +87,11 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
           cols.map((col) => StorageService.getMyUnitProgress(folder.name, col.name)));
       completedCounts[folder.name] = progresses.where((p) => p.completedAt != null).length;
     }));
+    final covers = await StorageService.getMyFolderCovers();
     if (mounted) {
       setState(() {
         _folders = folders;
+        _covers = covers;
         _completedCounts..clear()..addAll(completedCounts);
         _loading = false;
       });
@@ -163,6 +167,41 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
     await Navigator.push(context, MaterialPageRoute(
       builder: (_) => MyWordsFolderScreen(folderName: name),
     ));
+    _load();
+  }
+
+  void _showFolderOptions(String folderName) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: context.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (sheetCtx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(width: 36, height: 4, margin: const EdgeInsets.symmetric(vertical: 10), decoration: BoxDecoration(color: context.surface2, borderRadius: BorderRadius.circular(2))),
+          ListTile(
+            leading: Icon(Icons.image_outlined, color: context.primary),
+            title: Text(coverTr('cover'), style: TextStyle(color: context.appText)),
+            onTap: () { Navigator.pop(sheetCtx); _setCover(folderName); },
+          ),
+          ListTile(
+            leading: Icon(Icons.delete_outline, color: context.dangerColor),
+            title: Text(tr('delete'), style: TextStyle(color: context.dangerColor)),
+            onTap: () { Navigator.pop(sheetCtx); _deleteFolder(folderName); },
+          ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+  }
+
+  Future<void> _setCover(String folderName) async {
+    final key = StorageService.myCoverKey(folderName);
+    final old = StorageService.coverIn(_covers, key);
+    final next = await showCoverPicker(context, current: old);
+    if (next == null || next == (old ?? '')) return;
+    await StorageService.setMyCover(key, next);
+    SyncService.pushLists();
+    deleteCoverImage(old);
     _load();
   }
 
@@ -348,8 +387,6 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
       itemBuilder: (context, i) {
         final folder = _folders[i];
         final color = myWordsCardColors[i % myWordsCardColors.length];
-        final lighter = Color.lerp(color, Colors.white, 0.25)!;
-        final darker = Color.lerp(color, Colors.black, 0.25)!;
         final done = _completedCounts[folder.name] ?? 0;
         return GestureDetector(
           onTap: () async {
@@ -358,46 +395,16 @@ class _ImportedWordsScreenState extends State<ImportedWordsScreen> {
             ));
             _load();
           },
-          onLongPress: () => _deleteFolder(folder.name),
+          onLongPress: () => _showFolderOptions(folder.name),
           // Same card as the Library's folders (teacher_library_screen.dart).
           child: HeartbeatCard(
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [lighter, color, darker],
-                ),
-                boxShadow: [
-                  BoxShadow(color: color.withValues(alpha: 0.55), offset: const Offset(0, 8), blurRadius: 16),
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.3), offset: const Offset(0, 12), blurRadius: 24),
-                ],
-              ),
-              foregroundDecoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                border: Border(
-                  bottom: BorderSide(color: darker, width: 4),
-                  right: BorderSide(color: darker, width: 2),
-                ),
-              ),
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('📁', style: TextStyle(fontSize: 26)),
-                  const Spacer(),
-                  Text(folder.name,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 2),
-                  Text(
-                    tr('n_units_word').replaceFirst('{n}', '${folder.collectionCount}') +
-                        (done > 0 ? ' · ✅ $done/${folder.collectionCount}' : ''),
-                    style: const TextStyle(color: Colors.white70, fontSize: 11)),
-                ],
-              ),
+            child: CoverCard(
+              cover: StorageService.coverIn(_covers, StorageService.myCoverKey(folder.name)),
+              fallbackColor: color,
+              icon: '📁',
+              title: folder.name,
+              subtitle: tr('n_units_word').replaceFirst('{n}', '${folder.collectionCount}') +
+                  (done > 0 ? ' · ✅ $done/${folder.collectionCount}' : ''),
             ),
           ),
         );

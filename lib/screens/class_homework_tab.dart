@@ -11,6 +11,7 @@ import 'class_models.dart';
 import 'library_unit_study_screen.dart';
 import '../data/word_data.dart';
 import '../data/reading_data.dart';
+import '../widgets/folder_cover.dart';
 
 const _localStrings = <String, Map<String, String>>{
   'day_cap': {'en': 'Day', 'uz': 'Kun', 'ru': 'День'},
@@ -81,12 +82,14 @@ Widget _hwHero(String classId, String className) {
 
 class _AssignedFolder {
   final String id, assignmentId, name;
+  final String? cover;
   final List<HomeworkUnit> units;
   bool showAll = false;
-  _AssignedFolder({required this.id, required this.assignmentId, required this.name, required this.units});
-  Map<String, dynamic> toJson() => {'id': id, 'assignmentId': assignmentId, 'name': name, 'units': units.map((u) => u.toJson()).toList()};
+  _AssignedFolder({required this.id, required this.assignmentId, required this.name, required this.units, this.cover});
+  Map<String, dynamic> toJson() => {'id': id, 'assignmentId': assignmentId, 'name': name, 'cover': cover, 'units': units.map((u) => u.toJson()).toList()};
   static _AssignedFolder fromJson(Map<String, dynamic> m) => _AssignedFolder(
     id: m['id'] as String, assignmentId: m['assignmentId'] as String, name: m['name'] as String,
+    cover: m['cover'] as String?,
     units: (m['units'] as List).map((u) => HomeworkUnit.fromJson(Map<String, dynamic>.from(u as Map))).toList(),
   );
 }
@@ -150,7 +153,7 @@ Future<(_HwCache, Map<String, Set<String>>)> _fetchHomework(String classId, Stri
   final phase1 = await Future.wait([
     supabase
         .from('class_library_assignments')
-        .select('id, folder_id, teacher_folders(id, name)')
+        .select('id, folder_id, teacher_folders(id, name, cover)')
         .eq('class_id', classId),
     supabase
         .from('class_word_units')
@@ -189,7 +192,7 @@ Future<(_HwCache, Map<String, Set<String>>)> _fetchHomework(String classId, Stri
     folderIds.isNotEmpty
         ? supabase
             .from('teacher_units')
-            .select('id, folder_id, name, teacher_unit_words(count)')
+            .select('id, folder_id, name, cover, teacher_unit_words(count)')
             .inFilter('folder_id', folderIds)
             // The teacher's folder order (same as auto homework releases).
             // Dart's order() defaults to descending, so both are explicit.
@@ -248,6 +251,7 @@ Future<(_HwCache, Map<String, Set<String>>)> _fetchHomework(String classId, Stri
   for (final a in assignsRaw) {
     final folder = ((a as Map)['teacher_folders']) as Map;
     final folderId = folder['id'] as String;
+    final folderCover = folder['cover'] as String?;
     final units = unitsRaw
         .where((u) => (u as Map)['folder_id'] == folderId)
         .map((u) {
@@ -261,9 +265,10 @@ Future<(_HwCache, Map<String, Set<String>>)> _fetchHomework(String classId, Stri
             homeworkId: hw?['id'] as String?,
             hwModes: hw != null ? (hw['modes'] as List?)?.map((x) => x as String).toList() ?? ['learn', 'flashcard', 'quiz'] : null,
             hwDue: hw?['due_date'] as String?,
+            cover: (um['cover'] as String?) ?? folderCover,
           );
         }).toList();
-    folders.add(_AssignedFolder(id: folderId, assignmentId: a['id'] as String, name: folder['name'] as String, units: units));
+    folders.add(_AssignedFolder(id: folderId, assignmentId: a['id'] as String, name: folder['name'] as String, units: units, cover: folderCover));
   }
 
   // ── 8. Build class word unit list ───────────────────────────────────
@@ -769,7 +774,13 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
       Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: Row(children: [
-          const Text('📁', style: TextStyle(fontSize: 12)),
+          if (CoverSpec.parse(folder.cover) case final spec?)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: SizedBox(width: 22, height: 22, child: CoverFill(cover: spec, emojiSize: 12)),
+            )
+          else
+            const Text('📁', style: TextStyle(fontSize: 12)),
           const SizedBox(width: 6),
           Expanded(child: Text(folder.name,
             style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: context.textMuted),
@@ -798,7 +809,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
               ? _buildGridUnitCard(
                   id: u.id, name: u.name,
                   homeworkId: u.homeworkId!, hwModes: u.hwModes ?? [],
-                  hwDue: u.hwDue, isClassWords: isClassWords)
+                  hwDue: u.hwDue, isClassWords: isClassWords, cover: u.cover)
               : _buildLockedGridCard(u.name)).toList(),
         ),
       const SizedBox(height: 16),
@@ -865,10 +876,11 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
   Widget _buildGridUnitCard({
     required String id, required String name,
     required String homeworkId, required List<String> hwModes,
-    required String? hwDue, required bool isClassWords,
+    required String? hwDue, required bool isClassWords, String? cover,
   }) {
     final completed = _completedModes[homeworkId] ?? {};
     final allDone = isHomeworkFullyDone(hwModes, completed);
+    final coverSpec = CoverSpec.parse(cover);
     const modeIcons = {'learn': '📖', 'flashcard': '🃏', 'quiz': '🧠', 'match': '🎯'};
     final accent = allDone
         ? const LinearGradient(colors: [Color(0xFF22c55e), Color(0xFF4ade80)])
@@ -900,7 +912,11 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
               border: Border.all(color: allDone ? Colors.green.shade300 : context.border, width: 1.5),
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Container(height: 3, decoration: BoxDecoration(gradient: accent)),
+              // The teacher's cover as a banner; the plain accent bar otherwise.
+              if (coverSpec != null)
+                SizedBox(height: 30, width: double.infinity, child: CoverFill(cover: coverSpec, emojiSize: 18))
+              else
+                Container(height: 3, decoration: BoxDecoration(gradient: accent)),
               Expanded(child: Padding(
                 padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

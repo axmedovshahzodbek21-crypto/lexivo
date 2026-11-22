@@ -281,7 +281,9 @@ Future<void> refreshClassSrsCache({required String userId, required String class
   await ClassSrsCache.save(classId, rows);
 }
 
-String _newEventId() {
+/// Random v4 UUID made on the phone — lets a queued offline write be resent
+/// safely (the server ignores a second copy with the same id).
+String newClientUuid() {
   final r = Random.secure();
   final b = List<int>.generate(16, (_) => r.nextInt(256));
   b[6] = (b[6] & 0x0f) | 0x40; // version 4
@@ -301,7 +303,7 @@ Future<void> recordClassReview({
   int? responseMs,
 }) async {
   final params = {
-    'p_event_id': _newEventId(),
+    'p_event_id': newClientUuid(),
     'p_user_id': userId,
     'p_class_id': classId,
     'p_word': word,

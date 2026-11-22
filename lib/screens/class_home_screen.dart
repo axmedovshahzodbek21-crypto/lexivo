@@ -13,6 +13,7 @@ import '../widgets/member_avatar.dart';
 import 'class_chat_screen.dart';
 import 'class_hard_words_screen.dart';
 import 'class_models.dart';
+import 'teacher_offline.dart';
 import 'class_streak_screen.dart';
 import 'class_xp_calendar_screen.dart';
 
@@ -243,7 +244,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
       // class_members + profiles query) because profiles RLS only lets a
       // user read their own row — a teacher querying profiles for their
       // students directly would get zero rows back silently.
-      final rows = await supabase.rpc('get_class_pending_members', params: {'p_class_id': widget.classId});
+      final rows = await TeacherReads.pendingMembers(widget.classId);
       final members = (rows as List).map((r) {
         final m = Map<String, dynamic>.from(r as Map);
         return {
@@ -443,15 +444,21 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
 
     try {
       // ── Group 1: parallel independent fetches ─────────────────────────────
+      // Teacher reads go through TeacherReads (saved on the phone, so Home
+      // opens offline). Not for students: their second group of reads below
+      // would fail offline and overwrite the saved targets/notes with empties
+      // — a student's offline Home comes from the saved snapshot instead.
+      final c = widget.classId;
+      final t = widget.isTeacher;
       final results = await Future.wait<dynamic>([
-        supabase
+        t ? TeacherReads.announcements(c) : supabase
             .from('class_announcements')
             .select('id, class_id, message, created_at')
-            .eq('class_id', widget.classId)
+            .eq('class_id', c)
             .order('created_at', ascending: false)
             .limit(5),
-        supabase
-            .rpc('get_class_member_ids', params: {'p_class_id': widget.classId}),
+        t ? TeacherReads.memberIds(c) : supabase
+            .rpc('get_class_member_ids', params: {'p_class_id': c}),
       ]);
 
       final anns = (results[0] as List)
@@ -471,10 +478,10 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
           .map((m) => (m as Map)['student_id'] as String?)
           .whereType<String>()
           .toSet();
-      final approvedRows = await supabase
+      final approvedRows = t ? await TeacherReads.approvedMembers(c) : await supabase
           .from('class_members')
           .select('student_id, joined_at')
-          .eq('class_id', widget.classId)
+          .eq('class_id', c)
           .eq('status', 'approved');
       final approvedIds = (approvedRows as List).map((m) => (m as Map)['student_id'] as String).toSet();
       // Local join date per student — the fallback "last active" for someone
@@ -518,10 +525,10 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
             // no second (e.g. 7-day) "inactive" definition exists here.
             final today = DateTime.now().toIso8601String().substring(0, 10);
             final threeDaysAgo = DateTime.now().subtract(const Duration(days: 3)).toIso8601String().substring(0, 10);
-            final studyDaysRaw = await supabase
+            final studyDaysRaw = t ? await TeacherReads.studyDays(c, memberIds) : await supabase
                 .from('class_study_days')
                 .select('student_id, study_date')
-                .eq('class_id', widget.classId)
+                .eq('class_id', c)
                 .inFilter('student_id', memberIds);
             final lastStudyByStudent = <String, String>{};
             for (final row in studyDaysRaw as List) {
@@ -612,10 +619,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
         if (widget.isTeacher && anns.isNotEmpty) () async {
           try {
             final annIds = anns.map((a) => a.id).toList();
-            final readsRaw = await supabase
-                .from('class_announcement_reads')
-                .select('announcement_id')
-                .inFilter('announcement_id', annIds);
+            final readsRaw = await TeacherReads.announcementReads(c, annIds);
             for (final r in (readsRaw as List)) {
               final aid = (r as Map)['announcement_id'] as String;
               readCounts[aid] = (readCounts[aid] ?? 0) + 1;
@@ -1388,7 +1392,7 @@ class _StudentsSheetState extends State<_StudentsSheet> {
 
   Future<void> _load() async {
     try {
-      final data = await supabase.rpc('get_class_dashboard', params: {'p_class_id': widget.classId});
+      final data = await TeacherReads.dashboard(widget.classId);
       final list = (data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
       list.sort((a, b) => ((b['xp'] as num?) ?? 0).compareTo((a['xp'] as num?) ?? 0));
       if (mounted) setState(() { _students = list; _loading = false; });

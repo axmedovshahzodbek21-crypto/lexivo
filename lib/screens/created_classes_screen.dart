@@ -10,6 +10,8 @@ import 'teacher_library_screen.dart';
 import '../widgets/create_class_sheet.dart';
 import '../widgets/navigate_once.dart';
 import '../widgets/page_tip_button.dart';
+import '../widgets/offline_banner.dart' show timeAgoLabel;
+import 'teacher_offline.dart';
 
 const _kGradients = [
   [Color(0xFF6366F1), Color(0xFF8B5CF6)],
@@ -68,12 +70,13 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> with Naviga
     }
 
     try {
-      final taught = await supabase.from('classes').select('*').eq('teacher_id', user.id).order('created_at', ascending: false);
+      // Saved on the phone (TeacherReads) so the list opens offline.
+      final taught = await TeacherReads.taughtClasses(user.id);
       final taughtIds = (taught as List).map((c) => (c as Map)['id'] as String).toList();
 
       final myClasses = <ClassRow>[];
       if (taughtIds.isNotEmpty) {
-        final memberRows = await supabase.from('class_members').select('class_id').inFilter('class_id', taughtIds).eq('status', 'approved');
+        final memberRows = await TeacherReads.taughtMembers(taughtIds);
         final countMap = <String, int>{};
         for (final m in (memberRows as List)) {
           final id = (m as Map)['class_id'] as String;
@@ -91,6 +94,7 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> with Naviga
       _cachePut(user.id, myClasses);
       if (mounted) setState(() { _myClasses = myClasses; _loading = false; _loadError = false; });
       WidgetService.pushClasses(myClasses, {});
+      _loadOfflineTimes(myClasses);
     } catch (e) {
       // Only surface an error state when there's nothing cached to fall
       // back on — otherwise a failed background refresh keeps showing
@@ -100,6 +104,35 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> with Naviga
       debugPrint('[CreatedClassesScreen] load failed: $e');
       if (mounted) setState(() { _loading = false; _loadError = _myClasses.isEmpty; });
     }
+  }
+
+  final Set<String> _downloading = {};
+  Map<String, DateTime> _offlineAt = {};
+
+  Future<void> _loadOfflineTimes(List<ClassRow> classes) async {
+    final times = <String, DateTime>{};
+    for (final c in classes) {
+      final at = await classOfflineSavedAt(c.id);
+      if (at != null) times[c.id] = at;
+    }
+    if (mounted) setState(() => _offlineAt = times);
+  }
+
+  Future<void> _downloadForOffline(String classId) async {
+    if (_downloading.contains(classId)) return;
+    setState(() => _downloading.add(classId));
+    final messenger = ScaffoldMessenger.of(context);
+    var ok = true;
+    try {
+      await downloadTeacherClassForOffline(classId);
+    } catch (e) {
+      debugPrint('[CreatedClassesScreen] offline download failed: $e');
+      ok = false;
+    }
+    if (!mounted) return;
+    setState(() => _downloading.remove(classId));
+    await _loadOfflineTimes(_myClasses);
+    messenger.showSnackBar(SnackBar(content: Text(tr(ok ? 'offline_saved_teacher' : 'offline_save_failed'))));
   }
 
   Future<void> _createClass(String name) async {
@@ -346,6 +379,15 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> with Naviga
                 Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Expanded(child: Text(cls.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white, height: 1.2), maxLines: 2, overflow: TextOverflow.ellipsis)),
                   GestureDetector(
+                    onTap: () => _downloadForOffline(cls.id),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: _downloading.contains(cls.id)
+                          ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Icon(Icons.download_rounded, size: 16, color: Colors.white),
+                    ),
+                  ),
+                  GestureDetector(
                     onTap: () => _showRenameDialog(cls),
                     child: const Padding(padding: EdgeInsets.all(4), child: Text('✏️', style: TextStyle(fontSize: 12))),
                   ),
@@ -353,6 +395,11 @@ class _CreatedClassesScreenState extends State<CreatedClassesScreen> with Naviga
                 const SizedBox(height: 6),
                 Text('👥 ${cls.memberCount} ${cls.memberCount != 1 ? tr('students') : tr('student')}',
                     style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.7))),
+                if (_offlineAt[cls.id] != null) ...[
+                  const SizedBox(height: 2),
+                  Text('📥 ${timeAgoLabel(_offlineAt[cls.id]!)}',
+                      style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.7))),
+                ],
                 const Spacer(),
                 Row(children: [
                   Expanded(

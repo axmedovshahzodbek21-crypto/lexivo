@@ -11,6 +11,7 @@ import '../l10n.dart';
 import 'class_models.dart';
 import 'class_shell.dart';
 import 'class_home_screen.dart';
+import 'teacher_offline.dart' show markClassOfflineSaved, classOfflineSavedAt;
 import '../widgets/navigate_once.dart';
 import '../widgets/page_tip_button.dart';
 
@@ -133,8 +134,6 @@ Future<_Snapshot> _fetchSnapshot(String uid) async {
   );
 }
 
-String _offlineAtKey(String uid, String classId) => 'class_offline_at_v1_${uid}_$classId';
-
 /// Everything one approved class needs with no internet: sends answers made
 /// offline first, then saves the class role (so ClassShell opens), homework
 /// list + unit words, Review cards, and class home (announcements, notes,
@@ -152,7 +151,7 @@ Future<void> downloadClassForOffline(String classId) async {
     ClassHomeScreen.prefetchForStudent(classId).then((_) => true),
   ]);
   if (results.contains(false)) throw Exception('partial offline download');
-  await prefs.setString(_offlineAtKey(uid, classId), DateTime.now().toIso8601String());
+  await markClassOfflineSaved(classId);
 }
 
 /// Run once per app start (main.dart): downloads everything a student needs
@@ -234,11 +233,9 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
   }
 
   Future<void> _loadOfflineTimes(String uid, List<ClassRow> classes) async {
-    final prefs = await SharedPreferences.getInstance();
     final times = <String, DateTime>{};
     for (final c in classes) {
-      final raw = prefs.getString(_offlineAtKey(uid, c.id));
-      final at = raw == null ? null : DateTime.tryParse(raw);
+      final at = await classOfflineSavedAt(c.id);
       if (at != null) times[c.id] = at;
     }
     if (mounted) setState(() => _offlineAt = times);

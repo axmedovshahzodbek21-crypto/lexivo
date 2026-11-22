@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestList;
 import '../app_theme.dart';
 import '../services/fetch_in_chunks.dart';
 import '../date_utils.dart';
@@ -8,6 +7,8 @@ import '../services/supabase_service.dart';
 import '../services/class_colors.dart';
 import 'class_models.dart';
 import 'missed_homework.dart';
+import 'teacher_offline.dart';
+import '../widgets/offline_banner.dart';
 import 'student_summary.dart';
 import 'student_summary_view.dart';
 
@@ -141,18 +142,20 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
       // Full history, paged (one response stops at 1000 rows). The 500 cap and
       // the RPC's old 50-row limit made teacher and student see different
       // days and day totals for the same student.
+      // Teacher view reads go through TeacherReads so the page works offline
+      // once the class is downloaded (⬇️ on the class card).
       final results = await Future.wait<dynamic>([
-        fetchAllPages(() => isSelf
-            ? supabase
+        isSelf
+            ? fetchAllPages(() => supabase
                 .from('class_xp_history')
                 .select('id, amount, reason, created_at')
                 .eq('user_id', uid)
                 .eq('class_id', widget.classId)
                 .order('created_at', ascending: false)
-                .order('id', ascending: true)
-            : supabase.rpc<PostgrestList>('get_student_xp_history', params: {'p_class_id': widget.classId, 'p_student_id': uid})),
+                .order('id', ascending: true))
+            : TeacherReads.studentXpHistory(widget.classId, uid, stale: _markStale),
         if (widget.studentId != null)
-          supabase.from('class_members').select('joined_at').eq('class_id', widget.classId).eq('student_id', uid).maybeSingle(),
+          TeacherReads.studentJoined(widget.classId, uid, stale: _markStale),
       ]);
       final rows = results[0];
       final joined = results.length > 1 ? ((results[1] as Map?)?['joined_at'] as String?) : null;
@@ -171,18 +174,17 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
   }
 
   // Whole class's review answers for the last 30 days (for the class
-  // comparison sentence). Paged — PostgREST returns at most 1000 rows per request.
-  Future<List<ClassAnswer>> _loadClassAnswers() async {
-    final since = DateTime.now().subtract(const Duration(days: 30)).toUtc().toIso8601String();
-    final out = <ClassAnswer>[];
-    for (var from = 0; from < 20000; from += 1000) {
-      final rows = await supabase.from('class_review_events').select('user_id, knew, created_at')
-          .eq('class_id', widget.classId).gte('created_at', since)
-          .order('created_at', ascending: false).range(from, from + 999);
-      out.addAll(rows.map((r) => ClassAnswer(r['user_id'] as String, r['knew'] == true, DateTime.parse(r['created_at'] as String))));
-      if (rows.length < 1000) break;
-    }
-    return out;
+  // comparison sentence).
+  Future<List<ClassAnswer>> _loadClassAnswers() async => [
+    for (final r in await TeacherReads.classAnswers30d(widget.classId, stale: _markStale) as List)
+      ClassAnswer((r as Map)['user_id'] as String, r['knew'] == true, DateTime.parse(r['created_at'] as String)),
+  ];
+
+  // Set when any read here was served from the phone's saved copy (offline).
+  DateTime? _staleAt;
+  void _markStale(DateTime at) {
+    if (!mounted) return;
+    if (_staleAt == null || at.isBefore(_staleAt!)) setState(() => _staleAt = at);
   }
 
   // The teacher's Xulosa paragraph (student_summary.dart).
@@ -190,24 +192,21 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
     try {
       final now = DateTime.now();
       final today = formatStreakDate(now);
-      final notesQuery = supabase.from('class_notes').select('created_at, read_at')
-          .eq('class_id', widget.classId).eq('student_id', uid)
-          .order('created_at', ascending: false).limit(20);
+      final c = widget.classId;
+      final notesQuery = TeacherReads.studentNotes(c, uid, stale: _markStale);
       // Same "waiting for review" count as the web's XP History.
-      final srsQuery = supabase.from('class_srs_states').select('stage, next_due')
-          .eq('user_id', uid).eq('class_id', widget.classId);
-      final answersQuery = supabase.from('class_review_events').select('word, knew, created_at')
-          .eq('user_id', uid).eq('class_id', widget.classId).order('created_at', ascending: false).limit(5000);
-      final membersQuery = supabase.rpc('get_class_dashboard', params: {'p_class_id': widget.classId});
+      final srsQuery = TeacherReads.studentSrs(c, uid, stale: _markStale);
+      final answersQuery = TeacherReads.studentAnswers(c, uid, stale: _markStale);
+      final membersQuery = TeacherReads.dashboard(c, stale: _markStale);
       final classAnswersFuture = _loadClassAnswers();
       final records = await _records!;
-      final notes = (await notesQuery).map((n) => SentNote(
+      final notes = (await notesQuery as List).map((n) => SentNote(
         DateTime.parse(n['created_at'] as String),
         n['read_at'] != null ? DateTime.parse(n['read_at'] as String) : null,
       )).toList();
-      final srs = await srsQuery;
+      final srs = (await srsQuery as List).cast<Map>();
       final pending = srs.where((r) => ((r['stage'] as num?) ?? 0) < 5 && (r['next_due'] as String? ?? '9999').compareTo(today) <= 0).toList();
-      final answers = (await answersQuery).map((a) => ReviewAnswer(
+      final answers = (await answersQuery as List).map((a) => ReviewAnswer(
         a['word'] as String? ?? '', a['knew'] == true, DateTime.parse(a['created_at'] as String),
       )).toList();
       final summary = buildStudentSummary(
@@ -300,6 +299,7 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
           : SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                if (_staleAt != null) OfflineBanner(_staleAt!),
 
                 // ── Total XP banner ──────────────────────────────────────────
                 Container(

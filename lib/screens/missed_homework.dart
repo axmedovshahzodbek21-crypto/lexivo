@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import '../app_theme.dart';
 import '../date_utils.dart';
 import '../l10n.dart' as l10n;
-import '../services/supabase_service.dart';
-import '../services/fetch_in_chunks.dart';
 import '../data/reading_data.dart';
+import 'teacher_offline.dart';
 
 // One (homework × assigned student) with a due date: when it was set, when
 // it's due, and how far the student got. Feeds both the missed-deadline
@@ -65,28 +64,19 @@ String homeworkModeLabel(String mode) {
 
 Future<List<HomeworkRecord>> loadHomeworkRecords(String classId, List<String> studentIds) async {
   if (studentIds.isEmpty) return [];
-  final membersQuery = supabase.from('class_members').select('student_id, joined_at')
-      .eq('class_id', classId).inFilter('student_id', studentIds);
-  final hws = (await supabase
-      .from('class_homework')
-      .select('id, unit_id, class_unit_id, collection_name, day_number, passage_id, modes, due_date, created_at, student_ids, teacher_units(name), class_word_units(name)')
-      .eq('class_id', classId)
-      .not('due_date', 'is', null) as List)
+  // Reads go through TeacherReads so this works offline once downloaded.
+  final membersQuery = TeacherReads.joinDates(classId, studentIds);
+  final hws = (await TeacherReads.homeworkWithDeadlines(classId) as List)
       .map((e) => Map<String, dynamic>.from(e as Map))
       .toList();
   if (hws.isEmpty) return [];
   final joinedAt = <String, DateTime>{
-    for (final m in await membersQuery)
-      if (m['joined_at'] != null) m['student_id'] as String: DateTime.parse(m['joined_at'] as String),
+    for (final m in await membersQuery as List)
+      if ((m as Map)['joined_at'] != null) m['student_id'] as String: DateTime.parse(m['joined_at'] as String),
   };
 
   final doneOn = <String, String>{}; // '$hw:$student:$mode' -> local yyyy-mm-dd
-  final prog = await selectInChunks(hws.map((h) => h['id'] as String).toList(), (chunk) => supabase
-      .from('class_homework_progress')
-      .select('homework_id, student_id, mode, completed_at')
-      .inFilter('homework_id', chunk)
-      .inFilter('student_id', studentIds)
-      .order('id', ascending: true));
+  final prog = await TeacherReads.homeworkProgress(classId, hws.map((h) => h['id'] as String).toList(), studentIds) as List;
   for (final p in prog) {
     doneOn['${p['homework_id']}:${p['student_id']}:${p['mode']}'] =
         formatStreakDate(DateTime.parse(p['completed_at'] as String).toLocal());

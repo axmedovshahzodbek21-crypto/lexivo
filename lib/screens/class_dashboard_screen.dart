@@ -16,6 +16,11 @@ import 'class_words_screen.dart';
 import 'class_curriculum_tab.dart';
 import 'class_home_screen.dart';
 import 'missed_homework.dart';
+import 'teacher_offline.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../services/class_offline.dart';
+import '../services/class_srs_service.dart' show newClientUuid;
+import '../widgets/offline_banner.dart';
 
 // ── Models ───────────────────────────────────────────────────────────────────
 
@@ -365,11 +370,20 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   // but the UI shouldn't keep offering actions indefinitely once revoked.
   static const _teacherVerificationTtl = Duration(minutes: 5);
 
+  // Set when any Dashboard read was served from the phone's saved copy
+  // (no internet) — shows the "last updated" banner.
+  DateTime? _staleAt;
+  void _markStale(DateTime at) {
+    if (!mounted) return;
+    if (_staleAt == null || at.isBefore(_staleAt!)) setState(() => _staleAt = at);
+  }
+
   Future<void> _verifyTeacher() async {
     final user = currentUser;
     if (user == null) return;
     try {
-      final cls = await supabase.from('classes').select('teacher_id').eq('id', widget.classId).maybeSingle();
+      final cls = await supabase.from('classes').select('teacher_id').eq('id', widget.classId).maybeSingle()
+          .timeout(ClassOfflineQueue.timeout);
       if (mounted) {
         setState(() {
           _verifiedTeacher = cls != null && cls['teacher_id'] == user.id;
@@ -377,7 +391,11 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _verifiedTeacher = false);
+      // Offline: trust the role ClassShell last verified with the server, so
+      // notes/announcements can be queued. Not timestamped, so the next
+      // write re-checks online; RLS still decides when they're sent.
+      final cached = (await SharedPreferences.getInstance()).getString(classRoleKey(user.id, widget.classId));
+      if (mounted) setState(() { _verifiedTeacher = cached == 'teacher'; _verifiedTeacherAt = null; });
     }
   }
 
@@ -446,7 +464,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       // user read their own row — a teacher querying profiles for their
       // students directly gets zero rows back silently, same failure shape
       // the class_members read itself had before it got its own policy.
-      final rows = await supabase.rpc('get_class_pending_members', params: {'p_class_id': widget.classId});
+      final rows = await TeacherReads.pendingMembers(widget.classId, stale: _markStale);
       final members = (rows as List).map((r) {
         final m = Map<String, dynamic>.from(r as Map);
         return {
@@ -554,7 +572,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
 
   Future<void> _loadAnalytics() async {
     try {
-      final data = await supabase.rpc('get_class_analytics', params: {'p_class_id': widget.classId});
+      final data = await TeacherReads.analytics(widget.classId, stale: _markStale);
       final rows = (data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
       if (mounted) setState(() => _analyticsData = rows);
     } catch (e) {
@@ -580,7 +598,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
 
   Future<void> _loadProgressOverTime() async {
     try {
-      final data = await supabase.rpc('get_class_progress_over_time', params: {'p_class_id': widget.classId, 'p_days': 30});
+      final data = await TeacherReads.progressOverTime(widget.classId, stale: _markStale);
       final rows = (data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
       if (mounted) setState(() => _progressPoints = rows);
     } catch (e) {
@@ -673,6 +691,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   // the screen first rendered, with no way to refresh them short of leaving
   // and re-entering the whole screen.
   Future<void> _refresh() async {
+    setState(() => _staleAt = null); // a read that still can't reach the server sets it again
     _srsLoaded = false;
     _reviewLoaded = false;
     final futures = <Future<void>>[_load(), _loadAnalytics(), _loadProgressOverTime(), _loadPendingMembers()];
@@ -694,12 +713,13 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         DateTime.now().difference(cachedEntry.cachedAt) < _dashboardCacheTtl;
     if (mounted) setState(() { if (!hasCached) _loading = true; _error = null; });
     try {
+      final c = widget.classId;
       final results = await Future.wait<dynamic>([
-        supabase.rpc('get_class_dashboard', params: {'p_class_id': widget.classId}),
-        supabase.rpc('get_class_activity', params: {'p_class_id': widget.classId}),
-        supabase.from('collections').select().order('display_order'),
-        supabase.rpc('get_hard_words', params: {'p_class_id': widget.classId}),
-        supabase.from('class_members').select('student_id, joined_at').eq('class_id', widget.classId).eq('status', 'approved'),
+        TeacherReads.dashboard(c, stale: _markStale),
+        TeacherReads.activity(c, stale: _markStale),
+        TeacherReads.collections(stale: _markStale),
+        TeacherReads.hardWords(c, stale: _markStale),
+        TeacherReads.approvedMembers(c, stale: _markStale),
       ]);
 
       // get_class_dashboard's own definition isn't reconstructible from this
@@ -749,10 +769,11 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     if (!mounted) return;
     setState(() { _srsLoading = true; _srsError = null; });
     try {
+      final c = widget.classId;
       final results = await Future.wait<dynamic>([
-        supabase.from('class_srs_states').select('user_id, word, translation, stage, next_due').eq('class_id', widget.classId),
-        supabase.from('class_words').select('word, translation').eq('class_id', widget.classId).order('word'),
-        supabase.from('class_hard_words').select('user_id, word').eq('class_id', widget.classId),
+        TeacherReads.srsStates(c, stale: _markStale),
+        TeacherReads.classWords(c, stale: _markStale),
+        TeacherReads.classHardWords(c, stale: _markStale),
       ]);
       final srsStates = (results[0] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
       final srsWords  = (results[1] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
@@ -760,7 +781,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
       final uids = srsStates.map((e) => e['user_id'] as String).toSet().toList();
       final names = <String, String>{};
       if (uids.isNotEmpty) {
-        final profiles = await supabase.from('profiles').select('id, name').inFilter('id', uids);
+        final profiles = await TeacherReads.profileNames(c, uids, stale: _markStale);
         for (final p in (profiles as List)) {
           final m = Map<String, dynamic>.from(p as Map);
           names[m['id'] as String] = m['name'] as String? ?? tr('student');
@@ -786,8 +807,8 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     setState(() { _reviewLoading = true; _reviewError = null; });
     try {
       final results = await Future.wait<dynamic>([
-        supabase.from('class_xp_history').select('user_id, created_at').eq('class_id', widget.classId).eq('reason', 'SRS Review'),
-        supabase.from('class_srs_states').select('user_id, word, translation, stage, next_due').eq('class_id', widget.classId),
+        TeacherReads.reviewXp(widget.classId, stale: _markStale),
+        TeacherReads.srsStates(widget.classId, stale: _markStale),
       ]);
       final entries = (results[0] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
       final srsRows = (results[1] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
@@ -921,6 +942,8 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             Tab(text: '📋 ${tr('curriculum')}'),
           ],
         ),
+        if (_staleAt != null)
+          Padding(padding: const EdgeInsets.fromLTRB(16, 8, 16, 0), child: OfflineBanner(_staleAt!)),
         Expanded(
           child: _loading
             ? Center(child: CircularProgressIndicator(color: context.primary))
@@ -2056,20 +2079,30 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         // cause: teacher_id was missing from the payload, and the RLS
         // policy requires it to equal auth.uid() — web's postAnnouncement
         // always included it, this didn't.
+        // Phone-made id: with no internet the row waits in ClassOfflineQueue
+        // and is sent later as an insert-if-missing, so a resend (or a send
+        // that landed just before the timeout) can't post it twice.
+        final row = {
+          'id': newClientUuid(),
+          'class_id': widget.classId,
+          'teacher_id': currentUser?.id,
+          'message': ctrl.text.trim(),
+        };
+        var queued = false;
         try {
-          await supabase.from('class_announcements').insert({
-            'class_id': widget.classId,
-            'teacher_id': currentUser?.id,
-            'message': ctrl.text.trim(),
-          });
+          await supabase.from('class_announcements').insert(row).timeout(ClassOfflineQueue.timeout);
         } catch (e) {
-          if (mounted) msg.showSnackBar(SnackBar(content: Text('${tr('failed_to_send')}: $e')));
-          return;
+          if (!ClassOfflineQueue.isOfflineError(e)) {
+            if (mounted) msg.showSnackBar(SnackBar(content: Text('${tr('failed_to_send')}: $e')));
+            return;
+          }
+          await ClassOfflineQueue.enqueueUpsert('class_announcements', row, 'id');
+          queued = true;
         }
         ClassHomeScreen.invalidate(widget.classId);
         if (!mounted) return;
         nav.pop();
-        msg.showSnackBar(SnackBar(content: Text(tr('announcement_sent')), duration: const Duration(seconds: 2)));
+        msg.showSnackBar(SnackBar(content: Text(tr(queued ? 'offline_queued_announcement' : 'announcement_sent')), duration: const Duration(seconds: 3)));
       }),
     ).whenComplete(ctrl.dispose);
   }
@@ -2085,20 +2118,28 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
         if (!await _checkTeacher()) return;
         // teacher_id required by RLS — same class_id-missing-teacher_id bug
         // as class_announcements/class_targets above.
+        // Queued offline like announcements above (phone-made id).
+        final row = {
+          'id': newClientUuid(),
+          'class_id': widget.classId,
+          'teacher_id': currentUser?.id,
+          'student_id': s.studentId,
+          'message': ctrl.text.trim(),
+        };
+        var queued = false;
         try {
-          await supabase.from('class_notes').insert({
-            'class_id': widget.classId,
-            'teacher_id': currentUser?.id,
-            'student_id': s.studentId,
-            'message': ctrl.text.trim(),
-          });
+          await supabase.from('class_notes').insert(row).timeout(ClassOfflineQueue.timeout);
         } catch (e) {
-          if (mounted) msg.showSnackBar(SnackBar(content: Text('${tr('failed_to_send')}: $e')));
-          return;
+          if (!ClassOfflineQueue.isOfflineError(e)) {
+            if (mounted) msg.showSnackBar(SnackBar(content: Text('${tr('failed_to_send')}: $e')));
+            return;
+          }
+          await ClassOfflineQueue.enqueueUpsert('class_notes', row, 'id');
+          queued = true;
         }
         if (!mounted) return;
         nav.pop();
-        msg.showSnackBar(SnackBar(content: Text(tr('note_sent')), duration: const Duration(seconds: 2)));
+        msg.showSnackBar(SnackBar(content: Text(tr(queued ? 'offline_queued_note' : 'note_sent')), duration: const Duration(seconds: 3)));
       }),
     ).whenComplete(ctrl.dispose);
   }
@@ -2273,11 +2314,7 @@ class _CollectionDetailSheetState extends State<_CollectionDetailSheet> {
 
   Future<void> _load() async {
     try {
-      final res = await supabase.rpc('get_student_collection_progress', params: {
-        'p_class_id': widget.classId,
-        'p_student_id': widget.student.studentId,
-        'p_collection_name': widget.collectionName,
-      });
+      final res = await TeacherReads.collectionProgress(widget.classId, widget.student.studentId, widget.collectionName);
       if (mounted) {
         setState(() {
           _rows = List<Map<String, dynamic>>.from((res as List?)?.map((e) => Map<String, dynamic>.from(e as Map)) ?? []);
@@ -2489,10 +2526,7 @@ class _StreakCalendarSheetState extends State<_StreakCalendarSheet> {
 
   Future<void> _load() async {
     try {
-      final res = await supabase.rpc('get_student_study_calendar', params: {
-        'p_class_id': widget.classId,
-        'p_student_id': widget.student.studentId,
-      });
+      final res = await TeacherReads.studyCalendar(widget.classId, widget.student.studentId);
       if (mounted) {
         setState(() {
           _studyDates = {

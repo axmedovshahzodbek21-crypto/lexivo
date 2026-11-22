@@ -78,6 +78,7 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
   List<ClassLeaderboardRow> _rows = [];
   bool _loading = false;
   bool _initialized = false;
+  bool _loadError = false;
   late final AnimationController _ctrl;
   late final Animation<double> _anim;
   String? _myId;
@@ -98,10 +99,11 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
     if (widget.isVisible && !_initialized) {
       _initialize();
     }
-    // Tab re-visited with data already loaded — replay podium animation
-    else if (widget.isVisible && !old.isVisible && _rows.isNotEmpty && !_loading) {
-      _ctrl.reset();
-      _ctrl.forward();
+    // Tab re-visited — reload (keeps the old rows on screen meanwhile; _load
+    // replays the podium animation). It used to load only once per class
+    // visit, so one failed request left "No rankings yet" until a restart.
+    else if (widget.isVisible && !old.isVisible && !_loading) {
+      _load();
     }
   }
 
@@ -129,11 +131,12 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
           .map((e) => ClassLeaderboardRow.fromMap(Map<String, dynamic>.from(e as Map)))
           .toList();
       if (mounted) {
-        setState(() { _rows = rows; _loading = false; });
+        setState(() { _rows = rows; _loading = false; _loadError = false; });
         _ctrl.forward();
       }
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
+    } catch (e) {
+      debugPrint('ClassLeaderboardScreen _load error: $e');
+      if (mounted) setState(() { _loading = false; _loadError = true; });
     }
   }
 
@@ -144,14 +147,18 @@ class _ClassLeaderboardScreenState extends State<ClassLeaderboardScreen>
     if (_loading || !_initialized) return const Center(child: CircularProgressIndicator());
 
     if (_rows.isEmpty) {
+      // A failed request shows "Couldn't load" + Retry, not "No rankings yet".
       return Column(children: [
         _lbHero(widget.classId, widget.className),
         Expanded(child: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          const Text('🏆', style: TextStyle(fontSize: 56)),
+          Text(_loadError ? '📡' : '🏆', style: const TextStyle(fontSize: 56)),
           const SizedBox(height: 12),
-          Text(tr('no_rankings_yet'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
+          Text(tr(_loadError ? 'couldnt_load' : 'no_rankings_yet'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.appText)),
           const SizedBox(height: 6),
-          Text(tr('no_rankings_yet_sub'), style: TextStyle(color: context.textMuted, fontSize: 13)),
+          if (_loadError)
+            TextButton(onPressed: _load, child: Text(tr('retry')))
+          else
+            Text(tr('no_rankings_yet_sub'), style: TextStyle(color: context.textMuted, fontSize: 13)),
         ]))),
       ]);
     }

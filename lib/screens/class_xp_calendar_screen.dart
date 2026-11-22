@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestList;
 import '../app_theme.dart';
+import '../services/fetch_in_chunks.dart';
 import '../date_utils.dart';
 import '../l10n.dart' as l10n;
 import '../services/supabase_service.dart';
@@ -133,27 +135,22 @@ class _ClassXpCalendarScreenState extends State<ClassXpCalendarScreen> {
     final uid = widget.studentId ?? currentUser?.id;
     if (uid == null) { setState(() => _loading = false); return; }
     try {
-      // Capped at 500, matching StorageService.getXPHistory()'s cap on the
-      // personal calendar — this query had no limit at all, re-fetching and
-      // re-summing a class's *entire* XP history on every screen open with
-      // no bound on how large that history could grow over a long-running
-      // class. The "Total class XP" banner above doesn't depend on this
-      // list (it uses widget.totalXpRaw directly), so a cap only affects
-      // how far back day-by-day detail is visible — same tradeoff already
-      // accepted for the personal calendar.
       // RLS only lets a user read their own class_xp_history rows, so a
       // teacher viewing a student goes through the same RPC the web uses.
       final isSelf = uid == currentUser?.id;
-      final results = await Future.wait([
-        isSelf
+      // Full history, paged (one response stops at 1000 rows). The 500 cap and
+      // the RPC's old 50-row limit made teacher and student see different
+      // days and day totals for the same student.
+      final results = await Future.wait<dynamic>([
+        fetchAllPages(() => isSelf
             ? supabase
                 .from('class_xp_history')
                 .select('id, amount, reason, created_at')
                 .eq('user_id', uid)
                 .eq('class_id', widget.classId)
                 .order('created_at', ascending: false)
-                .limit(500)
-            : supabase.rpc('get_student_xp_history', params: {'p_class_id': widget.classId, 'p_student_id': uid}),
+                .order('id', ascending: true)
+            : supabase.rpc<PostgrestList>('get_student_xp_history', params: {'p_class_id': widget.classId, 'p_student_id': uid})),
         if (widget.studentId != null)
           supabase.from('class_members').select('joined_at').eq('class_id', widget.classId).eq('student_id', uid).maybeSingle(),
       ]);

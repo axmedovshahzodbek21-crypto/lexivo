@@ -43,7 +43,6 @@ typedef _Snapshot = ({
   Map<String, String> teacherNames,
   Map<String, List<ClassNote>> classNotes,
   Map<String, List<ClassTarget>> classTargets,
-  Map<String, List<ClassAnnouncement>> classAnnouncements,
   Map<String, String> membershipStatus,
 });
 // Keyed by user id, so this normally holds 1 entry — but a shared/test
@@ -77,7 +76,6 @@ Future<void> _saveSnapshot(String uid, _Snapshot s) async {
       'teacherNames': s.teacherNames,
       'classNotes': _groupedToJson(s.classNotes, (ClassNote n) => n.toJson()),
       'classTargets': _groupedToJson(s.classTargets, (ClassTarget t) => t.toJson()),
-      'classAnnouncements': _groupedToJson(s.classAnnouncements, (ClassAnnouncement a) => a.toJson()),
       'membershipStatus': s.membershipStatus,
     }));
   } catch (_) {}
@@ -89,7 +87,6 @@ Future<_Snapshot> _fetchSnapshot(String uid) async {
   final teacherNames = <String, String>{};
   final notes = <String, List<ClassNote>>{};
   final targets = <String, List<ClassTarget>>{};
-  final announcements = <String, List<ClassAnnouncement>>{};
   final membershipStatus = <String, String>{
     for (final m in (memberships as List))
       (m as Map)['class_id'] as String: (m['status'] as String?) ?? 'approved',
@@ -106,11 +103,13 @@ Future<_Snapshot> _fetchSnapshot(String uid) async {
       final joinedIds = joinedClasses.map((c) => c.id).toList();
       final teacherIds = joinedClasses.map((c) => c.teacherId).toSet().toList();
 
+      // Announcements and notes are read inside the class (class home), not
+      // on this list. Only unread notes are fetched, for the "N new" badge;
+      // they stay unread so class home still shows them as new.
       final parallel = await Future.wait([
         supabase.from('profiles').select('id, name').inFilter('id', teacherIds),
-        supabase.from('class_notes').select('id, class_id, message, created_at, read_at').eq('student_id', uid).order('created_at', ascending: false),
+        supabase.from('class_notes').select('id, class_id, message, created_at, read_at').eq('student_id', uid).isFilter('read_at', null).inFilter('class_id', joinedIds),
         supabase.from('class_targets').select('id, class_id, title, due_date, completed_at, created_at').eq('student_id', uid).order('created_at', ascending: false),
-        supabase.from('class_announcements').select('id, class_id, message, created_at').inFilter('class_id', joinedIds).order('created_at', ascending: false),
       ]);
 
       for (final p in parallel[0] as List) {
@@ -125,16 +124,11 @@ Future<_Snapshot> _fetchSnapshot(String uid) async {
         final target = ClassTarget.fromMap(Map<String, dynamic>.from(t as Map));
         targets[target.classId] = [...(targets[target.classId] ?? []), target];
       }
-      for (final a in parallel[3] as List) {
-        final ann = ClassAnnouncement.fromMap(Map<String, dynamic>.from(a as Map));
-        announcements[ann.classId] = [...(announcements[ann.classId] ?? []), ann];
-      }
     }
   }
   return (
     joinedClasses: joinedClasses, teacherNames: teacherNames,
     classNotes: notes, classTargets: targets,
-    classAnnouncements: announcements,
     membershipStatus: membershipStatus,
   );
 }
@@ -176,7 +170,6 @@ Future<_Snapshot?> _loadSnapshot(String uid) async {
       teacherNames: Map<String, String>.from(m['teacherNames'] as Map),
       classNotes: _groupedFromJson(m['classNotes'], ClassNote.fromMap),
       classTargets: _groupedFromJson(m['classTargets'], ClassTarget.fromMap),
-      classAnnouncements: _groupedFromJson(m['classAnnouncements'], ClassAnnouncement.fromMap),
       membershipStatus: Map<String, String>.from(m['membershipStatus'] as Map),
     );
   } catch (_) {
@@ -196,7 +189,6 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
   Map<String, String> _teacherNames = {};
   Map<String, List<ClassNote>> _classNotes = {};
   Map<String, List<ClassTarget>> _classTargets = {};
-  Map<String, List<ClassAnnouncement>> _classAnnouncements = {};
   Map<String, String> _membershipStatus = {};
   final Map<String, List<ClassLeaderboardRow>> _classLeaderboards = {};
   String? _expandedLeaderboard;
@@ -215,7 +207,6 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
     _teacherNames = s.teacherNames;
     _classNotes = s.classNotes;
     _classTargets = s.classTargets;
-    _classAnnouncements = s.classAnnouncements;
     _membershipStatus = s.membershipStatus;
     _loading = false;
   }
@@ -237,31 +228,6 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
 
     try {
       final snapshot = await _fetchSnapshot(user.id);
-
-      // Opening this screen counts as reading the teacher's notes. Mark read
-      // per class via the RPC (a plain student UPDATE is refused — see
-      // migration 20261019000002); the old update is the fallback. Done here,
-      // not in _fetchSnapshot, so the app-start offline download
-      // (prefetchClassesForOffline) never marks a note the student hasn't seen.
-      final unreadByClass = <String, List<String>>{};
-      for (final list in snapshot.classNotes.values) {
-        for (final note in list) {
-          if (note.readAt == null) (unreadByClass[note.classId] ??= []).add(note.id);
-        }
-      }
-      for (final entry in unreadByClass.entries) {
-        supabase.rpc('mark_class_notes_read', params: {'p_class_id': entry.key})
-            .then((_) {})
-            .catchError((e) {
-              debugPrint('[JoinedClassesScreen] mark_class_notes_read failed: $e');
-              return supabase.from('class_notes')
-                  .update({'read_at': DateTime.now().toUtc().toIso8601String()})
-                  .inFilter('id', entry.value)
-                  .then((_) {})
-                  .catchError((e) { debugPrint('[JoinedClassesScreen] mark-notes-read failed: $e'); });
-            });
-      }
-
       _cachePut(user.id, snapshot);
       _saveSnapshot(user.id, snapshot);
       if (mounted) setState(() { _applySnapshot(snapshot); _loadError = false; });
@@ -355,7 +321,6 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
         _cachePut(user.id, (
           joinedClasses: cached.joinedClasses, teacherNames: cached.teacherNames,
           classNotes: cached.classNotes, classTargets: _classTargets,
-          classAnnouncements: cached.classAnnouncements,
           membershipStatus: cached.membershipStatus,
         ));
       }
@@ -493,7 +458,6 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
     final targets = _classTargets[cls.id] ?? [];
     final active = targets.where((t) => t.completedAt == null).toList();
     final done = targets.where((t) => t.completedAt != null).toList();
-    final announcements = _classAnnouncements[cls.id] ?? [];
     final teacherName = _teacherNames[cls.teacherId] ?? tr('teacher');
     final isLbExpanded = _expandedLeaderboard == cls.id;
     final leaderboard = _classLeaderboards[cls.id] ?? [];
@@ -580,27 +544,6 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
           ),
         ),
 
-        if (announcements.isNotEmpty) _section('📢 ${tr('announcements')}', Column(children: announcements.map((a) {
-          final isNew = DateTime.now().difference(DateTime.parse(a.createdAt)).inHours < 24;
-          return Container(
-            margin: const EdgeInsets.only(bottom: 6),
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: isNew ? context.primaryBg : context.surface2,
-              borderRadius: BorderRadius.circular(10),
-              border: isNew ? Border(left: BorderSide(color: context.primary, width: 3)) : null,
-            ),
-            child: Row(children: [
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(a.message, style: TextStyle(fontSize: 13, color: context.appText)),
-                const SizedBox(height: 2),
-                Text(_timeAgo(a.createdAt), style: TextStyle(fontSize: 10, color: context.textMuted)),
-              ])),
-              if (isNew) Text(tr('new_label'), style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: context.primary)),
-            ]),
-          );
-        }).toList())),
-
         if (isLbExpanded) _section('🏆 ${tr('class_leaderboard')}',
           _leaderboardLoading == cls.id
             ? Center(child: Padding(padding: const EdgeInsets.all(12), child: CircularProgressIndicator(color: context.primary, strokeWidth: 2)))
@@ -649,24 +592,6 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
             ),
           );
         }).toList())),
-
-        if (notes.isNotEmpty) _section('✉️ ${tr('notes_from_teacher')}', Column(children: notes.map((n) => Container(
-          margin: const EdgeInsets.only(bottom: 6),
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: n.readAt != null ? context.surface2 : context.primaryBg,
-            borderRadius: BorderRadius.circular(10),
-            border: n.readAt == null ? Border(left: BorderSide(color: context.primary, width: 3)) : null,
-          ),
-          child: Row(children: [
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(n.message.isNotEmpty ? n.message : '📷 ${tr('chat_photo')}', style: TextStyle(fontSize: 13, color: context.appText)),
-              const SizedBox(height: 2),
-              Text(_timeAgo(n.createdAt), style: TextStyle(fontSize: 10, color: context.textMuted)),
-            ])),
-            if (n.readAt == null) Text(tr('new_label'), style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: context.primary)),
-          ]),
-        )).toList())),
 
         const SizedBox(height: 4),
       ]),

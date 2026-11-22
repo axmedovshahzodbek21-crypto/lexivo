@@ -143,6 +143,14 @@ Future<void> downloadClassForOffline(String classId) async {
   final uid = currentUser?.id;
   if (uid == null) return;
   await ClassOfflineQueue.flush();
+  // The saved role lets ClassShell open the class offline, so confirm with
+  // the server first — callers (Home cards) may include pending requests.
+  final membership = await supabase.from('class_members').select('status')
+      .eq('class_id', classId).eq('student_id', uid).maybeSingle()
+      .timeout(const Duration(seconds: 20));
+  if (membership == null || (membership['status'] ?? 'approved') != 'approved') {
+    throw Exception('not an approved member');
+  }
   final prefs = await SharedPreferences.getInstance();
   await prefs.setString(classRoleKey(uid, classId), 'student');
   final results = await Future.wait<bool>([

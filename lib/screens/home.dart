@@ -28,6 +28,9 @@ import '../services/supabase_service.dart';
 import '../services/class_offline.dart';
 import 'class_models.dart';
 import 'class_shell.dart';
+import 'joined_classes_screen.dart' show downloadClassForOffline;
+import 'teacher_offline.dart' show downloadTeacherClassForOffline, classOfflineSavedAt;
+import '../widgets/offline_banner.dart' show timeAgoLabel;
 import 'xp_level_sheet.dart';
 import 'personal_xp_calendar_screen.dart';
 import '../app_theme.dart';
@@ -96,6 +99,39 @@ class _HomeScreenState extends State<HomeScreen>
 
   // Class cards
   List<HomeClassCard> _homeClasses = [];
+  // ⬇️ offline download on the class cards (same as the class list pages).
+  final Set<String> _classDownloading = {};
+  Map<String, DateTime> _classOfflineAt = {};
+
+  Future<void> _loadClassOfflineTimes() async {
+    final times = <String, DateTime>{};
+    for (final c in _homeClasses) {
+      final at = await classOfflineSavedAt(c.classId);
+      if (at != null) times[c.classId] = at;
+    }
+    if (mounted) setState(() => _classOfflineAt = times);
+  }
+
+  Future<void> _downloadClass(HomeClassCard card) async {
+    if (_classDownloading.contains(card.classId)) return;
+    setState(() => _classDownloading.add(card.classId));
+    final messenger = ScaffoldMessenger.of(context);
+    var ok = true;
+    try {
+      card.isTeacher
+          ? await downloadTeacherClassForOffline(card.classId)
+          : await downloadClassForOffline(card.classId);
+    } catch (e) {
+      debugPrint('[Home] offline download failed: $e');
+      ok = false;
+    }
+    if (!mounted) return;
+    setState(() => _classDownloading.remove(card.classId));
+    await _loadClassOfflineTimes();
+    messenger.showSnackBar(SnackBar(content: Text(tr(!ok
+        ? 'offline_save_failed'
+        : card.isTeacher ? 'offline_saved_teacher' : 'offline_saved_now'))));
+  }
 
   // "Class mode" (set from the More screen) shows a class-first home — just
   // the classes section — for users who only use the app for a class. Falls
@@ -289,6 +325,7 @@ class _HomeScreenState extends State<HomeScreen>
               .map((e) => HomeClassCard.fromJson(Map<String, dynamic>.from(e as Map)))
               .toList();
           if (mounted) setState(() => _homeClasses = cached);
+          _loadClassOfflineTimes();
         }
       } catch (_) {}
     }
@@ -301,6 +338,7 @@ class _HomeScreenState extends State<HomeScreen>
       return;
     }
     if (mounted) setState(() => _homeClasses = cards);
+    _loadClassOfflineTimes();
 
     // Persist for next cold start
     try {
@@ -2049,7 +2087,24 @@ class _HomeScreenState extends State<HomeScreen>
                       ],
                     ),
                   ],
+                  if (_classOfflineAt[card.classId] != null) ...[
+                    const SizedBox(height: 5),
+                    Text('📥 ${tr('offline_saved_ago').replaceFirst('{t}', timeAgoLabel(_classOfflineAt[card.classId]!))}',
+                      style: const TextStyle(fontSize: 11, color: Colors.white70)),
+                  ],
                 ],
+              ),
+            ),
+            GestureDetector(
+              onTap: () => _downloadClass(card),
+              child: Container(
+                width: 36, height: 34,
+                margin: const EdgeInsets.only(right: 8),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(10)),
+                child: _classDownloading.contains(card.classId)
+                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.download_rounded, size: 18, color: Colors.white),
               ),
             ),
             const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 14),

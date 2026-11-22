@@ -14,6 +14,8 @@ import 'class_curriculum_tab.dart';
 import 'class_dashboard_screen.dart';
 import 'class_progress_screen.dart';
 import 'class_chat_screen.dart';
+import 'joined_classes_screen.dart' show downloadClassForOffline;
+import 'teacher_offline.dart' show downloadTeacherClassForOffline;
 
 class ClassShell extends StatefulWidget {
   final String classId;
@@ -117,6 +119,28 @@ class _ClassShellState extends State<ClassShell> {
     });
     if (authorized && !isTeacher) _loadDueCount();
     if (authorized && isTeacher) _loadUnreadMessages();
+  }
+
+  // ⬇️ in the app bar — same download as the class cards (Home, class lists).
+  bool _downloading = false;
+  Future<void> _downloadForOffline() async {
+    if (_downloading) return;
+    setState(() => _downloading = true);
+    final messenger = ScaffoldMessenger.of(context);
+    var ok = true;
+    try {
+      _isTeacher
+          ? await downloadTeacherClassForOffline(widget.classId)
+          : await downloadClassForOffline(widget.classId);
+    } catch (e) {
+      debugPrint('[ClassShell] offline download failed: $e');
+      ok = false;
+    }
+    if (!mounted) return;
+    setState(() => _downloading = false);
+    messenger.showSnackBar(SnackBar(content: Text(tr(!ok
+        ? 'offline_save_failed'
+        : _isTeacher ? 'offline_saved_teacher' : 'offline_saved_now'))));
   }
 
   Future<void> _loadUnreadMessages() async {
@@ -336,6 +360,12 @@ class _ClassShellState extends State<ClassShell> {
           ],
         ),
         actions: [
+          IconButton(
+            onPressed: _downloadForOffline,
+            icon: _downloading
+                ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: context.primary))
+                : Icon(Icons.download_rounded, color: context.primary),
+          ),
           if (_isTeacher)
             IconButton(
               tooltip: tr('chat_title'),

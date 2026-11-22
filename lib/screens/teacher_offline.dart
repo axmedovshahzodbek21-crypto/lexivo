@@ -134,8 +134,8 @@ Future<void> markClassOfflineSaved(String classId) async {
 /// ⬇️ on a teacher's class card: sends notes/announcements written offline,
 /// then runs every read the class screens make (see [TeacherReads]) so Home,
 /// the students sheet, the Dashboard and each student's page open with no
-/// internet. [classId] must come from the server's own "classes I teach"
-/// list — that's what makes saving the teacher role here safe. Throws if any
+/// internet. Ownership is re-checked with the server before the teacher role
+/// is saved. Throws if any
 /// part fails, so the card never claims a half-finished download.
 Future<void> downloadTeacherClassForOffline(String classId) async {
   final uid = currentUser?.id;
@@ -146,6 +146,10 @@ Future<void> downloadTeacherClassForOffline(String classId) async {
 
 Future<void> _downloadTeacherClass(String uid, String classId) async {
   await ClassOfflineQueue.flush();
+  // Confirm ownership with the server before saving the teacher role.
+  final cls = await supabase.from('classes').select('teacher_id').eq('id', classId).maybeSingle()
+      .timeout(const Duration(seconds: 20));
+  if (cls == null || cls['teacher_id'] != uid) throw Exception('not the teacher of this class');
   await (await SharedPreferences.getInstance()).setString(classRoleKey(uid, classId), 'teacher');
 
   final first = await Future.wait<dynamic>([

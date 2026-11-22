@@ -133,6 +133,28 @@ Future<_Snapshot> _fetchSnapshot(String uid) async {
   );
 }
 
+String _offlineAtKey(String uid, String classId) => 'class_offline_at_v1_${uid}_$classId';
+
+/// Everything one approved class needs with no internet: sends answers made
+/// offline first, then saves the class role (so ClassShell opens), homework
+/// list + unit words, Review cards, and class home (announcements, notes,
+/// targets). Records the time only when every part finished. Throws on a
+/// failed or partial download.
+Future<void> downloadClassForOffline(String classId) async {
+  final uid = currentUser?.id;
+  if (uid == null) return;
+  await ClassOfflineQueue.flush();
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString(classRoleKey(uid, classId), 'student');
+  final results = await Future.wait<bool>([
+    prefetchClassHomework(classId),
+    refreshClassSrsCache(userId: uid, classId: classId).then((_) => true),
+    ClassHomeScreen.prefetchForStudent(classId).then((_) => true),
+  ]);
+  if (results.contains(false)) throw Exception('partial offline download');
+  await prefs.setString(_offlineAtKey(uid, classId), DateTime.now().toIso8601String());
+}
+
 /// Run once per app start (main.dart): downloads everything a student needs
 /// to open their classes and do homework later with no internet — the class
 /// list, each approved class's role (so ClassShell opens offline), and each
@@ -151,9 +173,7 @@ Future<void> prefetchClassesForOffline() async {
         await prefs.remove(classRoleKey(uid, c.id));
         continue;
       }
-      await prefs.setString(classRoleKey(uid, c.id), 'student');
-      await prefetchClassHomework(c.id);
-      await refreshClassSrsCache(userId: uid, classId: c.id);
+      await downloadClassForOffline(c.id);
     }
   } catch (e) {
     debugPrint('[prefetchClassesForOffline] stopped: $e');
@@ -193,6 +213,8 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
   final Map<String, List<ClassLeaderboardRow>> _classLeaderboards = {};
   String? _expandedLeaderboard;
   String? _leaderboardLoading;
+  final Set<String> _downloading = {};
+  Map<String, DateTime> _offlineAt = {};
   bool _loading = true;
   bool _loadError = false;
 
@@ -211,6 +233,35 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
     _loading = false;
   }
 
+  Future<void> _loadOfflineTimes(String uid, List<ClassRow> classes) async {
+    final prefs = await SharedPreferences.getInstance();
+    final times = <String, DateTime>{};
+    for (final c in classes) {
+      final raw = prefs.getString(_offlineAtKey(uid, c.id));
+      final at = raw == null ? null : DateTime.tryParse(raw);
+      if (at != null) times[c.id] = at;
+    }
+    if (mounted) setState(() => _offlineAt = times);
+  }
+
+  Future<void> _downloadForOffline(String classId) async {
+    final user = currentUser;
+    if (user == null || _downloading.contains(classId)) return;
+    setState(() => _downloading.add(classId));
+    final messenger = ScaffoldMessenger.of(context);
+    bool ok = true;
+    try {
+      await downloadClassForOffline(classId);
+    } catch (e) {
+      debugPrint('[JoinedClassesScreen] offline download failed: $e');
+      ok = false;
+    }
+    if (!mounted) return;
+    setState(() => _downloading.remove(classId));
+    await _loadOfflineTimes(user.id, _joinedClasses);
+    messenger.showSnackBar(SnackBar(content: Text(tr(ok ? 'offline_saved_now' : 'offline_save_failed'))));
+  }
+
   Future<void> _load() async {
     final user = currentUser;
     if (user == null) { if (mounted) setState(() => _loading = false); return; }
@@ -222,6 +273,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
     }
     if (cached != null) {
       if (mounted) setState(() => _applySnapshot(cached!));
+      _loadOfflineTimes(user.id, cached.joinedClasses);
     } else {
       if (mounted) setState(() => _loading = true);
     }
@@ -231,6 +283,7 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
       _cachePut(user.id, snapshot);
       _saveSnapshot(user.id, snapshot);
       if (mounted) setState(() { _applySnapshot(snapshot); _loadError = false; });
+      _loadOfflineTimes(user.id, snapshot.joinedClasses);
       WidgetService.pushClasses(snapshot.joinedClasses, {});
     } catch (e) {
       // Only surface an error state when there's nothing cached to fall
@@ -497,8 +550,27 @@ class _JoinedClassesScreenState extends State<JoinedClassesScreen> with Navigate
                   ]),
                   const SizedBox(height: 2),
                   Text('👩‍🏫 $teacherName · ${cls.joinCode}', style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.7))),
+                  if (_offlineAt[cls.id] != null) ...[
+                    const SizedBox(height: 2),
+                    Text('📥 ${tr('offline_saved_ago').replaceFirst('{t}', _timeAgo(_offlineAt[cls.id]!.toIso8601String()))}',
+                      style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.7))),
+                  ],
                 ])),
                 const SizedBox(width: 8),
+                if (!pending) ...[
+                  GestureDetector(
+                    onTap: () => _downloadForOffline(cls.id),
+                    child: Container(
+                      width: 34, height: 32,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(10)),
+                      child: _downloading.contains(cls.id)
+                          ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Icon(Icons.download_rounded, size: 18, color: Colors.white),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                ],
                 GestureDetector(
                   onTap: () => _toggleLeaderboard(cls.id),
                   child: Container(

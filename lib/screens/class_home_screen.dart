@@ -53,6 +53,47 @@ class ClassHomeScreen extends StatefulWidget {
       cb();
     }
   }
+
+  /// Offline download (⬇️ on the class card, and app start): saves what a
+  /// student's class home shows — announcements, unread-state notes, targets,
+  /// teacher — where this screen reads it on a cold start with no internet.
+  /// Merges into the saved copy so teacher-side/stat fields are kept.
+  /// Never marks anything read: the student hasn't seen it yet.
+  static Future<void> prefetchForStudent(String classId) async {
+    final uid = currentUser?.id;
+    if (uid == null) return;
+    const t = Duration(seconds: 20);
+    final r = await Future.wait<dynamic>([
+      supabase.from('class_announcements').select('id, class_id, message, created_at')
+          .eq('class_id', classId).order('created_at', ascending: false).limit(5),
+      supabase.from('class_targets').select('id, class_id, title, due_date, completed_at, created_at')
+          .eq('class_id', classId).eq('student_id', uid).order('created_at', ascending: false),
+      supabase.from('class_notes').select('id, class_id, message, created_at, read_at')
+          .eq('class_id', classId).eq('student_id', uid).order('created_at', ascending: false).limit(30),
+      supabase.from('classes').select('teacher_id, chat_enabled').eq('id', classId).maybeSingle(),
+      supabase.from('class_members').select('class_xp').eq('class_id', classId).eq('student_id', uid).maybeSingle(),
+    ]).timeout(t);
+    final cls = r[3] as Map?;
+    final teacherId = cls?['teacher_id'] as String? ?? '';
+    final profile = teacherId.isEmpty ? null
+        : await supabase.from('profiles').select('name, bio').eq('id', teacherId).maybeSingle().timeout(t);
+    final prefs = await SharedPreferences.getInstance();
+    final key = '${_ClassHomeScreenState._prefsPrefix}$classId';
+    Map<String, dynamic> m = {};
+    try { m = Map<String, dynamic>.from(jsonDecode(prefs.getString(key) ?? '{}') as Map); } catch (_) {}
+    m['announcements'] = r[0] as List;
+    m['targets'] = r[1] as List;
+    m['notes'] = r[2] as List;
+    m['chatEnabled'] = cls?['chat_enabled'] == true;
+    m['teacherId'] = teacherId;
+    if (profile != null) {
+      m['teacherName'] = (profile as Map)['name'] as String? ?? '';
+      m['teacherBio'] = profile['bio'] as String? ?? '';
+    }
+    m['myClassXp'] = (r[4] as Map?)?['class_xp'] as int? ?? 0;
+    await prefs.setString(key, jsonEncode(m));
+    _ClassHomeScreenState._cache.remove(classId);
+  }
 }
 
 class _ClassHomeCache {
@@ -68,6 +109,9 @@ class _ClassHomeCache {
   final Map<String, int> readCounts;
   final int myClassXp;
   final int classStreak;
+  // Student only — saved so unread teacher notes still show offline.
+  final List<ClassNote> notes;
+  final bool chatEnabled;
   _ClassHomeCache({
     required this.announcements, required this.targets,
     required this.memberCount, required this.pendingHwCount,
@@ -75,6 +119,7 @@ class _ClassHomeCache {
     required this.teacherBio, required this.activeToday,
     required this.needsAttentionCount, required this.readCounts,
     required this.myClassXp, required this.classStreak,
+    this.notes = const [], this.chatEnabled = false,
   });
 }
 
@@ -94,7 +139,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
   bool _loading = true;
   List<ClassAnnouncement> _announcements = [];
   List<ClassNote> _notes = [];
-  bool _chatEnabled = false; // like _notes, not cached — fresh each load
+  bool _chatEnabled = false;
   List<ClassTarget> _targets = [];
   int _memberCount = 0;
   int _pendingHwCount = 0;
@@ -133,6 +178,8 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
     _readCounts = c.readCounts;
     _myClassXp = c.myClassXp;
     _classStreak = c.classStreak;
+    _notes = c.notes;
+    _chatEnabled = c.chatEnabled;
     _loading = false;
   }
 
@@ -343,6 +390,10 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
             ((m['readCounts'] as Map?) ?? {}).map((k, v) => MapEntry(k as String, (v as num).toInt()))),
         myClassXp: m['myClassXp'] as int? ?? 0,
         classStreak: m['classStreak'] as int? ?? 0,
+        notes: ((m['notes'] as List?) ?? const [])
+            .map((e) => ClassNote.fromMap(Map<String, dynamic>.from(e as Map)))
+            .toList(),
+        chatEnabled: m['chatEnabled'] == true,
       );
     } catch (_) {
       return null;
@@ -365,6 +416,8 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
         'readCounts': c.readCounts,
         'myClassXp': c.myClassXp,
         'classStreak': c.classStreak,
+        'notes': c.notes.map((n) => n.toJson()).toList(),
+        'chatEnabled': c.chatEnabled,
       }));
     } catch (_) {}
   }
@@ -633,6 +686,14 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
         teacherBio: teacherBio, activeToday: activeToday,
         needsAttentionCount: needsAttentionCount, readCounts: readCounts,
         myClassXp: myClassXp, classStreak: _classStreak,
+        // Saved as read: they were just shown and marked read above, so an
+        // offline cold start mustn't show them as NEW again.
+        notes: [
+          for (final n in notes)
+            n.readAt != null ? n : ClassNote(id: n.id, classId: n.classId, message: n.message,
+                createdAt: n.createdAt, readAt: DateTime.now().toUtc().toIso8601String()),
+        ],
+        chatEnabled: chatEnabled,
       );
       _cachePut(widget.classId, newCache);
       _saveToPrefs(newCache);
@@ -690,6 +751,7 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
             teacherBio: c.teacherBio, activeToday: c.activeToday,
             needsAttentionCount: c.needsAttentionCount, readCounts: c.readCounts,
             myClassXp: c.myClassXp, classStreak: streak,
+            notes: c.notes, chatEnabled: c.chatEnabled,
           );
           _cachePut(widget.classId, updated);
           _saveToPrefs(updated);

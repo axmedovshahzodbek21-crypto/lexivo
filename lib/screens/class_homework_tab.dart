@@ -394,7 +394,8 @@ Future<void> _saveHwPrefs(String key, _HwCache c) async {
 // online, so LibraryUnitStudyScreen can open it later with no connection.
 // Units already downloaded are skipped — the study screen refreshes its
 // own copy whenever it's opened online.
-Future<void> _prefetchUnitWords(_HwCache c, Map<String, Set<String>> serverDone) async {
+/// False when the connection dropped before every unit was saved.
+Future<bool> _prefetchUnitWords(_HwCache c, Map<String, Set<String>> serverDone) async {
   for (final h in c.collHwItems) { await HomeworkCache.save(h.homeworkId, done: serverDone[h.homeworkId] ?? {}); }
   for (final h in c.passageItems) { await HomeworkCache.save(h.homeworkId, done: serverDone[h.homeworkId] ?? {}); }
   final units = [
@@ -414,20 +415,22 @@ Future<void> _prefetchUnitWords(_HwCache c, Map<String, Set<String>> serverDone)
           .timeout(ClassOfflineQueue.timeout);
       await HomeworkCache.save(hwId, rows: rows, done: done);
     } catch (_) {
-      return; // connection dropped — try again on the next load
+      return false; // connection dropped — try again on the next load
     }
   }
+  return true;
 }
 
 /// App-start offline download for one class (see prefetchClassesForOffline):
 /// saves the homework list where ClassHomeworkTab reads it on a cold start,
-/// then the unfinished units' words for LibraryUnitStudyScreen.
-Future<void> prefetchClassHomework(String classId) async {
+/// then the unfinished units' words for LibraryUnitStudyScreen. Returns false
+/// if the connection dropped before every unit's words were saved.
+Future<bool> prefetchClassHomework(String classId) async {
   final uid = currentUser?.id;
-  if (uid == null) return;
+  if (uid == null) return false;
   final (cache, serverDone) = await _fetchHomework(classId, uid).timeout(const Duration(seconds: 20));
   await _saveHwPrefs('${uid}_$classId', cache);
-  await _prefetchUnitWords(cache, serverDone);
+  return _prefetchUnitWords(cache, serverDone);
 }
 
 // ── Widget ─────────────────────────────────────────────────────────────────

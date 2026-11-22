@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show CountOption;
 import '../services/supabase_service.dart';
 import '../services/class_colors.dart';
 import '../services/fetch_in_chunks.dart';
@@ -21,6 +22,7 @@ class ClassHomeScreen extends StatefulWidget {
   final bool isTeacher;
   final VoidCallback? onGoToDashboard;
   final VoidCallback? onGoToHomework;
+  final VoidCallback? onGoToProgress;
 
   const ClassHomeScreen({
     super.key,
@@ -29,6 +31,7 @@ class ClassHomeScreen extends StatefulWidget {
     required this.isTeacher,
     this.onGoToDashboard,
     this.onGoToHomework,
+    this.onGoToProgress,
   });
 
   @override
@@ -103,6 +106,10 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
   Map<String, int> _readCounts = {};
   int _myClassXp = 0;
   int _classStreak = 0;
+  // Student progress card: class study days (same record as the streak) and
+  // words learned in this class (one class_srs_states row per word).
+  Set<String> _studyDays = {};
+  int? _learned;
   bool _loadError = false;
 
   // Pending join requests (teacher only) — kept separate from the cached
@@ -613,6 +620,10 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
       if (!widget.isTeacher && user != null) {
         _loadPendingHwCount(user.id);
         _loadClassStreak(user.id);
+        supabase.from('class_srs_states').count(CountOption.exact)
+            .eq('user_id', user.id).eq('class_id', widget.classId)
+            .then((n) { if (mounted) setState(() => _learned = n); })
+            .catchError((Object e) { debugPrint('class learned count error: $e'); });
       }
 
       final newCache = _ClassHomeCache(
@@ -655,8 +666,9 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
           .map((r) => (r as Map)['study_date'] as String)
           .toList()
         ..sort();
-      if (days.isEmpty) return;
       final set = days.toSet();
+      if (mounted) setState(() => _studyDays = set);
+      if (days.isEmpty) return;
       final now = streakAdjustedNow();
       final today = formatStreakDate(now);
       final yesterday = formatStreakDate(now.subtract(const Duration(days: 1)));
@@ -844,6 +856,12 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
 
           const SizedBox(height: 20),
 
+          // ── My progress (student only) ─────────────────────────────────────
+          if (!widget.isTeacher && _learned != null) ...[
+            _progressCard(color),
+            const SizedBox(height: 16),
+          ],
+
           // ── Spotlight (teacher only) ───────────────────────────────────────
           if (widget.isTeacher && _needsAttentionCount > 0) ...[
             _spotlightBanner(),
@@ -1017,6 +1035,59 @@ class _ClassHomeScreenState extends State<ClassHomeScreen> {
       ]),
     ),
   );
+
+  // Words learned, class streak and the last 30 class study days. Tapping it
+  // opens the Progress tab. Mirrors web's "My progress" card on class home.
+  Widget _progressCard(Color color) {
+    final now = streakAdjustedNow();
+    final today = formatStreakDate(now);
+    return GestureDetector(
+      onTap: widget.onGoToProgress,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(color: context.surface, borderRadius: BorderRadius.circular(16), boxShadow: context.cardShadow),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Expanded(child: Text('📊 ${tr('my_progress').toUpperCase()}',
+              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: context.textMuted, letterSpacing: 1.2))),
+            Icon(Icons.chevron_right, size: 18, color: context.textMuted),
+          ]),
+          const SizedBox(height: 8),
+          Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('$_learned', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: color, height: 1)),
+              const SizedBox(height: 4),
+              Text(tr('learned').toUpperCase(), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: context.textMuted, letterSpacing: 0.8)),
+            ]),
+            const SizedBox(width: 20),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 2),
+              child: Text('🔥 ${tr('n_day_streak').replaceFirst('{n}', '$_classStreak')}',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: context.appText)),
+            ),
+          ]),
+          const SizedBox(height: 12),
+          Row(children: List.generate(30, (i) {
+            final day = formatStreakDate(now.subtract(Duration(days: 29 - i)));
+            final studied = _studyDays.contains(day);
+            return Expanded(
+              child: Container(
+                height: 14,
+                margin: EdgeInsets.only(right: i < 29 ? 2.5 : 0),
+                decoration: BoxDecoration(
+                  color: studied ? color : context.surface2,
+                  borderRadius: BorderRadius.circular(3),
+                  border: day == today ? Border.all(color: color, width: 1.5) : null,
+                ),
+              ),
+            );
+          })),
+          const SizedBox(height: 6),
+          Text(tr('study_calendar_30d'), style: TextStyle(fontSize: 10, color: context.textMuted)),
+        ]),
+      ),
+    );
+  }
 
   Widget _activityBar() {
     final ratio = _memberCount > 0 ? _activeToday / _memberCount : 0.0;

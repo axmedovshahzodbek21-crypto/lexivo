@@ -134,6 +134,7 @@ class _ClassShellState extends State<ClassShell> {
         isTeacher: _isTeacher,
         onGoToDashboard: _isTeacher ? () => setState(() => _tab = 4) : null,
         onGoToHomework: _isTeacher ? null : () => setState(() => _tab = 4),
+        onGoToProgress: _isTeacher ? null : () => setState(() => _tab = 5),
       ),
       ClassWordsScreen(classId: widget.classId, className: widget.className, isTeacher: _isTeacher),
       if (!_isTeacher)

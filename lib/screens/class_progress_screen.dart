@@ -77,7 +77,7 @@ class ClassProgressScreen extends StatefulWidget {
   static void clearCache() => _ClassProgressScreenState._cache.clear();
 }
 
-typedef _ProgressCache = ({List<ClassSRSEntry> entries, int starredCount, int hardCount, int totalWords});
+typedef _ProgressCache = ({List<ClassSRSEntry> entries, int starredCount, int hardCount, Set<String> studyDays});
 
 class _ClassProgressScreenState extends State<ClassProgressScreen> {
   static final Map<String, _ProgressCache> _cache = {};
@@ -89,7 +89,7 @@ class _ClassProgressScreenState extends State<ClassProgressScreen> {
   List<ClassSRSEntry> _entries = [];
   int _starredCount = 0;
   int _hardCount = 0;
-  int _totalWords = 0;
+  Set<String> _studyDays = {};
 
   static const _stageColors = [
     Color(0xFF9CA3AF), Color(0xFFF59E0B), Color(0xFF3B82F6),
@@ -105,7 +105,7 @@ class _ClassProgressScreenState extends State<ClassProgressScreen> {
       _entries      = cached.entries;
       _starredCount = cached.starredCount;
       _hardCount    = cached.hardCount;
-      _totalWords   = cached.totalWords;
+      _studyDays    = cached.studyDays;
       _loading      = false;
     }
     _load();
@@ -122,22 +122,23 @@ class _ClassProgressScreenState extends State<ClassProgressScreen> {
         getClassSRSAll(userId: user.id, classId: widget.classId),
         getClassStarredWordIds(userId: user.id, classId: widget.classId),
         getClassHardWordIds(userId: user.id, classId: widget.classId),
-        supabase.from('class_words').select('id').eq('class_id', widget.classId),
+        // Calendar source: the class study-day record (same as the streak).
+        supabase.from('class_study_days').select('study_date').eq('student_id', user.id).eq('class_id', widget.classId),
       ]);
       final all      = results[0] as List<ClassSRSEntry>;
       final starred  = results[1] as List;
       final hard     = results[2] as List;
-      final countRes = results[3] as List;
+      final days     = (results[3] as List).map((r) => (r as Map)['study_date'] as String).toSet();
       if (_cache.length >= _maxCacheEntries && !_cache.containsKey(_cacheKey)) {
         _cache.remove(_cache.keys.first);
       }
-      _cache[_cacheKey] = (entries: all, starredCount: starred.length, hardCount: hard.length, totalWords: countRes.length);
+      _cache[_cacheKey] = (entries: all, starredCount: starred.length, hardCount: hard.length, studyDays: days);
       if (mounted) {
         setState(() {
           _entries      = all;
           _starredCount = starred.length;
           _hardCount    = hard.length;
-          _totalWords   = countRes.length;
+          _studyDays    = days;
           _loading      = false;
         });
       }
@@ -167,16 +168,6 @@ class _ClassProgressScreenState extends State<ClassProgressScreen> {
     final dueCount = _entries.where((e) => e.nextDue.compareTo(today) <= 0 && e.stage < 5).length;
     final learnedCount = _entries.length;
     final stageCounts = List.generate(6, (s) => _entries.where((e) => e.stage == s).length);
-    // lastReviewed comes back from Supabase as a UTC timestamp string —
-    // taking the date substring directly (as before) read the UTC calendar
-    // date, not the device's local one, so a late-night review could land
-    // on the wrong cell in the local-dated 30-day calendar below. Parsing
-    // and converting .toLocal() first fixes that mismatch.
-    final reviewDates = _entries
-        .map((e) => e.lastReviewed)
-        .whereType<String>()
-        .map((s) => formatStreakDate(DateTime.parse(s).toLocal()))
-        .toSet();
     final days = _last30Days();
 
     return Scaffold(
@@ -188,7 +179,9 @@ class _ClassProgressScreenState extends State<ClassProgressScreen> {
           const SizedBox(height: 12),
           // Summary stats
           Row(children: [
-            _statCard('$learnedCount/$_totalWords', tr('learned'), context.primary),
+            // Just the count: class_words is only the Words-tab list, so
+            // "/total" read "/0" for classes taught through homework.
+            _statCard('$learnedCount', tr('learned'), context.primary),
             const SizedBox(width: 8),
             _statCard('$dueCount', tr('due_today'), dueCount > 0 ? const Color(0xFFF59E0B) : const Color(0xFF10B981)),
             const SizedBox(width: 8),
@@ -259,7 +252,7 @@ class _ClassProgressScreenState extends State<ClassProgressScreen> {
               itemCount: 30,
               itemBuilder: (ctx, i) {
                 final day = days[i];
-                final studied = reviewDates.contains(day);
+                final studied = _studyDays.contains(day);
                 final isToday = day == today;
                 return Container(
                   decoration: BoxDecoration(

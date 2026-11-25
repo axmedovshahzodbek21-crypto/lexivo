@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:share_plus/share_plus.dart';
+import '../config.dart';
 import '../data/word_data.dart';
 import '../data/phrases_collection.dart';
 import 'learning.dart';
@@ -328,6 +330,16 @@ class WordDetailScreen extends StatelessWidget {
           style: TextStyle(color: context.appText, fontWeight: FontWeight.bold),
         ),
         actions: [
+          // Shares the web /word/<word> page. Phrases have no web page.
+          if (!phrasesByLevel.values.contains(collection))
+            IconButton(
+              icon: Icon(Icons.share_outlined, color: context.primary),
+              tooltip: tr('share_word'),
+              onPressed: () => SharePlus.instance.share(ShareParams(
+                text: '${word.word} — ${word.translation}\n'
+                    '$kLexivoWebBase/word/${Uri.encodeComponent(word.word)}',
+              )),
+            ),
           TextButton(
             onPressed: () => Navigator.push(
               context,

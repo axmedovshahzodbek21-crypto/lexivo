@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
-import 'package:share_plus/share_plus.dart';
-import '../config.dart';
+import '../services/share_word.dart';
 import '../data/word_data.dart';
 import '../data/phrases_collection.dart';
 import 'learning.dart';
@@ -331,21 +330,10 @@ class WordDetailScreen extends StatelessWidget {
         ),
         actions: [
           // Shares the web /word/<word> page (words and phrases both live there).
-          // ! ' ( ) * are percent-encoded too: Telegram cuts a trailing "!"
-          // off a link ("Don't ask!" arrived as "Don't ask") — mirrors web wordPath().
           IconButton(
             icon: Icon(Icons.share_outlined, color: context.primary),
             tooltip: tr('share_word'),
-            onPressed: () {
-              final path = Uri.encodeComponent(word.word).replaceAllMapped(
-                RegExp(r"[!'()*]"),
-                (m) => '%${m[0]!.codeUnitAt(0).toRadixString(16).toUpperCase()}',
-              );
-              SharePlus.instance.share(ShareParams(
-                text: '${word.word} — ${word.translation}\n'
-                    '$kLexivoWebBase/word/$path',
-              ));
-            },
+            onPressed: () => shareWord(word.word, word.translation),
           ),
           TextButton(
             onPressed: () => Navigator.push(

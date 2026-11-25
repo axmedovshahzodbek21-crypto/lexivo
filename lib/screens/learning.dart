@@ -20,6 +20,7 @@ import '../data/storage_service.dart';
 import '../services/supabase_service.dart';
 import '../services/class_srs_service.dart';
 import '../services/class_offline.dart';
+import '../services/share_word.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import '../explain_prompt.dart';
@@ -1007,6 +1008,12 @@ class _LearningScreenState extends State<LearningScreen> with WidgetsBindingObse
               ),
               onPressed: _toggleStar,
             ),
+            if (isShareableWord(_currentWord.word))
+              IconButton(
+                icon: Icon(Icons.share_outlined, color: context.textMuted),
+                tooltip: tr('share_word'),
+                onPressed: () => shareWord(_currentWord.word, _currentWord.translation),
+              ),
             const PomodoroTimerPill(),
             const SizedBox(width: 8),
           ],

@@ -330,16 +330,23 @@ class WordDetailScreen extends StatelessWidget {
           style: TextStyle(color: context.appText, fontWeight: FontWeight.bold),
         ),
         actions: [
-          // Shares the web /word/<word> page. Phrases have no web page.
-          if (!phrasesByLevel.values.contains(collection))
-            IconButton(
-              icon: Icon(Icons.share_outlined, color: context.primary),
-              tooltip: tr('share_word'),
-              onPressed: () => SharePlus.instance.share(ShareParams(
+          // Shares the web /word/<word> page (words and phrases both live there).
+          // ! ' ( ) * are percent-encoded too: Telegram cuts a trailing "!"
+          // off a link ("Don't ask!" arrived as "Don't ask") — mirrors web wordPath().
+          IconButton(
+            icon: Icon(Icons.share_outlined, color: context.primary),
+            tooltip: tr('share_word'),
+            onPressed: () {
+              final path = Uri.encodeComponent(word.word).replaceAllMapped(
+                RegExp(r"[!'()*]"),
+                (m) => '%${m[0]!.codeUnitAt(0).toRadixString(16).toUpperCase()}',
+              );
+              SharePlus.instance.share(ShareParams(
                 text: '${word.word} — ${word.translation}\n'
-                    '$kLexivoWebBase/word/${Uri.encodeComponent(word.word)}',
-              )),
-            ),
+                    '$kLexivoWebBase/word/$path',
+              ));
+            },
+          ),
           TextButton(
             onPressed: () => Navigator.push(
               context,

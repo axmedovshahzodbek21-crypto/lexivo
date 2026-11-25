@@ -73,11 +73,12 @@ class _QuizSettingsScreenState extends State<QuizSettingsScreen> {
     super.dispose();
   }
 
-  void _onLangChange() { if (mounted) setState(() {}); }
+  void _onLangChange() {
+    if (mounted) setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       backgroundColor: context.bg,
       appBar: AppBar(
@@ -89,10 +90,7 @@ class _QuizSettingsScreenState extends State<QuizSettingsScreen> {
         ),
         title: Text(
           tr('quiz_settings'),
-          style: TextStyle(
-            color: context.appText,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: context.appText, fontWeight: FontWeight.bold),
         ),
         actions: const [PageTipButton('quiz')],
       ),
@@ -189,7 +187,10 @@ class _QuizSettingsScreenState extends State<QuizSettingsScreen> {
                 ),
                 child: Text(
                   tr('start_quiz'),
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -243,11 +244,7 @@ class _QuizSettingsScreenState extends State<QuizSettingsScreen> {
               ),
             ),
             if (selected)
-              Icon(
-                Icons.check_circle,
-                color: context.primary,
-                size: 22,
-              ),
+              Icon(Icons.check_circle, color: context.primary, size: 22),
           ],
         ),
       ),
@@ -328,18 +325,27 @@ class _QuizSessionScreenState extends State<QuizSessionScreen>
     super.dispose();
   }
 
-  void _onLangChange() { if (mounted) setState(() {}); }
+  void _onLangChange() {
+    if (mounted) setState(() {});
+  }
 
   void _buildQuestions() {
     final shuffled = List<WordItem>.from(widget.wordDay.words)
       ..shuffle(Random());
     _questions = shuffled;
-    const rotation = [QuizType.wordToTranslation, QuizType.translationToWord, QuizType.definitionToWord];
+    const rotation = [
+      QuizType.wordToTranslation,
+      QuizType.translationToWord,
+      QuizType.definitionToWord,
+    ];
     _types = [
       for (var i = 0; i < shuffled.length; i++)
         () {
-          final t = widget.quizType == QuizType.mixed ? rotation[i % 3] : widget.quizType;
-          return t == QuizType.definitionToWord && shuffled[i].definition.trim().isEmpty
+          final t = widget.quizType == QuizType.mixed
+              ? rotation[i % 3]
+              : widget.quizType;
+          return t == QuizType.definitionToWord &&
+                  shuffled[i].definition.trim().isEmpty
               ? QuizType.translationToWord
               : t;
         }(),
@@ -501,7 +507,6 @@ class _QuizSessionScreenState extends State<QuizSessionScreen>
   }
 
   // ── Not enough ────────────────────────────────────────────────────────────
-
 
   @override
   Widget build(BuildContext context) {
@@ -734,7 +739,9 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
     super.dispose();
   }
 
-  void _onLangChange() { if (mounted) setState(() {}); }
+  void _onLangChange() {
+    if (mounted) setState(() {});
+  }
 
   // Class mode: XP is scoped to the class leaderboard only (record_class_xp),
   // never the personal pool the Main Lexivo homescreen/level reads from —
@@ -743,16 +750,25 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
   // (no per-day/per-unit gate).
   Future<void> _awardClassXP() async {
     final base = widget.totalCount * 5;
-    final isPerfect = widget.totalCount > 0 && widget.correctCount == widget.totalCount;
+    final isPerfect =
+        widget.totalCount > 0 && widget.correctCount == widget.totalCount;
     // +25% for a flawless run, every perfect session (class practice has no
     // per-session gate, matching the base award).
     final xp = base + (isPerfect ? (base * 0.25).round() : 0);
     final user = currentUser;
     if (user != null && xp > 0) {
       // 0 = already earned today (server rule) — show that instead of a fake +N.
-      recordClassActivity(user.id, widget.classId!,
-          reason: isPerfect ? 'Quiz (perfect)' : 'Quiz', xp: xp).then((awarded) {
-        if (awarded == 0 && mounted) setState(() { _xpEarned = 0; _practiceXpDone = true; });
+      recordClassActivity(
+        user.id,
+        widget.classId!,
+        reason: isPerfect ? 'Quiz (perfect)' : 'Quiz',
+        xp: xp,
+      ).then((awarded) {
+        if (awarded == 0 && mounted)
+          setState(() {
+            _xpEarned = 0;
+            _practiceXpDone = true;
+          });
       });
     }
     if (mounted) setState(() => _xpEarned = xp);
@@ -769,26 +785,39 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
     await StorageService.recordStudySession();
     await StorageService.recordQuizSession();
     final base = widget.wordDay.words.length * 5;
-    final source = 'Unit ${widget.wordDay.dayNumber} · ${widget.collectionName}';
+    final source =
+        'Unit ${widget.wordDay.dayNumber} · ${widget.collectionName}';
     final alreadyAwarded = await StorageService.hasQuizXPAwarded(
-      widget.collectionName, widget.wordDay.dayNumber);
+      widget.collectionName,
+      widget.wordDay.dayNumber,
+    );
     if (!alreadyAwarded) {
       await StorageService.addXP(base, reason: 'Quiz', source: source);
       if (mounted) setState(() => _xpEarned = base);
       await StorageService.markQuizXPAwarded(
-        widget.collectionName, widget.wordDay.dayNumber);
+        widget.collectionName,
+        widget.wordDay.dayNumber,
+      );
     }
     // +25% bonus for a flawless run, granted right at completion, once per
     // unit (own gate so it can still land on a later perfect run even if the
     // base was already earned on an imperfect one).
     if (isPerfect &&
         !await StorageService.hasQuizPerfectXPAwarded(
-            widget.collectionName, widget.wordDay.dayNumber)) {
+          widget.collectionName,
+          widget.wordDay.dayNumber,
+        )) {
       final bonus = (base * 0.25).round();
-      await StorageService.addXP(bonus, reason: 'Quiz (perfect)', source: source);
+      await StorageService.addXP(
+        bonus,
+        reason: 'Quiz (perfect)',
+        source: source,
+      );
       if (mounted) setState(() => _xpEarned += bonus);
       await StorageService.markQuizPerfectXPAwarded(
-        widget.collectionName, widget.wordDay.dayNumber);
+        widget.collectionName,
+        widget.wordDay.dayNumber,
+      );
     }
     await StorageService.markQuizComplete(
       widget.collectionName,
@@ -833,264 +862,298 @@ class _QuizFinishScreenState extends State<QuizFinishScreen> {
     return Stack(
       children: [
         Scaffold(
-      backgroundColor: context.bg,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (widget.myUnitCompleted) ...[
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: context.successBg,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: context.successColor, width: 1.5),
-                  ),
-                  child: Text(tr('unit_complete_banner'),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontWeight: FontWeight.bold, color: context.successColor)),
-                ),
-              ],
-              Text(emoji, style: const TextStyle(fontSize: 60)),
-              const SizedBox(height: 20),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: context.appText,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 16,
-                ),
-                decoration: BoxDecoration(
-                  color: context.primaryBg,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildStat(
-                      '${widget.correctCount}',
-                      tr('correct_label'),
-                      Colors.green,
-                    ),
-                    _buildStat(
-                      '${widget.wrongWords.length}',
-                      tr('wrong_label'),
-                      const Color(0xFFE53935),
-                    ),
-                    _buildStat(
-                      '$percent%',
-                      '🎯 ${tr('score')}',
-                      context.primary,
-                    ),
-                  ],
-                ),
-              ),
-              if (_xpEarned > 0) ...[
-                const SizedBox(height: 16),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text('⚡', style: TextStyle(fontSize: 16)),
-                      const SizedBox(width: 6),
-                      Text('+${StorageService.displayXP(_xpEarned)} XP',
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFF59E0B))),
-                    ],
-                  ),
-                ),
-              ],
-              if (_practiceXpDone) ...[
-                const SizedBox(height: 16),
-                Text(tr('practice_xp_done_today'),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 12, color: context.textMuted)),
-              ],
-              const SizedBox(height: 28),
-
-              // Homework: a chained Match has no homework callback, so it would
-              // never be marked. The student starts Match from the homework screen.
-              if (!widget.noXP) SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => MatchingScreen(
-                          wordDay: widget.wordDay,
-                          collectionName: widget.collectionName,
-                          noXP: widget.noXP,
-                          classId: widget.classId,
-                          className: widget.className,
-                          onSessionComplete: widget.onMatchComplete,
+          backgroundColor: context.bg,
+          body: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(28),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (widget.myUnitCompleted) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: context.successBg,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: context.successColor,
+                          width: 1.5,
                         ),
                       ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      child: Text(
+                        tr('unit_complete_banner'),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: context.successColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                  Text(emoji, style: const TextStyle(fontSize: 60)),
+                  const SizedBox(height: 20),
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: context.appText,
                     ),
                   ),
-                  child: Text(
-                    '🔗 ${tr('play_match_btn')}',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
+                    decoration: BoxDecoration(
+                      color: context.primaryBg,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildStat(
+                          '${widget.correctCount}',
+                          tr('correct_label'),
+                          Colors.green,
+                        ),
+                        _buildStat(
+                          '${widget.wrongWords.length}',
+                          tr('wrong_label'),
+                          const Color(0xFFE53935),
+                        ),
+                        _buildStat(
+                          '$percent%',
+                          '🎯 ${tr('score')}',
+                          context.primary,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 12),
+                  if (_xpEarned > 0) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('⚡', style: TextStyle(fontSize: 16)),
+                          const SizedBox(width: 6),
+                          Text(
+                            '+${StorageService.displayXP(_xpEarned)} XP',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFF59E0B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  if (_practiceXpDone) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      tr('practice_xp_done_today'),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12, color: context.textMuted),
+                    ),
+                  ],
+                  const SizedBox(height: 28),
 
-              if (widget.wrongWords.isNotEmpty) ...[
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFEEEE),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Row(
-                    children: [
-                      const Text('❌', style: TextStyle(fontSize: 24)),
-                      const SizedBox(width: 12),
-                      Expanded(
+                  // Homework: a chained Match has no homework callback, so it would
+                  // never be marked. The student starts Match from the homework screen.
+                  if (!widget.noXP)
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => MatchingScreen(
+                                wordDay: widget.wordDay,
+                                collectionName: widget.collectionName,
+                                noXP: widget.noXP,
+                                classId: widget.classId,
+                                className: widget.className,
+                                onSessionComplete: widget.onMatchComplete,
+                              ),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF10B981),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
                         child: Text(
-                          tr('quiz_retry_prompt')
-                              .replaceFirst('{n}', '${widget.wrongWords.length}')
-                              .replaceFirst('{s}', widget.wrongWords.length > 1 ? 's' : ''),
+                          '🔗 ${tr('play_match_btn')}',
                           style: const TextStyle(
-                            color: Color(0xFFE53935),
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
                           ),
                         ),
                       ),
-                    ],
+                    ),
+                  const SizedBox(height: 12),
+
+                  if (widget.wrongWords.isNotEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFEEEE),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        children: [
+                          const Text('❌', style: TextStyle(fontSize: 24)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              tr('quiz_retry_prompt')
+                                  .replaceFirst(
+                                    '{n}',
+                                    '${widget.wrongWords.length}',
+                                  )
+                                  .replaceFirst(
+                                    '{s}',
+                                    widget.wrongWords.length > 1 ? 's' : '',
+                                  ),
+                              style: const TextStyle(
+                                color: Color(0xFFE53935),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          final retryDay = WordDay(
+                            dayNumber: widget.wordDay.dayNumber,
+                            topic: '${widget.wordDay.topic} — ${tr('retry')}',
+                            words: widget.wrongWords,
+                          );
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => QuizSessionScreen(
+                                wordDay: retryDay,
+                                userProfile: widget.userProfile,
+                                collectionName: widget.collectionName,
+                                quizType: widget.quizType,
+                                questionCount: widget.wrongWords.length,
+                                // Previously dropped entirely, so a retry silently
+                                // became a real-XP session (noXP not forwarded)
+                                // whose completion never reached the homework
+                                // screen (onHomeworkCompleted/onSessionComplete
+                                // not forwarded) — see QuizFinishScreen's own
+                                // doc comment on these two fields.
+                                noXP: widget.noXP,
+                                classId: widget.classId,
+                                className: widget.className,
+                                onHomeworkCompleted: widget.onHomeworkCompleted,
+                                onSessionComplete: widget.onSessionComplete,
+                                onMatchComplete: widget.onMatchComplete,
+                              ),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFE53935),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: Text(
+                          tr('retry_wrong'),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: context.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: Text(
+                        tr('back_to_home'),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
+                  const SizedBox(height: 12),
+                  TextButton(
                     onPressed: () {
-                      final retryDay = WordDay(
-                        dayNumber: widget.wordDay.dayNumber,
-                        topic: '${widget.wordDay.topic} — ${tr('retry')}',
-                        words: widget.wrongWords,
-                      );
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => QuizSessionScreen(
-                            wordDay: retryDay,
+                          builder: (context) => QuizSettingsScreen(
+                            wordDay: widget.wordDay,
                             userProfile: widget.userProfile,
                             collectionName: widget.collectionName,
-                            quizType: widget.quizType,
-                            questionCount: widget.wrongWords.length,
-                            // Previously dropped entirely, so a retry silently
-                            // became a real-XP session (noXP not forwarded)
-                            // whose completion never reached the homework
-                            // screen (onHomeworkCompleted/onSessionComplete
-                            // not forwarded) — see QuizFinishScreen's own
-                            // doc comment on these two fields.
                             noXP: widget.noXP,
                             classId: widget.classId,
                             className: widget.className,
-                            onHomeworkCompleted: widget.onHomeworkCompleted,
                             onSessionComplete: widget.onSessionComplete,
                             onMatchComplete: widget.onMatchComplete,
+                            onHomeworkCompleted: widget.onHomeworkCompleted,
                           ),
                         ),
                       );
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE53935),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
                     child: Text(
-                      tr('retry_wrong'),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                      tr('try_again'),
+                      style: TextStyle(
+                        color: context.primary,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
-              ],
-
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: context.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: Text(
-                    tr('back_to_home'),
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                ),
+                ],
               ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => QuizSettingsScreen(
-                        wordDay: widget.wordDay,
-                        userProfile: widget.userProfile,
-                        collectionName: widget.collectionName,
-                        noXP: widget.noXP,
-                        classId: widget.classId,
-                        className: widget.className,
-                        onSessionComplete: widget.onSessionComplete,
-                        onMatchComplete: widget.onMatchComplete,
-                        onHomeworkCompleted: widget.onHomeworkCompleted,
-                      ),
-                    ),
-                  );
-                },
-                child: Text(
-                  tr('try_again'),
-                  style: TextStyle(
-                    color: context.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
         ),
         Align(
           alignment: Alignment.topCenter,

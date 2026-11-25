@@ -3198,7 +3198,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     _hasPerfectQuizKey, _hasCompletedFlashcardKey, _hasCompletedSRSKey,
     _unitDoneDaysKey, _reviewDaysKey, _wordGoalDaysKey, _srsLockedDaysKey,
     _reviewLogKey, _srsLastReviewKey, _masteredSRSKey, _starredKey, _visitedPassagesKey,
-    'sync_stats_ts', 'sync_settings_ts', 'sync_lists_ts',
+    'sync_stats_ts', 'sync_settings_ts', 'sync_lists_ts', 'word_forms_mastered',
   ];
 
   // Prefixes covering per-unit/per-day progress keys that progressResetKeys

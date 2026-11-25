@@ -14,6 +14,7 @@ import 'reading_screen.dart';
 import 'real_english_screen.dart';
 import 'grammar_tips_screen.dart';
 import 'structures_hub_screen.dart';
+import 'word_forms_screen.dart';
 import 'free_time_screen.dart';
 import 'stats_screen.dart';
 import 'achievements.dart';
@@ -58,6 +59,8 @@ class MoreScreen extends StatelessWidget {
                 (_) => const GrammarTipsScreen()),
             _MoreItem(tr('more_structures'), Icons.extension_rounded, const Color(0xFFC026D3),
                 (_) => const StructuresHubScreen()),
+            _MoreItem(tr('wf_title'), Icons.swap_horiz_rounded, const Color(0xFF7C3AED),
+                (_) => const WordFormsScreen()),
           ]),
           _MoreGroup(tr('more_group_speaking'), [
             _MoreItem(tr('spk_title'), Icons.mic_rounded, const Color(0xFFBE185D),

@@ -10,7 +10,7 @@ import '../data/advanced_collection.dart' as col_adv;
 import '../config.dart';
 
 const _base = '$kLexivoWebBase/data';
-const _cacheVersion = 3; // bump this whenever bundled collection data changes
+const _cacheVersion = 4; // bump this whenever bundled collection data changes
 
 const _keys = {
   'a1': 'a1_collection',

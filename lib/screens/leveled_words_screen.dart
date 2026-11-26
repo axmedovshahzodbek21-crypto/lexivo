@@ -150,10 +150,7 @@ class LeveledWordsScreen extends StatelessWidget {
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => CollectionsScreen(
-                    userProfile: 'default',
-                    collection: ContentService.advanced,
-                  ),
+                  builder: (context) => const AdvancedScreen(),
                 ),
               ),
               child: Container(
@@ -233,17 +230,53 @@ class LeveledWordsScreen extends StatelessWidget {
   }
 }
 
-// ─── Foundation Screen ────────────────────────────────────────────────────────
+// ─── Advanced level folders ───────────────────────────────────────────────────
 
-class FoundationScreen extends StatefulWidget {
-  const FoundationScreen({super.key});
+/// Advanced is ONE collection ('Advanced', the IELTS Reading bank); its units
+/// are split into three level folders by unit number. Must match
+/// lexivo-web lib/advanced-levels.ts and scripts/advanced-to-dart.js.
+const advancedLevels = [
+  (label: 'B2+', first: 1, last: 16),
+  (label: 'C1', first: 17, last: 35),
+  (label: 'C2', first: 36, last: 55),
+];
 
-  @override
-  State<FoundationScreen> createState() => _FoundationScreenState();
+/// One level's slice of Advanced. Keeps the name 'Advanced' and the original
+/// unit numbers, so unit progress and SRS keys stay ('Advanced', dayNumber).
+WordCollection advancedLevelCollection(String label) {
+  final r = advancedLevels.firstWhere((l) => l.label == label);
+  final adv = ContentService.advanced;
+  return WordCollection(
+    name: adv.name,
+    description: adv.description,
+    days: adv.days
+        .where((d) => d.dayNumber >= r.first && d.dayNumber <= r.last)
+        .toList(),
+  );
 }
 
-class _FoundationScreenState extends State<FoundationScreen> {
-  Map<String, int> _completedUnits = {'A1': 0, 'A2': 0, 'B1': 0};
+class AdvancedScreen extends LevelFoldersScreen {
+  const AdvancedScreen({super.key}) : super(advanced: true);
+}
+
+// ─── Foundation Screen ────────────────────────────────────────────────────────
+
+class FoundationScreen extends LevelFoldersScreen {
+  const FoundationScreen({super.key}) : super(advanced: false);
+}
+
+/// Level-folder picker shared by Foundation (A1 · A2 · B1) and Advanced
+/// (B2+ · C1 · C2).
+class LevelFoldersScreen extends StatefulWidget {
+  final bool advanced;
+  const LevelFoldersScreen({super.key, required this.advanced});
+
+  @override
+  State<LevelFoldersScreen> createState() => _LevelFoldersScreenState();
+}
+
+class _LevelFoldersScreenState extends State<LevelFoldersScreen> {
+  Map<String, int> _completedUnits = {};
   bool _loading = true;
 
   @override
@@ -253,42 +286,47 @@ class _FoundationScreenState extends State<FoundationScreen> {
   }
 
   Future<void> _loadProgress() async {
-    int a1Done = 0;
-    int a2Done = 0;
-    int b1Done = 0;
-
-    for (final day in ContentService.a1.days) {
-      final progress = await StorageService.getUnitProgress(
-        'A1',
-        day.dayNumber,
-      );
-      if (progress.isComplete) a1Done++;
-    }
-    for (final day in ContentService.a2.days) {
-      final progress = await StorageService.getUnitProgress(
-        'A2',
-        day.dayNumber,
-      );
-      if (progress.isComplete) a2Done++;
-    }
-    for (final day in ContentService.b1.days) {
-      final progress = await StorageService.getUnitProgress(
-        'B1',
-        day.dayNumber,
-      );
-      if (progress.isComplete) b1Done++;
+    final done = <String, int>{};
+    for (final level in _levels()) {
+      final col = level['collection'] as WordCollection;
+      var n = 0;
+      for (final day in col.days) {
+        final progress =
+            await StorageService.getUnitProgress(col.name, day.dayNumber);
+        if (progress.isComplete) n++;
+      }
+      done[level['label'] as String] = n;
     }
 
     if (!mounted) return;
     setState(() {
-      _completedUnits = {'A1': a1Done, 'A2': a2Done, 'B1': b1Done};
+      _completedUnits = done;
       _loading = false;
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final levels = [
+  List<Map<String, Object>> _levels() {
+    if (widget.advanced) {
+      const colors = [Color(0xFF9B59B6), Color(0xFF8E44AD), Color(0xFF6C3483)];
+      const emojis = ['📖', '🎯', '🏆'];
+      return [
+        for (final (i, l) in advancedLevels.indexed)
+          () {
+            final col = advancedLevelCollection(l.label);
+            final key = l.label == 'B2+' ? 'b2' : l.label.toLowerCase();
+            return <String, Object>{
+              'label': l.label,
+              'name': tr('level_${key}_name'),
+              'emoji': emojis[i],
+              'color': colors[i],
+              'description': tr('level_${key}_description'),
+              'collection': col,
+              'total': col.days.where((d) => d.words.isNotEmpty).length,
+            };
+          }(),
+      ];
+    }
+    return [
       {
         'label': 'A1',
         'name': tr('level_a1_name'),
@@ -323,6 +361,11 @@ class _FoundationScreenState extends State<FoundationScreen> {
         'total': ContentService.b1.days.where((d) => d.words.isNotEmpty).length,
       },
     ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final levels = _levels();
 
     return Scaffold(
       backgroundColor: context.bg,
@@ -334,14 +377,14 @@ class _FoundationScreenState extends State<FoundationScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          tr('foundation_title'),
+          tr(widget.advanced ? 'advanced_title' : 'foundation_title'),
           style: TextStyle(
             color: context.appText,
             fontWeight: FontWeight.bold,
           ),
         ),
         actions: [
-          IconButton(
+          if (!widget.advanced) IconButton(
             icon: const Text('📖', style: TextStyle(fontSize: 22)),
             onPressed: () => Navigator.push(
               context,
@@ -366,7 +409,8 @@ class _FoundationScreenState extends State<FoundationScreen> {
                   final collection = level['collection'] as WordCollection;
 
                   return GestureDetector(
-                    onTap: () => Navigator.push(
+                    // An Advanced level with no units yet shows "coming soon".
+                    onTap: total == 0 ? null : () => Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => CollectionsScreen(
@@ -468,9 +512,11 @@ class _FoundationScreenState extends State<FoundationScreen> {
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  tr('units_complete_count')
-                                      .replaceFirst('{completed}', '$completed')
-                                      .replaceFirst('{total}', '$total'),
+                                  total == 0
+                                      ? tr('level_coming_soon')
+                                      : tr('units_complete_count')
+                                          .replaceFirst('{completed}', '$completed')
+                                          .replaceFirst('{total}', '$total'),
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,

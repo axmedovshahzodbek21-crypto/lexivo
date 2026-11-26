@@ -719,7 +719,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
                 childAspectRatio: 0.74,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                children: _cwUnits.where((u) => u.hasHomework).map((u) => _buildGridUnitCard(
+                children: _undoneFirst(_cwUnits.where((u) => u.hasHomework), (u) => u.homeworkId, (u) => u.hwModes ?? []).map((u) => _buildGridUnitCard(
                   id: u.id, name: u.name,
                   homeworkId: u.homeworkId!, hwModes: u.hwModes ?? [],
                   hwDue: u.hwDue, isClassWords: true,
@@ -738,7 +738,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
                 childAspectRatio: 0.74,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                children: _collHwItems.map((h) => _buildCollectionCard(h)).toList(),
+                children: _undoneFirst(_collHwItems, (h) => h.homeworkId, (h) => h.hwModes).map((h) => _buildCollectionCard(h)).toList(),
               ),
               const SizedBox(height: 16),
             ],
@@ -762,6 +762,23 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
           ),
         )),
     ]);
+  }
+
+  /// Unfinished homework first, then done, then unassigned (no homeworkId);
+  /// original order kept inside each group. Mirrors web homework pages.
+  List<T> _undoneFirst<T>(Iterable<T> items, String? Function(T) hwId, List<String> Function(T) modes) {
+    final undone = <T>[], done = <T>[], none = <T>[];
+    for (final it in items) {
+      final id = hwId(it);
+      if (id == null) {
+        none.add(it);
+      } else if (isHomeworkFullyDone(modes(it), _completedModes[id] ?? {})) {
+        done.add(it);
+      } else {
+        undone.add(it);
+      }
+    }
+    return [...undone, ...done, ...none];
   }
 
   Widget _sectionHeader(String label) => Padding(
@@ -808,7 +825,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
           childAspectRatio: 0.74,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          children: visible.map((u) => u.hasHomework
+          children: _undoneFirst(visible, (u) => u.hasHomework ? u.homeworkId : null, (u) => u.hwModes ?? []).map((u) => u.hasHomework
               ? _buildGridUnitCard(
                   id: u.id, name: u.name,
                   homeworkId: u.homeworkId!, hwModes: u.hwModes ?? [],

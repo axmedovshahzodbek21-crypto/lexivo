@@ -3,6 +3,7 @@ import '../data/a1_collection.dart';
 import '../data/a2_collection.dart';
 import '../data/b1_collection.dart';
 import '../data/phrases_collection.dart';
+import '../data/advanced_collection.dart';
 
 /// class_xp_history/class_members.class_xp store XP ×10 (so partial-point
 /// awards can be recorded as integers) — this is the one place that /10
@@ -19,6 +20,7 @@ final builtInCollections = <WordCollection>[
   thirtyDaysCollection, vocabularyChallengeCollection, wordMasteryCollection,
   a1Collection, a2Collection, b1Collection,
   ...phrasesByLevel.values,
+  ...advancedByLevel.values,
 ];
 
 /// Looks up one of the six built-in word collections by its exact display

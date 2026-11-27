@@ -245,7 +245,7 @@ class SyncService {
       // right where this one left off — nothing is lost by deferring it.
       try {
         final cloudRow = await _sb.from('user_data')
-            .select('learned_words, srs_words, starred_words, hard_words, study_days, review_days, word_goal_days, unit_done_days, xp_history, unit_progress, my_unit_progress, review_log, last_review, achievements, imported_words, custom_lists, my_folder_locks, my_folder_covers')
+            .select('learned_words, srs_words, starred_words, hard_words, study_days, review_days, word_goal_days, unit_done_days, xp_history, unit_progress, my_unit_progress, review_log, last_review, achievements, imported_words, custom_lists, my_folder_locks, my_folder_covers, focus_days')
             .eq('id', uid).maybeSingle();
         if (cloudRow != null) await _mergeListsFromCloudRow(cloudRow, prefs);
       } catch (e) {
@@ -315,6 +315,7 @@ class SyncService {
         'custom_lists':     arr('custom_lists'), // includes tombstones (deletedAt) so deletions propagate
         'my_folder_locks':  obj('my_folder_locks'),
         'my_folder_covers': obj('my_folder_covers'),
+        'focus_days':       obj('focus_days'),
         'achievements':     achievementEntries,
         'lists_updated_at': ts,
       });
@@ -380,6 +381,7 @@ class SyncService {
         'hard_words': [], 'study_days': [], 'review_days': [],
         'word_goal_days': [], 'unit_done_days': [], 'xp_history': [],
         'unit_progress': {}, 'my_unit_progress': {}, 'review_log': {}, 'last_review': {},
+        'focus_days': {},
         // Deliberately NOT clearing imported_words — Reset Progress undoes
         // learning progress, not vocabulary the user typed in themselves.
         'achievements': [],
@@ -1014,6 +1016,32 @@ class SyncService {
         }
       } catch (e) {
         debugPrint('[SyncService._mergeListsFromCloudRow] last_review merge failed: $e');
+      }
+
+      // focus_days (object: yyyy-MM-dd → seconds) — max per day, same as
+      // web, so a push from a device that hasn't logged today's session yet
+      // can never erase time recorded elsewhere.
+      try {
+        final cloudFD = (row['focus_days'] as Map<String, dynamic>?) ?? {};
+        if (cloudFD.isNotEmpty) {
+          final localRaw = prefs.getString('focus_days');
+          final localFD = localRaw != null
+              ? (jsonDecode(localRaw) as Map<String, dynamic>)
+              : <String, dynamic>{};
+          bool changed = false;
+          for (final entry in cloudFD.entries) {
+            final cloudSecs = entry.value;
+            if (cloudSecs is! num) continue;
+            final localSecs = localFD[entry.key];
+            if (localSecs is! num || cloudSecs > localSecs) {
+              localFD[entry.key] = cloudSecs.toInt();
+              changed = true;
+            }
+          }
+          if (changed) await prefs.setString('focus_days', jsonEncode(localFD));
+        }
+      } catch (e) {
+        debugPrint('[SyncService._mergeListsFromCloudRow] focus_days merge failed: $e');
       }
 
       // Post-merge: any active SRS word whose review log (just merged above)

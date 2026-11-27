@@ -832,6 +832,33 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
   static const _reviewLogKey     = 'srs_review_log';
   static const _srsLastReviewKey = 'srs_last_review';
   static const _masteredSRSKey   = 'mastered_srs_words';
+  static const _focusDaysKey     = 'focus_days';
+
+  // ── Focus time (Pomodoro) ──────────────────
+  // Seconds of work-phase time per local calendar day ({yyyy-MM-dd: secs}),
+  // same shape as web's lexivo_focus_days and synced through
+  // user_data.focus_days (max per day on merge). Plain local date, not the
+  // streak boundary, to match web.
+
+  static Future<Map<String, int>> getFocusDays() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_focusDaysKey);
+    if (raw == null) return {};
+    try {
+      return (jsonDecode(raw) as Map<String, dynamic>).map((k, v) => MapEntry(k, (v as num).toInt()));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  static Future<void> addFocusSeconds(int seconds) async {
+    if (seconds <= 0) return;
+    final prefs = await SharedPreferences.getInstance();
+    final days = await getFocusDays();
+    final today = formatStreakDate(DateTime.now());
+    days[today] = (days[today] ?? 0) + seconds;
+    await prefs.setString(_focusDaysKey, jsonEncode(days));
+  }
 
   // ── Unit Progress ──────────────────────────
 
@@ -3199,6 +3226,7 @@ static const _hasCompletedQuizKey = 'has_completed_quiz';
     _unitDoneDaysKey, _reviewDaysKey, _wordGoalDaysKey, _srsLockedDaysKey,
     _reviewLogKey, _srsLastReviewKey, _masteredSRSKey, _starredKey, _visitedPassagesKey,
     'sync_stats_ts', 'sync_settings_ts', 'sync_lists_ts', 'word_forms_mastered',
+    _focusDaysKey,
   ];
 
   // Prefixes covering per-unit/per-day progress keys that progressResetKeys

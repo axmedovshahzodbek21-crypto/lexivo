@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../l10n.dart';
+import '../data/storage_service.dart';
+import '../services/sync_service.dart';
 
 enum PomodoroState { idle, working, onBreak }
 
@@ -29,6 +31,11 @@ class PomodoroService extends ChangeNotifier with WidgetsBindingObserver {
   // accurate regardless of how many ticks were actually delivered.
   DateTime? _phaseEndTime;
   bool _observerRegistered = false;
+  // Focus-time tracking (same as web's addFocusSeconds): work-phase seconds
+  // are credited up to now on each tick, buffered, and written every 30s,
+  // at phase end, on stop and when the app goes to the background.
+  DateTime? _workCreditedUntil;
+  int _pendingFocusSeconds = 0;
 
   PomodoroState get state => _state;
   int get secondsRemaining => _secondsRemaining;
@@ -88,7 +95,32 @@ class PomodoroService extends ChangeNotifier with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && _phaseEndTime != null) {
       _reconcileFromWallClock();
+    } else if (state == AppLifecycleState.paused) {
+      _creditWork(DateTime.now());
+      _flushFocus(push: true);
     }
+  }
+
+  // Credits work time between the last credit and [upTo] (never past the
+  // work phase's end), so backgrounded time counts and breaks never do.
+  void _creditWork(DateTime upTo) {
+    if (_state != PomodoroState.working || _workCreditedUntil == null) return;
+    final end = _phaseEndTime;
+    final until = (end != null && upTo.isAfter(end)) ? end : upTo;
+    final secs = until.difference(_workCreditedUntil!).inSeconds;
+    if (secs <= 0) return;
+    _pendingFocusSeconds += secs;
+    _workCreditedUntil = _workCreditedUntil!.add(Duration(seconds: secs));
+    if (_pendingFocusSeconds >= 30) _flushFocus();
+  }
+
+  void _flushFocus({bool push = false}) {
+    final secs = _pendingFocusSeconds;
+    if (secs <= 0) return;
+    _pendingFocusSeconds = 0;
+    StorageService.addFocusSeconds(secs).then((_) {
+      if (push) SyncService.pushLists();
+    });
   }
 
   void _reconcileFromWallClock() {
@@ -109,6 +141,7 @@ class PomodoroService extends ChangeNotifier with WidgetsBindingObserver {
     _state = newState;
     _secondsRemaining = seconds;
     _phaseEndTime = DateTime.now().add(Duration(seconds: seconds));
+    _workCreditedUntil = newState == PomodoroState.working ? DateTime.now() : null;
     _oneMinuteWarningSent = false;
     if (newState == PomodoroState.onBreak) _pickBreakTips();
   }
@@ -175,6 +208,7 @@ class PomodoroService extends ChangeNotifier with WidgetsBindingObserver {
         }
       }
 
+      _creditWork(DateTime.now());
       _secondsRemaining = remaining;
       notifyListeners();
     });
@@ -183,6 +217,8 @@ class PomodoroService extends ChangeNotifier with WidgetsBindingObserver {
   void _onTimerEnd() {
     _timer?.cancel();
     if (_state == PomodoroState.working) {
+      if (_phaseEndTime != null) _creditWork(_phaseEndTime!);
+      _flushFocus(push: true);
       _pomodorosCompleted++;
       _beginPhase(PomodoroState.onBreak, _breakMinutes * 60);
       _sendNotification(
@@ -211,6 +247,9 @@ class PomodoroService extends ChangeNotifier with WidgetsBindingObserver {
 
   void stop() {
     _timer?.cancel();
+    _creditWork(DateTime.now());
+    _flushFocus(push: true);
+    _workCreditedUntil = null;
     _state = PomodoroState.idle;
     _secondsRemaining = 0;
     _phaseEndTime = null;

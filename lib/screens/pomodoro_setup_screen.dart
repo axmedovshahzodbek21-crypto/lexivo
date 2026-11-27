@@ -3,6 +3,7 @@ import '../l10n.dart';
 import 'dart:async';
 import 'dart:math';
 import 'pomodoro_service.dart';
+import 'focus_stats_screen.dart';
 import '../app_theme.dart';
 
 const _kBreakColor = Color(0xFF10B981);
@@ -158,6 +159,13 @@ class _PomodoroSetupScreenState extends State<PomodoroSetupScreen> {
                     ),
                   ],
                 ),
+              ),
+              IconButton(
+                icon: Icon(Icons.bar_chart_rounded, color: context.primary),
+                onPressed: () {
+                  _cancelAutoSkip();
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const FocusStatsScreen()));
+                },
               ),
               if (_autoSkipSeconds > 0)
                 GestureDetector(

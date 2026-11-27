@@ -2,13 +2,23 @@
 // Source: lexivo-web/scripts/advanced-data/*.txt
 import 'word_data.dart';
 
-final WordCollection advancedCollection = WordCollection(
-  name: 'Advanced',
-  description: 'B2+ · C1 · C2 — IELTS Reading vocabulary',
+/// Advanced (IELTS Reading bank) levels, in order. Each is its own collection
+/// named "Advanced B2+" / "Advanced C1" / "Advanced C2"; a level with no units yet shows "coming soon".
+const advancedLevels = ['B2+', 'C1', 'C2'];
+
+final Map<String, WordCollection> advancedByLevel = {
+  'B2+': advancedB2Collection,
+  'C1': advancedC1Collection,
+  'C2': advancedC2Collection,
+};
+
+final WordCollection advancedB2Collection = WordCollection(
+  name: 'Advanced B2+',
+  description: 'IELTS Reading vocabulary, strong B2',
   days: [
     WordDay(
       dayNumber: 1,
-      topic: 'B2+ · Sabab va oqibat',
+      topic: 'Sabab va oqibat',
       words: [
         WordItem(
           word: 'lead to',
@@ -294,7 +304,7 @@ final WordCollection advancedCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 2,
-      topic: 'B2+ · Dalil va tadqiqot · Qarama-qarshilik',
+      topic: 'Dalil va tadqiqot · Qarama-qarshilik',
       words: [
         WordItem(
           word: 'a recent study',
@@ -580,7 +590,7 @@ final WordCollection advancedCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 3,
-      topic: 'B2+ · Qarama-qarshilik · Tendensiya va o\'zgarish',
+      topic: 'Qarama-qarshilik · Tendensiya va o\'zgarish',
       words: [
         WordItem(
           word: 'to a certain extent',
@@ -866,7 +876,7 @@ final WordCollection advancedCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 4,
-      topic: 'B2+ · Atrof-muhit · Fan va texnologiya',
+      topic: 'Atrof-muhit · Fan va texnologiya',
       words: [
         WordItem(
           word: 'gradually',
@@ -1152,7 +1162,7 @@ final WordCollection advancedCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 5,
-      topic: 'B2+ · Fan va texnologiya · Tarix va meros',
+      topic: 'Fan va texnologiya · Tarix va meros',
       words: [
         WordItem(
           word: 'replace human workers',
@@ -1438,7 +1448,7 @@ final WordCollection advancedCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 6,
-      topic: 'B2+ · Tarix va meros · Jamiyat',
+      topic: 'Tarix va meros · Jamiyat',
       words: [
         WordItem(
           word: 'a historical site',
@@ -1724,7 +1734,7 @@ final WordCollection advancedCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 7,
-      topic: 'B2+ · Iqtisodiyot · Psixologiya',
+      topic: 'Iqtisodiyot · Psixologiya',
       words: [
         WordItem(
           word: 'economic growth',
@@ -2010,7 +2020,7 @@ final WordCollection advancedCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 8,
-      topic: 'B2+ · Psixologiya · Til va muloqot',
+      topic: 'Psixologiya · Til va muloqot',
       words: [
         WordItem(
           word: 'cope with stress',
@@ -2296,7 +2306,7 @@ final WordCollection advancedCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 9,
-      topic: 'B2+ · Til va muloqot · Salomatlik',
+      topic: 'Til va muloqot · Salomatlik',
       words: [
         WordItem(
           word: 'endangered languages',
@@ -2582,7 +2592,7 @@ final WordCollection advancedCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 10,
-      topic: 'B2+ · Ta\'lim · Qonun va davlat',
+      topic: 'Ta\'lim · Qonun va davlat',
       words: [
         WordItem(
           word: 'foster critical thinking',
@@ -2868,7 +2878,7 @@ final WordCollection advancedCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 11,
-      topic: 'B2+ · Qonun va davlat · San\'at va arxitektura',
+      topic: 'Qonun va davlat · San\'at va arxitektura',
       words: [
         WordItem(
           word: 'government funding',
@@ -3154,7 +3164,7 @@ final WordCollection advancedCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 12,
-      topic: 'B2+ · San\'at va arxitektura · Qishloq xo\'jaligi',
+      topic: 'San\'at va arxitektura · Qishloq xo\'jaligi',
       words: [
         WordItem(
           word: 'blend seamlessly with',
@@ -3440,7 +3450,7 @@ final WordCollection advancedCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 13,
-      topic: 'B2+ · Qishloq xo\'jaligi · Xavf va inqiroz',
+      topic: 'Qishloq xo\'jaligi · Xavf va inqiroz',
       words: [
         WordItem(
           word: 'livestock',
@@ -3726,7 +3736,7 @@ final WordCollection advancedCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 14,
-      topic: 'B2+ · Baholash va qamrov',
+      topic: 'Baholash va qamrov',
       words: [
         WordItem(
           word: 'vulnerable',
@@ -4012,7 +4022,7 @@ final WordCollection advancedCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 15,
-      topic: 'B2+ · Muallif pozitsiyasi',
+      topic: 'Muallif pozitsiyasi',
       words: [
         WordItem(
           word: 'slightly',
@@ -4298,7 +4308,7 @@ final WordCollection advancedCollection = WordCollection(
     ),
     WordDay(
       dayNumber: 16,
-      topic: 'B2+ · Vaqt va davrlar',
+      topic: 'Vaqt va davrlar',
       words: [
         WordItem(
           word: 'be widely regarded as',
@@ -4582,5 +4592,19 @@ final WordCollection advancedCollection = WordCollection(
         ),
       ],
     ),
+  ],
+);
+
+final WordCollection advancedC1Collection = WordCollection(
+  name: 'Advanced C1',
+  description: 'IELTS Reading vocabulary, C1',
+  days: [
+  ],
+);
+
+final WordCollection advancedC2Collection = WordCollection(
+  name: 'Advanced C2',
+  description: 'IELTS Reading vocabulary, C2',
+  days: [
   ],
 );

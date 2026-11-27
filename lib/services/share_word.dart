@@ -27,8 +27,8 @@ bool isShareableWord(String word) {
   _builtIn ??= {
     for (final c in [
       thirtyDaysCollection, vocabularyChallengeCollection, wordMasteryCollection,
-      a1Collection, a2Collection, b1Collection, advancedCollection,
-      ...phrasesByLevel.values,
+      a1Collection, a2Collection, b1Collection,
+      ...advancedByLevel.values, ...phrasesByLevel.values,
     ])
       for (final d in c.days)
         for (final w in d.words) _wordKey(w.word),

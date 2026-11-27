@@ -6,6 +6,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import '../data/storage_service.dart';
 import '../data/word_data.dart';
 import '../data/phrases_collection.dart';
+import '../data/advanced_collection.dart';
 import '../services/content_service.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
@@ -129,7 +130,7 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     final extra = <String>{
       ...learned.map((w) => w.translation),
       ...srs.map((w) => w.translation),
-      for (final col in [ContentService.a1, ContentService.a2, ContentService.b1, ContentService.advanced])
+      for (final col in [ContentService.a1, ContentService.a2, ContentService.b1, ...advancedByLevel.values])
         for (final day in col.days)
           for (final w in day.words) w.translation,
     }..removeWhere((t) => t.trim().isEmpty);
@@ -311,11 +312,10 @@ class _SRSReviewScreenState extends State<SRSReviewScreen>
     if (name == ContentService.a1.name) return ContentService.a1;
     if (name == ContentService.a2.name) return ContentService.a2;
     if (name == ContentService.b1.name) return ContentService.b1;
-    if (name == ContentService.advanced.name) return ContentService.advanced;
     if (name == thirtyDaysCollection.name) return thirtyDaysCollection;
     if (name == vocabularyChallengeCollection.name) return vocabularyChallengeCollection;
     if (name == wordMasteryCollection.name) return wordMasteryCollection;
-    for (final c in phrasesByLevel.values) {
+    for (final c in [...phrasesByLevel.values, ...advancedByLevel.values]) {
       if (name == c.name) return c;
     }
     return null;

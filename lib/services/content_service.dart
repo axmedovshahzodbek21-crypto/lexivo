@@ -6,7 +6,6 @@ import '../data/json_parsers.dart';
 import '../data/a1_collection.dart' as col_a1;
 import '../data/a2_collection.dart' as col_a2;
 import '../data/b1_collection.dart' as col_b1;
-import '../data/advanced_collection.dart' as col_adv;
 import '../config.dart';
 
 const _base = '$kLexivoWebBase/data';
@@ -16,7 +15,7 @@ const _keys = {
   'a1': 'a1_collection',
   'a2': 'a2_collection',
   'b1': 'b1_collection',
-  'advanced': 'advanced_collection',
+  // Advanced (B2+/C1/C2) is bundled only, like Phrases — advanced_collection.dart.
 };
 
 class ContentService {
@@ -24,7 +23,6 @@ class ContentService {
   static WordCollection a1 = col_a1.a1Collection;
   static WordCollection a2 = col_a2.a2Collection;
   static WordCollection b1 = col_b1.b1Collection;
-  static WordCollection advanced = col_adv.advancedCollection;
 
   static Future<void> initialize() async {
     // Load cached versions from previous fetch (may be newer than bundled)
@@ -86,7 +84,6 @@ class ContentService {
       case 'a1': a1 = col; break;
       case 'a2': a2 = col; break;
       case 'b1': b1 = col; break;
-      case 'advanced': advanced = col; break;
     }
   }
 }

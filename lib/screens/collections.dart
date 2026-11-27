@@ -27,6 +27,11 @@ String? _cefrDescription(String collectionName) {
     case '24 Vocabulary Challenge': return tr('home_collection_challenge_desc');
     case 'Word Mastery': return tr('home_collection_mastery_desc');
     default:
+      if (collectionName.startsWith('Advanced ')) {
+        final level = collectionName.substring('Advanced '.length);
+        final key = level == 'B2+' ? 'b2' : level.toLowerCase();
+        return '$level — ${tr('level_${key}_description')}';
+      }
       if (collectionName.startsWith('Phrases ')) {
         final level = collectionName.substring('Phrases '.length);
         return '$level — ${tr('phrases_level_${level.toLowerCase()}')}';

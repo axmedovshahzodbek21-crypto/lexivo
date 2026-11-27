@@ -21,7 +21,7 @@ Map<String, WordItem> buildWordMap() {
     a1Collection,
     a2Collection,
     b1Collection,
-    advancedCollection,
+    ...advancedByLevel.values,
     ...phrasesByLevel.values,
   ]) {
     for (final day in col.days) {

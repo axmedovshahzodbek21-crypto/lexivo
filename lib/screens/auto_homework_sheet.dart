@@ -135,6 +135,10 @@ Future<bool> showAutoHomeworkSheet(
   if (user == null) return false;
   var perDay = existing?.unitsPerDay ?? 1;
   final weekdays = <int>{...(existing?.weekdays ?? const [1, 2, 3, 4, 5, 6])};
+  // Learn is always required; the practice modes are the teacher's pick
+  // (unpicked ones still show to students as optional extras).
+  var cards = existing?.modes.contains('flashcard') ?? true;
+  var quiz = existing?.modes.contains('quiz') ?? true;
   var match = existing?.modes.contains('match') ?? false;
   int? dueDays = existing == null ? 1 : existing.dueDays;
   var randomOrder = existing?.randomOrder ?? false;
@@ -217,7 +221,7 @@ Future<bool> showAutoHomeworkSheet(
   Map<String, dynamic> settings() => {
         'units_per_day': perDay,
         'weekdays': (weekdays.toList()..sort()),
-        'modes': ['learn', 'flashcard', 'quiz', if (match) 'match'],
+        'modes': ['learn', if (cards) 'flashcard', if (quiz) 'quiz', if (match) 'match'],
         'due_days': dueDays,
         'random_order': randomOrder,
         if (collectionName != null) 'day_numbers': dayNumbers,
@@ -279,10 +283,10 @@ Future<bool> showAutoHomeworkSheet(
           Padding(
             padding: const EdgeInsets.only(top: 16),
             child: Wrap(spacing: 6, runSpacing: 6, children: [
-              chip(ctx, '📖 ${tr('mode_learn')}', true, () {}),
-              chip(ctx, '🃏 ${tr('mode_flashcard')}', true, () {}),
-              chip(ctx, '❓ ${tr('mode_quiz')}', true, () {}),
-              chip(ctx, '🔗 ${tr('mode_match')}${tr('mode_optional_suffix')}', match, () => setSheet(() => match = !match)),
+              chip(ctx, '📖 ${tr('mode_learn')} *', true, () {}),
+              chip(ctx, '🃏 ${tr('mode_flashcard')}', cards, () => setSheet(() => cards = !cards)),
+              chip(ctx, '❓ ${tr('mode_quiz')}', quiz, () => setSheet(() => quiz = !quiz)),
+              chip(ctx, '🔗 ${tr('mode_match')}', match, () => setSheet(() => match = !match)),
             ]),
           ),
 

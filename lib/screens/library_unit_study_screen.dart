@@ -367,6 +367,10 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
     final allDone = widget.modes.isEmpty || widget.modes.every(_completedModes.contains);
     final next = _nextMode;
     final skip = _skipMode;
+    // Required modes + optional extras. Extras stay reachable from the bottom
+    // bar even after the homework is done.
+    final shown = shownHomeworkModes(widget.modes);
+    final hasExtras = shown.any((m) => !widget.modes.contains(m));
 
     return Scaffold(
       backgroundColor: context.bg,
@@ -396,12 +400,13 @@ class _LibraryUnitStudyScreenState extends State<LibraryUnitStudyScreen> {
               wordCount: _wordDay!.words.length,
               onStart: _studyMode,
             ),
-      bottomNavigationBar: allDone
+      bottomNavigationBar: allDone && !hasExtras
           ? null
           : UnitModeBar(
-              modes: widget.modes,
+              modes: shown,
               completed: _completedModes,
               isLocked: _gatedByLearn,
+              isOptional: (m) => !widget.modes.contains(m),
               onStart: _studyMode,
             ),
     );

@@ -190,6 +190,8 @@ class UnitModeBar extends StatelessWidget {
   final Set<String> completed;
   final bool Function(String mode) isLocked;
   final void Function(String mode) onStart;
+  // Optional extras (not required by the homework) get a muted tile.
+  final bool Function(String mode)? isOptional;
 
   const UnitModeBar({
     super.key,
@@ -197,6 +199,7 @@ class UnitModeBar extends StatelessWidget {
     required this.completed,
     required this.isLocked,
     required this.onStart,
+    this.isOptional,
   });
 
   @override
@@ -212,7 +215,9 @@ class UnitModeBar extends StatelessWidget {
         children: modes.map((m) {
           final done = completed.contains(m);
           final locked = isLocked(m);
+          final optional = isOptional?.call(m) ?? false;
           final color = unitModeColor[m] ?? context.primary;
+          final muted = done || optional;
           return Expanded(
             child: GestureDetector(
               onTap: locked ? null : () => onStart(m),
@@ -220,20 +225,25 @@ class UnitModeBar extends StatelessWidget {
                 margin: const EdgeInsets.symmetric(horizontal: 3),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color: locked ? context.surface2 : done ? color.withValues(alpha: 0.15) : color,
+                  color: locked ? context.surface2 : muted ? color.withValues(alpha: 0.15) : color,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Text(locked ? '🔒' : (unitModeIcon[m] ?? '📖'), style: const TextStyle(fontSize: 16)),
                   const SizedBox(height: 3),
                   Text(labels[m] ?? m,
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 9,
                       fontWeight: FontWeight.w700,
-                      color: locked ? context.textMuted : done ? color : Colors.white,
+                      color: locked ? context.textMuted : muted ? color : Colors.white,
                     )),
                   if (done)
-                    Icon(Icons.check_rounded, color: color, size: 10),
+                    Icon(Icons.check_rounded, color: color, size: 10)
+                  else if (optional)
+                    Text(tr('mode_optional'),
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 8, color: locked ? context.textMuted : color)),
                 ]),
               ),
             ),

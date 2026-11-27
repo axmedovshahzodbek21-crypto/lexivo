@@ -47,6 +47,19 @@ WordCollection? collectionByName(String name) {
 bool isHomeworkFullyDone(List<String> modes, Set<String> completedModes) =>
     modes.isNotEmpty && modes.every(completedModes.contains);
 
+// Word homework always offers every practice mode. The teacher's `modes`
+// are the required ones (they decide "done"); the rest show as optional
+// extras the student may do for class XP. Reading homework is unchanged.
+List<String> shownHomeworkModes(List<String> modes) {
+  if (modes.contains('read')) return modes;
+  return const ['learn', 'flashcard', 'quiz', 'match']
+      .where((m) => m != 'learn' || modes.contains(m)).toList();
+}
+
+// How many of the required modes are done (optional extras don't count).
+int requiredDoneCount(List<String> modes, Set<String> completedModes) =>
+    modes.where(completedModes.contains).length;
+
 class ClassRow {
   final String id, name, joinCode, teacherId;
   final int memberCount;

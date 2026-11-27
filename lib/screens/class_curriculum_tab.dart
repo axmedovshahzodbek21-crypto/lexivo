@@ -753,10 +753,12 @@ class _ClassCurriculumTabState extends State<ClassCurriculumTab> {
               Wrap(spacing: 8, children: ['learn', 'flashcard', 'quiz', 'match'].map((mode) {
                 final emoji = {'learn': '📖', 'flashcard': '🃏', 'quiz': '❓', 'match': '🔗'}[mode]!;
                 final label = {'learn': tr('mode_learn'), 'flashcard': tr('mode_flashcard'), 'quiz': tr('mode_quiz'), 'match': tr('mode_match')}[mode]!;
-                final required = mode != 'match';
+                // Learn is always required; unpicked practice modes still
+                // show to students as optional extras.
+                final required = mode == 'learn';
                 final on = selectedModes[mode]!;
                 return FilterChip(
-                  label: Text('$emoji $label${required ? '' : tr('mode_optional_suffix')}',
+                  label: Text('$emoji $label${required ? ' *' : ''}',
                       style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: on ? Colors.white : context.textMuted)),
                   selected: on,
                   onSelected: required ? null : (v) => setSheet(() => selectedModes[mode] = v),

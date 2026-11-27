@@ -947,7 +947,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
                         color: allDone ? Colors.green : context.primary,
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: Text('${completed.length}/${hwModes.length}',
+                      child: Text('${requiredDoneCount(hwModes, completed)}/${hwModes.length}',
                         style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900)),
                     ),
                     const Spacer(),
@@ -963,7 +963,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(3),
                     child: LinearProgressIndicator(
-                      value: hwModes.isEmpty ? 0 : completed.length / hwModes.length,
+                      value: hwModes.isEmpty ? 0 : requiredDoneCount(hwModes, completed) / hwModes.length,
                       minHeight: 4,
                       backgroundColor: context.border,
                       valueColor: AlwaysStoppedAnimation<Color>(allDone ? Colors.green : context.primary),
@@ -1054,7 +1054,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
               color: allDone ? Colors.green : collColor,
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Text('${completed.length}/${h.hwModes.length}',
+            child: Text('${requiredDoneCount(h.hwModes, completed)}/${h.hwModes.length}',
               style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900)),
           ),
           const Spacer(),
@@ -1076,7 +1076,7 @@ class _ClassHomeworkTabState extends State<ClassHomeworkTab> {
         ClipRRect(
           borderRadius: BorderRadius.circular(3),
           child: LinearProgressIndicator(
-            value: h.hwModes.isEmpty ? 0 : completed.length / h.hwModes.length,
+            value: h.hwModes.isEmpty ? 0 : requiredDoneCount(h.hwModes, completed) / h.hwModes.length,
             minHeight: 4,
             backgroundColor: context.border,
             valueColor: AlwaysStoppedAnimation<Color>(allDone ? Colors.green : collColor),
